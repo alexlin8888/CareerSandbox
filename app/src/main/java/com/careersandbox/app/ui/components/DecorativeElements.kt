@@ -12,8 +12,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.unit.dp
 import com.careersandbox.app.ui.theme.BrandAmber
 import com.careersandbox.app.ui.theme.BrandOrange
@@ -88,17 +86,18 @@ fun ScatteredDecorations(
     Canvas(modifier = modifier.fillMaxSize()) {
         val stroke = Stroke(width = 1.5.dp.toPx())
 
-        // 左上小菱形
-        translate(left = size.width * 0.08f, top = size.height * 0.15f) {
-            rotate(45f, pivot = Offset(0f, 0f)) {
-                drawRect(
-                    color = BrandOrange.copy(alpha = 0.3f),
-                    topLeft = Offset(-12.dp.toPx(), -12.dp.toPx()),
-                    size = androidx.compose.ui.geometry.Size(24.dp.toPx(), 24.dp.toPx()),
-                    style = stroke,
-                )
-            }
+        // 左上小菱形(用 Path 畫 4 邊形)
+        val diamondCx = size.width * 0.08f
+        val diamondCy = size.height * 0.15f
+        val ds = 14.dp.toPx()
+        val diamondPath = Path().apply {
+            moveTo(diamondCx, diamondCy - ds)
+            lineTo(diamondCx + ds, diamondCy)
+            lineTo(diamondCx, diamondCy + ds)
+            lineTo(diamondCx - ds, diamondCy)
+            close()
         }
+        drawPath(path = diamondPath, color = BrandOrange.copy(alpha = 0.3f), style = stroke)
 
         // 右上線稿圓
         drawCircle(
