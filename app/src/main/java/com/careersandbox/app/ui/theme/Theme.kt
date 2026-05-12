@@ -47,9 +47,9 @@ fun CareerSandboxTheme(
             if (activity != null) {
                 val window = activity.window
                 try {
-                    // 透明狀態列,讓內容自己畫到頂
+                    // 透明狀態列
                     window.statusBarColor = android.graphics.Color.TRANSPARENT
-                    // 預設深色狀態列文字(淺底頁時)。深底頁透過光暈也還清楚可見
+                    // 淺色狀態列文字(白色 icon),適合深底/橘底 hero 頁
                     WindowCompat.getInsetsController(window, view)
                         .isAppearanceLightStatusBars = false
                 } catch (_: Throwable) {}

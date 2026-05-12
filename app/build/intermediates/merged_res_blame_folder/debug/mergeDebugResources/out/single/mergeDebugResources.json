@@ -1,0 +1,22 @@
+[
+    {
+        "merged": "C:\\Users\\Alex Lin\\.gradle\\daemon\\8.7\\com.careersandbox.app-debug-51:\\xml_backup_rules.xml.flat",
+        "source": "C:\\Users\\Alex Lin\\.gradle\\daemon\\8.7\\com.careersandbox.app-main-53:\\xml\\backup_rules.xml"
+    },
+    {
+        "merged": "com.careersandbox.app-debug-51:/drawable_undraw_no_data_ig65.xml.flat",
+        "source": "com.careersandbox.app-main-53:/drawable/undraw_no_data_ig65.xml"
+    },
+    {
+        "merged": "com.careersandbox.app-debug-51:/drawable_undraw_interview_yz52.xml.flat",
+        "source": "com.careersandbox.app-main-53:/drawable/undraw_interview_yz52.xml"
+    },
+    {
+        "merged": "C:\\Users\\Alex Lin\\.gradle\\daemon\\8.7\\com.careersandbox.app-debug-51:\\xml_data_extraction_rules.xml.flat",
+        "source": "C:\\Users\\Alex Lin\\.gradle\\daemon\\8.7\\com.careersandbox.app-main-53:\\xml\\data_extraction_rules.xml"
+    },
+    {
+        "merged": "com.careersandbox.app-debug-51:/drawable_undraw_online_information_hhp2.xml.flat",
+        "source": "com.careersandbox.app-main-53:/drawable/undraw_online_information_hhp2.xml"
+    }
+]

@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -17,14 +18,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.careersandbox.app.ui.components.DarkGlowBackdrop
+import com.careersandbox.app.R
+import com.careersandbox.app.ui.components.ScatteredDecorations
 import com.careersandbox.app.ui.theme.*
 import kotlinx.coroutines.delay
 
@@ -33,120 +36,96 @@ fun SplashScreen(onDone: () -> Unit) {
     var stage by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) {
-        delay(80)
-        stage = 1     // logo fade in
-        delay(420)
-        stage = 2     // 標語 fade in
-        delay(420)
-        stage = 3     // tagline
-        delay(900)
+        delay(100)
+        stage = 1
+        delay(400)
+        stage = 2
+        delay(400)
+        stage = 3
+        delay(1100)
         try { onDone() } catch (_: Throwable) {}
     }
 
-    // 漂浮動畫
     val infinite = rememberInfiniteTransition(label = "float")
     val floatY by infinite.animateFloat(
         initialValue = 0f,
-        targetValue = 8f,
+        targetValue = 12f,
         animationSpec = infiniteRepeatable(
-            animation = tween(2400, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse,
+            tween(2400, easing = FastOutSlowInEasing),
+            RepeatMode.Reverse,
         ),
         label = "floatY",
     )
 
-    DarkGlowBackdrop(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().background(InkCharcoal)) {
+        // 散落線稿裝飾
+        ScatteredDecorations(modifier = Modifier.fillMaxSize().alpha(0.5f))
+
         Column(
             modifier = Modifier.fillMaxSize().padding(32.dp),
-            verticalArrangement = Arrangement.SpaceBetween,
         ) {
-            // 上區:標籤
+            Spacer(Modifier.height(64.dp))
+
+            // AI Powered 徽章
             AnimatedVisibility(
                 visible = stage >= 1,
                 enter = fadeIn(tween(500)) + slideInVertically(tween(500)) { -it / 2 },
             ) {
-                Row(
-                    modifier = Modifier.padding(top = 48.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                Box(
+                    Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(BrandYellow)
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
                 ) {
-                    Box(
-                        Modifier
-                            .clip(RoundedCornerShape(50))
-                            .background(BrandYellow)
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Outlined.AutoAwesome, contentDescription = null,
-                                tint = InkCharcoal, modifier = Modifier.size(14.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text("AI Powered", color = InkCharcoal,
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.labelSmall)
-                        }
-                    }
-                }
-            }
-
-            // 中區:Logo + 主標題(不對稱左對齊)
-            Column {
-                AnimatedVisibility(
-                    visible = stage >= 1,
-                    enter = fadeIn(tween(600)) + slideInVertically(tween(600)) { it / 6 },
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .offset(y = floatY.dp)
-                            .size(80.dp)
-                            .shadow(28.dp, RoundedCornerShape(24.dp),
-                                spotColor = BrandOrange.copy(alpha = 0.7f))
-                            .clip(RoundedCornerShape(24.dp))
-                            .background(HeroGradient),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text("CS", color = PaperWhite,
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.AutoAwesome, contentDescription = null,
+                            tint = InkCharcoal, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("AI Powered",
+                            color = InkCharcoal,
                             fontWeight = FontWeight.Black,
-                            fontSize = 32.sp)
+                            style = MaterialTheme.typography.labelSmall)
                     }
-                }
-
-                Spacer(Modifier.height(28.dp))
-
-                AnimatedVisibility(
-                    visible = stage >= 2,
-                    enter = fadeIn(tween(500)) + slideInVertically(tween(500)) { it / 4 },
-                ) {
-                    Text(
-                        text = buildAnnotatedString {
-                            append("找工作\n很")
-                            withStyle(SpanStyle(color = BrandYellow)) { append("累") }
-                            append(",\n我們")
-                            withStyle(SpanStyle(color = BrandOrange)) { append("陪你") }
-                            append("。")
-                        },
-                        color = PaperWhite,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 52.sp,
-                        lineHeight = 58.sp,
-                        letterSpacing = (-1).sp,
-                    )
-                }
-
-                Spacer(Modifier.height(20.dp))
-
-                AnimatedVisibility(
-                    visible = stage >= 3,
-                    enter = fadeIn(tween(600)),
-                ) {
-                    Text(
-                        "Career Sandbox  ・  v0.2.0",
-                        color = InkGray400,
-                        style = MaterialTheme.typography.labelMedium,
-                        letterSpacing = 2.sp,
-                    )
                 }
             }
 
-            // 下區:右下角小指引
+            Spacer(Modifier.height(40.dp))
+
+            // 主標題 — 巨大不對稱
+            AnimatedVisibility(
+                visible = stage >= 2,
+                enter = fadeIn(tween(600)) + slideInVertically(tween(600)) { it / 6 },
+            ) {
+                Text(
+                    text = buildAnnotatedString {
+                        append("找工作\n")
+                        withStyle(SpanStyle(color = BrandOrange)) { append("不再") }
+                        append("\n孤單。")
+                    },
+                    color = PaperWhite,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 56.sp,
+                    lineHeight = 62.sp,
+                    letterSpacing = (-1.5).sp,
+                )
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            AnimatedVisibility(
+                visible = stage >= 3,
+                enter = fadeIn(tween(600)),
+            ) {
+                Text(
+                    "AI 陪你找方向 / 練面試 / 寫履歷",
+                    color = InkGray400,
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+            }
+
+            Spacer(Modifier.weight(1f))
+
+            // 底部 loading 指示
             AnimatedVisibility(
                 visible = stage >= 3,
                 enter = fadeIn(tween(800)),
@@ -154,16 +133,32 @@ fun SplashScreen(onDone: () -> Unit) {
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
+                    horizontalArrangement = Arrangement.Center,
                 ) {
-                    Text(
-                        "loading ⋯",
-                        color = InkGray500,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.alpha(0.6f),
-                    )
+                    Text("Career Sandbox",
+                        color = PaperWhite.copy(alpha = 0.7f),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 3.sp)
                 }
             }
+        }
+
+        // 插畫破框 — 從右下進入,半個身體在畫面外
+        AnimatedVisibility(
+            visible = stage >= 1,
+            enter = fadeIn(tween(900)) + slideInVertically(tween(900)) { it / 3 },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .offset(x = 60.dp, y = floatY.dp + 80.dp)
+                .size(360.dp),
+        ) {
+            Image(
+                painter = painterResource(R.drawable.undraw_online_information_hhp2),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize().alpha(0.92f),
+                contentScale = ContentScale.Fit,
+            )
         }
     }
 }
