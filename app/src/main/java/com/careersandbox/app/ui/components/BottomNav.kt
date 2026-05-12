@@ -31,6 +31,16 @@ private val sideTabs = listOf(
     TabItem(Routes.PROFILE, "我的", Icons.Outlined.Person),
 )
 
+/** 統一跳頁邏輯,給所有 tab 用 */
+private fun navigateToTab(navController: NavHostController, route: String, currentRoute: String?) {
+    if (currentRoute == route) return
+    navController.navigate(route) {
+        popUpTo(Routes.HOME) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
+    }
+}
+
 @Composable
 fun BottomNav(navController: NavHostController) {
     val currentEntry by navController.currentBackStackEntryAsState()
@@ -64,15 +74,7 @@ fun BottomNav(navController: NavHostController) {
                         tab = tab,
                         selected = currentRoute == tab.route,
                         modifier = Modifier.weight(1f),
-                        onClick = {
-                            if (currentRoute != tab.route) {
-                                navController.navigate(tab.route) {
-                                    popUpTo(Routes.HOME) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            }
-                        }
+                        onClick = { navigateToTab(navController, tab.route, currentRoute) }
                     )
                 }
                 Spacer(Modifier.width(64.dp))
@@ -81,20 +83,12 @@ fun BottomNav(navController: NavHostController) {
                         tab = tab,
                         selected = currentRoute == tab.route,
                         modifier = Modifier.weight(1f),
-                        onClick = {
-                            if (currentRoute != tab.route) {
-                                navController.navigate(tab.route) {
-                                    popUpTo(Routes.HOME) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            }
-                        }
+                        onClick = { navigateToTab(navController, tab.route, currentRoute) }
                     )
                 }
             }
         }
-        // 中央 FAB 麥克風
+        // 中央 FAB 麥克風(去 InterviewHub)
         Box(
             modifier = Modifier
                 .size(64.dp)
@@ -106,13 +100,7 @@ fun BottomNav(navController: NavHostController) {
                 .clip(CircleShape)
                 .background(HeroGradient)
                 .pressScale {
-                    if (currentRoute != Routes.INTERVIEW_HUB) {
-                        navController.navigate(Routes.INTERVIEW_HUB) {
-                            popUpTo(Routes.HOME) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
+                    navigateToTab(navController, Routes.INTERVIEW_HUB, currentRoute)
                 },
             contentAlignment = Alignment.Center,
         ) {

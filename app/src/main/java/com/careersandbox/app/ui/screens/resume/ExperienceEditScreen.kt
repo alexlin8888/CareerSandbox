@@ -100,14 +100,17 @@ private fun SegItem(label: String, sel: Boolean, modifier: Modifier, onClick: ()
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
-            .background(if (sel) InkBlack else androidx.compose.ui.graphics.Color.Transparent)
+            .background(
+                if (sel) BrandOrange
+                else androidx.compose.ui.graphics.Color.Transparent
+            )
             .pressScale(onClick = onClick)
             .padding(vertical = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(label, style = MaterialTheme.typography.labelLarge,
-            color = if (sel) PaperWhite else InkGray500,
-            fontWeight = FontWeight.SemiBold)
+            color = if (sel) PaperWhite else InkGray700,
+            fontWeight = if (sel) FontWeight.Bold else FontWeight.SemiBold)
     }
 }
 

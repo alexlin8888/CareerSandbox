@@ -1,8 +1,12 @@
 R_DEF: Internal format may change without notice
 local
+drawable undraw_group_video_k4jx
 drawable undraw_interview_yz52
 drawable undraw_no_data_ig65
 drawable undraw_online_information_hhp2
+drawable undraw_online_resume_z4sp
+drawable undraw_profile_image_2hi8
+drawable undraw_video_call_i5de
 string app_name
 style Theme.CareerSandbox
 xml backup_rules

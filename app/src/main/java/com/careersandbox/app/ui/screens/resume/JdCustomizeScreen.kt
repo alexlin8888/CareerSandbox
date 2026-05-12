@@ -47,7 +47,14 @@ fun JdCustomizeScreen(navController: NavHostController) {
             )
         },
         bottomBar = {
-            Row(Modifier.fillMaxWidth().background(PaperOff).padding(20.dp)) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .background(PaperOff)
+                    .imePadding()
+                    .navigationBarsPadding()
+                    .padding(20.dp)
+            ) {
                 if (step > 1) {
                     SecondaryButton("上一步", { step-- }, modifier = Modifier.weight(1f))
                     Spacer(Modifier.width(12.dp))
@@ -227,7 +234,10 @@ private fun Step4Base() {
         Box(
             Modifier.fillMaxWidth().padding(vertical = 6.dp)
                 .clip(RoundedCornerShape(16.dp))
-                .background(if (sel) InkBlack else MaterialTheme.colorScheme.surface)
+                .background(
+                    if (sel) BrandOrange.copy(alpha = 0.12f)
+                    else MaterialTheme.colorScheme.surface
+                )
                 .pressScale { selectedId = r.id }
                 .padding(16.dp),
         ) {
@@ -240,11 +250,11 @@ private fun Step4Base() {
                 Spacer(Modifier.width(8.dp))
                 Column {
                     Text(r.title, style = MaterialTheme.typography.titleMedium,
-                        color = if (sel) PaperWhite else InkBlack,
-                        fontWeight = FontWeight.SemiBold)
+                        color = InkBlack,
+                        fontWeight = if (sel) FontWeight.Bold else FontWeight.SemiBold)
                     Text("${r.targetJob} ・ ${r.lastEdited}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (sel) InkGray300 else InkGray500)
+                        color = InkGray500)
                 }
             }
         }
