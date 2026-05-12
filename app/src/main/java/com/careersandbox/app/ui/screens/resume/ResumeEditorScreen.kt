@@ -100,8 +100,11 @@ private fun SectionsTab() {
                     Switch(checked = enabled, onCheckedChange = { sections[idx] = name to it },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = PaperWhite,
-                            checkedTrackColor = InkBlack,
+                            checkedTrackColor = BrandOrange,
+                            checkedBorderColor = BrandOrange,
+                            uncheckedThumbColor = InkGray500,
                             uncheckedTrackColor = InkGray200,
+                            uncheckedBorderColor = InkGray300,
                         ))
                 }
             }

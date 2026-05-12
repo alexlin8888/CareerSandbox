@@ -258,7 +258,9 @@ private fun HistorySection(navController: NavHostController) {
                 color = BrandOrange,
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.pressScale {})
+                modifier = Modifier.pressScale {
+                    navController.navigate(Routes.INTERVIEW_HISTORY)
+                })
         }
         Spacer(Modifier.height(12.dp))
         MockData.interviewHistory.forEachIndexed { idx, r ->

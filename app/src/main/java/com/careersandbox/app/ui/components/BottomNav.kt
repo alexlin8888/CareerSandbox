@@ -31,7 +31,6 @@ private val sideTabs = listOf(
     TabItem(Routes.PROFILE, "我的", Icons.Outlined.Person),
 )
 
-/** 統一跳頁邏輯,給所有 tab 用 */
 private fun navigateToTab(navController: NavHostController, route: String, currentRoute: String?) {
     if (currentRoute == route) return
     navController.navigate(route) {
@@ -52,7 +51,7 @@ fun BottomNav(navController: NavHostController) {
             .padding(horizontal = 16.dp, vertical = 14.dp),
         contentAlignment = Alignment.Center,
     ) {
-        // 膠囊主體
+        // 1. 膠囊主體 + 4 個 tab(中間有大空隙給 FAB)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -66,32 +65,45 @@ fun BottomNav(navController: NavHostController) {
                 .background(InkCharcoal),
         ) {
             Row(
-                modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
+                modifier = Modifier.fillMaxSize(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                sideTabs.take(2).forEach { tab ->
-                    PillTab(
-                        tab = tab,
-                        selected = currentRoute == tab.route,
-                        modifier = Modifier.weight(1f),
-                        onClick = { navigateToTab(navController, tab.route, currentRoute) }
-                    )
+                // 左 2 個 tab,佔 40% 寬
+                Row(
+                    modifier = Modifier.weight(0.4f).padding(start = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    sideTabs.take(2).forEach { tab ->
+                        PillTab(
+                            tab = tab,
+                            selected = currentRoute == tab.route,
+                            onClick = { navigateToTab(navController, tab.route, currentRoute) }
+                        )
+                    }
                 }
-                Spacer(Modifier.width(64.dp))
-                sideTabs.drop(2).forEach { tab ->
-                    PillTab(
-                        tab = tab,
-                        selected = currentRoute == tab.route,
-                        modifier = Modifier.weight(1f),
-                        onClick = { navigateToTab(navController, tab.route, currentRoute) }
-                    )
+                // 中間 20% 的空白給 FAB(FAB 64dp + 兩側 padding)
+                Spacer(modifier = Modifier.weight(0.2f))
+                // 右 2 個 tab,佔 40% 寬
+                Row(
+                    modifier = Modifier.weight(0.4f).padding(end = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    sideTabs.drop(2).forEach { tab ->
+                        PillTab(
+                            tab = tab,
+                            selected = currentRoute == tab.route,
+                            onClick = { navigateToTab(navController, tab.route, currentRoute) }
+                        )
+                    }
                 }
             }
         }
-        // 中央 FAB 麥克風(去 InterviewHub)
+        // 2. 中央 FAB(在最上層 Z-order)
         Box(
             modifier = Modifier
-                .size(64.dp)
+                .size(60.dp)
                 .shadow(
                     elevation = 16.dp,
                     shape = CircleShape,
@@ -108,7 +120,7 @@ fun BottomNav(navController: NavHostController) {
                 Icons.Outlined.Mic,
                 contentDescription = "面試",
                 tint = PaperWhite,
-                modifier = Modifier.size(28.dp)
+                modifier = Modifier.size(26.dp)
             )
         }
     }
@@ -118,7 +130,6 @@ fun BottomNav(navController: NavHostController) {
 private fun PillTab(
     tab: TabItem,
     selected: Boolean,
-    modifier: Modifier,
     onClick: () -> Unit,
 ) {
     val iconColor by animateColorAsState(
@@ -133,8 +144,8 @@ private fun PillTab(
     )
 
     Box(
-        modifier = modifier
-            .height(44.dp)
+        modifier = Modifier
+            .size(width = 56.dp, height = 44.dp)
             .clip(CircleShape)
             .background(bgColor)
             .pressScale(onClick = onClick),
