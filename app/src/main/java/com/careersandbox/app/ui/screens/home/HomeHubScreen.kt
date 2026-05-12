@@ -1,6 +1,5 @@
 package com.careersandbox.app.ui.screens.home
 
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -15,7 +14,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -37,57 +35,49 @@ import com.careersandbox.app.ui.theme.*
 @Composable
 fun HomeHubScreen(navController: NavHostController) {
     Box(modifier = Modifier.fillMaxSize().background(PaperWhite)) {
-        // 散落線稿裝飾(整頁背景,在內容後面)
-        ScatteredDecorations(modifier = Modifier.fillMaxSize().alpha(0.7f))
-
+        // 內容區捲動,Hero 在最上方
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         ) {
-            // === HERO 區:wave 漸層 + 大字 + 插畫破框 ===
             HeroSection()
-
-            // 介於 hero 與內容的小過渡空間
             Spacer(Modifier.height(8.dp))
-
-            // === 快速入口:無框 icon + label,直接擺在白底 ===
             QuickActionsBorderless(navController)
-
             Spacer(Modifier.height(36.dp))
-
-            // === 你可以做的事:無框分區 ===
             ModuleSection(navController)
-
             Spacer(Modifier.height(36.dp))
-
-            // === 最近的提醒:無框分區 ===
             NotificationsBorderless()
-
             Spacer(Modifier.height(48.dp))
         }
     }
 }
 
-/** 頂部 HERO:wave 漸層底色 + 標題 + 進度數字 + 右下插畫破框 */
+/** Hero 區:wave 漸層 + 大字 + 插畫 + **僅在此區的線稿裝飾** */
 @Composable
 private fun HeroSection() {
     val stat = MockData.homeStat
-    Box(modifier = Modifier.fillMaxWidth().height(320.dp)) {
-        // wave 漸層背景
+    Box(modifier = Modifier.fillMaxWidth().height(360.dp)) {
+        // 1. wave 漸層背景(最底層)
         WaveHeroBackground(
             gradient = Brush.linearGradient(
                 colors = listOf(BrandDeepOrange, BrandOrange, BrandAmber),
                 start = androidx.compose.ui.geometry.Offset(0f, 0f),
                 end = androidx.compose.ui.geometry.Offset(800f, 600f),
             ),
-            heightDp = 320,
+            heightDp = 360,
         )
 
-        // hero 內容:左上排版
+        // 2. 線稿裝飾(只在 hero 區內)
+        ScatteredDecorations(
+            modifier = Modifier.fillMaxSize().alpha(0.6f)
+        )
+
+        // 3. 文字內容(避開右下插畫位置)
         Column(
             modifier = Modifier
-                .padding(horizontal = 24.dp, vertical = 32.dp)
+                .padding(horizontal = 24.dp, vertical = 24.dp)
                 .fillMaxWidth(),
         ) {
+            // 頂部問候
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("下午好,", color = PaperWhite.copy(alpha = 0.85f),
                     style = MaterialTheme.typography.bodyLarge)
@@ -103,82 +93,94 @@ private fun HeroSection() {
                 }
             }
             Spacer(Modifier.height(4.dp))
+            // 姓名 + 年級
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(MockData.currentUser.name,
                     color = PaperWhite,
                     fontWeight = FontWeight.Black,
                     fontSize = 40.sp,
-                    letterSpacing = (-1).sp,
                     lineHeight = 44.sp)
                 Spacer(Modifier.width(8.dp))
                 Text("大三",
                     color = BrandYellow,
-                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Black,
+                    fontSize = 18.sp,
                     modifier = Modifier.padding(bottom = 6.dp))
             }
-            Spacer(Modifier.height(24.dp))
 
-            // 進度,**沒有卡片包**,直接展示
-            Text(
-                text = buildAnnotatedString {
-                    withStyle(SpanStyle(color = PaperWhite.copy(alpha = 0.75f),
-                        fontSize = 14.sp)) {
-                        append("這週你完成了\n")
-                    }
-                    withStyle(SpanStyle(color = PaperWhite,
+            Spacer(Modifier.height(20.dp))
+
+            // 修 bug 1:拆成兩個 Text,各自獨立 line height
+            // 縮窄寬度,避開右下插畫位置
+            Column(modifier = Modifier.fillMaxWidth(0.62f)) {
+                Text(
+                    "這週你完成了",
+                    color = PaperWhite.copy(alpha = 0.85f),
+                    fontSize = 14.sp,
+                    lineHeight = 18.sp,
+                )
+                Spacer(Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        "${stat.resumeCompletion}",
+                        color = PaperWhite,
                         fontWeight = FontWeight.Black,
                         fontSize = 56.sp,
-                        letterSpacing = (-2).sp)) {
-                        append("${stat.resumeCompletion}")
-                    }
-                    withStyle(SpanStyle(color = PaperWhite.copy(alpha = 0.9f),
+                        lineHeight = 60.sp,
+                    )
+                    Spacer(Modifier.width(2.dp))
+                    Text(
+                        "%",
+                        color = PaperWhite.copy(alpha = 0.9f),
                         fontWeight = FontWeight.Bold,
-                        fontSize = 24.sp)) {
-                        append("%")
-                    }
-                    withStyle(SpanStyle(color = PaperWhite.copy(alpha = 0.75f),
-                        fontSize = 14.sp)) {
-                        append("  履歷")
-                    }
-                },
-            )
+                        fontSize = 22.sp,
+                        modifier = Modifier.padding(bottom = 10.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "履歷",
+                        color = PaperWhite.copy(alpha = 0.85f),
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(bottom = 14.dp),
+                    )
+                }
+            }
         }
 
-        // 右下:undraw 插畫破框!半個身體露在 wave 區外
+        // 4. 插畫破框(右下,但縮小避免擠到文字)
         Image(
             painter = painterResource(R.drawable.undraw_online_information_hhp2),
             contentDescription = null,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .offset(x = 12.dp, y = 24.dp)
-                .size(160.dp)
+                .offset(x = 8.dp, y = 24.dp)
+                .size(140.dp)
                 .alpha(0.95f),
             contentScale = ContentScale.Fit,
         )
     }
 }
 
-/** 快速入口 — 沒有背景框、沒有陰影、就是 icon + 文字直接擺 */
+/** 快速入口 — 無框 icon + 文字 */
 @Composable
 private fun QuickActionsBorderless(navController: NavHostController) {
-    Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            BorderlessIconAction("加經驗", Icons.Outlined.AddCircle, BrandOrange) {
-                navController.navigate(Routes.EXPERIENCE_EDIT)
-            }
-            BorderlessIconAction("練面試", Icons.Outlined.Mic, BrandDeepOrange) {
-                navController.navigate(Routes.INTERVIEW_HUB)
-            }
-            BorderlessIconAction("寫履歷", Icons.Outlined.Description, GlowPurple) {
-                navController.navigate(Routes.RESUME_EDITOR)
-            }
-            BorderlessIconAction("找職缺", Icons.Outlined.Search, AccentGreen) {
-                navController.navigate(Routes.EXPLORE_HUB)
-            }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        BorderlessIconAction("加經驗", Icons.Outlined.AddCircle, BrandOrange) {
+            navController.navigate(Routes.EXPERIENCE_EDIT)
+        }
+        BorderlessIconAction("練面試", Icons.Outlined.Mic, BrandDeepOrange) {
+            navController.navigate(Routes.INTERVIEW_HUB)
+        }
+        BorderlessIconAction("寫履歷", Icons.Outlined.Description, GlowPurple) {
+            navController.navigate(Routes.RESUME_EDITOR)
+        }
+        BorderlessIconAction("找職缺", Icons.Outlined.Search, AccentGreen) {
+            navController.navigate(Routes.EXPLORE_HUB)
         }
     }
 }
@@ -196,7 +198,6 @@ private fun BorderlessIconAction(
             .pressScale(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // icon 浮在白底上,只有底色暈染,沒有邊框
         Box(
             Modifier
                 .size(52.dp)
@@ -215,11 +216,9 @@ private fun BorderlessIconAction(
     }
 }
 
-/** 模組分區 — 用標題 + 細線分隔,不用卡片包 */
 @Composable
 private fun ModuleSection(navController: NavHostController) {
     Column(modifier = Modifier.padding(horizontal = 24.dp)) {
-        // 區塊標題,左對齊,字級大
         Text(
             text = buildAnnotatedString {
                 append("你可以")
@@ -229,7 +228,6 @@ private fun ModuleSection(navController: NavHostController) {
             color = InkBlack,
             fontWeight = FontWeight.Black,
             fontSize = 28.sp,
-            letterSpacing = (-0.8).sp,
         )
         Spacer(Modifier.height(4.dp))
         Text("4 個方向,從哪開始都可以",
@@ -238,7 +236,6 @@ private fun ModuleSection(navController: NavHostController) {
 
         Spacer(Modifier.height(20.dp))
 
-        // 4 個模組:用左側色條 + 圖示 + 標題 + 描述,**沒有卡片包**
         BorderlessModuleRow(
             number = "01",
             title = "AI 面試模擬",
@@ -305,12 +302,10 @@ private fun BorderlessModuleRow(
             .pressScale(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // 左:大編號
         Text(number,
             color = accent.copy(alpha = 0.4f),
             fontWeight = FontWeight.Black,
             fontSize = 28.sp,
-            letterSpacing = (-1).sp,
             modifier = Modifier.width(48.dp))
 
         Spacer(Modifier.width(8.dp))
@@ -320,8 +315,7 @@ private fun BorderlessModuleRow(
                 Text(title,
                     color = InkBlack,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    letterSpacing = (-0.3).sp)
+                    fontSize = 18.sp)
                 if (tag != null) {
                     Spacer(Modifier.width(8.dp))
                     Box(
@@ -342,7 +336,6 @@ private fun BorderlessModuleRow(
                 style = MaterialTheme.typography.bodyMedium)
         }
 
-        // 右:小圖示 + 箭頭
         Box(
             Modifier
                 .size(40.dp)
@@ -373,7 +366,6 @@ private fun NotificationsBorderless() {
         }
         Spacer(Modifier.height(16.dp))
         MockData.notifications.take(2).forEachIndexed { idx, n ->
-            // 無框列項
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
