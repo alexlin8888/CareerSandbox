@@ -1,0 +1,23 @@
+package com.careersandbox.app.navigation
+
+object Routes {
+    const val SPLASH = "splash"
+    const val LOGIN = "login"
+    const val ONBOARDING = "onboarding"
+
+    const val HOME = "home"
+    const val RESUME_HUB = "resume_hub"
+    const val INTERVIEW_HUB = "interview_hub"
+    const val EXPLORE_HUB = "explore_hub"
+    const val PROFILE = "profile"
+
+    const val EXPERIENCE_LIST = "experience_list"
+    const val EXPERIENCE_EDIT = "experience_edit"
+    const val RESUME_EDITOR = "resume_editor"
+    const val JD_CUSTOMIZE = "jd_customize"
+
+    const val INTERVIEW_SETUP_INDIVIDUAL = "interview_setup_individual"
+    const val INTERVIEW_LIVE_INDIVIDUAL = "interview_live_individual"
+    const val INTERVIEW_LIVE_GROUP = "interview_live_group"
+    const val INTERVIEW_REPORT = "interview_report"
+}
