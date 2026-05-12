@@ -1,9 +1,8 @@
 package com.careersandbox.app.ui.screens.interview
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,17 +13,21 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.data.model.InterviewRecord
 import com.careersandbox.app.navigation.Routes
@@ -33,274 +36,235 @@ import com.careersandbox.app.ui.theme.*
 
 @Composable
 fun InterviewHubScreen(navController: NavHostController) {
-    Box(modifier = Modifier.fillMaxSize().background(InkCharcoal)) {
-        // 光暈背景
-        Box(
-            Modifier.fillMaxSize().drawBehind {
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            BrandOrange.copy(alpha = 0.5f),
-                            Color.Transparent,
-                        ),
-                        center = Offset(size.width * 0.2f, size.height * 0.15f),
-                        radius = size.width * 0.9f,
-                    ),
-                    radius = size.width * 0.9f,
-                    center = Offset(size.width * 0.2f, size.height * 0.15f),
-                )
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            GlowPurple.copy(alpha = 0.35f),
-                            Color.Transparent,
-                        ),
-                        center = Offset(size.width * 0.95f, size.height * 0.5f),
-                        radius = size.width * 0.7f,
-                    ),
-                    radius = size.width * 0.7f,
-                    center = Offset(size.width * 0.95f, size.height * 0.5f),
-                )
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            BrandYellow.copy(alpha = 0.3f),
-                            Color.Transparent,
-                        ),
-                        center = Offset(size.width * 0.1f, size.height * 0.95f),
-                        radius = size.width * 0.6f,
-                    ),
-                    radius = size.width * 0.6f,
-                    center = Offset(size.width * 0.1f, size.height * 0.95f),
-                )
-            }
-        )
-
+    Box(modifier = Modifier.fillMaxSize().background(PaperWhite)) {
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         ) {
-            // 頂部
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 20.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text("面試模擬",
-                        color = PaperWhite,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 30.sp,
-                        letterSpacing = (-0.5).sp)
-                    Spacer(Modifier.height(4.dp))
-                    Text("Interview Practice",
-                        color = InkGray400,
-                        style = MaterialTheme.typography.labelMedium,
-                        letterSpacing = 2.sp)
-                }
-                Box(
-                    Modifier.size(44.dp).clip(CircleShape)
-                        .background(Color(0x1AFFFFFF))
-                        .pressScale {},
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(Icons.Outlined.History, contentDescription = null,
-                        tint = PaperWhite, modifier = Modifier.size(20.dp))
-                }
-            }
+            // === Hero 區 ===
+            HeroSection()
 
-            // 統計區:三個玻璃感小卡
-            Row(
-                modifier = Modifier.padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                GlassStatChip("4", "已完成", BrandYellow, Modifier.weight(1f))
-                GlassStatChip("71", "平均分", GlowPink, Modifier.weight(1f))
-                GlassStatChip("2", "本週", GlowPurple, Modifier.weight(1f))
-            }
+            Spacer(Modifier.height(24.dp))
 
-            Spacer(Modifier.height(28.dp))
+            // === 兩個方案卡(都帶插畫)===
+            PlanCards(navController)
 
-            // 選一種開始
-            Row(
-                modifier = Modifier.padding(horizontal = 24.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("選一種開始",
-                    color = PaperWhite,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 22.sp)
-                Spacer(Modifier.width(8.dp))
-                Box(
-                    Modifier.size(6.dp).clip(CircleShape).background(BrandYellow)
-                )
-            }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(32.dp))
 
-            // 兩張大型面試類型卡
-            Column(
-                modifier = Modifier.padding(horizontal = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                BigInterviewCard(
-                    title = "個人面試",
-                    eyebrow = "1 對 1 ・ 入門推薦",
-                    description = "AI 扮演面試官,從履歷出題,從你的回答追問",
-                    bgGradient = Brush.linearGradient(
-                        listOf(BrandDeepOrange, BrandOrange)
-                    ),
-                    icon = Icons.Outlined.Person,
-                    tag = null,
-                    onClick = { navController.navigate(Routes.INTERVIEW_SETUP_INDIVIDUAL) },
-                )
-                BigInterviewCard(
-                    title = "團體面試",
-                    eyebrow = "3-5 人小組 ・ MVP",
-                    description = "AI 扮演其他應徵者,真實討論場景演練",
-                    bgGradient = Brush.linearGradient(
-                        listOf(Color(0xFF1F2937), Color(0xFF374151))
-                    ),
-                    icon = Icons.Outlined.Groups,
-                    tag = "市面少見",
-                    onClick = { navController.navigate(Routes.INTERVIEW_LIVE_GROUP) },
-                )
-            }
+            // === 歷史紀錄(無框列表)===
+            HistorySection(navController)
 
-            Spacer(Modifier.height(28.dp))
-
-            // 歷史紀錄
-            Row(
-                modifier = Modifier.padding(horizontal = 24.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("歷史紀錄",
-                    color = PaperWhite,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 22.sp,
-                    modifier = Modifier.weight(1f))
-                Text("全部",
-                    color = BrandYellow,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.pressScale {})
-            }
-            Spacer(Modifier.height(14.dp))
-
-            Column(
-                modifier = Modifier.padding(horizontal = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                MockData.interviewHistory.forEach { r ->
-                    HistoryRow(r) { navController.navigate(Routes.INTERVIEW_REPORT) }
-                }
-            }
             Spacer(Modifier.height(48.dp))
         }
     }
 }
 
 @Composable
-private fun GlassStatChip(value: String, label: String, accent: Color, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(18.dp))
-            .background(Color(0x14FFFFFF))
-            .padding(horizontal = 14.dp, vertical = 14.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(6.dp).clip(CircleShape).background(accent))
-            Spacer(Modifier.width(6.dp))
-            Text(label, color = InkGray400,
-                style = MaterialTheme.typography.labelSmall)
+private fun HeroSection() {
+    Box(modifier = Modifier.fillMaxWidth().height(220.dp)) {
+        WaveHeroBackground(
+            gradient = Brush.linearGradient(
+                colors = listOf(BrandDeepOrange, BrandOrange, BrandAmber),
+            ),
+            heightDp = 220,
+        )
+        ScatteredDecorations(
+            modifier = Modifier.fillMaxSize().alpha(0.6f)
+        )
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 24.dp, vertical = 24.dp)
+                .fillMaxWidth(),
+        ) {
+            Text("INTERVIEW PRACTICE",
+                color = PaperWhite.copy(alpha = 0.85f),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 3.sp)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = buildAnnotatedString {
+                    append("面試")
+                    withStyle(SpanStyle(color = BrandYellow)) { append("不再") }
+                    append("\n緊張到失常。")
+                },
+                color = PaperWhite,
+                fontWeight = FontWeight.Black,
+                fontSize = 36.sp,
+                lineHeight = 42.sp,
+            )
+            Spacer(Modifier.height(12.dp))
+            // 統計
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(6.dp).clip(CircleShape).background(BrandYellow))
+                Spacer(Modifier.width(6.dp))
+                Text("已完成 4 次 · 平均 71 分",
+                    color = PaperWhite.copy(alpha = 0.9f),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold)
+            }
         }
-        Spacer(Modifier.height(6.dp))
-        Text(value, color = PaperWhite,
-            fontWeight = FontWeight.Black,
-            fontSize = 28.sp, letterSpacing = (-1).sp)
     }
 }
 
 @Composable
-private fun BigInterviewCard(
-    title: String, eyebrow: String, description: String,
-    bgGradient: Brush, icon: ImageVector, tag: String?,
+private fun PlanCards(navController: NavHostController) {
+    Column(
+        modifier = Modifier.padding(horizontal = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        // 大標
+        Text(
+            text = buildAnnotatedString {
+                append("選一種")
+                withStyle(SpanStyle(color = BrandOrange)) { append("開始") }
+            },
+            color = InkBlack,
+            fontWeight = FontWeight.Black,
+            fontSize = 26.sp,
+            modifier = Modifier.padding(start = 4.dp),
+        )
+
+        // 個人面試卡
+        PlanCard(
+            number = "01",
+            title = "個人面試",
+            eyebrow = "1 對 1",
+            description = "AI 扮演面試官,\n從履歷出題、即時追問",
+            tagText = "入門推薦",
+            tagBg = BrandYellow,
+            tagFg = InkCharcoal,
+            cardBg = Brush.linearGradient(listOf(BrandDeepOrange, BrandOrange)),
+            illustrationRes = R.drawable.undraw_video_call_i5de,
+            onClick = { navController.navigate(Routes.INTERVIEW_SETUP_INDIVIDUAL) },
+        )
+
+        // 團體面試卡(MVP 差異化)
+        PlanCard(
+            number = "02",
+            title = "團體面試",
+            eyebrow = "3-5 人小組",
+            description = "AI 扮演其他應徵者,\n真實小組討論演練",
+            tagText = "市面少見 · MVP",
+            tagBg = BrandYellow,
+            tagFg = InkCharcoal,
+            cardBg = Brush.linearGradient(listOf(Color(0xFF1F2937), Color(0xFF374151))),
+            illustrationRes = R.drawable.undraw_group_video_k4jx,
+            onClick = { navController.navigate(Routes.INTERVIEW_LIVE_GROUP) },
+        )
+    }
+}
+
+@Composable
+private fun PlanCard(
+    number: String,
+    title: String,
+    eyebrow: String,
+    description: String,
+    tagText: String,
+    tagBg: Color,
+    tagFg: Color,
+    cardBg: Brush,
+    illustrationRes: Int,
     onClick: () -> Unit,
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .height(200.dp)
             .shadow(20.dp, RoundedCornerShape(28.dp),
-                spotColor = BrandOrange.copy(alpha = 0.3f))
+                spotColor = BrandOrange.copy(alpha = 0.35f))
             .clip(RoundedCornerShape(28.dp))
-            .background(bgGradient)
-            .pressScale(onClick = onClick)
-            .padding(24.dp),
+            .background(cardBg)
+            .pressScale(onClick = onClick),
     ) {
-        Column {
+        // 卡內裝飾線稿
+        ScatteredDecorations(
+            modifier = Modifier.fillMaxSize().alpha(0.3f)
+        )
+        // 文字內容(左側)
+        Column(
+            modifier = Modifier
+                .padding(24.dp)
+                .fillMaxHeight()
+                .fillMaxWidth(0.6f),
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(number,
+                        color = PaperWhite.copy(alpha = 0.5f),
+                        fontWeight = FontWeight.Black,
+                        fontSize = 16.sp)
+                    Spacer(Modifier.width(8.dp))
+                    Text(eyebrow,
+                        color = PaperWhite.copy(alpha = 0.8f),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold)
+                }
+                Spacer(Modifier.height(6.dp))
+                Text(title,
+                    color = PaperWhite,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 32.sp,
+                    lineHeight = 36.sp)
+                Spacer(Modifier.height(8.dp))
+                Text(description,
+                    color = PaperWhite.copy(alpha = 0.85f),
+                    style = MaterialTheme.typography.bodySmall,
+                    lineHeight = 18.sp)
+            }
+            // 底部 tag + 箭頭
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     Modifier
                         .clip(CircleShape)
-                        .background(Color(0x33FFFFFF))
+                        .background(tagBg)
                         .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
-                    Text(eyebrow, color = PaperWhite,
+                    Text(tagText,
+                        color = tagFg,
                         style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        letterSpacing = 0.5.sp)
+                        fontWeight = FontWeight.Black)
                 }
-                Spacer(Modifier.weight(1f))
-                if (tag != null) {
-                    Box(
-                        Modifier
-                            .clip(CircleShape)
-                            .background(BrandYellow)
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
-                    ) {
-                        Text(tag, color = InkCharcoal,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 0.5.sp)
-                    }
-                }
-            }
-            Spacer(Modifier.height(20.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(title, color = PaperWhite,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 36.sp, letterSpacing = (-1).sp,
-                    modifier = Modifier.weight(1f))
-                Box(
-                    Modifier
-                        .size(56.dp)
-                        .clip(CircleShape)
-                        .background(Color(0x33FFFFFF)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(icon, contentDescription = null,
-                        tint = PaperWhite,
-                        modifier = Modifier.size(26.dp))
-                }
-            }
-            Spacer(Modifier.height(10.dp))
-            Text(description,
-                color = PaperWhite.copy(alpha = 0.8f),
-                style = MaterialTheme.typography.bodyMedium)
-            Spacer(Modifier.height(20.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier
-                        .clip(CircleShape)
-                        .background(PaperWhite)
-                        .padding(horizontal = 14.dp, vertical = 8.dp)
-                ) {
-                    Text("開始模擬", color = InkCharcoal,
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.labelLarge)
-                }
-                Spacer(Modifier.weight(1f))
+                Spacer(Modifier.width(8.dp))
                 Icon(Icons.Outlined.ChevronRight, contentDescription = null,
                     tint = PaperWhite)
+            }
+        }
+        // 插畫破框(右下)
+        Image(
+            painter = painterResource(illustrationRes),
+            contentDescription = null,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .offset(x = 8.dp, y = 0.dp)
+                .size(150.dp)
+                .alpha(0.95f),
+            contentScale = ContentScale.Fit,
+        )
+    }
+}
+
+@Composable
+private fun HistorySection(navController: NavHostController) {
+    Column(modifier = Modifier.padding(horizontal = 24.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("歷史紀錄",
+                color = InkBlack,
+                fontWeight = FontWeight.Black,
+                fontSize = 22.sp,
+                modifier = Modifier.weight(1f))
+            Text("全部",
+                color = BrandOrange,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.pressScale {})
+        }
+        Spacer(Modifier.height(12.dp))
+        MockData.interviewHistory.forEachIndexed { idx, r ->
+            HistoryRow(r) { navController.navigate(Routes.INTERVIEW_REPORT) }
+            if (idx < MockData.interviewHistory.size - 1) {
+                SectionDivider(modifier = Modifier.padding(vertical = 12.dp))
             }
         }
     }
@@ -311,10 +275,7 @@ private fun HistoryRow(r: InterviewRecord, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(Color(0x14FFFFFF))
-            .pressScale(onClick = onClick)
-            .padding(16.dp),
+            .pressScale(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
@@ -322,11 +283,11 @@ private fun HistoryRow(r: InterviewRecord, onClick: () -> Unit) {
                 Box(
                     Modifier
                         .clip(CircleShape)
-                        .background(BrandYellow)
+                        .background(BrandYellow.copy(alpha = 0.3f))
                         .padding(horizontal = 8.dp, vertical = 2.dp)
                 ) {
                     Text(r.type.label,
-                        color = InkCharcoal,
+                        color = BrandDeepOrange,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold)
                 }
@@ -335,19 +296,21 @@ private fun HistoryRow(r: InterviewRecord, onClick: () -> Unit) {
                     style = MaterialTheme.typography.labelSmall,
                     color = InkGray400)
             }
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(4.dp))
             Text(r.jobTitle,
                 style = MaterialTheme.typography.titleMedium,
-                color = PaperWhite, fontWeight = FontWeight.SemiBold)
+                color = InkBlack, fontWeight = FontWeight.SemiBold)
         }
-        Column(horizontalAlignment = Alignment.End) {
+        Row(verticalAlignment = Alignment.Bottom) {
             Text("${r.score}",
-                color = PaperWhite,
+                color = BrandOrange,
                 fontWeight = FontWeight.Black,
-                fontSize = 32.sp, letterSpacing = (-1).sp)
+                fontSize = 28.sp)
+            Spacer(Modifier.width(2.dp))
             Text("分",
                 style = MaterialTheme.typography.labelSmall,
-                color = InkGray400)
+                color = InkGray500,
+                modifier = Modifier.padding(bottom = 6.dp))
         }
     }
 }

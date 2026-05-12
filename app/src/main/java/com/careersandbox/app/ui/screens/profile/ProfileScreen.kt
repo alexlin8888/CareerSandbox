@@ -1,8 +1,10 @@
 package com.careersandbox.app.ui.screens.profile
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -11,119 +13,196 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen() {
     val user = MockData.currentUser
-    Scaffold(
-        containerColor = PaperOff,
-        topBar = {
-            TopAppBar(
-                title = { Text("我的", fontWeight = FontWeight.ExtraBold,
-                    style = MaterialTheme.typography.headlineMedium, color = InkBlack) },
-                actions = {
-                    IconButton(onClick = {}) {
-                        Icon(Icons.Outlined.Settings, contentDescription = null, tint = InkBlack)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = PaperOff),
-            )
-        }
-    ) { pad ->
+    Box(modifier = Modifier.fillMaxSize().background(PaperWhite)) {
         Column(
-            modifier = Modifier.padding(pad).verticalScroll(rememberScrollState()),
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         ) {
-            Spacer(Modifier.height(8.dp))
-            // 個人區
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Avatar(name = user.name, size = 76.dp, background = InkBlack)
-                Spacer(Modifier.height(14.dp))
-                Text(user.name, style = MaterialTheme.typography.titleLarge,
-                    color = InkBlack, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(4.dp))
-                Text("${user.school} ・ ${user.department} ・ ${user.year}",
-                    style = MaterialTheme.typography.bodyMedium, color = InkGray500)
-            }
-
+            HeroSection(userName = user.name, school = user.school,
+                dept = user.department, year = user.year)
             Spacer(Modifier.height(20.dp))
-
-            // 統計卡
-            Row(
-                modifier = Modifier.padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                ProfileStat("4", "經驗", Modifier.weight(1f))
-                ProfileStat("3", "履歷", Modifier.weight(1f))
-                ProfileStat("4", "面試", Modifier.weight(1f))
-                ProfileStat("12", "探索職位", Modifier.weight(1f))
-            }
-
-            Spacer(Modifier.height(24.dp))
-
-            Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-                ProfileItem("編輯個人檔案", Icons.Outlined.AccountCircle)
-                ProfileItem("我的收藏", Icons.Outlined.Favorite)
-                ProfileItem("申請紀錄", Icons.Outlined.Assignment)
-                ProfileItem("通知設定", Icons.Outlined.Notifications)
-                ProfileItem("幫助與意見", Icons.Outlined.HelpOutline)
-                ProfileItem("隱私與條款", Icons.Outlined.Lock)
-
-                Spacer(Modifier.height(16.dp))
-                HorizontalDivider(color = InkGray200)
-                Spacer(Modifier.height(8.dp))
-
-                ProfileItem("登出", Icons.Outlined.Logout, color = AccentRed)
-            }
-            Spacer(Modifier.height(40.dp))
+            StatsSection()
+            Spacer(Modifier.height(32.dp))
+            MenuSection()
+            Spacer(Modifier.height(48.dp))
         }
     }
 }
 
 @Composable
-private fun ProfileStat(value: String, label: String, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(vertical = 14.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(value, style = MaterialTheme.typography.headlineSmall,
-            color = BrandOrange, fontWeight = FontWeight.ExtraBold)
-        Spacer(Modifier.height(2.dp))
-        Text(label, style = MaterialTheme.typography.labelSmall, color = InkGray500)
+private fun HeroSection(userName: String, school: String, dept: String, year: String) {
+    Box(modifier = Modifier.fillMaxWidth().height(260.dp)) {
+        WaveHeroBackground(
+            gradient = Brush.linearGradient(
+                colors = listOf(BrandDeepOrange, BrandOrange, BrandAmber),
+            ),
+            heightDp = 260,
+        )
+        ScatteredDecorations(modifier = Modifier.fillMaxSize().alpha(0.6f))
+
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 24.dp, vertical = 24.dp)
+                .fillMaxWidth(0.6f),
+        ) {
+            Text("MY PROFILE",
+                color = PaperWhite.copy(alpha = 0.85f),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 3.sp)
+            Spacer(Modifier.height(12.dp))
+            Text(userName,
+                color = PaperWhite,
+                fontWeight = FontWeight.Black,
+                fontSize = 36.sp,
+                lineHeight = 40.sp)
+            Spacer(Modifier.height(8.dp))
+            Text("$school $dept",
+                color = PaperWhite.copy(alpha = 0.9f),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(8.dp))
+            Box(
+                Modifier
+                    .clip(CircleShape)
+                    .background(BrandYellow)
+                    .padding(horizontal = 12.dp, vertical = 4.dp)
+            ) {
+                Text(year,
+                    color = InkCharcoal,
+                    fontWeight = FontWeight.Black,
+                    style = MaterialTheme.typography.labelMedium)
+            }
+        }
+
+        // 插畫破框(右下)
+        Image(
+            painter = painterResource(R.drawable.undraw_profile_image_2hi8),
+            contentDescription = null,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .offset(x = 0.dp, y = 8.dp)
+                .size(180.dp)
+                .alpha(0.95f),
+            contentScale = ContentScale.Fit,
+        )
     }
 }
 
 @Composable
-private fun ProfileItem(
-    label: String, icon: ImageVector,
-    color: androidx.compose.ui.graphics.Color = InkBlack,
-) {
+private fun StatsSection() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .pressScale {}
-            .padding(vertical = 14.dp, horizontal = 4.dp),
+            .padding(horizontal = 24.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        StatBlock(value = "4", label = "完成面試")
+        VerticalDivider()
+        StatBlock(value = "${MockData.experiences.size}", label = "經驗筆數")
+        VerticalDivider()
+        StatBlock(value = "${MockData.resumes.size}", label = "履歷數")
+        VerticalDivider()
+        StatBlock(value = "78", label = "平均分")
+    }
+}
+
+@Composable
+private fun StatBlock(value: String, label: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(value,
+            color = BrandOrange,
+            fontWeight = FontWeight.Black,
+            fontSize = 28.sp)
+        Spacer(Modifier.height(2.dp))
+        Text(label,
+            color = InkGray500,
+            style = MaterialTheme.typography.labelSmall)
+    }
+}
+
+@Composable
+private fun VerticalDivider() {
+    Box(
+        modifier = Modifier
+            .width(1.dp)
+            .height(36.dp)
+            .background(InkGray200)
+    )
+}
+
+@Composable
+private fun MenuSection() {
+    Column(modifier = Modifier.padding(horizontal = 24.dp)) {
+        Text(
+            text = buildAnnotatedString {
+                append("帳號")
+                withStyle(SpanStyle(color = BrandOrange)) { append("設定") }
+            },
+            color = InkBlack,
+            fontWeight = FontWeight.Black,
+            fontSize = 22.sp,
+        )
+        Spacer(Modifier.height(20.dp))
+
+        MenuRow("01", "個人資料", Icons.Outlined.Person, BrandOrange)
+        SectionDivider(modifier = Modifier.padding(vertical = 14.dp))
+        MenuRow("02", "通知設定", Icons.Outlined.NotificationsNone, BrandDeepOrange)
+        SectionDivider(modifier = Modifier.padding(vertical = 14.dp))
+        MenuRow("03", "隱私與資料", Icons.Outlined.Lock, GlowPurple)
+        SectionDivider(modifier = Modifier.padding(vertical = 14.dp))
+        MenuRow("04", "幫助與支援", Icons.Outlined.HelpOutline, AccentGreen)
+        SectionDivider(modifier = Modifier.padding(vertical = 14.dp))
+        MenuRow("05", "登出", Icons.Outlined.Logout, AccentRed)
+    }
+}
+
+@Composable
+private fun MenuRow(number: String, title: String, icon: ImageVector, accent: Color) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .pressScale {},
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
-        Spacer(Modifier.width(16.dp))
-        Text(label, style = MaterialTheme.typography.bodyLarge,
-            color = color, fontWeight = FontWeight.Medium,
+        Text(number,
+            color = accent.copy(alpha = 0.4f),
+            fontWeight = FontWeight.Black,
+            fontSize = 24.sp,
+            modifier = Modifier.width(40.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(title,
+            color = InkBlack,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 16.sp,
             modifier = Modifier.weight(1f))
-        Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = InkGray400)
+        Box(
+            Modifier.size(36.dp).clip(CircleShape)
+                .background(accent.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icon, contentDescription = null,
+                tint = accent, modifier = Modifier.size(18.dp))
+        }
     }
 }
