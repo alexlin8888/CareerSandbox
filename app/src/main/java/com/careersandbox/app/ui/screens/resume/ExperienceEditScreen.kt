@@ -90,23 +90,23 @@ private fun ModeSegmented(mode: EditMode, onChange: (EditMode) -> Unit) {
             .background(InkGray100)
             .padding(4.dp),
     ) {
-        SegItem("對話式 (推薦)", mode == EditMode.CHAT, Modifier.weight(1f)) { onChange(EditMode.CHAT) }
-        SegItem("表單式", mode == EditMode.FORM, Modifier.weight(1f)) { onChange(EditMode.FORM) }
+        SegItem("對話式 (推薦)", mode == EditMode.CHAT) { onChange(EditMode.CHAT) }
+        SegItem("表單式", mode == EditMode.FORM) { onChange(EditMode.FORM) }
     }
 }
 
 @Composable
-private fun SegItem(label: String, sel: Boolean, modifier: Modifier, onClick: () -> Unit) {
+private fun RowScope.SegItem(label: String, sel: Boolean, onClick: () -> Unit) {
     Box(
-        modifier = modifier
-            .fillMaxWidth()
+        modifier = Modifier
+            .weight(1f)
+            .height(44.dp)
             .clip(RoundedCornerShape(10.dp))
             .background(
                 if (sel) BrandOrange
                 else androidx.compose.ui.graphics.Color.Transparent
             )
-            .pressScale(onClick = onClick)
-            .padding(vertical = 12.dp),
+            .pressScale(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Text(label, style = MaterialTheme.typography.labelLarge,

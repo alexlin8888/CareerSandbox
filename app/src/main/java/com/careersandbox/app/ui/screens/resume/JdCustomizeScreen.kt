@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -53,17 +54,44 @@ fun JdCustomizeScreen(navController: NavHostController) {
                     .background(PaperOff)
                     .imePadding()
                     .navigationBarsPadding()
-                    .padding(20.dp)
+                    .padding(20.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 if (step > 1) {
-                    SecondaryButton("上一步", { step-- }, modifier = Modifier.weight(1f))
-                    Spacer(Modifier.width(12.dp))
+                    // 上一步:outlined
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(MaterialTheme.colorScheme.surface)
+                            .border(1.5.dp, InkGray300, RoundedCornerShape(16.dp))
+                            .pressScale { step-- },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text("上一步",
+                            color = InkBlack,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Medium)
+                    }
                 }
-                PrimaryDarkButton(
-                    if (step == 5) "完成" else "下一步",
-                    { if (step < 5) step++ else navController.popBackStack() },
-                    modifier = Modifier.weight(1f),
-                )
+                // 下一步 / 完成:filled dark
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(56.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(InkBlack)
+                        .pressScale {
+                            if (step < 5) step++ else navController.popBackStack()
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(if (step == 5) "完成" else "下一步",
+                        color = PaperWhite,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold)
+                }
             }
         }
     ) { pad ->
