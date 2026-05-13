@@ -10,8 +10,7 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.graphics.graphicsLayer
 
 /** 按下時縮小 95% 帶回彈,適用所有可點擊元件 */
 fun Modifier.pressScale(
@@ -21,14 +20,18 @@ fun Modifier.pressScale(
 ): Modifier = composed {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
+    val targetScale = if (pressed && enabled) scaleDown else 1f
     val scale by animateFloatAsState(
-        targetValue = if (pressed && enabled) scaleDown else 1f,
+        targetValue = targetScale,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessLow),
         label = "pressScale"
     )
     this
-        .scale(scale)
+        .graphicsLayer {
+            scaleX = scale
+            scaleY = scale
+        }
         .clickable(
             interactionSource = interactionSource,
             indication = null,
