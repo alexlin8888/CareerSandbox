@@ -99,13 +99,14 @@ private fun ModeSegmented(mode: EditMode, onChange: (EditMode) -> Unit) {
 private fun SegItem(label: String, sel: Boolean, modifier: Modifier, onClick: () -> Unit) {
     Box(
         modifier = modifier
+            .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
             .background(
                 if (sel) BrandOrange
                 else androidx.compose.ui.graphics.Color.Transparent
             )
             .pressScale(onClick = onClick)
-            .padding(vertical = 10.dp),
+            .padding(vertical = 12.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(label, style = MaterialTheme.typography.labelLarge,

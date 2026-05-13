@@ -31,12 +31,18 @@ private val sideTabs = listOf(
     TabItem(Routes.PROFILE, "我的", Icons.Outlined.Person),
 )
 
+/**
+ * Tab 切換邏輯:
+ * - 點目標 tab,popUpTo HOME(包含 inclusive=true 把 HOME 也清掉)再 navigate
+ * - 結果:整個 nav stack 重置成 [TARGET],每次切換都乾淨
+ * - 不用 saveState/restoreState,避免狀態紊亂
+ */
 private fun navigateToTab(navController: NavHostController, route: String, currentRoute: String?) {
     if (currentRoute == route) return
     navController.navigate(route) {
-        popUpTo(Routes.HOME) { saveState = true }
+        // 清掉整個 hub stack(包含 HOME),重新建立
+        popUpTo(Routes.HOME) { inclusive = true }
         launchSingleTop = true
-        restoreState = true
     }
 }
 
@@ -51,7 +57,6 @@ fun BottomNav(navController: NavHostController) {
             .padding(horizontal = 16.dp, vertical = 14.dp),
         contentAlignment = Alignment.Center,
     ) {
-        // 1. 膠囊主體 + 4 個 tab(中間有大空隙給 FAB)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -68,7 +73,6 @@ fun BottomNav(navController: NavHostController) {
                 modifier = Modifier.fillMaxSize(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // 左 2 個 tab,佔 40% 寬
                 Row(
                     modifier = Modifier.weight(0.4f).padding(start = 12.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly,
@@ -82,9 +86,7 @@ fun BottomNav(navController: NavHostController) {
                         )
                     }
                 }
-                // 中間 20% 的空白給 FAB(FAB 64dp + 兩側 padding)
                 Spacer(modifier = Modifier.weight(0.2f))
-                // 右 2 個 tab,佔 40% 寬
                 Row(
                     modifier = Modifier.weight(0.4f).padding(end = 12.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly,
@@ -100,7 +102,6 @@ fun BottomNav(navController: NavHostController) {
                 }
             }
         }
-        // 2. 中央 FAB(在最上層 Z-order)
         Box(
             modifier = Modifier
                 .size(60.dp)

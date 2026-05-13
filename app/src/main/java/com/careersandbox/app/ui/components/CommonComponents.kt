@@ -117,8 +117,8 @@ fun PrimaryDarkButton(
     enabled: Boolean = true,
 ) {
     Box(
-        modifier = Modifier
-            .then(if (modifier == Modifier) Modifier.fillMaxWidth() else modifier)
+        modifier = modifier
+            .fillMaxWidth()
             .height(56.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(if (enabled) InkBlack else InkGray400)
@@ -146,8 +146,8 @@ fun PrimaryOrangeButton(
     leadingIcon: ImageVector? = null,
 ) {
     Box(
-        modifier = Modifier
-            .then(if (modifier == Modifier) Modifier.fillMaxWidth() else modifier)
+        modifier = modifier
+            .fillMaxWidth()
             .height(56.dp)
             .shadow(elevation = 6.dp, shape = RoundedCornerShape(16.dp),
                 spotColor = BrandOrange.copy(alpha = 0.5f))
@@ -177,8 +177,8 @@ fun SecondaryButton(
     leadingIcon: ImageVector? = null,
 ) {
     Box(
-        modifier = Modifier
-            .then(if (modifier == Modifier) Modifier.fillMaxWidth() else modifier)
+        modifier = modifier
+            .fillMaxWidth()
             .height(56.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.surface)
