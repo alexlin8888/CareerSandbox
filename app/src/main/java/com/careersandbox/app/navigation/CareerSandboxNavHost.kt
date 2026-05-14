@@ -89,4 +89,12 @@ fun CareerSandboxNavHost(
             })
         ) { backStackEntry ->
             val articleId = backStackEntry.arguments?.getString("articleId") ?: ""
-            ArticleDetailScreen(navContro
+            ArticleDetailScreen(navController, articleId)
+        }
+        composable(Routes.SETTINGS_PROFILE) { SettingsProfileScreen(navController) }
+        composable(Routes.SETTINGS_NOTIFICATIONS) { SettingsNotificationsScreen(navController) }
+        composable(Routes.SETTINGS_PRIVACY) { SettingsPrivacyScreen(navController) }
+        composable(Routes.SETTINGS_HELP) { SettingsHelpScreen(navController) }
+        composable(Routes.SETTINGS_LOGOUT) { SettingsLogoutScreen(navController) }
+    }
+}

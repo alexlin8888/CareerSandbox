@@ -77,4 +77,14 @@ data class Article(
 
 sealed class ArticleBlock {
     data class Heading(val text: String) : ArticleBlock()
-    data class Paragr
+    data class Paragraph(val text: String) : ArticleBlock()
+    data class BulletList(val items: List<String>) : ArticleBlock()
+    data class Quote(val text: String) : ArticleBlock()
+}
+
+enum class ArticleCategory(val label: String) {
+    CAREER_EXPLORATION("職涯探索"),
+    INTERVIEW("面試"),
+    RESUME("履歷"),
+    WORKPLACE("職場"),
+}
