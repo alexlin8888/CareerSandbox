@@ -7,23 +7,35 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.navigation.Routes
-import com.careersandbox.app.ui.components.*
+import com.careersandbox.app.ui.components.SectionDivider
+import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 
-// ============= 共用 TopBar =============
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SettingsScaffold(
@@ -38,7 +50,7 @@ private fun SettingsScaffold(
                 title = { Text(title, fontWeight = FontWeight.Bold, color = InkBlack) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Outlined.ArrowBack, contentDescription = null, tint = InkBlack)
+                        Icon(Icons.Filled.ArrowBack, contentDescription = null, tint = InkBlack)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = PaperWhite),
@@ -65,7 +77,6 @@ fun SettingsProfileScreen(navController: NavHostController) {
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp),
         ) {
-            // 大頭照區
             Spacer(Modifier.height(8.dp))
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Box(
@@ -75,32 +86,35 @@ fun SettingsProfileScreen(navController: NavHostController) {
                         .background(BrandOrange.copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(user.name.firstOrNull()?.toString() ?: "?",
+                    Text(
+                        text = user.name.firstOrNull()?.toString() ?: "?",
                         color = BrandDeepOrange,
                         fontSize = 40.sp,
-                        fontWeight = FontWeight.Black)
+                        fontWeight = FontWeight.Black,
+                    )
                 }
             }
             Spacer(Modifier.height(8.dp))
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text("更換大頭照",
+                Text(
+                    text = "更換大頭照",
                     color = BrandOrange,
                     fontWeight = FontWeight.SemiBold,
                     style = MaterialTheme.typography.labelLarge,
-                    modifier = Modifier.pressScale {})
+                    modifier = Modifier.pressScale {},
+                )
             }
             Spacer(Modifier.height(32.dp))
 
-            ProfileField("姓名", name, { name = it })
+            ProfileField("姓名", name) { name = it }
             Spacer(Modifier.height(20.dp))
-            ProfileField("學校", school, { school = it })
+            ProfileField("學校", school) { school = it }
             Spacer(Modifier.height(20.dp))
-            ProfileField("系所", dept, { dept = it })
+            ProfileField("系所", dept) { dept = it }
             Spacer(Modifier.height(20.dp))
-            ProfileField("年級", year, { year = it })
+            ProfileField("年級", year) { year = it }
             Spacer(Modifier.height(40.dp))
 
-            // 儲存按鈕(內聯,不用共用元件)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -110,10 +124,12 @@ fun SettingsProfileScreen(navController: NavHostController) {
                     .pressScale { navController.popBackStack() },
                 contentAlignment = Alignment.Center,
             ) {
-                Text("儲存變更",
+                Text(
+                    "儲存變更",
                     color = PaperWhite,
                     fontWeight = FontWeight.Black,
-                    style = MaterialTheme.typography.titleMedium)
+                    style = MaterialTheme.typography.titleMedium,
+                )
             }
             Spacer(Modifier.height(40.dp))
         }
@@ -123,11 +139,13 @@ fun SettingsProfileScreen(navController: NavHostController) {
 @Composable
 private fun ProfileField(label: String, value: String, onChange: (String) -> Unit) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(label,
+        Text(
+            label,
             color = InkGray500,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,
-            letterSpacing = 1.sp)
+            letterSpacing = 1.sp,
+        )
         Spacer(Modifier.height(8.dp))
         OutlinedTextField(
             value = value,
@@ -179,22 +197,24 @@ fun SettingsNotificationsScreen(navController: NavHostController) {
 }
 
 @Composable
-private fun ToggleRow(title: String, subtitle: String, value: Boolean, onChange: (Boolean) -> Unit) {
+private fun ToggleRow(
+    title: String,
+    subtitle: String,
+    value: Boolean,
+    onChange: (Boolean) -> Unit,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(title,
-                color = InkBlack,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 16.sp)
+            Text(title, color = InkBlack, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
             Spacer(Modifier.height(2.dp))
-            Text(subtitle,
-                color = InkGray500,
-                style = MaterialTheme.typography.bodySmall)
+            Text(subtitle, color = InkGray500, style = MaterialTheme.typography.bodySmall)
         }
-        Switch(checked = value, onCheckedChange = onChange,
+        Switch(
+            checked = value,
+            onCheckedChange = onChange,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = PaperWhite,
                 checkedTrackColor = BrandOrange,
@@ -202,18 +222,21 @@ private fun ToggleRow(title: String, subtitle: String, value: Boolean, onChange:
                 uncheckedThumbColor = InkGray500,
                 uncheckedTrackColor = InkGray200,
                 uncheckedBorderColor = InkGray300,
-            ))
+            ),
+        )
     }
 }
 
 @Composable
 private fun SettingsGroupTitle(text: String) {
-    Text(text,
+    Text(
+        text,
         color = InkGray500,
         style = MaterialTheme.typography.labelMedium,
         fontWeight = FontWeight.Bold,
         letterSpacing = 2.sp,
-        modifier = Modifier.padding(bottom = 12.dp))
+        modifier = Modifier.padding(bottom = 12.dp),
+    )
 }
 
 // ============= 03 隱私與資料 =============
@@ -232,23 +255,23 @@ fun SettingsPrivacyScreen(navController: NavHostController) {
                 .padding(horizontal = 24.dp, vertical = 16.dp),
         ) {
             SettingsGroupTitle("帳號可見性")
-            ToggleRow("公開個人檔案", "其他用戶可看見你的履歷摘要",
-                profilePublic) { profilePublic = it }
+            ToggleRow("公開個人檔案", "其他用戶可看見你的履歷摘要", profilePublic) { profilePublic = it }
             SectionDivider(modifier = Modifier.padding(vertical = 12.dp))
-            ToggleRow("允許企業搜尋", "讓徵才公司主動聯絡你",
-                allowSearch) { allowSearch = it }
+            ToggleRow("允許企業搜尋", "讓徵才公司主動聯絡你", allowSearch) { allowSearch = it }
 
             Spacer(Modifier.height(28.dp))
             SettingsGroupTitle("資料使用")
-            ToggleRow("匿名資料用於模型訓練",
+            ToggleRow(
+                "匿名資料用於模型訓練",
                 "你的資料會去除個資後協助改善 AI 推薦",
-                aiTraining) { aiTraining = it }
+                aiTraining,
+            ) { aiTraining = it }
 
             Spacer(Modifier.height(28.dp))
             SettingsGroupTitle("資料操作")
-            ActionRow("下載我的所有資料", Icons.Outlined.Download, BrandOrange) {}
+            ActionRow("下載我的所有資料", Icons.Filled.Download, BrandOrange) {}
             SectionDivider(modifier = Modifier.padding(vertical = 12.dp))
-            ActionRow("刪除我的帳號", Icons.Outlined.DeleteOutline, AccentRed) {}
+            ActionRow("刪除我的帳號", Icons.Filled.Delete, AccentRed) {}
 
             Spacer(Modifier.height(40.dp))
         }
@@ -256,24 +279,34 @@ fun SettingsPrivacyScreen(navController: NavHostController) {
 }
 
 @Composable
-private fun ActionRow(title: String, icon: ImageVector, accent: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
+private fun ActionRow(
+    title: String,
+    icon: ImageVector,
+    accent: Color,
+    onClick: () -> Unit,
+) {
     Row(
         modifier = Modifier.fillMaxWidth().pressScale(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            Modifier.size(36.dp).clip(CircleShape).background(accent.copy(alpha = 0.12f)),
+            Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(accent.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center,
         ) {
             Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(18.dp))
         }
         Spacer(Modifier.width(12.dp))
-        Text(title,
+        Text(
+            title,
             color = accent,
             fontWeight = FontWeight.SemiBold,
             fontSize = 16.sp,
-            modifier = Modifier.weight(1f))
-        Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = InkGray400)
+            modifier = Modifier.weight(1f),
+        )
+        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = InkGray400)
     }
 }
 
@@ -289,22 +322,28 @@ fun SettingsHelpScreen(navController: NavHostController) {
                 .padding(horizontal = 24.dp, vertical = 16.dp),
         ) {
             SettingsGroupTitle("常見問題")
-            FaqItem("AI 面試評分準確嗎?",
-                "我們用業界專家設計的 12 項指標,結合你的履歷與職缺特性綜合評分,建議與真實面試後使用做比對。")
+            FaqItem(
+                "AI 面試評分準確嗎?",
+                "我們用業界專家設計的 12 項指標,結合你的履歷與職缺特性綜合評分,建議與真實面試後使用做比對。",
+            )
             SectionDivider(modifier = Modifier.padding(vertical = 12.dp))
-            FaqItem("我的履歷會被別人看到嗎?",
-                "預設不公開,只有開啟「公開個人檔案」後才會出現在企業搜尋結果。")
+            FaqItem(
+                "我的履歷會被別人看到嗎?",
+                "預設不公開,只有開啟「公開個人檔案」後才會出現在企業搜尋結果。",
+            )
             SectionDivider(modifier = Modifier.padding(vertical = 12.dp))
-            FaqItem("可以匯出履歷成 PDF 嗎?",
-                "履歷編輯器右上角有匯出選項,支援 PDF、Word、純文字三種格式。")
+            FaqItem(
+                "可以匯出履歷成 PDF 嗎?",
+                "履歷編輯器右上角有匯出選項,支援 PDF、Word、純文字三種格式。",
+            )
 
             Spacer(Modifier.height(28.dp))
             SettingsGroupTitle("聯絡我們")
-            ActionRow("Email 客服", Icons.Outlined.MailOutline, BrandOrange) {}
+            ActionRow("Email 客服", Icons.Filled.Email, BrandOrange) {}
             SectionDivider(modifier = Modifier.padding(vertical = 12.dp))
-            ActionRow("回報問題", Icons.Outlined.Flag, BrandDeepOrange) {}
+            ActionRow("回報問題", Icons.Filled.Info, BrandDeepOrange) {}
             SectionDivider(modifier = Modifier.padding(vertical = 12.dp))
-            ActionRow("功能建議", Icons.Outlined.Lightbulb, GlowPurple) {}
+            ActionRow("功能建議", Icons.Filled.Lightbulb, GlowPurple) {}
 
             Spacer(Modifier.height(28.dp))
             SettingsGroupTitle("關於")
@@ -322,23 +361,27 @@ private fun FaqItem(question: String, answer: String) {
     var expanded by remember { mutableStateOf(false) }
     Column(modifier = Modifier.fillMaxWidth().pressScale { expanded = !expanded }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(question,
+            Text(
+                question,
                 color = InkBlack,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 15.sp,
-                modifier = Modifier.weight(1f))
+                modifier = Modifier.weight(1f),
+            )
             Icon(
-                if (expanded) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
+                if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
                 contentDescription = null,
                 tint = InkGray500,
             )
         }
         if (expanded) {
             Spacer(Modifier.height(6.dp))
-            Text(answer,
+            Text(
+                answer,
                 color = InkGray500,
                 style = MaterialTheme.typography.bodySmall,
-                lineHeight = 20.sp)
+                lineHeight = 20.sp,
+            )
         }
     }
 }
@@ -349,14 +392,14 @@ private fun InfoRow(label: String, value: String) {
         modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label,
+        Text(
+            label,
             color = InkBlack,
             fontWeight = FontWeight.Medium,
             fontSize = 15.sp,
-            modifier = Modifier.weight(1f))
-        Text(value,
-            color = InkGray500,
-            style = MaterialTheme.typography.bodyMedium)
+            modifier = Modifier.weight(1f),
+        )
+        Text(value, color = InkGray500, style = MaterialTheme.typography.bodyMedium)
     }
 }
 
@@ -379,23 +422,25 @@ fun SettingsLogoutScreen(navController: NavHostController) {
                     .background(AccentRed.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Outlined.Logout, contentDescription = null,
-                    tint = AccentRed, modifier = Modifier.size(36.dp))
+                Icon(
+                    Icons.Filled.ExitToApp,
+                    contentDescription = null,
+                    tint = AccentRed,
+                    modifier = Modifier.size(36.dp),
+                )
             }
             Spacer(Modifier.height(24.dp))
-            Text("確定要登出嗎?",
-                color = InkBlack,
-                fontWeight = FontWeight.Black,
-                fontSize = 24.sp)
+            Text("確定要登出嗎?", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 24.sp)
             Spacer(Modifier.height(8.dp))
-            Text("登出後你的離線資料將被清除,\n下次登入需要重新同步",
+            Text(
+                "登出後你的離線資料將被清除,\n下次登入需要重新同步",
                 color = InkGray500,
                 style = MaterialTheme.typography.bodyMedium,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                lineHeight = 22.sp)
+                textAlign = TextAlign.Center,
+                lineHeight = 22.sp,
+            )
             Spacer(Modifier.weight(1f))
 
-            // 登出按鈕(內聯)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -409,13 +454,14 @@ fun SettingsLogoutScreen(navController: NavHostController) {
                     },
                 contentAlignment = Alignment.Center,
             ) {
-                Text("確認登出",
+                Text(
+                    "確認登出",
                     color = PaperWhite,
                     fontWeight = FontWeight.Black,
-                    style = MaterialTheme.typography.titleMedium)
+                    style = MaterialTheme.typography.titleMedium,
+                )
             }
             Spacer(Modifier.height(12.dp))
-            // 取消(內聯)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -425,10 +471,12 @@ fun SettingsLogoutScreen(navController: NavHostController) {
                     .pressScale { navController.popBackStack() },
                 contentAlignment = Alignment.Center,
             ) {
-                Text("取消",
+                Text(
+                    "取消",
                     color = InkBlack,
                     fontWeight = FontWeight.SemiBold,
-                    style = MaterialTheme.typography.titleMedium)
+                    style = MaterialTheme.typography.titleMedium,
+                )
             }
             Spacer(Modifier.height(40.dp))
         }
