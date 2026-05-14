@@ -48,6 +48,51 @@ fun NotificationsAllScreen(navController: NavHostController) {
             contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
         ) {
             item {
+                // Hero 卡
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(140.dp)
+                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
+                        .background(
+                            androidx.compose.ui.graphics.Brush.linearGradient(
+                                colors = listOf(
+                                    BrandOrange.copy(alpha = 0.12f),
+                                    BrandPeach.copy(alpha = 0.45f),
+                                )
+                            )
+                        ),
+                ) {
+                    androidx.compose.foundation.Image(
+                        painter = androidx.compose.ui.res.painterResource(
+                            id = com.careersandbox.app.R.drawable.undraw_time_management_4ss6
+                        ),
+                        contentDescription = null,
+                        contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .padding(end = 12.dp)
+                            .size(130.dp),
+                    )
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .padding(start = 20.dp, end = 140.dp),
+                    ) {
+                        Text("提醒中心",
+                            color = BrandDeepOrange,
+                            fontWeight = FontWeight.Black,
+                            style = MaterialTheme.typography.labelLarge,
+                            letterSpacing = 2.sp)
+                        Spacer(Modifier.height(4.dp))
+                        Text("近期的待辦與行程",
+                            color = InkBlack,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 18.sp,
+                            lineHeight = 24.sp)
+                    }
+                }
+                Spacer(Modifier.height(28.dp))
                 Text("最新", color = InkGray500,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,

@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.data.model.Experience
@@ -62,13 +63,45 @@ fun ExperienceListScreen(navController: NavHostController) {
             val filtered = if (selectedCategory == "全部") MockData.experiences
             else MockData.experiences.filter { it.category == selectedCategory }
 
-            LazyColumn(
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                items(filtered) { e -> ExperienceCard(e) }
-                item { Spacer(Modifier.height(24.dp)) }
+            if (filtered.isEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Spacer(Modifier.height(40.dp))
+                    androidx.compose.foundation.Image(
+                        painter = androidx.compose.ui.res.painterResource(
+                            id = com.careersandbox.app.R.drawable.undraw_no_data_ig65
+                        ),
+                        contentDescription = null,
+                        modifier = Modifier.size(200.dp),
+                    )
+                    Spacer(Modifier.height(24.dp))
+                    Text(
+                        "這個分類還沒有經驗",
+                        color = InkBlack,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 18.sp,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "用右上角的 + 按鈕新增第一筆",
+                        color = InkGray500,
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    )
+                }
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    items(filtered) { e -> ExperienceCard(e) }
+                    item { Spacer(Modifier.height(24.dp)) }
+                }
             }
         }
     }
