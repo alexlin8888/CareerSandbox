@@ -1,10 +1,15 @@
 package com.careersandbox.app.ui.screens.home
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
@@ -18,16 +23,20 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.MockData
+import com.careersandbox.app.data.model.Article
+import com.careersandbox.app.data.model.ArticleCategory
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
@@ -353,7 +362,7 @@ private fun BorderlessModuleRow(
 
 @Composable
 private fun ArticleSection() {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     Column {
         // 標題
         Row(
@@ -385,15 +394,15 @@ private fun ArticleSection() {
         Spacer(Modifier.height(16.dp))
 
         // 橫向滾動文章卡
-        androidx.compose.foundation.lazy.LazyRow(
+        LazyRow(
             contentPadding = PaddingValues(horizontal = 24.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            androidx.compose.foundation.lazy.items(MockData.articles) { article ->
+            items(MockData.articles) { article ->
                 ArticleCard(article) {
-                    val intent = android.content.Intent(
-                        android.content.Intent.ACTION_VIEW,
-                        android.net.Uri.parse(article.url)
+                    val intent = Intent(
+                        Intent.ACTION_VIEW,
+                        Uri.parse(article.url)
                     )
                     context.startActivity(intent)
                 }
@@ -404,20 +413,20 @@ private fun ArticleSection() {
 
 @Composable
 private fun ArticleCard(
-    article: com.careersandbox.app.data.model.Article,
+    article: Article,
     onClick: () -> Unit,
 ) {
     val accentColor = when (article.category) {
-        com.careersandbox.app.data.model.ArticleCategory.RESUME -> BrandOrange
-        com.careersandbox.app.data.model.ArticleCategory.INTERVIEW -> BrandDeepOrange
-        com.careersandbox.app.data.model.ArticleCategory.CAREER_EXPLORATION -> GlowPurple
-        com.careersandbox.app.data.model.ArticleCategory.WORKPLACE -> AccentGreen
+        ArticleCategory.RESUME -> BrandOrange
+        ArticleCategory.INTERVIEW -> BrandDeepOrange
+        ArticleCategory.CAREER_EXPLORATION -> GlowPurple
+        ArticleCategory.WORKPLACE -> AccentGreen
     }
     Box(
         modifier = Modifier
             .width(260.dp)
             .height(180.dp)
-            .clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(20.dp))
             .background(accentColor.copy(alpha = 0.08f))
             .pressScale(onClick = onClick)
             .padding(16.dp),
@@ -450,14 +459,14 @@ private fun ArticleCard(
                 fontSize = 16.sp,
                 lineHeight = 22.sp,
                 maxLines = 2,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(6.dp))
             // 摘要
             Text(article.excerpt,
                 color = InkGray500,
                 style = MaterialTheme.typography.bodySmall,
                 maxLines = 2,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                overflow = TextOverflow.Ellipsis,
                 lineHeight = 18.sp)
             Spacer(Modifier.weight(1f))
             // 來源
