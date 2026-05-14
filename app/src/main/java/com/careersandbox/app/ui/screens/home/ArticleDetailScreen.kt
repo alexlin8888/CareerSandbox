@@ -251,11 +251,18 @@ fun ArticleDetailScreen(navController: NavHostController, articleId: String) {
 
 @Composable
 private fun CoverBanner(article: Article, accent: Color) {
-    // 漸層封面 — 漸層 + 大字
+    val illustRes = when (article.category) {
+        ArticleCategory.RESUME -> com.careersandbox.app.R.drawable.undraw_reading_a_book_4cap
+        ArticleCategory.INTERVIEW -> com.careersandbox.app.R.drawable.undraw_presenting_pjjk
+        ArticleCategory.CAREER_EXPLORATION -> com.careersandbox.app.R.drawable.undraw_thinking_mode_7czd
+        ArticleCategory.WORKPLACE -> com.careersandbox.app.R.drawable.undraw_work_time_1ogn
+    }
+
+    // 漸層封面 — 漸層 + 大字 + unDraw 插畫
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(260.dp)
+            .height(280.dp)
             .background(
                 Brush.linearGradient(
                     colors = listOf(
@@ -266,6 +273,18 @@ private fun CoverBanner(article: Article, accent: Color) {
                 )
             )
     ) {
+        // unDraw 插畫 — 右下,半透明融合
+        androidx.compose.foundation.Image(
+            painter = androidx.compose.ui.res.painterResource(id = illustRes),
+            contentDescription = null,
+            contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+            alpha = 0.85f,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 12.dp, bottom = 12.dp)
+                .size(140.dp),
+        )
+
         // 大編號浮水印
         Text(
             text = "#${article.id.uppercase()}",
@@ -298,12 +317,12 @@ private fun CoverBanner(article: Article, accent: Color) {
         Text(
             article.title,
             color = PaperWhite,
-            fontSize = 26.sp,
+            fontSize = 24.sp,
             fontWeight = FontWeight.Black,
-            lineHeight = 36.sp,
+            lineHeight = 32.sp,
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .padding(24.dp),
+                .padding(start = 24.dp, end = 160.dp, bottom = 24.dp),
         )
     }
 }
