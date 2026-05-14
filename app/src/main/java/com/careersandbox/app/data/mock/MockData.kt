@@ -10,9 +10,40 @@ object MockData {
         school = "國立政治大學",
         department = "資訊管理學系",
         year = "大三",
+        email = "alex.lin@example.com",
+        phone = "0912-345-678",
+        bio = "資管系大三,專注於使用者研究與資料分析。曾在零售業實習做過 A/B 測試,也在新創接案做過產品邏輯設計。下一步想往 PM 方向發展,目標是進到關注亞洲市場的科技公司。",
+        linkedin = "linkedin.com/in/alex-lin",
+        github = "github.com/alexlin",
+        portfolio = "alex-portfolio.cc",
         interests = listOf("產品經理", "使用者研究", "資料分析"),
-        skillsHave = listOf("Excel", "簡報製作", "SQL"),
-        skillsWant = listOf("Figma", "Python", "A/B 測試"),
+        skillsHave = listOf("Excel", "簡報製作", "SQL", "Notion", "使用者訪談", "A/B 測試"),
+        skillsWant = listOf("Figma", "Python", "GA4"),
+        languages = listOf(
+            LanguageProficiency("中文", "母語"),
+            LanguageProficiency("英文", "TOEIC 875"),
+            LanguageProficiency("日文", "JLPT N2"),
+        ),
+        activities = listOf(
+            ActivityRecord(
+                title = "政大資管之夜",
+                role = "行銷組組長",
+                period = "2024.09 - 2025.03",
+                highlight = "IG 從 0 經營到 1200 追蹤,觸及破社團新高",
+            ),
+            ActivityRecord(
+                title = "全國大專商業個案大賽",
+                role = "隊長",
+                period = "2024.10",
+                highlight = "進入決賽,獲北區優勝(前 8 名)",
+            ),
+            ActivityRecord(
+                title = "新創實習 - 電商產品團隊",
+                role = "PM 實習生",
+                period = "2025.07 - 2025.09",
+                highlight = "主導 2 個 A/B 測試,轉換率提升 14%",
+            ),
+        ),
     )
 
     val homeStat = HomeStat(

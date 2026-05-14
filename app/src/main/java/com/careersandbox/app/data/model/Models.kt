@@ -6,9 +6,29 @@ data class User(
     val school: String,
     val department: String,
     val year: String,
+    val email: String = "",
+    val phone: String = "",
+    val bio: String = "",
+    val linkedin: String = "",
+    val github: String = "",
+    val portfolio: String = "",
     val interests: List<String> = emptyList(),
     val skillsHave: List<String> = emptyList(),
     val skillsWant: List<String> = emptyList(),
+    val languages: List<LanguageProficiency> = emptyList(),
+    val activities: List<ActivityRecord> = emptyList(),
+)
+
+data class LanguageProficiency(
+    val language: String,
+    val level: String,
+)
+
+data class ActivityRecord(
+    val title: String,
+    val role: String,
+    val period: String,
+    val highlight: String = "",
 )
 
 data class Experience(

@@ -68,6 +68,12 @@ fun SettingsProfileScreen(navController: NavHostController) {
     var school by remember { mutableStateOf(user.school) }
     var dept by remember { mutableStateOf(user.department) }
     var year by remember { mutableStateOf(user.year) }
+    var email by remember { mutableStateOf(user.email) }
+    var phone by remember { mutableStateOf(user.phone) }
+    var bio by remember { mutableStateOf(user.bio) }
+    var linkedin by remember { mutableStateOf(user.linkedin) }
+    var github by remember { mutableStateOf(user.github) }
+    var portfolio by remember { mutableStateOf(user.portfolio) }
 
     SettingsScaffold("個人資料", { navController.popBackStack() }) { pad ->
         Column(
@@ -78,6 +84,7 @@ fun SettingsProfileScreen(navController: NavHostController) {
                 .padding(horizontal = 24.dp),
         ) {
             Spacer(Modifier.height(8.dp))
+            // 大頭照
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Box(
                     Modifier
@@ -104,17 +111,60 @@ fun SettingsProfileScreen(navController: NavHostController) {
                     modifier = Modifier.pressScale {},
                 )
             }
-            Spacer(Modifier.height(32.dp))
 
+            // 01 基本資料
+            ProfileSectionHeader("01", "基本資料")
             ProfileField("姓名", name) { name = it }
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(16.dp))
             ProfileField("學校", school) { school = it }
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(16.dp))
             ProfileField("系所", dept) { dept = it }
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(16.dp))
             ProfileField("年級", year) { year = it }
+
+            // 02 聯絡方式
+            ProfileSectionHeader("02", "聯絡方式")
+            ProfileField("Email", email) { email = it }
+            Spacer(Modifier.height(16.dp))
+            ProfileField("電話", phone) { phone = it }
+
+            // 03 自我介紹
+            ProfileSectionHeader("03", "自我介紹")
+            BioField(bio) { bio = it }
+
+            // 04 專長技能
+            ProfileSectionHeader("04", "專長與技能")
+            ChipDisplaySection("已具備", user.skillsHave, BrandOrange)
+            Spacer(Modifier.height(16.dp))
+            ChipDisplaySection("學習中", user.skillsWant, BrandDeepOrange)
+
+            // 05 語言能力
+            ProfileSectionHeader("05", "語言能力")
+            user.languages.forEach { lang ->
+                LanguageRow(lang)
+                if (lang != user.languages.last()) {
+                    SectionDivider(modifier = Modifier.padding(vertical = 8.dp))
+                }
+            }
+
+            // 06 社團與競賽
+            ProfileSectionHeader("06", "社團與競賽經歷")
+            user.activities.forEach { act ->
+                ActivityCard(act)
+                Spacer(Modifier.height(12.dp))
+            }
+
+            // 07 個人連結
+            ProfileSectionHeader("07", "個人連結")
+            ProfileField("LinkedIn", linkedin) { linkedin = it }
+            Spacer(Modifier.height(16.dp))
+            ProfileField("GitHub", github) { github = it }
+            Spacer(Modifier.height(16.dp))
+            ProfileField("作品集", portfolio) { portfolio = it }
+
             Spacer(Modifier.height(40.dp))
 
+            // 儲存按鈕
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -134,6 +184,27 @@ fun SettingsProfileScreen(navController: NavHostController) {
             Spacer(Modifier.height(40.dp))
         }
     }
+}
+
+@Composable
+private fun ProfileSectionHeader(number: String, title: String) {
+    Spacer(Modifier.height(36.dp))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            number,
+            color = BrandOrange.copy(alpha = 0.45f),
+            fontWeight = FontWeight.Black,
+            fontSize = 26.sp,
+        )
+        Spacer(Modifier.width(12.dp))
+        Text(
+            title,
+            color = InkBlack,
+            fontWeight = FontWeight.Black,
+            fontSize = 18.sp,
+        )
+    }
+    Spacer(Modifier.height(16.dp))
 }
 
 @Composable
@@ -158,6 +229,163 @@ private fun ProfileField(label: String, value: String, onChange: (String) -> Uni
                 unfocusedBorderColor = InkGray300,
             ),
         )
+    }
+}
+
+@Composable
+private fun BioField(value: String, onChange: (String) -> Unit) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = onChange,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 140.dp),
+            shape = RoundedCornerShape(12.dp),
+            placeholder = {
+                Text(
+                    "用 2-3 句話介紹自己:你是誰、有什麼能力、想往什麼方向",
+                    color = InkGray400,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = BrandOrange,
+                unfocusedBorderColor = InkGray300,
+            ),
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "${value.length} / 400 字",
+            color = InkGray400,
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.align(Alignment.End),
+        )
+    }
+}
+
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun ChipDisplaySection(label: String, items: List<String>, accent: Color) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(6.dp).clip(CircleShape).background(accent))
+            Spacer(Modifier.width(8.dp))
+            Text(
+                label,
+                color = InkGray500,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 1.sp,
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+        androidx.compose.foundation.layout.FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items.forEach { item ->
+                Box(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(accent.copy(alpha = 0.1f))
+                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                ) {
+                    Text(
+                        item,
+                        color = accent,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            }
+            // 加 + 按鈕
+            Box(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(InkGray100)
+                    .pressScale {}
+                    .padding(horizontal = 14.dp, vertical = 6.dp),
+            ) {
+                Text(
+                    "+ 新增",
+                    color = InkGray500,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LanguageRow(lang: com.careersandbox.app.data.model.LanguageProficiency) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            lang.language,
+            color = InkBlack,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.weight(1f),
+        )
+        Box(
+            modifier = Modifier
+                .clip(CircleShape)
+                .background(BrandOrange.copy(alpha = 0.1f))
+                .padding(horizontal = 12.dp, vertical = 5.dp),
+        ) {
+            Text(
+                lang.level,
+                color = BrandDeepOrange,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ActivityCard(act: com.careersandbox.app.data.model.ActivityRecord) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(BrandOrange.copy(alpha = 0.05f))
+            .padding(16.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                act.title,
+                color = InkBlack,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                act.period,
+                color = InkGray500,
+                style = MaterialTheme.typography.labelSmall,
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            act.role,
+            color = BrandDeepOrange,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+        )
+        if (act.highlight.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                act.highlight,
+                color = InkGray700,
+                style = MaterialTheme.typography.bodyMedium,
+                lineHeight = 22.sp,
+            )
+        }
     }
 }
 
