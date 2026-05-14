@@ -17,8 +17,17 @@ object Routes {
     const val JD_CUSTOMIZE = "jd_customize"
 
     const val INTERVIEW_SETUP_INDIVIDUAL = "interview_setup_individual"
+    const val INTERVIEW_SETUP_GROUP = "interview_setup_group"
     const val INTERVIEW_LIVE_INDIVIDUAL = "interview_live_individual"
     const val INTERVIEW_LIVE_GROUP = "interview_live_group"
     const val INTERVIEW_REPORT = "interview_report"
     const val INTERVIEW_HISTORY = "interview_history"
+
+    const val NOTIFICATIONS_ALL = "notifications_all"
+
+    const val SETTINGS_PROFILE = "settings_profile"
+    const val SETTINGS_NOTIFICATIONS = "settings_notifications"
+    const val SETTINGS_PRIVACY = "settings_privacy"
+    const val SETTINGS_HELP = "settings_help"
+    const val SETTINGS_LOGOUT = "settings_logout"
 }

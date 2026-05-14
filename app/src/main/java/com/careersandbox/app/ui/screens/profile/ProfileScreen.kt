@@ -26,13 +26,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
 import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.MockData
+import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
 
 @Composable
-fun ProfileScreen() {
+fun ProfileScreen(navController: NavHostController) {
     val user = MockData.currentUser
     Box(modifier = Modifier.fillMaxSize().background(PaperWhite)) {
         Column(
@@ -43,7 +45,7 @@ fun ProfileScreen() {
             Spacer(Modifier.height(20.dp))
             StatsSection()
             Spacer(Modifier.height(32.dp))
-            MenuSection()
+            MenuSection(navController)
             Spacer(Modifier.height(48.dp))
         }
     }
@@ -152,7 +154,7 @@ private fun VerticalDivider() {
 }
 
 @Composable
-private fun MenuSection() {
+private fun MenuSection(navController: NavHostController) {
     Column(modifier = Modifier.padding(horizontal = 24.dp)) {
         Text(
             text = buildAnnotatedString {
@@ -165,24 +167,34 @@ private fun MenuSection() {
         )
         Spacer(Modifier.height(20.dp))
 
-        MenuRow("01", "個人資料", Icons.Outlined.Person, BrandOrange)
+        MenuRow("01", "個人資料", Icons.Outlined.Person, BrandOrange) {
+            navController.navigate(Routes.SETTINGS_PROFILE)
+        }
         SectionDivider(modifier = Modifier.padding(vertical = 14.dp))
-        MenuRow("02", "通知設定", Icons.Outlined.NotificationsNone, BrandDeepOrange)
+        MenuRow("02", "通知設定", Icons.Outlined.NotificationsNone, BrandDeepOrange) {
+            navController.navigate(Routes.SETTINGS_NOTIFICATIONS)
+        }
         SectionDivider(modifier = Modifier.padding(vertical = 14.dp))
-        MenuRow("03", "隱私與資料", Icons.Outlined.Lock, GlowPurple)
+        MenuRow("03", "隱私與資料", Icons.Outlined.Lock, GlowPurple) {
+            navController.navigate(Routes.SETTINGS_PRIVACY)
+        }
         SectionDivider(modifier = Modifier.padding(vertical = 14.dp))
-        MenuRow("04", "幫助與支援", Icons.Outlined.HelpOutline, AccentGreen)
+        MenuRow("04", "幫助與支援", Icons.Outlined.HelpOutline, AccentGreen) {
+            navController.navigate(Routes.SETTINGS_HELP)
+        }
         SectionDivider(modifier = Modifier.padding(vertical = 14.dp))
-        MenuRow("05", "登出", Icons.Outlined.Logout, AccentRed)
+        MenuRow("05", "登出", Icons.Outlined.Logout, AccentRed) {
+            navController.navigate(Routes.SETTINGS_LOGOUT)
+        }
     }
 }
 
 @Composable
-private fun MenuRow(number: String, title: String, icon: ImageVector, accent: Color) {
+private fun MenuRow(number: String, title: String, icon: ImageVector, accent: Color, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .pressScale {},
+            .pressScale(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(number,

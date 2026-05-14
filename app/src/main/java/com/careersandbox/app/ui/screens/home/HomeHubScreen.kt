@@ -45,7 +45,9 @@ fun HomeHubScreen(navController: NavHostController) {
             Spacer(Modifier.height(36.dp))
             ModuleSection(navController)
             Spacer(Modifier.height(36.dp))
-            NotificationsBorderless()
+            ArticleSection()
+            Spacer(Modifier.height(36.dp))
+            NotificationsBorderless(navController)
             Spacer(Modifier.height(48.dp))
         }
     }
@@ -350,7 +352,137 @@ private fun BorderlessModuleRow(
 }
 
 @Composable
-private fun NotificationsBorderless() {
+private fun ArticleSection() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    Column {
+        // 標題
+        Row(
+            modifier = Modifier.padding(horizontal = 24.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = buildAnnotatedString {
+                    append("精選")
+                    withStyle(SpanStyle(color = BrandOrange)) { append("文章") }
+                },
+                color = InkBlack,
+                fontWeight = FontWeight.Black,
+                fontSize = 22.sp,
+                modifier = Modifier.weight(1f),
+            )
+            Text("8 篇",
+                color = InkGray500,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold)
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "履歷、面試、職涯探索 — 邊看邊學",
+            color = InkGray500,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(horizontal = 24.dp),
+        )
+        Spacer(Modifier.height(16.dp))
+
+        // 橫向滾動文章卡
+        androidx.compose.foundation.lazy.LazyRow(
+            contentPadding = PaddingValues(horizontal = 24.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            androidx.compose.foundation.lazy.items(MockData.articles) { article ->
+                ArticleCard(article) {
+                    val intent = android.content.Intent(
+                        android.content.Intent.ACTION_VIEW,
+                        android.net.Uri.parse(article.url)
+                    )
+                    context.startActivity(intent)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ArticleCard(
+    article: com.careersandbox.app.data.model.Article,
+    onClick: () -> Unit,
+) {
+    val accentColor = when (article.category) {
+        com.careersandbox.app.data.model.ArticleCategory.RESUME -> BrandOrange
+        com.careersandbox.app.data.model.ArticleCategory.INTERVIEW -> BrandDeepOrange
+        com.careersandbox.app.data.model.ArticleCategory.CAREER_EXPLORATION -> GlowPurple
+        com.careersandbox.app.data.model.ArticleCategory.WORKPLACE -> AccentGreen
+    }
+    Box(
+        modifier = Modifier
+            .width(260.dp)
+            .height(180.dp)
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
+            .background(accentColor.copy(alpha = 0.08f))
+            .pressScale(onClick = onClick)
+            .padding(16.dp),
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // 分類標
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier
+                        .clip(CircleShape)
+                        .background(accentColor)
+                        .padding(horizontal = 10.dp, vertical = 3.dp)
+                ) {
+                    Text(article.category.label,
+                        color = PaperWhite,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Black)
+                }
+                Spacer(Modifier.weight(1f))
+                Text("${article.readMinutes} min",
+                    color = InkGray500,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold)
+            }
+            Spacer(Modifier.height(10.dp))
+            // 標題
+            Text(article.title,
+                color = InkBlack,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+                lineHeight = 22.sp,
+                maxLines = 2,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Spacer(Modifier.height(6.dp))
+            // 摘要
+            Text(article.excerpt,
+                color = InkGray500,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 2,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                lineHeight = 18.sp)
+            Spacer(Modifier.weight(1f))
+            // 來源
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(6.dp).clip(CircleShape).background(accentColor))
+                Spacer(Modifier.width(6.dp))
+                Text(article.source,
+                    color = InkBlack,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold)
+                Spacer(Modifier.width(6.dp))
+                Text("·",
+                    color = InkGray400,
+                    style = MaterialTheme.typography.labelSmall)
+                Spacer(Modifier.width(6.dp))
+                Text(article.publishedDate,
+                    color = InkGray500,
+                    style = MaterialTheme.typography.labelSmall)
+            }
+        }
+    }
+}
+
+@Composable
+private fun NotificationsBorderless(navController: NavHostController) {
     Column(modifier = Modifier.padding(horizontal = 24.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("最近的提醒",
@@ -362,7 +494,9 @@ private fun NotificationsBorderless() {
                 color = BrandOrange,
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.pressScale {})
+                modifier = Modifier.pressScale {
+                    navController.navigate(Routes.NOTIFICATIONS_ALL)
+                })
         }
         Spacer(Modifier.height(16.dp))
         MockData.notifications.take(2).forEachIndexed { idx, n ->

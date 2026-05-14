@@ -149,7 +149,7 @@ private fun PlanCards(navController: NavHostController) {
             tagFg = InkCharcoal,
             cardBg = Brush.linearGradient(listOf(Color(0xFF1F2937), Color(0xFF374151))),
             illustrationRes = R.drawable.undraw_group_video_k4jx,
-            onClick = { navController.navigate(Routes.INTERVIEW_LIVE_GROUP) },
+            onClick = { navController.navigate(Routes.INTERVIEW_SETUP_GROUP) },
         )
     }
 }

@@ -62,3 +62,21 @@ data class NotificationItem(
     val body: String,
     val time: String,
 )
+
+data class Article(
+    val id: String,
+    val category: ArticleCategory,
+    val title: String,
+    val excerpt: String,
+    val source: String,
+    val publishedDate: String,
+    val readMinutes: Int,
+    val url: String,
+)
+
+enum class ArticleCategory(val label: String) {
+    CAREER_EXPLORATION("職涯探索"),
+    INTERVIEW("面試"),
+    RESUME("履歷"),
+    WORKPLACE("職場"),
+}

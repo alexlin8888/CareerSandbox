@@ -8,11 +8,17 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.careersandbox.app.ui.screens.home.ExplorePlaceholderScreen
 import com.careersandbox.app.ui.screens.home.HomeHubScreen
+import com.careersandbox.app.ui.screens.home.NotificationsAllScreen
 import com.careersandbox.app.ui.screens.interview.*
 import com.careersandbox.app.ui.screens.onboarding.LoginScreen
 import com.careersandbox.app.ui.screens.onboarding.OnboardingScreen
 import com.careersandbox.app.ui.screens.onboarding.SplashScreen
 import com.careersandbox.app.ui.screens.profile.ProfileScreen
+import com.careersandbox.app.ui.screens.profile.SettingsHelpScreen
+import com.careersandbox.app.ui.screens.profile.SettingsLogoutScreen
+import com.careersandbox.app.ui.screens.profile.SettingsNotificationsScreen
+import com.careersandbox.app.ui.screens.profile.SettingsPrivacyScreen
+import com.careersandbox.app.ui.screens.profile.SettingsProfileScreen
 import com.careersandbox.app.ui.screens.resume.*
 
 @OptIn(androidx.compose.animation.ExperimentalAnimationApi::class)
@@ -60,7 +66,7 @@ fun CareerSandboxNavHost(
         composable(Routes.RESUME_HUB) { ResumeHubScreen(navController) }
         composable(Routes.INTERVIEW_HUB) { InterviewHubScreen(navController) }
         composable(Routes.EXPLORE_HUB) { ExplorePlaceholderScreen() }
-        composable(Routes.PROFILE) { ProfileScreen() }
+        composable(Routes.PROFILE) { ProfileScreen(navController) }
 
         composable(Routes.EXPERIENCE_LIST) { ExperienceListScreen(navController) }
         composable(Routes.EXPERIENCE_EDIT) { ExperienceEditScreen(navController) }
@@ -68,9 +74,17 @@ fun CareerSandboxNavHost(
         composable(Routes.JD_CUSTOMIZE) { JdCustomizeScreen(navController) }
 
         composable(Routes.INTERVIEW_SETUP_INDIVIDUAL) { InterviewSetupScreen(navController) }
+        composable(Routes.INTERVIEW_SETUP_GROUP) { InterviewSetupGroupScreen(navController) }
         composable(Routes.INTERVIEW_LIVE_INDIVIDUAL) { InterviewLiveIndividualScreen(navController) }
         composable(Routes.INTERVIEW_LIVE_GROUP) { InterviewLiveGroupScreen(navController) }
         composable(Routes.INTERVIEW_REPORT) { InterviewReportScreen(navController) }
         composable(Routes.INTERVIEW_HISTORY) { InterviewHistoryScreen(navController) }
+
+        composable(Routes.NOTIFICATIONS_ALL) { NotificationsAllScreen(navController) }
+        composable(Routes.SETTINGS_PROFILE) { SettingsProfileScreen(navController) }
+        composable(Routes.SETTINGS_NOTIFICATIONS) { SettingsNotificationsScreen(navController) }
+        composable(Routes.SETTINGS_PRIVACY) { SettingsPrivacyScreen(navController) }
+        composable(Routes.SETTINGS_HELP) { SettingsHelpScreen(navController) }
+        composable(Routes.SETTINGS_LOGOUT) { SettingsLogoutScreen(navController) }
     }
 }
