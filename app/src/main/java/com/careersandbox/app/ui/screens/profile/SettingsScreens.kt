@@ -302,7 +302,7 @@ fun SettingsHelpScreen(navController: NavHostController) {
             SettingsGroupTitle("聯絡我們")
             ActionRow("Email 客服", Icons.Outlined.MailOutline, BrandOrange) {}
             SectionDivider(modifier = Modifier.padding(vertical = 12.dp))
-            ActionRow("回報問題", Icons.Outlined.BugReport, BrandDeepOrange) {}
+            ActionRow("回報問題", Icons.Outlined.Flag, BrandDeepOrange) {}
             SectionDivider(modifier = Modifier.padding(vertical = 12.dp))
             ActionRow("功能建議", Icons.Outlined.Lightbulb, GlowPurple) {}
 
