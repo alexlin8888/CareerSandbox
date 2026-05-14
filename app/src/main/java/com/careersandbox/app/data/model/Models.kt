@@ -72,11 +72,9 @@ data class Article(
     val publishedDate: String,
     val readMinutes: Int,
     val url: String,
+    val bodyContent: List<ArticleBlock> = emptyList(),
 )
 
-enum class ArticleCategory(val label: String) {
-    CAREER_EXPLORATION("職涯探索"),
-    INTERVIEW("面試"),
-    RESUME("履歷"),
-    WORKPLACE("職場"),
-}
+sealed class ArticleBlock {
+    data class Heading(val text: String) : ArticleBlock()
+    data class Paragr

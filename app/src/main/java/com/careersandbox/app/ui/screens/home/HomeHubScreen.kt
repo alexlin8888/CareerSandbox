@@ -54,7 +54,7 @@ fun HomeHubScreen(navController: NavHostController) {
             Spacer(Modifier.height(36.dp))
             ModuleSection(navController)
             Spacer(Modifier.height(36.dp))
-            ArticleSection()
+            ArticleSection(navController)
             Spacer(Modifier.height(36.dp))
             NotificationsBorderless(navController)
             Spacer(Modifier.height(48.dp))
@@ -361,8 +361,7 @@ private fun BorderlessModuleRow(
 }
 
 @Composable
-private fun ArticleSection() {
-    val context = LocalContext.current
+private fun ArticleSection(navController: NavHostController) {
     Column {
         // 標題
         Row(
@@ -379,10 +378,6 @@ private fun ArticleSection() {
                 fontSize = 22.sp,
                 modifier = Modifier.weight(1f),
             )
-            Text("8 篇",
-                color = InkGray500,
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.SemiBold)
         }
         Spacer(Modifier.height(4.dp))
         Text(
@@ -400,11 +395,7 @@ private fun ArticleSection() {
         ) {
             items(MockData.articles) { article ->
                 ArticleCard(article) {
-                    val intent = Intent(
-                        Intent.ACTION_VIEW,
-                        Uri.parse(article.url)
-                    )
-                    context.startActivity(intent)
+                    navController.navigate(Routes.articleDetail(article.id))
                 }
             }
         }
@@ -538,3 +529,4 @@ private fun NotificationsBorderless(navController: NavHostController) {
         }
     }
 }
+                                                                                                                                                                                                                                                                                          

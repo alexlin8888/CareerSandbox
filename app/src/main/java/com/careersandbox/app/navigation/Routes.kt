@@ -24,10 +24,9 @@ object Routes {
     const val INTERVIEW_HISTORY = "interview_history"
 
     const val NOTIFICATIONS_ALL = "notifications_all"
+    const val ARTICLE_DETAIL = "article_detail/{articleId}"
+    fun articleDetail(articleId: String) = "article_detail/$articleId"
 
     const val SETTINGS_PROFILE = "settings_profile"
     const val SETTINGS_NOTIFICATIONS = "settings_notifications"
-    const val SETTINGS_PRIVACY = "settings_privacy"
-    const val SETTINGS_HELP = "settings_help"
-    const val SETTINGS_LOGOUT = "settings_logout"
-}
+    const val SETTI

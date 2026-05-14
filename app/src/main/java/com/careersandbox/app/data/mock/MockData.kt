@@ -86,7 +86,7 @@ object MockData {
         "A/B 測試", "SEO", "廣告投放", "Notion", "Tableau"
     )
 
-    // 8 篇真實學職涯文章(來源整理自網路公開內容)
+    // 8 篇真實學職涯文章(內容改寫整理,來源見 url)
     val articles = listOf(
         Article(
             id = "a1",
@@ -97,6 +97,28 @@ object MockData {
             publishedDate = "2025.10",
             readMinutes = 8,
             url = "https://www.cake.me/resources/resume/resume-outline-and-samples",
+            bodyContent = listOf(
+                ArticleBlock.Paragraph("好的履歷不是把所有經歷塞滿,而是把對的東西放在對的位置。人資每天看上百份履歷,平均停留時間 6-10 秒,排版邏輯決定你能不能進到下一輪。"),
+                ArticleBlock.Heading("一、個人資訊"),
+                ArticleBlock.Paragraph("姓名、聯絡方式、應徵職位這三項放最上面。一張清楚的照片可以加分,但不是必要。LinkedIn / GitHub / 作品集連結也放這區。"),
+                ArticleBlock.Heading("二、自傳精華(個人簡介)"),
+                ArticleBlock.Paragraph("400 字以內,用一段話講清楚:你是誰、有什麼能力、為什麼適合這份工作。避免寫成流水帳。"),
+                ArticleBlock.Heading("三、工作經歷"),
+                ArticleBlock.Paragraph("如果已有工作經驗,這段放在學歷之前。每段經歷至少包含:公司名稱、職位、時間、3-5 項具體成果(帶數字)。"),
+                ArticleBlock.Heading("四、學歷"),
+                ArticleBlock.Paragraph("簡潔列出最高學歷至大學資訊即可。新鮮人可以加上 GPA(3.5 以上才寫)、重要修課。"),
+                ArticleBlock.Heading("五、專業技能"),
+                ArticleBlock.BulletList(listOf(
+                    "硬實力:工具、程式語言、證照(分類列點)",
+                    "軟實力:溝通、領導、專案管理(舉例佐證)",
+                    "語言能力:標示等級(如 TOEIC 850、日檢 N2)",
+                )),
+                ArticleBlock.Quote("一個項目的描述,通常一到兩句重點即可。把履歷通篇劃重點等於沒有重點。"),
+                ArticleBlock.Heading("六、作品集"),
+                ArticleBlock.Paragraph("如果有 GitHub / Behance / Medium / 個人網站,放最後。3-5 個代表作就夠了,精挑而非求多。"),
+                ArticleBlock.Heading("七、量身打造"),
+                ArticleBlock.Paragraph("每投一個職缺,履歷至少要調整 30% — 把跟這份工作相關的經驗往前排,關鍵字對應到 JD。一份履歷打天下的時代已經過了。"),
+            ),
         ),
         Article(
             id = "a2",
@@ -107,66 +129,15 @@ object MockData {
             publishedDate = "2025.05",
             readMinutes = 6,
             url = "https://www.yourator.co/articles/80",
-        ),
-        Article(
-            id = "a3",
-            category = ArticleCategory.INTERVIEW,
-            title = "STAR 原則:面試這樣答邏輯清楚超加分",
-            excerpt = "Situation 情境、Task 任務、Action 行動、Result 結果。撰寫履歷時可用「做了什麼+產生什麼影響」。自我介紹也適用。",
-            source = "Yourator",
-            publishedDate = "2025.03",
-            readMinutes = 5,
-            url = "https://www.yourator.co/articles/177",
-        ),
-        Article(
-            id = "a4",
-            category = ArticleCategory.CAREER_EXPLORATION,
-            title = "畢業後不知道做什麼?4 步驟釐清生涯方向",
-            excerpt = "認識自己:看心理測驗、書籍、列特質。認識工作:看求職網職缺條件、實際接觸該領域工作者。配對:找到交集再下手。",
-            source = "Yourator",
-            publishedDate = "2024.05",
-            readMinutes = 7,
-            url = "https://www.yourator.co/articles/260",
-        ),
-        Article(
-            id = "a5",
-            category = ArticleCategory.CAREER_EXPLORATION,
-            title = "找不到有熱情的工作?那就先找喜歡的能力",
-            excerpt = "工作不會完完全全是自己喜歡的樣子。在現有工作中觀察、發掘小小成就感的點,再思考朝什麼方向擴展,設定下一個職涯方向。",
-            source = "方格子 vocus",
-            publishedDate = "2022.06",
-            readMinutes = 6,
-            url = "https://vocus.cc/article/628cb426fd8978000158de4b",
-        ),
-        Article(
-            id = "a6",
-            category = ArticleCategory.RESUME,
-            title = "新鮮人履歷怎麼寫?4 大履歷範本解析",
-            excerpt = "實習目標應放在「能帶給企業何種益處」,而非懇求學習機會。實習規劃可分短中長期切入,提供人資評估動機與職缺適配度。",
-            source = "Cake 求職平台",
-            publishedDate = "2026.03",
-            readMinutes = 9,
-            url = "https://www.cake.me/resources/resume/fresh-grad-resume",
-        ),
-        Article(
-            id = "a7",
-            category = ArticleCategory.INTERVIEW,
-            title = "新創實習履歷教學:求職信 3 大重點",
-            excerpt = "精簡有力:擷取重點和求職優勢,200 字內讓人資留下印象。一句話原則:用一句話闡述為什麼對這家新創有興趣。",
-            source = "Cake 求職平台",
-            publishedDate = "2024.05",
-            readMinutes = 5,
-            url = "https://www.cake.me/resources/resume-samples-startup-internship-resume-tutorial",
-        ),
-        Article(
-            id = "a8",
-            category = ArticleCategory.WORKPLACE,
-            title = "履歷專長興趣怎麼寫?新鮮人必看指南",
-            excerpt = "興趣不必非常厲害,只要能替生活充電就算。挑選與應徵職務最相關的興趣專長,讓履歷上的專長顯得有說服力。",
-            source = "Yourator",
-            publishedDate = "2025.06",
-            readMinutes = 5,
-            url = "https://www.yourator.co/articles/323",
-        ),
-    )
-}
+            bodyContent = listOf(
+                ArticleBlock.Paragraph("自我介紹是面試的第一題,也是面試官評估表達能力與邏輯思考的關鍵時刻。但 90% 的人都在這一題就被默默扣分。"),
+                ArticleBlock.Heading("為什麼自我介紹很關鍵?"),
+                ArticleBlock.Paragraph("面試官想透過自我介紹快速了解兩件事:一、你的背景跟職位適配度;二、你的表達能力與邏輯思考。所以不能流水帳念履歷,要展現選擇與重點。"),
+                ArticleBlock.Heading("自我介紹三段架構"),
+                ArticleBlock.BulletList(listOf(
+                    "開場:一句話概括你的職涯定位 + 強項",
+                    "中段:挑 1-2 個最相關的經歷詳述(用 STAR 原則)",
+                    "收尾:為什麼是這家公司、能帶來什麼價值",
+                )),
+                ArticleBlock.Heading("依時間調整深度"),
+                ArticleBlock.Paragraph("

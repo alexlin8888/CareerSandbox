@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.careersandbox.app.ui.screens.home.ArticleDetailScreen
 import com.careersandbox.app.ui.screens.home.ExplorePlaceholderScreen
 import com.careersandbox.app.ui.screens.home.HomeHubScreen
 import com.careersandbox.app.ui.screens.home.NotificationsAllScreen
@@ -81,10 +82,11 @@ fun CareerSandboxNavHost(
         composable(Routes.INTERVIEW_HISTORY) { InterviewHistoryScreen(navController) }
 
         composable(Routes.NOTIFICATIONS_ALL) { NotificationsAllScreen(navController) }
-        composable(Routes.SETTINGS_PROFILE) { SettingsProfileScreen(navController) }
-        composable(Routes.SETTINGS_NOTIFICATIONS) { SettingsNotificationsScreen(navController) }
-        composable(Routes.SETTINGS_PRIVACY) { SettingsPrivacyScreen(navController) }
-        composable(Routes.SETTINGS_HELP) { SettingsHelpScreen(navController) }
-        composable(Routes.SETTINGS_LOGOUT) { SettingsLogoutScreen(navController) }
-    }
-}
+        composable(
+            route = Routes.ARTICLE_DETAIL,
+            arguments = listOf(androidx.navigation.navArgument("articleId") {
+                type = androidx.navigation.NavType.StringType
+            })
+        ) { backStackEntry ->
+            val articleId = backStackEntry.arguments?.getString("articleId") ?: ""
+            ArticleDetailScreen(navContro
