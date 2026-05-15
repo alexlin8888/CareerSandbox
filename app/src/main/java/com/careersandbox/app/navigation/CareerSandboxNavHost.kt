@@ -1,11 +1,13 @@
 package com.careersandbox.app.navigation
 
-import androidx.compose.animation.*
+import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import com.careersandbox.app.ui.screens.home.ArticleDetailScreen
 import com.careersandbox.app.ui.screens.home.ExplorePlaceholderScreen
 import com.careersandbox.app.ui.screens.home.HomeHubScreen
@@ -22,7 +24,7 @@ import com.careersandbox.app.ui.screens.profile.SettingsPrivacyScreen
 import com.careersandbox.app.ui.screens.profile.SettingsProfileScreen
 import com.careersandbox.app.ui.screens.resume.*
 
-@OptIn(androidx.compose.animation.ExperimentalAnimationApi::class)
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun CareerSandboxNavHost(
     navController: NavHostController,
@@ -86,5 +88,15 @@ fun CareerSandboxNavHost(
         composable(Routes.NOTIFICATIONS_ALL) { NotificationsAllScreen(navController) }
         composable(
             route = Routes.ARTICLE_DETAIL,
-            arguments = listOf(androidx.navigation.navArgument("articleId") {
-                type = androidx.navigation.NavType
+            arguments = listOf(navArgument("articleId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val articleId = backStackEntry.arguments?.getString("articleId") ?: ""
+            ArticleDetailScreen(navController, articleId)
+        }
+        composable(Routes.SETTINGS_PROFILE) { SettingsProfileScreen(navController) }
+        composable(Routes.SETTINGS_NOTIFICATIONS) { SettingsNotificationsScreen(navController) }
+        composable(Routes.SETTINGS_PRIVACY) { SettingsPrivacyScreen(navController) }
+        composable(Routes.SETTINGS_HELP) { SettingsHelpScreen(navController) }
+        composable(Routes.SETTINGS_LOGOUT) { SettingsLogoutScreen(navController) }
+    }
+}

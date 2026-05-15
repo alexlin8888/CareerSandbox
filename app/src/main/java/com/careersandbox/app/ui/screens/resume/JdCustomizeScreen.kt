@@ -586,6 +586,7 @@ private fun SectionTitle(title: String, subtitle: String) {
     Spacer(Modifier.height(12.dp))
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun HighlightItem(text: String, matched: List<String>) {
     Column(

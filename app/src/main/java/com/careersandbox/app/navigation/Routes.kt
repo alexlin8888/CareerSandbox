@@ -29,4 +29,11 @@ object Routes {
 
     const val RESUME_PROFILE = "resume_profile"
     const val RESUME_UPLOAD_PROCESSING = "resume_upload_processing"
-    const val JD_CU
+    const val JD_CUSTOMIZE_RESULT = "jd_customize_result"
+
+    const val SETTINGS_PROFILE = "settings_profile"
+    const val SETTINGS_NOTIFICATIONS = "settings_notifications"
+    const val SETTINGS_PRIVACY = "settings_privacy"
+    const val SETTINGS_HELP = "settings_help"
+    const val SETTINGS_LOGOUT = "settings_logout"
+}
