@@ -1,7 +1,10 @@
 package com.careersandbox.app.navigation
 
+import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
