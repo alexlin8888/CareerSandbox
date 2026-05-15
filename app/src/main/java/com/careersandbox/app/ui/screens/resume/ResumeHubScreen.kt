@@ -1,7 +1,9 @@
 package com.careersandbox.app.ui.screens.resume
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -18,6 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
@@ -103,52 +106,95 @@ private fun HeroSection() {
 
 @Composable
 private fun QuickActions(navController: NavHostController) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        // 主按鈕(實心橘色)
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+        // 上傳 PDF 主路徑(橘底卡)
         Box(
             modifier = Modifier
-                .weight(1f)
-                .height(56.dp)
-                .shadow(12.dp, RoundedCornerShape(16.dp),
-                    spotColor = BrandOrange.copy(alpha = 0.5f))
-                .clip(RoundedCornerShape(16.dp))
-                .background(Brush.linearGradient(
-                    listOf(BrandDeepOrange, BrandOrange, BrandAmber))
-                )
-                .pressScale { navController.navigate(Routes.RESUME_EDITOR) },
-            contentAlignment = Alignment.Center,
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(18.dp))
+                .background(BrandPeach.copy(alpha = 0.5f))
+                .pressScale {
+                    navController.navigate(Routes.RESUME_UPLOAD_PROCESSING)
+                }
+                .padding(20.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.Add, contentDescription = null,
-                    tint = PaperWhite, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(6.dp))
-                Text("新增履歷",
-                    color = PaperWhite,
-                    fontWeight = FontWeight.Black,
-                    style = MaterialTheme.typography.titleMedium)
+                Box(
+                    Modifier.size(44.dp).clip(CircleShape).background(BrandDeepOrange),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Outlined.FileDownload,
+                        contentDescription = null,
+                        tint = PaperWhite,
+                        modifier = Modifier
+                            .size(22.dp)
+                            .graphicsLayer { rotationZ = 180f })
+                }
+                Spacer(Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("上傳已有履歷",
+                        color = BrandDeepOrange,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 17.sp)
+                    Spacer(Modifier.height(2.dp))
+                    Text("PDF / Word — AI 自動結構化成個人檔案",
+                        color = InkGray700,
+                        style = MaterialTheme.typography.bodySmall,
+                        lineHeight = 18.sp)
+                }
             }
         }
-        // 次要按鈕
+
+        // 「或」分隔
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(Modifier.weight(1f).height(0.5.dp).background(InkGray200))
+            Text("或",
+                color = InkGray400,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 4.sp,
+                modifier = Modifier.padding(horizontal = 12.dp))
+            Box(Modifier.weight(1f).height(0.5.dp).background(InkGray200))
+        }
+
+        // 從表單建立(白底 outline 卡)
         Box(
             modifier = Modifier
-                .weight(1f)
-                .height(56.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(BrandOrange.copy(alpha = 0.1f))
-                .pressScale { navController.navigate(Routes.JD_CUSTOMIZE) },
-            contentAlignment = Alignment.Center,
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(18.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .border(
+                    androidx.compose.foundation.BorderStroke(0.5.dp, InkGray200),
+                    RoundedCornerShape(18.dp)
+                )
+                .pressScale { navController.navigate(Routes.RESUME_EDITOR) }
+                .padding(20.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.Tune, contentDescription = null,
-                    tint = BrandDeepOrange, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(6.dp))
-                Text("JD 客製化",
-                    color = BrandDeepOrange,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleSmall)
+                Box(
+                    Modifier.size(44.dp).clip(CircleShape).background(InkGray100),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Outlined.Add,
+                        contentDescription = null,
+                        tint = InkBlack,
+                        modifier = Modifier.size(22.dp))
+                }
+                Spacer(Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("從表單建立",
+                        color = InkBlack,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 17.sp)
+                    Spacer(Modifier.height(2.dp))
+                    Text("沒有現成履歷?從零開始一步一步填",
+                        color = InkGray500,
+                        style = MaterialTheme.typography.bodySmall,
+                        lineHeight = 18.sp)
+                }
             }
         }
     }
@@ -178,7 +224,7 @@ private fun ResumeList(navController: NavHostController) {
             ResumeRow(
                 index = idx,
                 resume = r,
-                onClick = { navController.navigate(Routes.RESUME_EDITOR) },
+                onClick = { navController.navigate(Routes.RESUME_PROFILE) },
             )
             if (idx < MockData.resumes.size - 1) {
                 SectionDivider(modifier = Modifier.padding(vertical = 14.dp))

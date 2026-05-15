@@ -1,288 +1,630 @@
 package com.careersandbox.app.ui.screens.resume
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.careersandbox.app.data.mock.MockData
-import com.careersandbox.app.ui.components.*
+import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
+import kotlinx.coroutines.delay
+
+private enum class JdPhase { INPUT, ANALYZING, RESULT }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JdCustomizeScreen(navController: NavHostController) {
-    var step by remember { mutableIntStateOf(1) }
+    var phase by remember { mutableStateOf(JdPhase.INPUT) }
     var jdText by remember { mutableStateOf("") }
 
     Scaffold(
-        containerColor = PaperOff,
+        containerColor = PaperWhite,
         topBar = {
             TopAppBar(
-                title = { Text("JD 客製化", fontWeight = FontWeight.Bold, color = InkBlack) },
+                title = {
+                    Text(
+                        when (phase) {
+                            JdPhase.INPUT -> "貼上職缺 JD"
+                            JdPhase.ANALYZING -> "AI 分析中"
+                            JdPhase.RESULT -> "客製化結果"
+                        },
+                        fontWeight = FontWeight.Bold, color = InkBlack,
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Outlined.ArrowBack, contentDescription = null, tint = InkBlack)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = PaperOff),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = PaperWhite),
             )
         },
-        bottomBar = {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .background(PaperOff)
-                    .imePadding()
-                    .navigationBarsPadding()
-                    .padding(20.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                if (step > 1) {
-                    // 上一步:outlined
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(56.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(MaterialTheme.colorScheme.surface)
-                            .border(1.5.dp, InkGray300, RoundedCornerShape(16.dp))
-                            .pressScale { step-- },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text("上一步",
-                            color = InkBlack,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Medium)
-                    }
-                }
-                // 下一步 / 完成:filled dark
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(56.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(InkBlack)
-                        .pressScale {
-                            if (step < 5) step++ else navController.popBackStack()
-                        },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(if (step == 5) "完成" else "下一步",
-                        color = PaperWhite,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold)
-                }
-            }
-        }
     ) { pad ->
-        Column(
-            modifier = Modifier.padding(pad).padding(horizontal = 20.dp)
-                .verticalScroll(rememberScrollState()),
-        ) {
-            StepIndicator(step, 5)
-            Spacer(Modifier.height(24.dp))
-
-            AnimatedContent(
-                targetState = step,
-                transitionSpec = {
-                    (fadeIn(tween(300)) + slideInHorizontally(tween(300)) { it / 4 })
-                        .togetherWith(fadeOut(tween(150)))
-                },
-                label = "step",
-            ) { s ->
-                Column {
-                    when (s) {
-                        1 -> Step1Paste(jdText) { jdText = it }
-                        2 -> Step2Analyze()
-                        3 -> Step3Match()
-                        4 -> Step4Base()
-                        5 -> Step5Generate()
-                    }
-                }
-            }
-            Spacer(Modifier.height(40.dp))
+        when (phase) {
+            JdPhase.INPUT -> InputPhase(
+                jdText = jdText,
+                onJdChange = { jdText = it },
+                onSubmit = { phase = JdPhase.ANALYZING },
+                contentPadding = pad,
+            )
+            JdPhase.ANALYZING -> AnalyzingPhase(
+                onDone = { phase = JdPhase.RESULT },
+                contentPadding = pad,
+            )
+            JdPhase.RESULT -> ResultPhase(
+                onBack = { phase = JdPhase.INPUT },
+                contentPadding = pad,
+            )
         }
     }
 }
 
+// ========== 階段 1:貼 JD ==========
 @Composable
-private fun StepIndicator(current: Int, total: Int) {
-    val labels = listOf("貼 JD", "分析", "比對", "選底稿", "生成")
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        for (i in 1..total) {
-            val active = i <= current
+private fun InputPhase(
+    jdText: String,
+    onJdChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+    contentPadding: PaddingValues,
+) {
+    Column(
+        modifier = Modifier
+            .padding(contentPadding)
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp),
+    ) {
+        Spacer(Modifier.height(8.dp))
+
+        // 簡介卡
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(18.dp))
+                .background(BrandPeach.copy(alpha = 0.45f))
+                .padding(20.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Outlined.AutoAwesome,
+                    contentDescription = null,
+                    tint = BrandDeepOrange,
+                    modifier = Modifier.size(22.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("AI 變魔術",
+                    color = BrandDeepOrange,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 17.sp)
+            }
+            Spacer(Modifier.height(10.dp))
+            Text(
+                "貼上你想應徵的職缺敘述,AI 會分析你的個人檔案跟這份 JD 的適配度,自動凸顯相關段落、隱藏無關內容,並給你 ATS 通過率評估。",
+                color = InkGray700,
+                style = MaterialTheme.typography.bodyMedium,
+                lineHeight = 22.sp,
+            )
+        }
+
+        Spacer(Modifier.height(24.dp))
+
+        Text("職缺敘述",
+            color = InkGray500,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Black,
+            letterSpacing = 3.sp)
+        Spacer(Modifier.height(10.dp))
+        OutlinedTextField(
+            value = jdText,
+            onValueChange = onJdChange,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 280.dp),
+            shape = RoundedCornerShape(16.dp),
+            placeholder = {
+                Text(
+                    "貼上完整 JD 內容(職位描述 + 必要條件 + 加分條件)。\n\n例如:\n「我們正在尋找一位 Junior PM,需要熟悉資料分析、A/B 測試,並有獨立帶專案的經驗...」",
+                    color = InkGray400,
+                    style = MaterialTheme.typography.bodyMedium,
+                    lineHeight = 22.sp,
+                )
+            },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = BrandOrange,
+                unfocusedBorderColor = InkGray200,
+            ),
+        )
+        if (jdText.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "${jdText.length} 字元",
+                color = AccentGreen,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.align(Alignment.End),
+            )
+        }
+
+        Spacer(Modifier.height(28.dp))
+
+        // 範例提示
+        Text("試試貼上這個範例:",
+            color = InkGray500,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(8.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(InkGray100)
+                .pressScale {
+                    onJdChange(
+                        "Junior Product Manager - 電商產品團隊\n\n" +
+                                "我們正在尋找一位充滿好奇心的 Junior PM,加入我們的電商產品團隊。\n\n" +
+                                "工作內容:\n" +
+                                "- 透過資料分析找出產品優化機會\n" +
+                                "- 規劃 A/B 測試,驗證產品假設\n" +
+                                "- 跨部門協作(設計、工程、行銷)\n" +
+                                "- 撰寫 PRD 與 user story\n\n" +
+                                "必要條件:\n" +
+                                "- 熟悉 SQL 與資料分析工具\n" +
+                                "- 有 A/B 測試、量化思考經驗\n" +
+                                "- 良好的溝通與跨部門協作能力\n" +
+                                "- 對使用者體驗有熱情\n\n" +
+                                "加分條件:\n" +
+                                "- 曾在零售、電商相關產業實習\n" +
+                                "- 熟悉 SaaS 產品邏輯\n" +
+                                "- 英文流利"
+                    )
+                }
+                .padding(14.dp),
+        ) {
+            Text("Junior PM @ 電商產品團隊",
+                color = BrandDeepOrange,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold)
+        }
+
+        Spacer(Modifier.height(36.dp))
+
+        // CTA
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(if (jdText.length >= 20) InkBlack else InkGray300)
+                .pressScale(enabled = jdText.length >= 20) { onSubmit() },
+            contentAlignment = Alignment.Center,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Outlined.AutoAwesome,
+                    contentDescription = null,
+                    tint = if (jdText.length >= 20) BrandAmber else InkGray500,
+                    modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("開始 AI 客製化",
+                    color = if (jdText.length >= 20) PaperWhite else InkGray500,
+                    fontWeight = FontWeight.Black,
+                    style = MaterialTheme.typography.titleMedium)
+            }
+        }
+        if (jdText.length < 20) {
+            Spacer(Modifier.height(8.dp))
+            Text("至少貼 20 個字元才能開始",
+                color = InkGray500,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.align(Alignment.CenterHorizontally))
+        }
+
+        Spacer(Modifier.height(40.dp))
+    }
+}
+
+// ========== 階段 2:AI 分析中 ==========
+@Composable
+private fun AnalyzingPhase(onDone: () -> Unit, contentPadding: PaddingValues) {
+    val steps = listOf(
+        "解析 JD 關鍵字" to 700L,
+        "比對你的個人檔案" to 900L,
+        "計算 ATS 適配度" to 700L,
+        "重組履歷重點" to 800L,
+    )
+    var currentStep by remember { mutableIntStateOf(-1) }
+
+    LaunchedEffect(Unit) {
+        delay(300)
+        steps.forEachIndexed { idx, (_, duration) ->
+            currentStep = idx
+            delay(duration)
+        }
+        delay(400)
+        onDone()
+    }
+
+    // pulse 動畫
+    val transition = rememberInfiniteTransition(label = "pulse")
+    val pulse by transition.animateFloat(
+        initialValue = 0.6f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "pulse",
+    )
+
+    Column(
+        modifier = Modifier
+            .padding(contentPadding)
+            .fillMaxSize()
+            .padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Spacer(Modifier.height(60.dp))
+
+        // 中央光點(脈動)
+        Box(
+            modifier = Modifier
+                .size(120.dp)
+                .clip(CircleShape)
+                .background(BrandOrange.copy(alpha = 0.15f * pulse)),
+            contentAlignment = Alignment.Center,
+        ) {
             Box(
-                Modifier.size(32.dp).clip(RoundedCornerShape(50))
-                    .background(if (active) InkBlack else InkGray200),
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(CircleShape)
+                    .background(BrandOrange.copy(alpha = 0.5f * pulse)),
                 contentAlignment = Alignment.Center,
             ) {
-                if (active && i < current) {
-                    Icon(Icons.Outlined.Check, contentDescription = null, tint = PaperWhite,
-                        modifier = Modifier.size(16.dp))
-                } else {
-                    Text("$i", color = if (active) PaperWhite else InkGray400,
-                        style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                }
-            }
-            if (i < total) {
-                Box(Modifier.weight(1f).height(2.dp)
-                    .background(if (i < current) InkBlack else InkGray200))
-            }
-        }
-    }
-    Spacer(Modifier.height(8.dp))
-    Text(labels.getOrElse(current - 1) { "" },
-        style = MaterialTheme.typography.labelLarge,
-        color = BrandOrange, fontWeight = FontWeight.Bold)
-}
-
-@Composable
-private fun Step1Paste(jd: String, onChange: (String) -> Unit) {
-    Text("貼上目標職位描述", style = MaterialTheme.typography.headlineMedium,
-        color = InkBlack, fontWeight = FontWeight.ExtraBold)
-    Spacer(Modifier.height(8.dp))
-    Text("從 104、LinkedIn 等網站複製即可", color = InkGray500,
-        style = MaterialTheme.typography.bodyMedium)
-    Spacer(Modifier.height(20.dp))
-    OutlinedTextField(
-        value = jd, onValueChange = onChange,
-        placeholder = { Text("把整段 JD 貼進來⋯", color = InkGray400) },
-        modifier = Modifier.fillMaxWidth().heightIn(min = 240.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = InkBlack, unfocusedBorderColor = InkGray200,
-            focusedContainerColor = MaterialTheme.colorScheme.surface,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-        )
-    )
-}
-
-@Composable
-private fun Step2Analyze() {
-    Text("AI 分析這份 JD", style = MaterialTheme.typography.headlineMedium,
-        color = InkBlack, fontWeight = FontWeight.ExtraBold)
-    Spacer(Modifier.height(20.dp))
-    AnalysisCard("必備條件", Icons.Outlined.CheckCircle, AccentGreen,
-        listOf("資管/商管相關科系", "Excel 進階操作", "基礎 SQL 能力"))
-    AnalysisCard("加分條件", Icons.Outlined.AddCircle, BrandOrange,
-        listOf("Tableau / Power BI", "Python 資料處理", "電商產業經驗"))
-    AnalysisCard("隱性需求", Icons.Outlined.Visibility, AccentBlue,
-        listOf("能跨團隊溝通", "面對大量未整理資料的耐性", "願意主動找問題"))
-}
-
-@Composable
-private fun AnalysisCard(title: String, icon: ImageVector, accent: Color, items: List<String>) {
-    StaggeredAppear {
-        WhiteCard(modifier = Modifier.padding(vertical = 6.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier.size(36.dp).clip(RoundedCornerShape(10.dp))
-                        .background(accent.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(icon, contentDescription = null, tint = accent,
-                        modifier = Modifier.size(18.dp))
-                }
-                Spacer(Modifier.width(12.dp))
-                Text(title, style = MaterialTheme.typography.titleMedium,
-                    color = InkBlack, fontWeight = FontWeight.Bold)
-            }
-            Spacer(Modifier.height(12.dp))
-            items.forEach {
-                Row(Modifier.padding(vertical = 3.dp)) {
-                    Text("・ ", color = accent, fontWeight = FontWeight.Bold)
-                    Text(it, style = MaterialTheme.typography.bodyMedium, color = InkBlack)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun Step3Match() {
-    Text("比對你的素材", style = MaterialTheme.typography.headlineMedium,
-        color = InkBlack, fontWeight = FontWeight.ExtraBold)
-    Spacer(Modifier.height(20.dp))
-    MatchRow("Excel 進階操作", "已覆蓋", AccentGreen)
-    MatchRow("基礎 SQL 能力", "已覆蓋", AccentGreen)
-    MatchRow("跨團隊溝通", "需強化", AccentYellow)
-    MatchRow("Python 資料處理", "缺失", AccentRed)
-    MatchRow("Tableau / Power BI", "缺失", AccentRed)
-}
-
-@Composable
-private fun MatchRow(item: String, status: String, color: Color) {
-    WhiteCard(modifier = Modifier.padding(vertical = 4.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(10.dp).clip(RoundedCornerShape(50)).background(color))
-            Spacer(Modifier.width(12.dp))
-            Text(item, style = MaterialTheme.typography.bodyLarge,
-                color = InkBlack, modifier = Modifier.weight(1f))
-            Box(
-                Modifier
-                    .clip(RoundedCornerShape(50))
-                    .background(color.copy(alpha = 0.15f))
-                    .padding(horizontal = 10.dp, vertical = 4.dp)
-            ) {
-                Text(status, style = MaterialTheme.typography.labelSmall,
-                    color = color, fontWeight = FontWeight.Bold)
-            }
-        }
-    }
-}
-
-@Composable
-private fun Step4Base() {
-    Text("選一份底稿", style = MaterialTheme.typography.headlineMedium,
-        color = InkBlack, fontWeight = FontWeight.ExtraBold)
-    Spacer(Modifier.height(20.dp))
-    var selectedId by remember { mutableStateOf("r1") }
-    MockData.resumes.forEach { r ->
-        val sel = r.id == selectedId
-        Box(
-            Modifier.fillMaxWidth().padding(vertical = 6.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(
-                    if (sel) BrandOrange.copy(alpha = 0.12f)
-                    else MaterialTheme.colorScheme.surface
+                Icon(
+                    Icons.Outlined.AutoAwesome,
+                    contentDescription = null,
+                    tint = PaperWhite,
+                    modifier = Modifier.size(36.dp),
                 )
-                .pressScale { selectedId = r.id }
-                .padding(16.dp),
+            }
+        }
+
+        Spacer(Modifier.height(28.dp))
+        Text("施展魔術中",
+            color = InkBlack,
+            fontWeight = FontWeight.Black,
+            fontSize = 24.sp)
+        Spacer(Modifier.height(6.dp))
+        Text("AI 正在為這份 JD 重組你的履歷",
+            color = InkGray500,
+            style = MaterialTheme.typography.bodyMedium)
+
+        Spacer(Modifier.height(40.dp))
+
+        // 進度
+        Column(modifier = Modifier.fillMaxWidth()) {
+            steps.forEachIndexed { idx, (label, _) ->
+                val isCurrent = idx == currentStep
+                val isComplete = idx < currentStep
+
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(
+                                when {
+                                    isComplete -> BrandOrange
+                                    isCurrent -> BrandPeach
+                                    else -> InkGray100
+                                }
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        when {
+                            isComplete -> Icon(Icons.Outlined.Check,
+                                contentDescription = null,
+                                tint = PaperWhite,
+                                modifier = Modifier.size(16.dp))
+                            isCurrent -> Box(
+                                Modifier.size(10.dp).clip(CircleShape).background(BrandDeepOrange)
+                            )
+                            else -> Text("${idx + 1}",
+                                color = InkGray400,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    Spacer(Modifier.width(14.dp))
+                    Text(label,
+                        color = if (isComplete || isCurrent) InkBlack else InkGray400,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium)
+                }
+            }
+        }
+
+        Spacer(Modifier.weight(1f))
+    }
+}
+
+// ========== 階段 3:結果 ==========
+@Composable
+private fun ResultPhase(onBack: () -> Unit, contentPadding: PaddingValues) {
+    Column(
+        modifier = Modifier
+            .padding(contentPadding)
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp),
+    ) {
+        Spacer(Modifier.height(8.dp))
+
+        // 適配度大卡
+        MatchScoreCard(score = 82)
+
+        Spacer(Modifier.height(24.dp))
+
+        // 三大指標
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            MetricMini("關鍵字命中", "8 / 11", AccentGreen, modifier = Modifier.weight(1f))
+            MetricMini("硬實力", "高", BrandOrange, modifier = Modifier.weight(1f))
+            MetricMini("軟實力", "中", BrandAmber, modifier = Modifier.weight(1f))
+        }
+
+        Spacer(Modifier.height(36.dp))
+
+        // 已強化
+        SectionTitle("已強化", "AI 認為對這份 JD 重要的段落")
+        HighlightItem(
+            text = "用 SQL 整理銷售資料,流程從 6 小時縮短至 1.5 小時(節省 75%)",
+            matched = listOf("SQL", "資料分析"),
+        )
+        Spacer(Modifier.height(10.dp))
+        HighlightItem(
+            text = "主導 2 個 A/B 測試,轉換率提升 14%",
+            matched = listOf("A/B 測試", "量化思考"),
+        )
+        Spacer(Modifier.height(10.dp))
+        HighlightItem(
+            text = "跨部門協作:行銷、設計、工程,每週同步進度",
+            matched = listOf("跨部門協作"),
+        )
+
+        Spacer(Modifier.height(28.dp))
+
+        // 已弱化(隱藏)
+        SectionTitle("已弱化", "AI 認為跟這份 JD 相關性低,自動隱藏")
+        DimmedItem("IG 從 0 經營到 1200 追蹤")
+        Spacer(Modifier.height(8.dp))
+        DimmedItem("辦過 3 場校園活動 220+ 人到場")
+
+        Spacer(Modifier.height(28.dp))
+
+        // 缺失關鍵字
+        SectionTitle("建議補強", "這些 JD 關鍵字你的檔案沒提到")
+        MissingChips(listOf("PRD 撰寫", "user story", "SaaS 邏輯"))
+
+        Spacer(Modifier.height(36.dp))
+
+        // 主按鈕
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(InkBlack)
+                .pressScale {},
+            contentAlignment = Alignment.Center,
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                RadioButton(selected = sel, onClick = { selectedId = r.id },
-                    colors = RadioButtonDefaults.colors(
-                        selectedColor = BrandOrange,
-                        unselectedColor = InkGray400,
-                    ))
+                Icon(Icons.Outlined.FileDownload,
+                    contentDescription = null,
+                    tint = PaperWhite,
+                    modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
-                Column {
-                    Text(r.title, style = MaterialTheme.typography.titleMedium,
-                        color = InkBlack,
-                        fontWeight = if (sel) FontWeight.Bold else FontWeight.SemiBold)
-                    Text("${r.targetJob} ・ ${r.lastEdited}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = InkGray500)
+                Text("匯出客製化版 PDF",
+                    color = PaperWhite,
+                    fontWeight = FontWeight.Black,
+                    style = MaterialTheme.typography.titleMedium)
+            }
+        }
+
+        Spacer(Modifier.height(10.dp))
+        // 次按鈕
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(InkGray100)
+                .pressScale(onClick = onBack),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("試另一份 JD",
+                color = InkBlack,
+                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleSmall)
+        }
+
+        Spacer(Modifier.height(40.dp))
+    }
+}
+
+@Composable
+private fun MatchScoreCard(score: Int) {
+    val animScore by animateIntAsState(
+        targetValue = score,
+        animationSpec = tween(1200, easing = FastOutSlowInEasing),
+        label = "score",
+    )
+    val accent = when {
+        score >= 75 -> AccentGreen
+        score >= 50 -> BrandOrange
+        else -> AccentRed
+    }
+    val verdict = when {
+        score >= 75 -> "高度適配 — 強烈建議投遞"
+        score >= 50 -> "中度適配 — 補強關鍵字後再投"
+        else -> "低度適配 — 建議找更相符的職缺"
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(accent.copy(alpha = 0.1f))
+            .padding(24.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column {
+                Text("適配度",
+                    color = InkGray500,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 2.sp)
+                Spacer(Modifier.height(2.dp))
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text("$animScore",
+                        color = accent,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 56.sp,
+                        lineHeight = 56.sp,
+                        letterSpacing = (-1).sp)
+                    Spacer(Modifier.width(2.dp))
+                    Text("%",
+                        color = accent,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 24.sp,
+                        modifier = Modifier.padding(bottom = 10.dp))
+                }
+            }
+            Spacer(Modifier.weight(1f))
+            // 環形圖
+            Box(
+                modifier = Modifier
+                    .size(70.dp)
+                    .clip(CircleShape)
+                    .background(accent.copy(alpha = 0.2f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(CircleShape)
+                        .background(accent),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Outlined.AutoAwesome,
+                        contentDescription = null,
+                        tint = PaperWhite,
+                        modifier = Modifier.size(22.dp))
+                }
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Text(verdict,
+            color = InkBlack,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
+private fun MetricMini(label: String, value: String, accent: Color, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(InkGray100)
+            .padding(14.dp),
+    ) {
+        Text(label,
+            color = InkGray500,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = 1.sp)
+        Spacer(Modifier.height(6.dp))
+        Text(value,
+            color = accent,
+            fontWeight = FontWeight.Black,
+            fontSize = 20.sp)
+    }
+}
+
+@Composable
+private fun SectionTitle(title: String, subtitle: String) {
+    Text(title,
+        color = InkBlack,
+        fontWeight = FontWeight.Black,
+        fontSize = 18.sp)
+    Spacer(Modifier.height(2.dp))
+    Text(subtitle,
+        color = InkGray500,
+        style = MaterialTheme.typography.bodySmall)
+    Spacer(Modifier.height(12.dp))
+}
+
+@Composable
+private fun HighlightItem(text: String, matched: List<String>) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(BrandPeach.copy(alpha = 0.3f))
+            .padding(start = 16.dp, top = 12.dp, end = 14.dp, bottom = 12.dp),
+    ) {
+        Row(verticalAlignment = Alignment.Top) {
+            Box(
+                Modifier
+                    .padding(top = 6.dp, end = 10.dp)
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(BrandDeepOrange)
+            )
+            Text(text,
+                color = InkBlack,
+                style = MaterialTheme.typography.bodyMedium,
+                lineHeight = 22.sp,
+                modifier = Modifier.weight(1f))
+        }
+        Spacer(Modifier.height(8.dp))
+        androidx.compose.foundation.layout.FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            matched.forEach { keyword ->
+                Box(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(BrandDeepOrange)
+                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                ) {
+                    Text("✓ $keyword",
+                        color = PaperWhite,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -290,43 +632,46 @@ private fun Step4Base() {
 }
 
 @Composable
-private fun Step5Generate() {
-    Text("客製版本已生成", style = MaterialTheme.typography.headlineMedium,
-        color = InkBlack, fontWeight = FontWeight.ExtraBold)
-    Spacer(Modifier.height(8.dp))
-    Text("AI 根據 JD 重組這份履歷,每段都標註了改寫原因",
-        color = InkGray500, style = MaterialTheme.typography.bodyMedium)
-    Spacer(Modifier.height(20.dp))
+private fun DimmedItem(text: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(InkGray100)
+            .padding(start = 16.dp, top = 12.dp, end = 14.dp, bottom = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Outlined.Close,
+            contentDescription = null,
+            tint = InkGray400,
+            modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(10.dp))
+        Text(text,
+            color = InkGray500,
+            style = MaterialTheme.typography.bodyMedium,
+            textDecoration = TextDecoration.LineThrough,
+            modifier = Modifier.weight(1f))
+    }
+}
 
-    val items = listOf(
-        Triple("自我介紹",
-            "資管系大三,具備 SQL + Excel 量化分析能力,曾將業務週報流程從 6 小時優化至 1.5 小時。",
-            "JD 強調量化分析,因此把實習中的時間節省幅度提前"),
-        Triple("工作經驗 — 電商實習",
-            "・用 SQL 從千萬筆訂單中拆解品類銷售趨勢,提供業務週報\n・建立自動化模板,後續同事可直接套用",
-            "JD 提到「跨團隊」,所以強調工作成果被其他人沿用"),
-    )
-    items.forEachIndexed { idx, (title, body, reason) ->
-        StaggeredAppear(delayMillis = idx * 100) {
-            WhiteCard(modifier = Modifier.padding(vertical = 6.dp)) {
-                Text(title, style = MaterialTheme.typography.titleSmall,
-                    color = BrandOrange, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(8.dp))
-                Text(body, style = MaterialTheme.typography.bodyMedium, color = InkBlack)
-                Spacer(Modifier.height(10.dp))
-                Box(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
-                        .background(BrandPeach.copy(alpha = 0.4f)).padding(10.dp)
-                ) {
-                    Row {
-                        Icon(Icons.Outlined.Info, contentDescription = null,
-                            tint = BrandDeepOrange, modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("為什麼這樣寫:$reason",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = BrandDeepOrange)
-                    }
-                }
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun MissingChips(keywords: List<String>) {
+    androidx.compose.foundation.layout.FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        keywords.forEach { kw ->
+            Box(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(AccentRed.copy(alpha = 0.1f))
+                    .padding(horizontal = 14.dp, vertical = 7.dp),
+            ) {
+                Text("+ $kw",
+                    color = AccentRed,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold)
             }
         }
     }

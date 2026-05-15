@@ -73,6 +73,8 @@ fun CareerSandboxNavHost(
         composable(Routes.EXPERIENCE_EDIT) { ExperienceEditScreen(navController) }
         composable(Routes.RESUME_EDITOR) { ResumeEditorScreen(navController) }
         composable(Routes.JD_CUSTOMIZE) { JdCustomizeScreen(navController) }
+        composable(Routes.RESUME_PROFILE) { ResumeProfileScreen(navController) }
+        composable(Routes.RESUME_UPLOAD_PROCESSING) { ResumeUploadProcessingScreen(navController) }
 
         composable(Routes.INTERVIEW_SETUP_INDIVIDUAL) { InterviewSetupScreen(navController) }
         composable(Routes.INTERVIEW_SETUP_GROUP) { InterviewSetupGroupScreen(navController) }
@@ -85,16 +87,4 @@ fun CareerSandboxNavHost(
         composable(
             route = Routes.ARTICLE_DETAIL,
             arguments = listOf(androidx.navigation.navArgument("articleId") {
-                type = androidx.navigation.NavType.StringType
-            })
-        ) { backStackEntry ->
-            val articleId = backStackEntry.arguments?.getString("articleId") ?: ""
-            ArticleDetailScreen(navController, articleId)
-        }
-        composable(Routes.SETTINGS_PROFILE) { SettingsProfileScreen(navController) }
-        composable(Routes.SETTINGS_NOTIFICATIONS) { SettingsNotificationsScreen(navController) }
-        composable(Routes.SETTINGS_PRIVACY) { SettingsPrivacyScreen(navController) }
-        composable(Routes.SETTINGS_HELP) { SettingsHelpScreen(navController) }
-        composable(Routes.SETTINGS_LOGOUT) { SettingsLogoutScreen(navController) }
-    }
-}
+                type = androidx.navigation.NavType
