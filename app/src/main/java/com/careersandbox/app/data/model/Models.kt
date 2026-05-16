@@ -49,6 +49,12 @@ data class Resume(
     val completion: Int,
 )
 
+enum class ResumeTemplate(val label: String, val sublabel: String) {
+    TW_CLASSIC("台式中文", "104 經典版型 ・ 含照片"),
+    EN_ONE_PAGE("英文一頁式", "Yourator / LinkedIn 風格"),
+    MODERN_DARK("現代深色", "新創公司投遞首選"),
+}
+
 data class InterviewRecord(
     val id: String,
     val type: InterviewType,
@@ -92,6 +98,7 @@ data class Article(
     val publishedDate: String,
     val readMinutes: Int,
     val url: String,
+    val coverImageUrl: String = "",
     val bodyContent: List<ArticleBlock> = emptyList(),
 )
 

@@ -258,42 +258,48 @@ private fun CoverBanner(article: Article, accent: Color) {
         ArticleCategory.WORKPLACE -> com.careersandbox.app.R.drawable.undraw_work_time_1ogn
     }
 
-    // 漸層封面 — 漸層 + 大字 + unDraw 插畫
+    // 圖片封面 — 真實照片 + 漸層遮罩,文字浮在上面
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(280.dp)
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(
-                        accent.copy(alpha = 0.85f),
-                        accent.copy(alpha = 0.5f),
-                        accent.copy(alpha = 0.95f),
+            .background(accent),
+    ) {
+        // 真實照片(Coil)— 載入中或失敗時顯示底色 + unDraw
+        if (article.coverImageUrl.isNotEmpty()) {
+            coil.compose.AsyncImage(
+                model = article.coverImageUrl,
+                contentDescription = null,
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else {
+            // 備援:unDraw 插畫
+            androidx.compose.foundation.Image(
+                painter = androidx.compose.ui.res.painterResource(id = illustRes),
+                contentDescription = null,
+                contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                alpha = 0.85f,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 12.dp, bottom = 12.dp)
+                    .size(140.dp),
+            )
+        }
+
+        // 漸層遮罩 — 上半透明,下半深色讓文字好讀
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Black.copy(alpha = 0.1f),
+                            Color.Black.copy(alpha = 0.2f),
+                            Color.Black.copy(alpha = 0.75f),
+                        )
                     )
                 )
-            )
-    ) {
-        // unDraw 插畫 — 右下,半透明融合
-        androidx.compose.foundation.Image(
-            painter = androidx.compose.ui.res.painterResource(id = illustRes),
-            contentDescription = null,
-            contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-            alpha = 0.85f,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 12.dp, bottom = 12.dp)
-                .size(140.dp),
-        )
-
-        // 大編號浮水印
-        Text(
-            text = "#${article.id.uppercase()}",
-            color = PaperWhite.copy(alpha = 0.15f),
-            fontSize = 120.sp,
-            fontWeight = FontWeight.Black,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(end = 24.dp, top = 12.dp),
         )
 
         // 分類膠囊
@@ -302,7 +308,7 @@ private fun CoverBanner(article: Article, accent: Color) {
                 .align(Alignment.TopStart)
                 .padding(24.dp)
                 .clip(CircleShape)
-                .background(PaperWhite.copy(alpha = 0.25f))
+                .background(accent)
                 .padding(horizontal = 14.dp, vertical = 6.dp)
         ) {
             Text(
@@ -317,12 +323,12 @@ private fun CoverBanner(article: Article, accent: Color) {
         Text(
             article.title,
             color = PaperWhite,
-            fontSize = 24.sp,
+            fontSize = 26.sp,
             fontWeight = FontWeight.Black,
-            lineHeight = 32.sp,
+            lineHeight = 36.sp,
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .padding(start = 24.dp, end = 160.dp, bottom = 24.dp),
+                .padding(start = 24.dp, end = 24.dp, bottom = 24.dp),
         )
     }
 }

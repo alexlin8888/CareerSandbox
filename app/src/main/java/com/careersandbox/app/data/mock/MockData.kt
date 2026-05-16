@@ -128,6 +128,7 @@ object MockData {
             publishedDate = "2025.10",
             readMinutes = 8,
             url = "https://www.cake.me/resources/resume/resume-outline-and-samples",
+            coverImageUrl = "https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=800&q=80",
             bodyContent = listOf(
                 ArticleBlock.Paragraph("好的履歷不是把所有經歷塞滿,而是把對的東西放在對的位置。人資每天看上百份履歷,平均停留時間 6-10 秒,排版邏輯決定你能不能進到下一輪。"),
                 ArticleBlock.Heading("一、個人資訊"),
@@ -160,6 +161,7 @@ object MockData {
             publishedDate = "2025.05",
             readMinutes = 6,
             url = "https://www.yourator.co/articles/80",
+            coverImageUrl = "https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=800&q=80",
             bodyContent = listOf(
                 ArticleBlock.Paragraph("自我介紹是面試的第一題,也是面試官評估表達能力與邏輯思考的關鍵時刻。但 90% 的人都在這一題就被默默扣分。"),
                 ArticleBlock.Heading("為什麼自我介紹很關鍵?"),
@@ -191,6 +193,7 @@ object MockData {
             publishedDate = "2025.03",
             readMinutes = 5,
             url = "https://www.yourator.co/articles/177",
+            coverImageUrl = "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&q=80",
             bodyContent = listOf(
                 ArticleBlock.Paragraph("被問「請分享一次解決問題的經驗」,然後就在那裡支吾其詞 — STAR 原則就是為了避免這種尷尬發明的萬用框架。"),
                 ArticleBlock.Heading("STAR 四步驟"),
@@ -220,6 +223,7 @@ object MockData {
             publishedDate = "2024.05",
             readMinutes = 7,
             url = "https://www.yourator.co/articles/260",
+            coverImageUrl = "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80",
             bodyContent = listOf(
                 ArticleBlock.Paragraph("大四了,朋友都在拿 offer,只有自己還不知道要做什麼 — 這是大多數人都會經歷的階段,不丟臉,也不用慌。"),
                 ArticleBlock.Heading("Step 1:認識自己"),
@@ -246,6 +250,7 @@ object MockData {
             publishedDate = "2022.06",
             readMinutes = 6,
             url = "https://vocus.cc/article/628cb426fd8978000158de4b",
+            coverImageUrl = "https://images.unsplash.com/photo-1521791136064-7986c2920216?w=800&q=80",
             bodyContent = listOf(
                 ArticleBlock.Paragraph("「找到你的熱情就會成功」這句話害了很多人 — 因為大多數人根本沒有清晰的熱情,於是陷入無止盡的迷茫。"),
                 ArticleBlock.Heading("熱情 ≠ 興趣"),
@@ -270,6 +275,7 @@ object MockData {
             publishedDate = "2026.03",
             readMinutes = 9,
             url = "https://www.cake.me/resources/resume/fresh-grad-resume",
+            coverImageUrl = "https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=800&q=80",
             bodyContent = listOf(
                 ArticleBlock.Paragraph("新鮮人沒工作經驗,履歷上最容易犯的錯就是「懇求學習機會」 — 但企業要的是能帶來價值的人,不是免費培訓學員。"),
                 ArticleBlock.Heading("換位思考:企業在意什麼?"),
@@ -302,6 +308,7 @@ object MockData {
             publishedDate = "2024.05",
             readMinutes = 5,
             url = "https://www.cake.me/resources/resume-samples-startup-internship-resume-tutorial",
+            coverImageUrl = "https://images.unsplash.com/photo-1556761175-b413da4baf72?w=800&q=80",
             bodyContent = listOf(
                 ArticleBlock.Paragraph("新創公司收到的履歷少、人資也少,一封寫得好的求職信(cover letter)幾乎能直接拿到面試 — 但寫得糟,則是直接 ban。"),
                 ArticleBlock.Heading("一、精簡有力"),
@@ -325,6 +332,7 @@ object MockData {
             publishedDate = "2025.06",
             readMinutes = 5,
             url = "https://www.yourator.co/articles/323",
+            coverImageUrl = "https://images.unsplash.com/photo-1517842645767-c639042777db?w=800&q=80",
             bodyContent = listOf(
                 ArticleBlock.Paragraph("「興趣:看電影、聽音樂、運動」 — 這是 90% 新鮮人履歷的興趣欄,等於沒寫。"),
                 ArticleBlock.Heading("為什麼要寫興趣?"),

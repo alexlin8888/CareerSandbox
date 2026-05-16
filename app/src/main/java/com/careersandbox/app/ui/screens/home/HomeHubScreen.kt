@@ -413,42 +413,86 @@ private fun ArticleCard(
         ArticleCategory.CAREER_EXPLORATION -> GlowPurple
         ArticleCategory.WORKPLACE -> AccentGreen
     }
-    Box(
+    Column(
         modifier = Modifier
             .width(260.dp)
-            .height(180.dp)
+            .height(280.dp)
             .clip(RoundedCornerShape(20.dp))
-            .background(accentColor.copy(alpha = 0.08f))
-            .pressScale(onClick = onClick)
-            .padding(16.dp),
+            .background(MaterialTheme.colorScheme.surface)
+            .pressScale(onClick = onClick),
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // 分類標
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier
-                        .clip(CircleShape)
-                        .background(accentColor)
-                        .padding(horizontal = 10.dp, vertical = 3.dp)
-                ) {
-                    Text(article.category.label,
-                        color = PaperWhite,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Black)
-                }
-                Spacer(Modifier.weight(1f))
-                Text("${article.readMinutes} min",
-                    color = InkGray500,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold)
+        // 上半:封面圖 + 分類膠囊浮在圖上
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(140.dp)
+                .background(accentColor.copy(alpha = 0.12f)),
+        ) {
+            // 真實圖片(Coil 載入)
+            if (article.coverImageUrl.isNotEmpty()) {
+                coil.compose.AsyncImage(
+                    model = article.coverImageUrl,
+                    contentDescription = null,
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
             }
-            Spacer(Modifier.height(10.dp))
+            // 漸層遮罩讓分類標好讀
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        androidx.compose.ui.graphics.Brush.verticalGradient(
+                            colors = listOf(
+                                androidx.compose.ui.graphics.Color.Transparent,
+                                androidx.compose.ui.graphics.Color.Transparent,
+                                androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.25f),
+                            )
+                        )
+                    )
+            )
+            // 分類膠囊浮在左上
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(12.dp)
+                    .clip(CircleShape)
+                    .background(accentColor)
+                    .padding(horizontal = 10.dp, vertical = 4.dp)
+            ) {
+                Text(article.category.label,
+                    color = PaperWhite,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Black)
+            }
+            // 閱讀時間浮在右下
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(12.dp)
+                    .clip(CircleShape)
+                    .background(PaperWhite.copy(alpha = 0.92f))
+                    .padding(horizontal = 8.dp, vertical = 3.dp)
+            ) {
+                Text("${article.readMinutes} min",
+                    color = InkBlack,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold)
+            }
+        }
+
+        // 下半:文字內容
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(14.dp),
+        ) {
             // 標題
             Text(article.title,
                 color = InkBlack,
                 fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                lineHeight = 22.sp,
+                fontSize = 15.sp,
+                lineHeight = 20.sp,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(6.dp))
@@ -458,11 +502,11 @@ private fun ArticleCard(
                 style = MaterialTheme.typography.bodySmall,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                lineHeight = 18.sp)
+                lineHeight = 17.sp)
             Spacer(Modifier.weight(1f))
             // 來源
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(6.dp).clip(CircleShape).background(accentColor))
+                Box(Modifier.size(5.dp).clip(CircleShape).background(accentColor))
                 Spacer(Modifier.width(6.dp))
                 Text(article.source,
                     color = InkBlack,
