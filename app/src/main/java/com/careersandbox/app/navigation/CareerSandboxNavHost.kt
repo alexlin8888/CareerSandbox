@@ -118,4 +118,5 @@ fun CareerSandboxNavHost(
         composable(Routes.SETTINGS_PRIVACY) { SettingsPrivacyScreen(navController) }
         composable(Routes.SETTINGS_HELP) { SettingsHelpScreen(navController) }
         composable(Routes.SETTINGS_LOGOUT) { SettingsLogoutScreen(navController) }
- 
+    }
+}

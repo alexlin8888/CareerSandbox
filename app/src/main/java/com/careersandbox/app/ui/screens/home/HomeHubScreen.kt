@@ -566,4 +566,149 @@ private fun NotificationsBorderless(navController: NavHostController) {
                         fontWeight = FontWeight.SemiBold)
                     Text(n.body,
                         color = InkGray500,
-                        style = MaterialTheme.typograph
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1)
+                }
+                Text(n.time, color = InkGray400,
+                    style = MaterialTheme.typography.labelSmall)
+            }
+            if (idx < 1) {
+                SectionDivider(modifier = Modifier.padding(vertical = 8.dp))
+            }
+        }
+    }
+}
+
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun CompetitionSection(navController: NavHostController) {
+    Column {
+        Row(
+            modifier = Modifier.padding(horizontal = 24.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = buildAnnotatedString {
+                    append("推薦")
+                    withStyle(SpanStyle(color = AccentGreen)) { append("競賽") }
+                },
+                color = InkBlack,
+                fontWeight = FontWeight.Black,
+                fontSize = 22.sp,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "從興趣 / 系所推薦,組隊找夥伴",
+            color = InkGray500,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(horizontal = 24.dp),
+        )
+        Spacer(Modifier.height(16.dp))
+
+        val lazyListState = androidx.compose.foundation.lazy.rememberLazyListState()
+        val flingBehavior = androidx.compose.foundation.gestures.snapping
+            .rememberSnapFlingBehavior(lazyListState = lazyListState)
+        LazyRow(
+            state = lazyListState,
+            flingBehavior = flingBehavior,
+            contentPadding = PaddingValues(horizontal = 24.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            items(MockData.competitions) { competition ->
+                CompetitionCard(competition)
+            }
+        }
+    }
+}
+
+@Composable
+private fun CompetitionCard(competition: com.careersandbox.app.data.model.Competition) {
+    val accentColor = when (competition.coverColor) {
+        "orange" -> BrandOrange
+        "green" -> AccentGreen
+        "purple" -> GlowPurple
+        "pink" -> Color(0xFFE26B8C)
+        "teal" -> Color(0xFF1D9E75)
+        else -> BrandOrange
+    }
+    Column(
+        modifier = Modifier
+            .width(200.dp)
+            .height(230.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .pressScale {},
+    ) {
+        // 上半:類別 + 截止日 chip
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(90.dp)
+                .background(accentColor.copy(alpha = 0.14f)),
+        ) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(12.dp)
+                    .clip(CircleShape)
+                    .background(accentColor)
+                    .padding(horizontal = 10.dp, vertical = 4.dp),
+            ) {
+                Text(competition.category.label,
+                    color = PaperWhite,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Black)
+            }
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(12.dp)
+                    .clip(CircleShape)
+                    .background(PaperWhite.copy(alpha = 0.92f))
+                    .padding(horizontal = 8.dp, vertical = 3.dp),
+            ) {
+                Text("截止 ${competition.deadline.takeLast(5)}",
+                    color = InkBlack,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold)
+            }
+        }
+
+        // 下半:標題 + 主辦 + 獎金 + 隊伍規模
+        Column(
+            modifier = Modifier.fillMaxSize().padding(12.dp),
+        ) {
+            Text(competition.title,
+                color = InkBlack,
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                lineHeight = 18.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis)
+            Spacer(Modifier.height(4.dp))
+            Text(competition.organizer,
+                color = InkGray500,
+                style = MaterialTheme.typography.labelSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis)
+            Spacer(Modifier.weight(1f))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(5.dp).clip(CircleShape).background(accentColor))
+                Spacer(Modifier.width(6.dp))
+                Text(competition.prize,
+                    color = InkBlack,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f))
+            }
+            Spacer(Modifier.height(2.dp))
+            Text(competition.teamSize,
+                color = InkGray500,
+                style = MaterialTheme.typography.labelSmall)
+        }
+    }
+}

@@ -356,4 +356,61 @@ object MockData {
         ),
     )
 
- 
+    val competitions = listOf(
+        Competition(
+            id = "c1",
+            title = "KPMG 商業個案大賽 2026",
+            organizer = "KPMG 台灣",
+            category = CompetitionCategory.CASE,
+            deadline = "2026.06.30",
+            teamSize = "3-4 人",
+            prize = "首獎 NT$100,000",
+            tags = listOf("商科", "顧問", "個案分析"),
+            coverColor = "orange",
+        ),
+        Competition(
+            id = "c2",
+            title = "經濟部青年創業競賽",
+            organizer = "經濟部中小企業處",
+            category = CompetitionCategory.PITCH,
+            deadline = "2026.07.15",
+            teamSize = "2-5 人",
+            prize = "創業金 NT$50 萬",
+            tags = listOf("創業", "新創", "提案"),
+            coverColor = "green",
+        ),
+        Competition(
+            id = "c3",
+            title = "AppWorks School 黑客松",
+            organizer = "AppWorks",
+            category = CompetitionCategory.HACKATHON,
+            deadline = "2026.06.10",
+            teamSize = "2-4 人",
+            prize = "獎金 + 加入 AppWorks 機會",
+            tags = listOf("Tech", "AI", "週末活動"),
+            coverColor = "purple",
+        ),
+        Competition(
+            id = "c4",
+            title = "Yourator 履歷設計挑戰",
+            organizer = "Yourator",
+            category = CompetitionCategory.DESIGN,
+            deadline = "2026.05.31",
+            teamSize = "個人賽",
+            prize = "$30,000 + 工作機會",
+            tags = listOf("設計", "履歷", "Figma"),
+            coverColor = "pink",
+        ),
+        Competition(
+            id = "c5",
+            title = "教育部全國學生服務學習研究獎",
+            organizer = "教育部",
+            category = CompetitionCategory.RESEARCH,
+            deadline = "2026.08.20",
+            teamSize = "1-3 人",
+            prize = "研究獎金 NT$30,000",
+            tags = listOf("學術", "研究", "教育"),
+            coverColor = "teal",
+        ),
+    )
+}
