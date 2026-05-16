@@ -67,10 +67,50 @@ object MockData {
             listOf("技術", "全端")),
     )
 
-    val resumes = listOf(
-        Resume("r1", "產品經理-綜合版", "Junior PM", "今天", "v3", 82),
-        Resume("r2", "資料分析師-技能強化", "Data Analyst", "3 天前", "v1", 64),
-        Resume("r3", "UX 研究員-草稿", "UX Researcher", "2 週前", "v0", 32),
+    val masterResume = Resume(
+        id = "r_master",
+        lastEdited = "2 天前",
+        totalExperiences = 7,
+        totalSkills = 12,
+        completion = 95,
+    )
+
+    val jobApplications = listOf(
+        JobApplication(
+            id = "j1",
+            company = "Acer",
+            position = "Junior PM",
+            jdSnippet = "尋找對使用者體驗有熱情的 PM,需熟悉資料分析與 A/B 測試,獨立帶專案經驗加分。",
+            matchScore = 82,
+            createdAt = "10/12",
+            versions = listOf(
+                ResumeVersion("v_a1_3", 3, VersionStatus.SUBMITTED, "10/14", submittedAt = "10/14"),
+                ResumeVersion("v_a1_2", 2, VersionStatus.EDITING, "10/13"),
+                ResumeVersion("v_a1_1", 1, VersionStatus.DRAFT, "10/12"),
+            ),
+        ),
+        JobApplication(
+            id = "j2",
+            company = "KKday",
+            position = "資料分析師",
+            jdSnippet = "需熟悉 SQL,協助業務團隊產出週報、洞察客群行為。",
+            matchScore = 64,
+            createdAt = "10/15",
+            versions = listOf(
+                ResumeVersion("v_a2_1", 1, VersionStatus.DRAFT, "10/15"),
+            ),
+        ),
+        JobApplication(
+            id = "j3",
+            company = "字節跳動",
+            position = "UX 研究員(實習)",
+            jdSnippet = "尋找對使用者研究有興趣的學生,進行訪談、可用性測試。",
+            matchScore = 32,
+            createdAt = "10/16",
+            versions = listOf(
+                ResumeVersion("v_a3_1", 1, VersionStatus.DRAFT, "10/16"),
+            ),
+        ),
     )
 
     val interviewHistory = listOf(
@@ -367,6 +407,7 @@ object MockData {
             prize = "首獎 NT$100,000",
             tags = listOf("商科", "顧問", "個案分析"),
             coverColor = "orange",
+            coverImageUrl = "https://images.unsplash.com/photo-1664575602554-2087b04935a5?w=600&q=80",
         ),
         Competition(
             id = "c2",
@@ -378,6 +419,7 @@ object MockData {
             prize = "創業金 NT$50 萬",
             tags = listOf("創業", "新創", "提案"),
             coverColor = "green",
+            coverImageUrl = "https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=600&q=80",
         ),
         Competition(
             id = "c3",
@@ -389,6 +431,7 @@ object MockData {
             prize = "獎金 + 加入 AppWorks 機會",
             tags = listOf("Tech", "AI", "週末活動"),
             coverColor = "purple",
+            coverImageUrl = "https://images.unsplash.com/photo-1531482615713-2afd69097998?w=600&q=80",
         ),
         Competition(
             id = "c4",
@@ -400,6 +443,7 @@ object MockData {
             prize = "$30,000 + 工作機會",
             tags = listOf("設計", "履歷", "Figma"),
             coverColor = "pink",
+            coverImageUrl = "https://images.unsplash.com/photo-1561070791-2526d30994b8?w=600&q=80",
         ),
         Competition(
             id = "c5",
@@ -411,6 +455,7 @@ object MockData {
             prize = "研究獎金 NT$30,000",
             tags = listOf("學術", "研究", "教育"),
             coverColor = "teal",
+            coverImageUrl = "https://images.unsplash.com/photo-1517048676732-d65bc937f952?w=600&q=80",
         ),
     )
 }

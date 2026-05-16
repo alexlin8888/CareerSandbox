@@ -30,6 +30,11 @@ object Routes {
     const val RESUME_PROFILE = "resume_profile"
     const val RESUME_UPLOAD_PROCESSING = "resume_upload_processing"
     const val JD_CUSTOMIZE_RESULT = "jd_customize_result"
+    const val NEW_JOB_APPLICATION = "new_job_application"
+    const val JOB_APPLICATION_DETAIL = "job_application_detail/{jobId}"
+    fun jobApplicationDetail(jobId: String) = "job_application_detail/$jobId"
+    const val PDF_EXPORT_DIALOG = "pdf_export_dialog/{versionId}"
+    fun pdfExportDialog(versionId: String) = "pdf_export_dialog/$versionId"
 
     const val SETTINGS_PROFILE = "settings_profile"
     const val SETTINGS_NOTIFICATIONS = "settings_notifications"

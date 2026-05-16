@@ -40,14 +40,48 @@ data class Experience(
     val tags: List<String> = emptyList(),
 )
 
+/**
+ * 母版履歷 — 使用者只維護 1 份,所有經歷不修飾全部寫下來
+ */
 data class Resume(
     val id: String,
-    val title: String,
-    val targetJob: String,
     val lastEdited: String,
-    val version: String,
+    val totalExperiences: Int,
+    val totalSkills: Int,
     val completion: Int,
 )
+
+/**
+ * 職缺 — 1 個職位+公司組合,底下可有多個版本
+ */
+data class JobApplication(
+    val id: String,
+    val company: String,
+    val position: String,
+    val jdSnippet: String,
+    val matchScore: Int,
+    val createdAt: String,
+    val versions: List<ResumeVersion>,
+)
+
+/**
+ * 版本 — 針對職缺的客製化履歷版本
+ */
+data class ResumeVersion(
+    val id: String,
+    val versionNumber: Int,
+    val status: VersionStatus,
+    val createdAt: String,
+    val submittedAt: String = "",
+    val notes: String = "",
+)
+
+enum class VersionStatus(val label: String) {
+    DRAFT("草稿"),
+    EDITING("編輯中"),
+    SUBMITTED("已投遞"),
+    ARCHIVED("封存"),
+}
 
 enum class ResumeTemplate(val label: String, val sublabel: String) {
     TW_CLASSIC("台式中文", "104 經典版型 ・ 含照片"),
@@ -126,6 +160,7 @@ data class Competition(
     val prize: String,
     val tags: List<String>,
     val coverColor: String = "orange",
+    val coverImageUrl: String = "",
 )
 
 enum class CompetitionCategory(val label: String) {

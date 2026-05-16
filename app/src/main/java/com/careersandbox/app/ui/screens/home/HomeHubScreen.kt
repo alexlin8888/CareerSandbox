@@ -648,6 +648,28 @@ private fun CompetitionCard(competition: com.careersandbox.app.data.model.Compet
                 .height(90.dp)
                 .background(accentColor.copy(alpha = 0.14f)),
         ) {
+            // 真實圖片(Coil 載入)
+            if (competition.coverImageUrl.isNotEmpty()) {
+                coil.compose.AsyncImage(
+                    model = competition.coverImageUrl,
+                    contentDescription = null,
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+            // 漸層遮罩
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        androidx.compose.ui.graphics.Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Black.copy(alpha = 0.1f),
+                                Color.Black.copy(alpha = 0.4f),
+                            )
+                        )
+                    )
+            )
             Box(
                 modifier = Modifier
                     .align(Alignment.TopStart)

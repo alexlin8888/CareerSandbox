@@ -97,6 +97,21 @@ fun CareerSandboxNavHost(
         composable(Routes.JD_CUSTOMIZE) { JdCustomizeScreen(navController) }
         composable(Routes.RESUME_PROFILE) { ResumeProfileScreen(navController) }
         composable(Routes.RESUME_UPLOAD_PROCESSING) { ResumeUploadProcessingScreen(navController) }
+        composable(Routes.NEW_JOB_APPLICATION) { NewJobApplicationScreen(navController) }
+        composable(
+            route = Routes.JOB_APPLICATION_DETAIL,
+            arguments = listOf(navArgument("jobId") { type = NavType.StringType })
+        ) { entry ->
+            val jobId = entry.arguments?.getString("jobId") ?: ""
+            JobApplicationDetailScreen(navController, jobId)
+        }
+        composable(
+            route = Routes.PDF_EXPORT_DIALOG,
+            arguments = listOf(navArgument("versionId") { type = NavType.StringType })
+        ) { entry ->
+            val versionId = entry.arguments?.getString("versionId") ?: ""
+            PdfExportDialogScreen(navController, versionId)
+        }
 
         composable(Routes.INTERVIEW_SETUP_INDIVIDUAL) { InterviewSetupScreen(navController) }
         composable(Routes.INTERVIEW_SETUP_GROUP) { InterviewSetupGroupScreen(navController) }
