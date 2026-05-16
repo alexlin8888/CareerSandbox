@@ -123,7 +123,7 @@ private fun StatsSection() {
         VerticalDivider()
         StatBlock(value = "${MockData.experiences.size}", label = "經驗筆數")
         VerticalDivider()
-        StatBlock(value = "${MockData.resumes.size}", label = "履歷數")
+        StatBlock(value = "${MockData.jobApplications.size}", label = "履歷數")
         VerticalDivider()
         StatBlock(value = "78", label = "平均分")
     }
