@@ -8,7 +8,7 @@ object Routes {
     const val HOME = "home"
     const val RESUME_HUB = "resume_hub"
     const val INTERVIEW_HUB = "interview_hub"
-    const val EXPLORE_HUB = "explore_hub"
+    const val WORKPLACE_SANDBOX = "workplace_sandbox"
     const val PROFILE = "profile"
 
     const val EXPERIENCE_LIST = "experience_list"

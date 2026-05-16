@@ -12,7 +12,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.careersandbox.app.ui.screens.home.ArticleDetailScreen
-import com.careersandbox.app.ui.screens.home.ExplorePlaceholderScreen
 import com.careersandbox.app.ui.screens.home.HomeHubScreen
 import com.careersandbox.app.ui.screens.home.NotificationsAllScreen
 import com.careersandbox.app.ui.screens.interview.*
@@ -26,6 +25,7 @@ import com.careersandbox.app.ui.screens.profile.SettingsNotificationsScreen
 import com.careersandbox.app.ui.screens.profile.SettingsPrivacyScreen
 import com.careersandbox.app.ui.screens.profile.SettingsProfileScreen
 import com.careersandbox.app.ui.screens.resume.*
+import com.careersandbox.app.ui.screens.workplace.WorkplaceSandboxScreen
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -88,7 +88,7 @@ fun CareerSandboxNavHost(
         composable(Routes.HOME) { HomeHubScreen(navController) }
         composable(Routes.RESUME_HUB) { ResumeHubScreen(navController) }
         composable(Routes.INTERVIEW_HUB) { InterviewHubScreen(navController) }
-        composable(Routes.EXPLORE_HUB) { ExplorePlaceholderScreen() }
+        composable(Routes.WORKPLACE_SANDBOX) { WorkplaceSandboxScreen() }
         composable(Routes.PROFILE) { ProfileScreen(navController) }
 
         composable(Routes.EXPERIENCE_LIST) { ExperienceListScreen(navController) }
@@ -118,5 +118,4 @@ fun CareerSandboxNavHost(
         composable(Routes.SETTINGS_PRIVACY) { SettingsPrivacyScreen(navController) }
         composable(Routes.SETTINGS_HELP) { SettingsHelpScreen(navController) }
         composable(Routes.SETTINGS_LOGOUT) { SettingsLogoutScreen(navController) }
-    }
-}
+ 

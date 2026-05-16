@@ -45,7 +45,7 @@ fun CareerSandboxApp() {
 
     // 處理系統返回鍵:在非首頁的 hub 頁,返回鍵跳回 HOME(不退 App)
     val isHubButNotHome = currentRoute in listOf(
-        Routes.RESUME_HUB, Routes.INTERVIEW_HUB, Routes.EXPLORE_HUB, Routes.PROFILE,
+        Routes.RESUME_HUB, Routes.INTERVIEW_HUB, Routes.WORKPLACE_SANDBOX, Routes.PROFILE,
     )
     BackHandler(enabled = isHubButNotHome) {
         navController.navigate(Routes.HOME) {

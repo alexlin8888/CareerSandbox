@@ -44,7 +44,6 @@ import com.careersandbox.app.ui.theme.*
 @Composable
 fun HomeHubScreen(navController: NavHostController) {
     Box(modifier = Modifier.fillMaxSize().background(PaperWhite)) {
-        // 內容區捲動,Hero 在最上方
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         ) {
@@ -53,6 +52,8 @@ fun HomeHubScreen(navController: NavHostController) {
             QuickActionsBorderless(navController)
             Spacer(Modifier.height(36.dp))
             ModuleSection(navController)
+            Spacer(Modifier.height(36.dp))
+            CompetitionSection(navController)
             Spacer(Modifier.height(36.dp))
             ArticleSection(navController)
             Spacer(Modifier.height(36.dp))
@@ -190,9 +191,7 @@ private fun QuickActionsBorderless(navController: NavHostController) {
         BorderlessIconAction("寫履歷", Icons.Outlined.Description, GlowPurple) {
             navController.navigate(Routes.RESUME_EDITOR)
         }
-        BorderlessIconAction("找職缺", Icons.Outlined.Search, AccentGreen) {
-            navController.navigate(Routes.EXPLORE_HUB)
-        }
+        BorderlessIconAction("找競賽", Icons.Outlined.EmojiEvents, AccentGreen) {}
     }
 }
 
@@ -279,7 +278,7 @@ private fun ModuleSection(navController: NavHostController) {
             tagColor = Color.Transparent,
             accent = GlowPurple,
             icon = Icons.Outlined.Work,
-            onClick = { navController.navigate(Routes.EXPLORE_HUB) },
+            onClick = { navController.navigate(Routes.WORKPLACE_SANDBOX) },
         )
         SectionDivider(modifier = Modifier.padding(vertical = 18.dp))
 
@@ -291,7 +290,7 @@ private fun ModuleSection(navController: NavHostController) {
             tagColor = Color.Transparent,
             accent = AccentGreen,
             icon = Icons.Outlined.Groups,
-            onClick = { navController.navigate(Routes.EXPLORE_HUB) },
+            onClick = {},
         )
     }
 }
@@ -567,15 +566,4 @@ private fun NotificationsBorderless(navController: NavHostController) {
                         fontWeight = FontWeight.SemiBold)
                     Text(n.body,
                         color = InkGray500,
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = 1)
-                }
-                Text(n.time, color = InkGray400,
-                    style = MaterialTheme.typography.labelSmall)
-            }
-            if (idx < 1) {
-                SectionDivider(modifier = Modifier.padding(vertical = 8.dp))
-            }
-        }
-    }
-}
+                        style = MaterialTheme.typograph

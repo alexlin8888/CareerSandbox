@@ -27,7 +27,7 @@ private data class TabItem(val route: String, val label: String, val icon: Image
 private val sideTabs = listOf(
     TabItem(Routes.HOME, "首頁", Icons.Outlined.Home),
     TabItem(Routes.RESUME_HUB, "履歷", Icons.Outlined.Description),
-    TabItem(Routes.EXPLORE_HUB, "探索", Icons.Outlined.Explore),
+    TabItem(Routes.WORKPLACE_SANDBOX, "職場沙盒", Icons.Outlined.Apartment),
     TabItem(Routes.PROFILE, "我的", Icons.Outlined.Person),
 )
 
@@ -165,6 +165,6 @@ private fun PillTab(
 fun shouldShowBottomNav(currentRoute: String?): Boolean {
     return currentRoute in listOf(
         Routes.HOME, Routes.RESUME_HUB, Routes.INTERVIEW_HUB,
-        Routes.EXPLORE_HUB, Routes.PROFILE
+        Routes.WORKPLACE_SANDBOX, Routes.PROFILE
     )
 }
