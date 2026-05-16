@@ -34,7 +34,7 @@ import com.careersandbox.app.ui.theme.*
 import kotlin.math.cos
 import kotlin.math.sin
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun ExperienceNetworkScreen(navController: NavHostController) {
     val experiences = MockData.experiences
