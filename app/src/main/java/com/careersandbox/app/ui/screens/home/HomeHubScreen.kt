@@ -360,6 +360,7 @@ private fun BorderlessModuleRow(
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun ArticleSection(navController: NavHostController) {
     Column {
@@ -567,4 +568,14 @@ private fun NotificationsBorderless(navController: NavHostController) {
                     Text(n.body,
                         color = InkGray500,
                         style = MaterialTheme.typography.bodySmall,
-   
+                        maxLines = 1)
+                }
+                Text(n.time, color = InkGray400,
+                    style = MaterialTheme.typography.labelSmall)
+            }
+            if (idx < 1) {
+                SectionDivider(modifier = Modifier.padding(vertical = 8.dp))
+            }
+        }
+    }
+}
