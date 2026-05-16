@@ -37,19 +37,36 @@ fun CareerSandboxNavHost(
         navController = navController,
         startDestination = startDestination,
         enterTransition = {
-            fadeIn(animationSpec = tween(250)) +
-                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(280))
+            fadeIn(animationSpec = tween(280, easing = androidx.compose.animation.core.FastOutSlowInEasing)) +
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    animationSpec = tween(340, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                    initialOffset = { it / 8 },
+                )
         },
         exitTransition = {
-            fadeOut(animationSpec = tween(200))
+            fadeOut(animationSpec = tween(220)) +
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    animationSpec = tween(340),
+                    targetOffset = { -it / 12 },
+                )
         },
         popEnterTransition = {
-            fadeIn(animationSpec = tween(250)) +
-                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(280))
+            fadeIn(animationSpec = tween(280)) +
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(340),
+                    initialOffset = { -it / 12 },
+                )
         },
         popExitTransition = {
-            fadeOut(animationSpec = tween(200)) +
-                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(280))
+            fadeOut(animationSpec = tween(220)) +
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(340),
+                    targetOffset = { it / 8 },
+                )
         },
     ) {
         composable(Routes.SPLASH) {

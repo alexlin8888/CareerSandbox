@@ -1,5 +1,6 @@
 package com.careersandbox.app.ui.screens.resume
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -13,9 +14,15 @@ import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -23,6 +30,7 @@ import androidx.navigation.NavHostController
 import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.SectionDivider
+import com.careersandbox.app.ui.components.StaggeredAppear
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 
@@ -99,6 +107,25 @@ fun ResumeProfileScreen(navController: NavHostController) {
             }
         },
     ) { pad ->
+        // 進場狀態
+        var entered by remember { mutableStateOf(false) }
+        LaunchedEffect(Unit) { entered = true }
+
+        // 大頭照進場 scale
+        val avatarScale by animateFloatAsState(
+            targetValue = if (entered) 1f else 0.6f,
+            animationSpec = androidx.compose.animation.core.spring(
+                dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                stiffness = androidx.compose.animation.core.Spring.StiffnessLow,
+            ),
+            label = "avatarScale",
+        )
+        val avatarAlpha by animateFloatAsState(
+            targetValue = if (entered) 1f else 0f,
+            animationSpec = androidx.compose.animation.core.tween(400),
+            label = "avatarAlpha",
+        )
+
         Column(
             modifier = Modifier
                 .padding(pad)
@@ -109,10 +136,17 @@ fun ResumeProfileScreen(navController: NavHostController) {
             Spacer(Modifier.height(8.dp))
 
             // === 頭部:大頭照 + 名字 + headline ===
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier.graphicsLayer { alpha = avatarAlpha },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Box(
                     Modifier
                         .size(72.dp)
+                        .graphicsLayer {
+                            scaleX = avatarScale
+                            scaleY = avatarScale
+                        }
                         .clip(CircleShape)
                         .background(BrandOrange.copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center,
@@ -140,9 +174,10 @@ fun ResumeProfileScreen(navController: NavHostController) {
 
             Spacer(Modifier.height(20.dp))
 
-            // 興趣 chip
-            androidx.compose.foundation.layout.FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            // 興趣 chip(staggered 200ms)
+            StaggeredAppear(delayMillis = 100) {
+                androidx.compose.foundation.layout.FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 user.interests.forEach { interest ->
@@ -159,18 +194,25 @@ fun ResumeProfileScreen(navController: NavHostController) {
                     }
                 }
             }
+            }  // 關 StaggeredAppear(興趣 chip)
 
             // === 關於我 ===
-            SectionLabel("關於我")
-            Text(
-                user.bio,
-                color = InkBlack,
-                style = MaterialTheme.typography.bodyLarge,
-                lineHeight = 28.sp,
-            )
+            StaggeredAppear(delayMillis = 220) {
+                Column {
+                    SectionLabel("關於我")
+                    Text(
+                        user.bio,
+                        color = InkBlack,
+                        style = MaterialTheme.typography.bodyLarge,
+                        lineHeight = 28.sp,
+                    )
+                }
+            }
 
             // === 經歷 ===
-            SectionLabel("經歷")
+            StaggeredAppear(delayMillis = 320) {
+                Column { SectionLabel("經歷") }
+            }
             user.activities.forEach { act ->
                 Column(modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {

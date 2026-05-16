@@ -388,8 +388,13 @@ private fun ArticleSection(navController: NavHostController) {
         )
         Spacer(Modifier.height(16.dp))
 
-        // 橫向滾動文章卡
+        // 橫向滾動文章卡(snap 感)
+        val lazyListState = androidx.compose.foundation.lazy.rememberLazyListState()
+        val flingBehavior = androidx.compose.foundation.gestures.snapping
+            .rememberSnapFlingBehavior(lazyListState = lazyListState)
         LazyRow(
+            state = lazyListState,
+            flingBehavior = flingBehavior,
             contentPadding = PaddingValues(horizontal = 24.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -562,14 +567,4 @@ private fun NotificationsBorderless(navController: NavHostController) {
                     Text(n.body,
                         color = InkGray500,
                         style = MaterialTheme.typography.bodySmall,
-                        maxLines = 1)
-                }
-                Text(n.time, color = InkGray400,
-                    style = MaterialTheme.typography.labelSmall)
-            }
-            if (idx < 1) {
-                SectionDivider(modifier = Modifier.padding(vertical = 8.dp))
-            }
-        }
-    }
-}
+   

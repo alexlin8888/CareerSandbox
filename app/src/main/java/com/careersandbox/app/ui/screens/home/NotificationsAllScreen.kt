@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
@@ -19,6 +20,7 @@ import androidx.navigation.NavHostController
 import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.data.model.NotificationItem
 import com.careersandbox.app.ui.components.SectionDivider
+import com.careersandbox.app.ui.components.StaggeredAppear
 import com.careersandbox.app.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -100,9 +102,14 @@ fun NotificationsAllScreen(navController: NavHostController) {
                 Spacer(Modifier.height(12.dp))
             }
             // 重複列表展示
-            items(MockData.notifications + MockData.notifications) { n ->
-                NotificationRowFull(n)
-                SectionDivider(modifier = Modifier.padding(vertical = 10.dp))
+            val notiList = MockData.notifications + MockData.notifications
+            itemsIndexed(notiList) { index, n ->
+                StaggeredAppear(delayMillis = 80 + index * 50, durationMillis = 280) {
+                    Column {
+                        NotificationRowFull(n)
+                        SectionDivider(modifier = Modifier.padding(vertical = 10.dp))
+                    }
+                }
             }
             item { Spacer(Modifier.height(40.dp)) }
         }
