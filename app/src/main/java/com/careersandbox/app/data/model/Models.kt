@@ -115,3 +115,23 @@ enum class ArticleCategory(val label: String) {
     RESUME("履歷"),
     WORKPLACE("職場"),
 }
+
+data class Competition(
+    val id: String,
+    val title: String,
+    val organizer: String,
+    val category: CompetitionCategory,
+    val deadline: String,
+    val teamSize: String,
+    val prize: String,
+    val tags: List<String>,
+    val coverColor: String = "orange",
+)
+
+enum class CompetitionCategory(val label: String) {
+    CASE("商業個案"),
+    HACKATHON("黑客松"),
+    PITCH("提案 / 創業"),
+    DESIGN("設計"),
+    RESEARCH("研究"),
+}
