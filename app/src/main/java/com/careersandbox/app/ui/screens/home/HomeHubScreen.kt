@@ -19,6 +19,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -527,7 +531,6 @@ private fun ArticleCard(
     }
 }
 
-@Composable
 /**
  * 鈴鐺元件:有未讀時 → 紅點 + 每 8 秒搖晃一次
  */
@@ -539,14 +542,12 @@ private fun AnimatedBell(
     val hasUnread = unreadCount > 0
 
     // 搖晃動畫:每 8 秒一次,持續 0.8 秒,左右各晃 1 次
-    val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition(
-        label = "bell-swing"
-    )
+    val infiniteTransition = rememberInfiniteTransition(label = "bell-swing")
     val rotation by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 0f,
-        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
-            animation = androidx.compose.animation.core.keyframes {
+        animationSpec = infiniteRepeatable(
+            animation = keyframes {
                 durationMillis = 8000
                 0f at 0
                 0f at 100
