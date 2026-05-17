@@ -121,37 +121,51 @@ private fun HeroSection() {
     }
 }
 
-/** Stats:Banking 風 — 1 已投遞超大,其他 3 個變底部 mini cards */
+/** Stats:Banking 風 + 投遞率環圈 — 1 已投遞超大,右側環圈填空 */
 @Composable
 private fun StatsRow() {
     val totalVersions = MockData.jobApplications.sumOf { it.versions.size }
     val totalSubmitted = MockData.jobApplications.flatMap { it.versions }
         .count { it.status == VersionStatus.SUBMITTED }
+    val totalJobs = MockData.jobApplications.size
+    val submitRate = if (totalJobs > 0) totalSubmitted.toFloat() / totalJobs else 0f
+    val submitPct = (submitRate * 100).toInt()
 
     Column(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
     ) {
-        // 主數字:已投遞 56sp
-        Text(
-            text = totalSubmitted.toString(),
-            color = BrandDeepOrange,
-            fontWeight = FontWeight.Black,
-            fontSize = 56.sp,
-            lineHeight = 56.sp,
-        )
-        Spacer(Modifier.height(2.dp))
-        Text(
-            "已投遞職缺",
-            color = InkBlack,
-            fontWeight = FontWeight.Bold,
-            fontSize = 14.sp,
-        )
-        Spacer(Modifier.height(2.dp))
-        Text(
-            "這週你做了 $totalSubmitted 件事",
-            color = InkGray500,
-            fontSize = 11.sp,
-        )
+        // 上區:左大數字 + 右環圈
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // 左:已投遞主數字
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = totalSubmitted.toString(),
+                    color = BrandDeepOrange,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 56.sp,
+                    lineHeight = 56.sp,
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    "已投遞職缺",
+                    color = InkBlack,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    "這週你做了 $totalSubmitted 件事",
+                    color = InkGray500,
+                    fontSize = 11.sp,
+                )
+            }
+            // 右:投遞率環圈
+            SubmitRateRing(
+                percent = submitPct,
+                progress = submitRate,
+                modifier = Modifier.size(90.dp),
+            )
+        }
 
         Spacer(Modifier.height(14.dp))
 
@@ -161,7 +175,7 @@ private fun StatsRow() {
         ) {
             MiniStatCard(
                 label = "職缺",
-                value = MockData.jobApplications.size.toString(),
+                value = totalJobs.toString(),
                 modifier = Modifier.weight(1f),
             )
             MiniStatCard(
@@ -173,6 +187,73 @@ private fun StatsRow() {
                 label = "技能",
                 value = MockData.masterResume.totalSkills.toString(),
                 modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+/** 投遞率環圈 */
+@Composable
+private fun SubmitRateRing(
+    percent: Int,
+    progress: Float,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val strokeWidthPx = 6.dp.toPx()
+            val diameter = size.minDimension - strokeWidthPx
+            val topLeft = Offset(
+                (size.width - diameter) / 2f,
+                (size.height - diameter) / 2f,
+            )
+            val arcSize = Size(diameter, diameter)
+            // 背景圓
+            drawArc(
+                color = InkGray200,
+                startAngle = 0f,
+                sweepAngle = 360f,
+                useCenter = false,
+                topLeft = topLeft,
+                size = arcSize,
+                style = androidx.compose.ui.graphics.drawscope.Stroke(
+                    width = strokeWidthPx,
+                    cap = androidx.compose.ui.graphics.StrokeCap.Round,
+                ),
+            )
+            // 進度圓弧
+            if (progress > 0f) {
+                drawArc(
+                    color = BrandDeepOrange,
+                    startAngle = -90f,
+                    sweepAngle = 360f * progress.coerceIn(0f, 1f),
+                    useCenter = false,
+                    topLeft = topLeft,
+                    size = arcSize,
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(
+                        width = strokeWidthPx,
+                        cap = androidx.compose.ui.graphics.StrokeCap.Round,
+                    ),
+                )
+            }
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                "$percent%",
+                color = BrandDeepOrange,
+                fontWeight = FontWeight.Black,
+                fontSize = 18.sp,
+                lineHeight = 18.sp,
+            )
+            Spacer(Modifier.height(1.dp))
+            Text(
+                "投遞率",
+                color = InkGray500,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Medium,
             )
         }
     }

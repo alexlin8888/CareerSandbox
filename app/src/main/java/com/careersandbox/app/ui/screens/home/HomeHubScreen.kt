@@ -124,38 +124,65 @@ private fun HeroSection(navController: NavHostController) {
 
             Spacer(Modifier.height(20.dp))
 
-            // 修 bug 1:拆成兩個 Text,各自獨立 line height
-            // 縮窄寬度,避開右下插畫位置
-            Column(modifier = Modifier.fillMaxWidth(0.62f)) {
-                Text(
-                    "這週你完成了",
-                    color = PaperWhite.copy(alpha = 0.85f),
-                    fontSize = 14.sp,
-                    lineHeight = 18.sp,
-                )
-                Spacer(Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.Bottom) {
+            // 64% + chips 並排
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Bottom,
+            ) {
+                // 左:64% 大數字
+                Column(modifier = Modifier.fillMaxWidth(0.55f)) {
                     Text(
-                        "${stat.resumeCompletion}",
-                        color = PaperWhite,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 56.sp,
-                        lineHeight = 60.sp,
-                    )
-                    Spacer(Modifier.width(2.dp))
-                    Text(
-                        "%",
-                        color = PaperWhite.copy(alpha = 0.9f),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 22.sp,
-                        modifier = Modifier.padding(bottom = 10.dp),
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        "履歷",
+                        "這週你完成了",
                         color = PaperWhite.copy(alpha = 0.85f),
                         fontSize = 14.sp,
-                        modifier = Modifier.padding(bottom = 14.dp),
+                        lineHeight = 18.sp,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text(
+                            "${stat.resumeCompletion}",
+                            color = PaperWhite,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 56.sp,
+                            lineHeight = 60.sp,
+                        )
+                        Spacer(Modifier.width(2.dp))
+                        Text(
+                            "%",
+                            color = PaperWhite.copy(alpha = 0.9f),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 22.sp,
+                            modifier = Modifier.padding(bottom = 10.dp),
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "履歷",
+                            color = PaperWhite.copy(alpha = 0.85f),
+                            fontSize = 14.sp,
+                            modifier = Modifier.padding(bottom = 14.dp),
+                        )
+                    }
+                }
+
+                Spacer(Modifier.weight(1f))
+
+                // 右:streak / 進步 chips(放頂部對齊文字)
+                Column(
+                    modifier = Modifier.padding(bottom = 60.dp),
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    StreakChip(
+                        leadingIcon = Icons.Outlined.LocalFireDepartment,
+                        text = "連續",
+                        value = "5",
+                        suffix = "天",
+                    )
+                    StreakChip(
+                        leadingIcon = Icons.Outlined.TrendingUp,
+                        text = "比上週",
+                        value = "+12",
+                        suffix = "%",
                     )
                 }
             }
@@ -171,6 +198,50 @@ private fun HeroSection(navController: NavHostController) {
                 .size(140.dp)
                 .alpha(0.95f),
             contentScale = ContentScale.Fit,
+        )
+    }
+}
+
+/** Hero 右上 streak / 進步 chip */
+@Composable
+private fun StreakChip(
+    leadingIcon: ImageVector,
+    text: String,
+    value: String,
+    suffix: String,
+) {
+    Row(
+        modifier = Modifier
+            .clip(CircleShape)
+            .background(Color(0x33FFFFFF))
+            .padding(horizontal = 10.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            leadingIcon,
+            contentDescription = null,
+            tint = BrandYellow,
+            modifier = Modifier.size(14.dp),
+        )
+        Spacer(Modifier.width(5.dp))
+        Text(
+            text,
+            color = PaperWhite.copy(alpha = 0.85f),
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Medium,
+        )
+        Spacer(Modifier.width(4.dp))
+        Text(
+            value,
+            color = PaperWhite,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Black,
+        )
+        Text(
+            suffix,
+            color = PaperWhite.copy(alpha = 0.85f),
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Medium,
         )
     }
 }
