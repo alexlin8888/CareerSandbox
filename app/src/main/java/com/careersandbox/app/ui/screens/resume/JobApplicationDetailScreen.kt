@@ -1,5 +1,6 @@
 package com.careersandbox.app.ui.screens.resume
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -9,23 +10,34 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.data.mock.MockData
+import com.careersandbox.app.data.model.JobApplication
 import com.careersandbox.app.data.model.ResumeVersion
 import com.careersandbox.app.data.model.VersionStatus
 import com.careersandbox.app.navigation.Routes
+import com.careersandbox.app.ui.components.ScatteredDecorations
+import com.careersandbox.app.ui.components.WaveHeroBackground
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JobApplicationDetailScreen(
     navController: NavHostController,
@@ -39,184 +51,276 @@ fun JobApplicationDetailScreen(
             return
         }
 
-    val matchColor = when {
-        job.matchScore >= 75 -> AccentGreen
-        job.matchScore >= 50 -> BrandOrange
-        else -> InkGray500
-    }
-
-    Scaffold(
-        containerColor = PaperWhite,
-        topBar = {
-            TopAppBar(
-                title = { Text("職缺版本", fontWeight = FontWeight.Bold, color = InkBlack) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Outlined.ArrowBack, contentDescription = null, tint = InkBlack)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = PaperWhite),
-            )
-        },
-        bottomBar = {
-            Box(Modifier.fillMaxWidth().background(PaperWhite).padding(20.dp)) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(InkBlack)
-                        .pressScale {
-                            navController.navigate(Routes.JD_CUSTOMIZE)
-                        },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Outlined.AutoAwesome,
-                            contentDescription = null,
-                            tint = BrandAmber,
-                            modifier = Modifier.size(20.dp),
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            "生成新版本",
-                            color = PaperWhite,
-                            fontWeight = FontWeight.Black,
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                    }
-                }
-            }
-        },
-    ) { pad ->
+    Box(modifier = Modifier.fillMaxSize().background(PaperWhite)) {
         Column(
             modifier = Modifier
-                .padding(pad)
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
+                .verticalScroll(rememberScrollState()),
         ) {
-            Spacer(Modifier.height(8.dp))
-
-            // 職缺資訊卡
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(InkGray100.copy(alpha = 0.5f))
-                    .padding(20.dp),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            job.position,
-                            color = InkBlack,
-                            fontWeight = FontWeight.Black,
-                            fontSize = 20.sp,
-                        )
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            "@ ${job.company}",
-                            color = InkGray500,
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium,
-                        )
-                    }
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            "${job.matchScore}%",
-                            color = matchColor,
-                            fontWeight = FontWeight.Black,
-                            fontSize = 28.sp,
-                        )
-                        Text(
-                            "適配度",
-                            color = InkGray500,
-                            style = MaterialTheme.typography.labelSmall,
-                        )
-                    }
-                }
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    "JD 摘要",
-                    color = InkGray500,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 2.sp,
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    job.jdSnippet,
-                    color = InkBlack,
-                    style = MaterialTheme.typography.bodyMedium,
-                    lineHeight = 22.sp,
-                )
-            }
-
+            HeroSection(job, navController)
+            Spacer(Modifier.height(24.dp))
+            StatsSection(job)
             Spacer(Modifier.height(28.dp))
+            JdSnippetSection(job)
+            Spacer(Modifier.height(32.dp))
+            VersionsSection(job, navController)
+            Spacer(Modifier.height(48.dp))
+        }
+    }
+}
 
-            Text(
-                "版本歷史",
+/** Hero — 完全對齊 ResumeHub */
+@Composable
+private fun HeroSection(job: JobApplication, navController: NavHostController) {
+    Box(modifier = Modifier.fillMaxWidth().height(240.dp)) {
+        WaveHeroBackground(
+            gradient = Brush.linearGradient(
+                colors = listOf(BrandDeepOrange, BrandOrange, BrandAmber),
+            ),
+            heightDp = 240,
+        )
+        ScatteredDecorations(modifier = Modifier.fillMaxSize().alpha(0.6f))
+
+        // 返回鍵(左上)
+        Box(
+            Modifier
+                .padding(16.dp)
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(PaperWhite.copy(alpha = 0.2f))
+                .pressScale { navController.popBackStack() },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Outlined.ArrowBack, contentDescription = null, tint = PaperWhite)
+        }
+
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 24.dp, vertical = 24.dp)
+                .padding(top = 36.dp)
+                .fillMaxWidth(0.72f),
+        ) {
+            Text("MY APPLICATION",
+                color = PaperWhite.copy(alpha = 0.85f),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 3.sp)
+            Spacer(Modifier.height(12.dp))
+            Text(job.position,
+                color = PaperWhite,
+                fontWeight = FontWeight.Black,
+                fontSize = 32.sp,
+                lineHeight = 36.sp)
+            Spacer(Modifier.height(6.dp))
+            Text(job.company,
+                color = PaperWhite.copy(alpha = 0.9f),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(8.dp))
+            Box(
+                Modifier
+                    .clip(CircleShape)
+                    .background(BrandYellow)
+                    .padding(horizontal = 12.dp, vertical = 4.dp)
+            ) {
+                Text("${job.versions.size} 個版本",
+                    color = InkCharcoal,
+                    fontWeight = FontWeight.Black,
+                    style = MaterialTheme.typography.labelMedium)
+            }
+        }
+    }
+}
+
+/** 4 個數字 stat */
+@Composable
+private fun StatsSection(job: JobApplication) {
+    val submitted = job.versions.count { it.status == VersionStatus.SUBMITTED }
+    val editing = job.versions.count { it.status == VersionStatus.EDITING }
+    val draft = job.versions.count { it.status == VersionStatus.DRAFT }
+
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        StatBlock(job.matchScore.toString(), "適配度",
+            valueColor = when {
+                job.matchScore >= 75 -> AccentGreen
+                job.matchScore >= 50 -> BrandOrange
+                else -> InkGray400
+            })
+        StatDivider()
+        StatBlock(submitted.toString(), "已投遞")
+        StatDivider()
+        StatBlock(editing.toString(), "編輯中")
+        StatDivider()
+        StatBlock(draft.toString(), "草稿")
+    }
+}
+
+@Composable
+private fun StatBlock(value: String, label: String, valueColor: Color = BrandOrange) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(value, color = valueColor, fontWeight = FontWeight.Black, fontSize = 28.sp)
+        Spacer(Modifier.height(2.dp))
+        Text(label, color = InkGray500, style = MaterialTheme.typography.labelSmall)
+    }
+}
+
+@Composable
+private fun StatDivider() {
+    Box(Modifier.height(36.dp).width(0.5.dp).background(InkGray200))
+}
+
+/** JD 摘要 */
+@Composable
+private fun JdSnippetSection(job: JobApplication) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(InkGray100.copy(alpha = 0.5f))
+            .padding(18.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                Icons.Outlined.Description,
+                contentDescription = null,
+                tint = BrandDeepOrange,
+                modifier = Modifier.size(16.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text("JD 摘要",
                 color = InkGray500,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Black,
-                letterSpacing = 3.sp,
+                letterSpacing = 2.sp)
+        }
+        Spacer(Modifier.height(10.dp))
+        Text(
+            job.jdSnippet,
+            color = InkBlack,
+            style = MaterialTheme.typography.bodyMedium,
+            lineHeight = 22.sp,
+        )
+        Spacer(Modifier.height(12.dp))
+        Text("建立於 ${job.createdAt}",
+            color = InkGray400,
+            style = MaterialTheme.typography.labelSmall)
+    }
+}
+
+/** 版本列表 */
+@Composable
+private fun VersionsSection(
+    job: JobApplication,
+    navController: NavHostController,
+) {
+    Column(modifier = Modifier.padding(horizontal = 24.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = buildAnnotatedString {
+                    append("所有")
+                    withStyle(SpanStyle(color = BrandOrange)) { append("版本") }
+                },
+                color = InkBlack,
+                fontWeight = FontWeight.Black,
+                fontSize = 26.sp,
+                modifier = Modifier.weight(1f),
+            )
+            Text("+ 新版本",
+                color = BrandDeepOrange,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.pressScale {
+                    navController.navigate(Routes.JD_CUSTOMIZE)
+                })
+        }
+        Spacer(Modifier.height(4.dp))
+        Text("${job.versions.size} 個版本,可獨立編輯與匯出",
+            color = InkGray500,
+            style = MaterialTheme.typography.bodyMedium)
+
+        Spacer(Modifier.height(20.dp))
+
+        job.versions.forEach { ver ->
+            VersionCard(
+                version = ver,
+                onClick = { navController.navigate(Routes.RESUME_PROFILE) },
+                onExport = { navController.navigate(Routes.pdfExportDialog(ver.id)) },
+                onMarkSubmitted = { /* TODO */ },
             )
             Spacer(Modifier.height(12.dp))
-
-            job.versions.forEach { ver ->
-                VersionDetailCard(ver, navController)
-                Spacer(Modifier.height(10.dp))
-            }
-
-            Spacer(Modifier.height(40.dp))
         }
     }
 }
 
 @Composable
-private fun VersionDetailCard(
+private fun VersionCard(
     version: ResumeVersion,
-    navController: NavHostController,
+    onClick: () -> Unit,
+    onExport: () -> Unit,
+    onMarkSubmitted: () -> Unit,
 ) {
+    val (statusColor, statusText) = when (version.status) {
+        VersionStatus.SUBMITTED -> AccentGreen to "已投遞"
+        VersionStatus.EDITING -> BrandDeepOrange to "編輯中"
+        VersionStatus.DRAFT -> InkGray500 to "草稿"
+        VersionStatus.ARCHIVED -> InkGray400 to "封存"
+    }
+    val dateText = if (version.status == VersionStatus.SUBMITTED)
+        "投遞於 ${version.submittedAt}" else "建立於 ${version.createdAt}"
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .pressScale {
-                navController.navigate(Routes.RESUME_PROFILE)
-            }
+            .clip(RoundedCornerShape(18.dp))
+            .background(InkGray100.copy(alpha = 0.5f))
+            .pressScale(onClick = onClick)
             .padding(16.dp),
     ) {
+        // 頭:版本號 + 狀態 + 日期
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier
-                    .clip(CircleShape)
-                    .background(InkBlack)
-                    .padding(horizontal = 10.dp, vertical = 4.dp),
-            ) {
-                Text(
-                    "v${version.versionNumber}",
-                    color = PaperWhite,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Black,
-                )
-            }
-            Spacer(Modifier.width(10.dp))
+            // 大版本號
+            Text(
+                "v${version.versionNumber}",
+                color = statusColor.copy(alpha = 0.6f),
+                fontWeight = FontWeight.Black,
+                fontSize = 32.sp,
+                lineHeight = 32.sp,
+                modifier = Modifier.width(54.dp),
+            )
             Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        statusText,
+                        color = statusColor,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 18.sp,
+                    )
+                    if (version.status == VersionStatus.SUBMITTED) {
+                        Spacer(Modifier.width(8.dp))
+                        Box(
+                            Modifier
+                                .clip(CircleShape)
+                                .background(BrandYellow)
+                                .padding(horizontal = 8.dp, vertical = 2.dp),
+                        ) {
+                            Text(
+                                "完成",
+                                color = InkCharcoal,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Black,
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(2.dp))
                 Text(
-                    version.status.label,
-                    color = InkBlack,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-                Text(
-                    if (version.status == VersionStatus.SUBMITTED) "投遞於 ${version.submittedAt}"
-                    else "建立於 ${version.createdAt}",
+                    dateText,
                     color = InkGray500,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.bodyMedium,
                 )
             }
             Icon(
@@ -226,91 +330,71 @@ private fun VersionDetailCard(
             )
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(14.dp))
 
+        // 兩個操作按鈕
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            // 匯出 PDF
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(InkGray100)
-                    .pressScale {
-                        navController.navigate(Routes.pdfExportDialog(version.id))
-                    }
-                    .padding(vertical = 8.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Outlined.FileDownload,
-                        contentDescription = null,
-                        tint = InkBlack,
-                        modifier = Modifier.size(14.dp),
-                    )
-                    Spacer(Modifier.width(4.dp))
-                    Text(
-                        "匯出 PDF",
-                        color = InkBlack,
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-            }
-
-            // 標記已投遞
+            VersionActionPill(
+                icon = Icons.Outlined.FileDownload,
+                label = "匯出 PDF",
+                accent = BrandDeepOrange,
+                modifier = Modifier.weight(1f),
+                onClick = onExport,
+            )
             if (version.status != VersionStatus.SUBMITTED) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(AccentGreen.copy(alpha = 0.15f))
-                        .pressScale {}
-                        .padding(vertical = 8.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Outlined.Check,
-                            contentDescription = null,
-                            tint = AccentGreen,
-                            modifier = Modifier.size(14.dp),
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            "標記已投遞",
-                            color = AccentGreen,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
-                }
+                VersionActionPill(
+                    icon = Icons.Outlined.Check,
+                    label = "標記已投遞",
+                    accent = AccentGreen,
+                    modifier = Modifier.weight(1f),
+                    onClick = onMarkSubmitted,
+                )
             } else {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(AccentGreen.copy(alpha = 0.15f))
-                        .padding(vertical = 8.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Outlined.CheckCircle,
-                            contentDescription = null,
-                            tint = AccentGreen,
-                            modifier = Modifier.size(14.dp),
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            "已投遞",
-                            color = AccentGreen,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Black,
-                        )
-                    }
-                }
+                VersionActionPill(
+                    icon = Icons.Outlined.CheckCircle,
+                    label = "已投遞",
+                    accent = AccentGreen,
+                    isFilled = true,
+                    modifier = Modifier.weight(1f),
+                    onClick = {},
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun VersionActionPill(
+    icon: ImageVector,
+    label: String,
+    accent: Color,
+    modifier: Modifier = Modifier,
+    isFilled: Boolean = false,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                if (isFilled) accent else PaperWhite
+            )
+            .pressScale(onClick = onClick)
+            .padding(vertical = 9.dp, horizontal = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = if (isFilled) PaperWhite else accent,
+            modifier = Modifier.size(15.dp),
+        )
+        Spacer(Modifier.width(5.dp))
+        Text(
+            label,
+            color = if (isFilled) PaperWhite else accent,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+        )
     }
 }
