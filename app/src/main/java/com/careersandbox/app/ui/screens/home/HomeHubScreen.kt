@@ -55,15 +55,15 @@ fun HomeHubScreen(navController: NavHostController) {
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         ) {
             HeroSection(navController)
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(20.dp))
             ArticleSection(navController)
-            Spacer(Modifier.height(36.dp))
+            Spacer(Modifier.height(24.dp))
             QuickActionsBorderless(navController)
-            Spacer(Modifier.height(36.dp))
+            Spacer(Modifier.height(28.dp))
             ModuleSection(navController)
-            Spacer(Modifier.height(36.dp))
+            Spacer(Modifier.height(28.dp))
             CompetitionSection(navController)
-            Spacer(Modifier.height(48.dp))
+            Spacer(Modifier.height(32.dp))
         }
     }
 }
@@ -666,7 +666,7 @@ private fun CompetitionSection(navController: NavHostController) {
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(horizontal = 24.dp),
         )
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(12.dp))
 
         val lazyListState = androidx.compose.foundation.lazy.rememberLazyListState()
         val flingBehavior = androidx.compose.foundation.gestures.snapping

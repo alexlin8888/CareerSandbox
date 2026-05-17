@@ -50,13 +50,13 @@ fun ResumeHubScreen(navController: NavHostController) {
                 .verticalScroll(rememberScrollState()),
         ) {
             HeroSection()
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(20.dp))
             StatsRow()
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(18.dp))
             BentoActions(navController)
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(24.dp))
             JobApplicationsSection(navController)
-            Spacer(Modifier.height(48.dp))
+            Spacer(Modifier.height(32.dp))
         }
     }
 }
@@ -186,9 +186,9 @@ private fun MiniStatCard(
 ) {
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(10.dp))
-            .background(PaperWhite)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .clip(RoundedCornerShape(12.dp))
+            .background(InkGray100.copy(alpha = 0.5f))
+            .padding(horizontal = 14.dp, vertical = 10.dp),
     ) {
         Text(
             label,
@@ -397,13 +397,13 @@ private fun JobApplicationsSection(navController: NavHostController) {
             style = MaterialTheme.typography.bodyMedium,
         )
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(12.dp))
 
         MockData.jobApplications.forEach { job ->
             JobProgressCard(job) {
                 navController.navigate(Routes.jobApplicationDetail(job.id))
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(10.dp))
         }
     }
 }
