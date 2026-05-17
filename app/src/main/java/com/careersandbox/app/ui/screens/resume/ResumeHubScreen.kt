@@ -1,5 +1,11 @@
 package com.careersandbox.app.ui.screens.resume
 
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -272,7 +278,8 @@ private fun JobProgressCard(
     }
     val submittedCount = job.versions.count { it.status == VersionStatus.SUBMITTED }
     val latest = job.versions.maxByOrNull { it.versionNumber }
-    val latestLabel = when (latest?.status) {
+    val latestStatus = latest?.status
+    val latestLabel = when (latestStatus) {
         VersionStatus.SUBMITTED -> "已投遞 v${latest.versionNumber}"
         VersionStatus.EDITING -> "編輯中 v${latest.versionNumber}"
         VersionStatus.DRAFT -> "草稿 v${latest.versionNumber}"
@@ -283,23 +290,70 @@ private fun JobProgressCard(
         if (it.status == VersionStatus.SUBMITTED) it.submittedAt else it.createdAt
     } ?: ""
 
+    // 層次邏輯
+    val isSubmitted = submittedCount > 0
+    val isAllDraft = job.versions.all { it.status == VersionStatus.DRAFT }
+    val cardBg = when {
+        isSubmitted -> BrandPeach.copy(alpha = 0.55f)
+        isAllDraft -> InkGray100.copy(alpha = 0.3f)
+        else -> InkGray100.copy(alpha = 0.6f)
+    }
+    val cardAlpha = if (isAllDraft) 0.7f else 1f
+
+    // 微浮動(只在 hot job 上)
+    val floatAnim = if (isSubmitted) {
+        val transition = rememberInfiniteTransition(label = "card-float")
+        transition.animateFloat(
+            initialValue = 0f,
+            targetValue = -3f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(
+                    durationMillis = 2400,
+                    easing = FastOutSlowInEasing,
+                ),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "float-y"
+        ).value
+    } else 0f
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .offset(y = floatAnim.dp)
+            .alpha(cardAlpha)
             .clip(RoundedCornerShape(18.dp))
-            .background(InkGray100.copy(alpha = 0.5f))
+            .background(cardBg)
             .pressScale(onClick = onClick)
             .padding(16.dp),
     ) {
         // 頭
         Row(verticalAlignment = Alignment.Top) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    job.position,
-                    color = InkBlack,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        job.position,
+                        color = if (isAllDraft) InkGray500 else InkBlack,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                    )
+                    if (isSubmitted) {
+                        Spacer(Modifier.width(8.dp))
+                        Box(
+                            Modifier
+                                .clip(CircleShape)
+                                .background(AccentGreen)
+                                .padding(horizontal = 8.dp, vertical = 2.dp),
+                        ) {
+                            Text(
+                                "已投遞",
+                                color = PaperWhite,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Black,
+                            )
+                        }
+                    }
+                }
                 Spacer(Modifier.height(2.dp))
                 Text(
                     "${job.company} · $latestLabel",

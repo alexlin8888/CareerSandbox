@@ -565,7 +565,7 @@ private fun AnimatedBell(
 
     Box(
         Modifier
-            .size(40.dp)
+            .size(48.dp)
             .clip(CircleShape)
             .background(Color(0x33FFFFFF))
             .pressScale(onClick = onClick),
@@ -576,7 +576,7 @@ private fun AnimatedBell(
             contentDescription = null,
             tint = PaperWhite,
             modifier = Modifier
-                .size(20.dp)
+                .size(24.dp)
                 .graphicsLayer {
                     rotationZ = if (hasUnread) rotation else 0f
                     transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.2f)
@@ -587,8 +587,8 @@ private fun AnimatedBell(
             Box(
                 Modifier
                     .align(Alignment.TopEnd)
-                    .offset(x = (-8).dp, y = 8.dp)
-                    .size(9.dp)
+                    .offset(x = (-10).dp, y = 10.dp)
+                    .size(10.dp)
                     .clip(CircleShape)
                     .background(AccentRed)
                     .border(

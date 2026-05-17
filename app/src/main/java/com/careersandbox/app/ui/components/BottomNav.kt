@@ -17,6 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.careersandbox.app.navigation.Routes
@@ -60,7 +61,7 @@ fun BottomNav(navController: NavHostController) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(68.dp)
+                .height(72.dp)
                 .shadow(
                     elevation = 20.dp,
                     shape = RoundedCornerShape(50),
@@ -102,26 +103,41 @@ fun BottomNav(navController: NavHostController) {
                 }
             }
         }
-        Box(
+        Column(
             modifier = Modifier
-                .size(60.dp)
-                .shadow(
-                    elevation = 16.dp,
-                    shape = CircleShape,
-                    spotColor = BrandOrange.copy(alpha = 0.7f)
-                )
-                .clip(CircleShape)
-                .background(HeroGradient)
+                .size(width = 60.dp, height = 68.dp)
                 .pressScale {
                     navigateToTab(navController, Routes.INTERVIEW_HUB, currentRoute)
                 },
-            contentAlignment = Alignment.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
         ) {
-            Icon(
-                Icons.Outlined.Mic,
-                contentDescription = "面試",
-                tint = PaperWhite,
-                modifier = Modifier.size(26.dp)
+            Box(
+                modifier = Modifier
+                    .size(46.dp)
+                    .shadow(
+                        elevation = 16.dp,
+                        shape = CircleShape,
+                        spotColor = BrandOrange.copy(alpha = 0.7f)
+                    )
+                    .clip(CircleShape)
+                    .background(HeroGradient),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Outlined.Mic,
+                    contentDescription = "面試",
+                    tint = PaperWhite,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = "面試",
+                color = PaperWhite,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                fontSize = 9.sp,
             )
         }
     }
@@ -144,19 +160,28 @@ private fun PillTab(
         label = "bgColor"
     )
 
-    Box(
+    Column(
         modifier = Modifier
-            .size(width = 56.dp, height = 44.dp)
-            .clip(CircleShape)
+            .width(56.dp)
+            .clip(RoundedCornerShape(20.dp))
             .background(bgColor)
-            .pressScale(onClick = onClick),
-        contentAlignment = Alignment.Center,
+            .pressScale(onClick = onClick)
+            .padding(vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(
             tab.icon,
             contentDescription = tab.label,
             tint = iconColor,
-            modifier = Modifier.size(22.dp)
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = tab.label,
+            color = iconColor,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+            fontSize = 9.sp,
         )
     }
 }
