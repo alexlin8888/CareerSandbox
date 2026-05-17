@@ -121,6 +121,7 @@ data class NotificationItem(
     val title: String,
     val body: String,
     val time: String,
+    val read: Boolean = false,
 )
 
 data class Article(

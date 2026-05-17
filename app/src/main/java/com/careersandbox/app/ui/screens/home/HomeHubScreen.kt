@@ -19,8 +19,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -47,7 +49,7 @@ fun HomeHubScreen(navController: NavHostController) {
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         ) {
-            HeroSection()
+            HeroSection(navController)
             Spacer(Modifier.height(8.dp))
             QuickActionsBorderless(navController)
             Spacer(Modifier.height(36.dp))
@@ -56,8 +58,6 @@ fun HomeHubScreen(navController: NavHostController) {
             CompetitionSection(navController)
             Spacer(Modifier.height(36.dp))
             ArticleSection(navController)
-            Spacer(Modifier.height(36.dp))
-            NotificationsBorderless(navController)
             Spacer(Modifier.height(48.dp))
         }
     }
@@ -65,7 +65,7 @@ fun HomeHubScreen(navController: NavHostController) {
 
 /** Hero 區:wave 漸層 + 大字 + 插畫 + **僅在此區的線稿裝飾** */
 @Composable
-private fun HeroSection() {
+private fun HeroSection(navController: NavHostController) {
     val stat = MockData.homeStat
     Box(modifier = Modifier.fillMaxWidth().height(360.dp)) {
         // 1. wave 漸層背景(最底層)
@@ -94,15 +94,12 @@ private fun HeroSection() {
                 Text("下午好,", color = PaperWhite.copy(alpha = 0.85f),
                     style = MaterialTheme.typography.bodyLarge)
                 Spacer(Modifier.weight(1f))
-                Box(
-                    Modifier.size(40.dp).clip(CircleShape)
-                        .background(Color(0x33FFFFFF))
-                        .pressScale {},
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(Icons.Outlined.NotificationsNone, contentDescription = null,
-                        tint = PaperWhite, modifier = Modifier.size(20.dp))
-                }
+                AnimatedBell(
+                    unreadCount = MockData.notifications.count { !it.read },
+                    onClick = {
+                        navController.navigate(Routes.NOTIFICATIONS_ALL)
+                    },
+                )
             }
             Spacer(Modifier.height(4.dp))
             // 姓名 + 年級
@@ -531,50 +528,74 @@ private fun ArticleCard(
 }
 
 @Composable
-private fun NotificationsBorderless(navController: NavHostController) {
-    Column(modifier = Modifier.padding(horizontal = 24.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("最近的提醒",
-                color = InkBlack,
-                fontWeight = FontWeight.Black,
-                fontSize = 22.sp,
-                modifier = Modifier.weight(1f))
-            Text("全部",
-                color = BrandOrange,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.pressScale {
-                    navController.navigate(Routes.NOTIFICATIONS_ALL)
-                })
-        }
-        Spacer(Modifier.height(16.dp))
-        MockData.notifications.take(2).forEachIndexed { idx, n ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    Modifier.size(8.dp).clip(CircleShape).background(BrandOrange)
-                )
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(n.title,
-                        color = InkBlack,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.SemiBold)
-                    Text(n.body,
-                        color = InkGray500,
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = 1)
-                }
-                Text(n.time, color = InkGray400,
-                    style = MaterialTheme.typography.labelSmall)
+/**
+ * 鈴鐺元件:有未讀時 → 紅點 + 每 8 秒搖晃一次
+ */
+@Composable
+private fun AnimatedBell(
+    unreadCount: Int,
+    onClick: () -> Unit,
+) {
+    val hasUnread = unreadCount > 0
+
+    // 搖晃動畫:每 8 秒一次,持續 0.8 秒,左右各晃 1 次
+    val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition(
+        label = "bell-swing"
+    )
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 0f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            animation = androidx.compose.animation.core.keyframes {
+                durationMillis = 8000
+                0f at 0
+                0f at 100
+                -15f at 200
+                12f at 350
+                -10f at 500
+                7f at 650
+                -4f at 800
+                0f at 950
+                0f at 8000
             }
-            if (idx < 1) {
-                SectionDivider(modifier = Modifier.padding(vertical = 8.dp))
-            }
+        ),
+        label = "rotation"
+    )
+
+    Box(
+        Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(Color(0x33FFFFFF))
+            .pressScale(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            Icons.Outlined.NotificationsNone,
+            contentDescription = null,
+            tint = PaperWhite,
+            modifier = Modifier
+                .size(20.dp)
+                .graphicsLayer {
+                    rotationZ = if (hasUnread) rotation else 0f
+                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.2f)
+                },
+        )
+        // 紅點(未讀時顯示)
+        if (hasUnread) {
+            Box(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = (-8).dp, y = 8.dp)
+                    .size(9.dp)
+                    .clip(CircleShape)
+                    .background(AccentRed)
+                    .border(
+                        width = 1.5.dp,
+                        color = Color(0xFFA63E1F),
+                        shape = CircleShape,
+                    ),
+            )
         }
     }
 }
