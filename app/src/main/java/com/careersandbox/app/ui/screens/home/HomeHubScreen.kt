@@ -202,7 +202,7 @@ private fun HeroSection(navController: NavHostController) {
     }
 }
 
-/** Hero 右上 streak / 進步 chip */
+/** Hero 右上 streak / 進步 chip — 白底實色,跟 hero 對比強 */
 @Composable
 private fun StreakChip(
     leadingIcon: ImageVector,
@@ -213,35 +213,35 @@ private fun StreakChip(
     Row(
         modifier = Modifier
             .clip(CircleShape)
-            .background(Color(0x33FFFFFF))
-            .padding(horizontal = 10.dp, vertical = 4.dp),
+            .background(PaperWhite)
+            .padding(horizontal = 10.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             leadingIcon,
             contentDescription = null,
-            tint = BrandYellow,
-            modifier = Modifier.size(14.dp),
-        )
-        Spacer(Modifier.width(5.dp))
-        Text(
-            text,
-            color = PaperWhite.copy(alpha = 0.85f),
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Medium,
+            tint = BrandDeepOrange,
+            modifier = Modifier.size(13.dp),
         )
         Spacer(Modifier.width(4.dp))
         Text(
+            text,
+            color = InkGray500,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Spacer(Modifier.width(3.dp))
+        Text(
             value,
-            color = PaperWhite,
+            color = InkBlack,
             fontSize = 12.sp,
             fontWeight = FontWeight.Black,
         )
         Text(
             suffix,
-            color = PaperWhite.copy(alpha = 0.85f),
+            color = InkGray500,
             fontSize = 10.sp,
-            fontWeight = FontWeight.Medium,
+            fontWeight = FontWeight.SemiBold,
         )
     }
 }
