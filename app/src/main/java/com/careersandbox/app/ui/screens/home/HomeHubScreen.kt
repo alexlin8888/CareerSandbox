@@ -23,6 +23,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -362,7 +363,26 @@ private fun BorderlessModuleRow(
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
 private fun ArticleSection(navController: NavHostController) {
+    val articles = MockData.articles
+    val pagerState = androidx.compose.foundation.pager.rememberPagerState(
+        pageCount = { articles.size }
+    )
+
+    // 每 5 秒自動往下一篇 fling
+    androidx.compose.runtime.LaunchedEffect(pagerState) {
+        while (true) {
+            kotlinx.coroutines.delay(5000)
+            val next = (pagerState.currentPage + 1) % articles.size
+            pagerState.animateScrollToPage(
+                page = next,
+                animationSpec = tween(durationMillis = 600)
+            )
+        }
+    }
+
     Column {
         // 標題
         Row(
@@ -379,37 +399,69 @@ private fun ArticleSection(navController: NavHostController) {
                 fontSize = 22.sp,
                 modifier = Modifier.weight(1f),
             )
+            Text("查看全部",
+                color = BrandDeepOrange,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.labelMedium)
         }
         Spacer(Modifier.height(4.dp))
         Text(
-            "履歷、面試、職涯探索 — 邊看邊學",
+            "履歷、面試、職涯探索",
             color = InkGray500,
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(horizontal = 24.dp),
         )
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(14.dp))
 
-        // 橫向滾動文章卡(snap 感)
-        val lazyListState = androidx.compose.foundation.lazy.rememberLazyListState()
-        val flingBehavior = androidx.compose.foundation.gestures.snapping
-            .rememberSnapFlingBehavior(lazyListState = lazyListState)
-        LazyRow(
-            state = lazyListState,
-            flingBehavior = flingBehavior,
+        // 狹長 banner pager
+        androidx.compose.foundation.pager.HorizontalPager(
+            state = pagerState,
             contentPadding = PaddingValues(horizontal = 24.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            pageSpacing = 12.dp,
+        ) { page ->
+            val article = articles[page]
+            ArticleBanner(article) {
+                navController.navigate(Routes.articleDetail(article.id))
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        // Dots indicator
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp),
+            horizontalArrangement = Arrangement.Center,
         ) {
-            items(MockData.articles) { article ->
-                ArticleCard(article) {
-                    navController.navigate(Routes.articleDetail(article.id))
-                }
+            repeat(articles.size) { idx ->
+                val isCurrent = pagerState.currentPage == idx
+                val width by androidx.compose.animation.core.animateDpAsState(
+                    targetValue = if (isCurrent) 18.dp else 6.dp,
+                    animationSpec = tween(durationMillis = 400),
+                    label = "dot-w"
+                )
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 3.dp)
+                        .height(6.dp)
+                        .width(width)
+                        .clip(CircleShape)
+                        .background(
+                            if (isCurrent) BrandDeepOrange
+                            else InkGray300
+                        )
+                )
             }
         }
     }
 }
 
+/**
+ * Ocard 風狹長 banner:圖滿版,文字疊在底部漸層遮罩
+ */
 @Composable
-private fun ArticleCard(
+private fun ArticleBanner(
     article: Article,
     onClick: () -> Unit,
 ) {
@@ -419,66 +471,66 @@ private fun ArticleCard(
         ArticleCategory.CAREER_EXPLORATION -> GlowPurple
         ArticleCategory.WORKPLACE -> AccentGreen
     }
-    Column(
+
+    Box(
         modifier = Modifier
-            .width(260.dp)
-            .height(280.dp)
+            .fillMaxWidth()
+            .height(200.dp)
             .clip(RoundedCornerShape(20.dp))
-            .background(MaterialTheme.colorScheme.surface)
+            .background(accentColor.copy(alpha = 0.18f))
             .pressScale(onClick = onClick),
     ) {
-        // 上半:封面圖 + 分類膠囊浮在圖上
+        // 底圖
+        if (article.coverImageUrl.isNotEmpty()) {
+            coil.compose.AsyncImage(
+                model = article.coverImageUrl,
+                contentDescription = null,
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+
+        // 底部漸層遮罩
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(140.dp)
-                .background(accentColor.copy(alpha = 0.12f)),
-        ) {
-            // 真實圖片(Coil 載入)
-            if (article.coverImageUrl.isNotEmpty()) {
-                coil.compose.AsyncImage(
-                    model = article.coverImageUrl,
-                    contentDescription = null,
-                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-            // 漸層遮罩讓分類標好讀
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        androidx.compose.ui.graphics.Brush.verticalGradient(
-                            colors = listOf(
-                                androidx.compose.ui.graphics.Color.Transparent,
-                                androidx.compose.ui.graphics.Color.Transparent,
-                                androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.25f),
-                            )
-                        )
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            androidx.compose.ui.graphics.Color.Transparent,
+                            androidx.compose.ui.graphics.Color.Transparent,
+                            androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.5f),
+                            androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.85f),
+                        ),
+                        startY = 0f,
                     )
-            )
-            // 分類膠囊浮在左上
+                )
+        )
+
+        // 上方:分類膠囊 + 閱讀時間
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .fillMaxWidth()
+                .padding(14.dp),
+        ) {
             Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(12.dp)
+                Modifier
                     .clip(CircleShape)
                     .background(accentColor)
-                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                    .padding(horizontal = 12.dp, vertical = 4.dp)
             ) {
                 Text(article.category.label,
                     color = PaperWhite,
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Black)
             }
-            // 閱讀時間浮在右下
+            Spacer(Modifier.weight(1f))
             Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(12.dp)
+                Modifier
                     .clip(CircleShape)
                     .background(PaperWhite.copy(alpha = 0.92f))
-                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                    .padding(horizontal = 10.dp, vertical = 4.dp)
             ) {
                 Text("${article.readMinutes} min",
                     color = InkBlack,
@@ -487,44 +539,33 @@ private fun ArticleCard(
             }
         }
 
-        // 下半:文字內容
+        // 下方:標題 + 摘要 + 來源
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(14.dp),
+                .align(Alignment.BottomStart)
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
         ) {
-            // 標題
             Text(article.title,
-                color = InkBlack,
-                fontWeight = FontWeight.Bold,
-                fontSize = 15.sp,
-                lineHeight = 20.sp,
+                color = PaperWhite,
+                fontWeight = FontWeight.Black,
+                fontSize = 18.sp,
+                lineHeight = 22.sp,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis)
-            Spacer(Modifier.height(6.dp))
-            // 摘要
-            Text(article.excerpt,
-                color = InkGray500,
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                lineHeight = 17.sp)
-            Spacer(Modifier.weight(1f))
-            // 來源
+            Spacer(Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(5.dp).clip(CircleShape).background(accentColor))
-                Spacer(Modifier.width(6.dp))
                 Text(article.source,
-                    color = InkBlack,
+                    color = PaperWhite.copy(alpha = 0.85f),
                     style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold)
+                    fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.width(6.dp))
                 Text("·",
-                    color = InkGray400,
+                    color = PaperWhite.copy(alpha = 0.6f),
                     style = MaterialTheme.typography.labelSmall)
                 Spacer(Modifier.width(6.dp))
                 Text(article.publishedDate,
-                    color = InkGray500,
+                    color = PaperWhite.copy(alpha = 0.7f),
                     style = MaterialTheme.typography.labelSmall)
             }
         }

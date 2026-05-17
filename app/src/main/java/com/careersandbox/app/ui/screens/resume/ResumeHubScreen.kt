@@ -1,11 +1,5 @@
 package com.careersandbox.app.ui.screens.resume
 
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -136,24 +130,61 @@ private fun StatsSection() {
 
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+        verticalAlignment = Alignment.Bottom,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        StatBlock(MockData.jobApplications.size.toString(), "職缺")
+        // 已投遞 — 最重要(實際成果)
+        StatBlock(
+            value = totalSubmitted.toString(),
+            label = "已投遞",
+            level = StatLevel.PRIMARY,
+        )
         StatDivider()
-        StatBlock(totalVersions.toString(), "版本")
+        // 職缺 — 重要(進行中)
+        StatBlock(
+            value = MockData.jobApplications.size.toString(),
+            label = "職缺",
+            level = StatLevel.SECONDARY,
+        )
         StatDivider()
-        StatBlock(totalSubmitted.toString(), "已投遞")
+        // 版本 — 次要
+        StatBlock(
+            value = totalVersions.toString(),
+            label = "版本",
+            level = StatLevel.TERTIARY,
+        )
         StatDivider()
-        StatBlock(MockData.masterResume.totalSkills.toString(), "技能")
+        // 技能 — 最不重要(static)
+        StatBlock(
+            value = MockData.masterResume.totalSkills.toString(),
+            label = "技能",
+            level = StatLevel.TERTIARY,
+        )
     }
 }
 
+private enum class StatLevel { PRIMARY, SECONDARY, TERTIARY }
+
 @Composable
-private fun StatBlock(value: String, label: String) {
+private fun StatBlock(value: String, label: String, level: StatLevel = StatLevel.SECONDARY) {
+    val (numSize, numColor, numWeight) = when (level) {
+        StatLevel.PRIMARY -> Triple(36.sp, BrandDeepOrange, FontWeight.Black)
+        StatLevel.SECONDARY -> Triple(26.sp, BrandOrange, FontWeight.Black)
+        StatLevel.TERTIARY -> Triple(20.sp, InkGray500, FontWeight.Bold)
+    }
+    val labelColor = when (level) {
+        StatLevel.PRIMARY -> InkBlack
+        else -> InkGray500
+    }
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, color = BrandOrange, fontWeight = FontWeight.Black, fontSize = 28.sp)
+        Text(value, color = numColor, fontWeight = numWeight, fontSize = numSize, lineHeight = (numSize.value + 2).sp)
         Spacer(Modifier.height(2.dp))
-        Text(label, color = InkGray500, style = MaterialTheme.typography.labelSmall)
+        Text(
+            label,
+            color = labelColor,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = if (level == StatLevel.PRIMARY) FontWeight.Bold else FontWeight.Medium,
+        )
     }
 }
 
@@ -261,10 +292,8 @@ private fun JobApplicationsSection(navController: NavHostController) {
 }
 
 /**
- * C 變數職缺卡:
- * - 頭:職位 + 公司+狀態副標 + 右側大適配度數字
- * - 中:適配度進度條(漸層橘)
- * - 底:meta 列 — N 版本 / N 投遞 / 最新日期
+ * 職缺卡 — 字級主次:
+ * 適配度 44sp (最大,最重要) > 職位 17sp > 公司+狀態 13sp > meta 11sp
  */
 @Composable
 private fun JobProgressCard(
@@ -278,8 +307,7 @@ private fun JobProgressCard(
     }
     val submittedCount = job.versions.count { it.status == VersionStatus.SUBMITTED }
     val latest = job.versions.maxByOrNull { it.versionNumber }
-    val latestStatus = latest?.status
-    val latestLabel = when (latestStatus) {
+    val latestLabel = when (latest?.status) {
         VersionStatus.SUBMITTED -> "已投遞 v${latest.versionNumber}"
         VersionStatus.EDITING -> "編輯中 v${latest.versionNumber}"
         VersionStatus.DRAFT -> "草稿 v${latest.versionNumber}"
@@ -290,94 +318,58 @@ private fun JobProgressCard(
         if (it.status == VersionStatus.SUBMITTED) it.submittedAt else it.createdAt
     } ?: ""
 
-    // 層次邏輯
-    val isSubmitted = submittedCount > 0
-    val isAllDraft = job.versions.all { it.status == VersionStatus.DRAFT }
-    val cardBg = when {
-        isSubmitted -> BrandPeach.copy(alpha = 0.55f)
-        isAllDraft -> InkGray100.copy(alpha = 0.3f)
-        else -> InkGray100.copy(alpha = 0.6f)
-    }
-    val cardAlpha = if (isAllDraft) 0.7f else 1f
-
-    // 微浮動(只在 hot job 上)
-    val floatAnim = if (isSubmitted) {
-        val transition = rememberInfiniteTransition(label = "card-float")
-        transition.animateFloat(
-            initialValue = 0f,
-            targetValue = -3f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(
-                    durationMillis = 2400,
-                    easing = FastOutSlowInEasing,
-                ),
-                repeatMode = RepeatMode.Reverse,
-            ),
-            label = "float-y"
-        ).value
-    } else 0f
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .offset(y = floatAnim.dp)
-            .alpha(cardAlpha)
             .clip(RoundedCornerShape(18.dp))
-            .background(cardBg)
+            .background(InkGray100.copy(alpha = 0.5f))
             .pressScale(onClick = onClick)
             .padding(16.dp),
     ) {
-        // 頭
-        Row(verticalAlignment = Alignment.Top) {
+        // 頭:左邊文字 + 右邊大適配度
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        job.position,
-                        color = if (isAllDraft) InkGray500 else InkBlack,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
-                    )
-                    if (isSubmitted) {
-                        Spacer(Modifier.width(8.dp))
-                        Box(
-                            Modifier
-                                .clip(CircleShape)
-                                .background(AccentGreen)
-                                .padding(horizontal = 8.dp, vertical = 2.dp),
-                        ) {
-                            Text(
-                                "已投遞",
-                                color = PaperWhite,
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Black,
-                            )
-                        }
-                    }
-                }
-                Spacer(Modifier.height(2.dp))
+                Text(
+                    job.position,
+                    color = InkBlack,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp,
+                    lineHeight = 21.sp,
+                )
+                Spacer(Modifier.height(3.dp))
                 Text(
                     "${job.company} · $latestLabel",
                     color = InkGray500,
-                    style = MaterialTheme.typography.bodyMedium,
+                    fontSize = 13.sp,
+                    lineHeight = 16.sp,
                 )
             }
-            Text(
-                "${job.matchScore}",
-                color = matchColor,
-                fontWeight = FontWeight.Black,
-                fontSize = 28.sp,
-                lineHeight = 28.sp,
-            )
+            // 適配度 — 最大最粗,主視覺
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    "${job.matchScore}",
+                    color = matchColor,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 44.sp,
+                    lineHeight = 44.sp,
+                )
+                Text(
+                    "適配度",
+                    color = matchColor.copy(alpha = 0.7f),
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 10.sp,
+                )
+            }
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(14.dp))
 
         // 進度條
         ProgressBar(progress = job.matchScore / 100f, accent = matchColor)
 
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(12.dp))
 
-        // Meta 列
+        // Meta 列 — 最小,輔助資訊
         Row(verticalAlignment = Alignment.CenterVertically) {
             MetaItem(value = "${job.versions.size}", label = "版本")
             Spacer(Modifier.width(16.dp))
@@ -386,7 +378,7 @@ private fun JobProgressCard(
             Text(
                 latestDate,
                 color = InkGray400,
-                style = MaterialTheme.typography.labelSmall,
+                fontSize = 10.sp,
             )
         }
     }
@@ -395,10 +387,10 @@ private fun JobProgressCard(
 @Composable
 private fun MetaItem(value: String, label: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(value, color = InkBlack, fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.labelLarge)
-        Spacer(Modifier.width(4.dp))
-        Text(label, color = InkGray500, style = MaterialTheme.typography.labelSmall)
+        Text(value, color = InkGray700, fontWeight = FontWeight.Bold,
+            fontSize = 12.sp)
+        Spacer(Modifier.width(3.dp))
+        Text(label, color = InkGray400, fontSize = 10.sp)
     }
 }
 
