@@ -121,56 +121,90 @@ private fun HeroSection() {
     }
 }
 
-/** Stats:1 已投遞最大,其他小 */
+/** Stats:Banking 風 — 1 已投遞超大,其他 3 個變底部 mini cards */
 @Composable
 private fun StatsRow() {
     val totalVersions = MockData.jobApplications.sumOf { it.versions.size }
     val totalSubmitted = MockData.jobApplications.flatMap { it.versions }
         .count { it.status == VersionStatus.SUBMITTED }
 
-    Row(
+    Column(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-        verticalAlignment = Alignment.Bottom,
-        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        // 已投遞 (PRIMARY)
-        StatBlock(
-            value = totalSubmitted.toString(),
-            label = "已投遞",
-            primary = true,
+        // 主數字:已投遞 56sp
+        Text(
+            text = totalSubmitted.toString(),
+            color = BrandDeepOrange,
+            fontWeight = FontWeight.Black,
+            fontSize = 56.sp,
+            lineHeight = 56.sp,
         )
-        StatDivider()
-        StatBlock(MockData.jobApplications.size.toString(), "職缺")
-        StatDivider()
-        StatBlock(totalVersions.toString(), "版本")
-        StatDivider()
-        StatBlock(MockData.masterResume.totalSkills.toString(), "技能")
-    }
-}
-
-@Composable
-private fun StatBlock(value: String, label: String, primary: Boolean = false) {
-    val (numSize, numColor, numWeight) = if (primary) {
-        Triple(36.sp, BrandDeepOrange, FontWeight.Black)
-    } else {
-        Triple(20.sp, InkGray500, FontWeight.Bold)
-    }
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, color = numColor, fontWeight = numWeight, fontSize = numSize,
-            lineHeight = (numSize.value + 2).sp)
         Spacer(Modifier.height(2.dp))
         Text(
-            label,
-            color = if (primary) InkBlack else InkGray500,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = if (primary) FontWeight.Bold else FontWeight.Medium,
+            "已投遞職缺",
+            color = InkBlack,
+            fontWeight = FontWeight.Bold,
+            fontSize = 14.sp,
         )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            "這週你做了 $totalSubmitted 件事",
+            color = InkGray500,
+            fontSize = 11.sp,
+        )
+
+        Spacer(Modifier.height(14.dp))
+
+        // 底部 3 個 mini cards
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            MiniStatCard(
+                label = "職缺",
+                value = MockData.jobApplications.size.toString(),
+                modifier = Modifier.weight(1f),
+            )
+            MiniStatCard(
+                label = "版本",
+                value = totalVersions.toString(),
+                modifier = Modifier.weight(1f),
+            )
+            MiniStatCard(
+                label = "技能",
+                value = MockData.masterResume.totalSkills.toString(),
+                modifier = Modifier.weight(1f),
+            )
+        }
     }
 }
 
 @Composable
-private fun StatDivider() {
-    Box(Modifier.height(36.dp).width(0.5.dp).background(InkGray200))
+private fun MiniStatCard(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(PaperWhite)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+    ) {
+        Text(
+            label,
+            color = InkGray500,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Medium,
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            value,
+            color = InkBlack,
+            fontWeight = FontWeight.Black,
+            fontSize = 18.sp,
+            lineHeight = 18.sp,
+        )
+    }
 }
 
 /**
@@ -243,57 +277,53 @@ private fun BentoMain(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    Column(
+    Box(
         modifier = modifier
             .clip(RoundedCornerShape(20.dp))
             .background(BrandDeepOrange)
-            .pressScale(onClick = onClick)
-            .padding(18.dp),
+            .pressScale(onClick = onClick),
     ) {
-        Box(
-            Modifier
-                .size(44.dp)
-                .clip(CircleShape)
-                .background(PaperWhite.copy(alpha = 0.2f)),
-            contentAlignment = Alignment.Center,
+        // 背景插畫(置中,稍微偏上)
+        Image(
+            painter = painterResource(R.drawable.undraw_reading_a_book_4cap),
+            contentDescription = null,
+            modifier = Modifier
+                .align(Alignment.Center)
+                .offset(y = (-10).dp)
+                .size(120.dp)
+                .alpha(0.95f),
+            contentScale = ContentScale.Fit,
+        )
+
+        // 底部文字
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(16.dp),
         ) {
-            Icon(
-                Icons.Outlined.Visibility,
-                contentDescription = null,
-                tint = PaperWhite,
-                modifier = Modifier.size(24.dp),
-            )
-        }
-        Spacer(Modifier.weight(1f))
-        Text(
-            "檢視母版",
-            color = PaperWhite,
-            fontWeight = FontWeight.Black,
-            fontSize = 22.sp,
-            lineHeight = 26.sp,
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            "看看完整的自己",
-            color = PaperWhite.copy(alpha = 0.85f),
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Spacer(Modifier.height(10.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                "${MockData.masterResume.totalExperiences} 段經歷",
-                color = PaperWhite.copy(alpha = 0.9f),
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
+                "檢視母版",
+                color = PaperWhite,
+                fontWeight = FontWeight.Black,
+                fontSize = 20.sp,
+                lineHeight = 24.sp,
             )
-            Spacer(Modifier.width(8.dp))
-            Icon(
-                Icons.Outlined.ArrowForward,
-                contentDescription = null,
-                tint = PaperWhite,
-                modifier = Modifier.size(14.dp),
-            )
+            Spacer(Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "${MockData.masterResume.totalExperiences} 段經歷",
+                    color = PaperWhite.copy(alpha = 0.9f),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(Modifier.width(6.dp))
+                Icon(
+                    Icons.Outlined.ArrowForward,
+                    contentDescription = null,
+                    tint = PaperWhite,
+                    modifier = Modifier.size(14.dp),
+                )
+            }
         }
     }
 }
