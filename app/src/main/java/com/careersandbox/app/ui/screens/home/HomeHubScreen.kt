@@ -55,14 +55,14 @@ fun HomeHubScreen(navController: NavHostController) {
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         ) {
             HeroSection(navController)
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(24.dp))
+            ArticleSection(navController)
+            Spacer(Modifier.height(36.dp))
             QuickActionsBorderless(navController)
             Spacer(Modifier.height(36.dp))
             ModuleSection(navController)
             Spacer(Modifier.height(36.dp))
             CompetitionSection(navController)
-            Spacer(Modifier.height(36.dp))
-            ArticleSection(navController)
             Spacer(Modifier.height(48.dp))
         }
     }

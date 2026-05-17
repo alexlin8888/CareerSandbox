@@ -51,9 +51,9 @@ fun ResumeHubScreen(navController: NavHostController) {
         ) {
             HeroSection()
             Spacer(Modifier.height(24.dp))
-            StatsSection()
-            Spacer(Modifier.height(28.dp))
-            ActionTilesSection(navController)
+            StatsRow()
+            Spacer(Modifier.height(24.dp))
+            BentoActions(navController)
             Spacer(Modifier.height(32.dp))
             JobApplicationsSection(navController)
             Spacer(Modifier.height(48.dp))
@@ -61,7 +61,7 @@ fun ResumeHubScreen(navController: NavHostController) {
     }
 }
 
-/** Hero — 完全沿用 ProfileScreen 結構 */
+/** Hero — 完全沿用之前(不動) */
 @Composable
 private fun HeroSection() {
     Box(modifier = Modifier.fillMaxWidth().height(260.dp)) {
@@ -121,9 +121,9 @@ private fun HeroSection() {
     }
 }
 
-/** Stats 4 數字 */
+/** Stats:1 已投遞最大,其他小 */
 @Composable
-private fun StatsSection() {
+private fun StatsRow() {
     val totalVersions = MockData.jobApplications.sumOf { it.versions.size }
     val totalSubmitted = MockData.jobApplications.flatMap { it.versions }
         .count { it.status == VersionStatus.SUBMITTED }
@@ -133,57 +133,37 @@ private fun StatsSection() {
         verticalAlignment = Alignment.Bottom,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        // 已投遞 — 最重要(實際成果)
+        // 已投遞 (PRIMARY)
         StatBlock(
             value = totalSubmitted.toString(),
             label = "已投遞",
-            level = StatLevel.PRIMARY,
+            primary = true,
         )
         StatDivider()
-        // 職缺 — 重要(進行中)
-        StatBlock(
-            value = MockData.jobApplications.size.toString(),
-            label = "職缺",
-            level = StatLevel.SECONDARY,
-        )
+        StatBlock(MockData.jobApplications.size.toString(), "職缺")
         StatDivider()
-        // 版本 — 次要
-        StatBlock(
-            value = totalVersions.toString(),
-            label = "版本",
-            level = StatLevel.TERTIARY,
-        )
+        StatBlock(totalVersions.toString(), "版本")
         StatDivider()
-        // 技能 — 最不重要(static)
-        StatBlock(
-            value = MockData.masterResume.totalSkills.toString(),
-            label = "技能",
-            level = StatLevel.TERTIARY,
-        )
+        StatBlock(MockData.masterResume.totalSkills.toString(), "技能")
     }
 }
 
-private enum class StatLevel { PRIMARY, SECONDARY, TERTIARY }
-
 @Composable
-private fun StatBlock(value: String, label: String, level: StatLevel = StatLevel.SECONDARY) {
-    val (numSize, numColor, numWeight) = when (level) {
-        StatLevel.PRIMARY -> Triple(36.sp, BrandDeepOrange, FontWeight.Black)
-        StatLevel.SECONDARY -> Triple(26.sp, BrandOrange, FontWeight.Black)
-        StatLevel.TERTIARY -> Triple(20.sp, InkGray500, FontWeight.Bold)
-    }
-    val labelColor = when (level) {
-        StatLevel.PRIMARY -> InkBlack
-        else -> InkGray500
+private fun StatBlock(value: String, label: String, primary: Boolean = false) {
+    val (numSize, numColor, numWeight) = if (primary) {
+        Triple(36.sp, BrandDeepOrange, FontWeight.Black)
+    } else {
+        Triple(20.sp, InkGray500, FontWeight.Bold)
     }
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, color = numColor, fontWeight = numWeight, fontSize = numSize, lineHeight = (numSize.value + 2).sp)
+        Text(value, color = numColor, fontWeight = numWeight, fontSize = numSize,
+            lineHeight = (numSize.value + 2).sp)
         Spacer(Modifier.height(2.dp))
         Text(
             label,
-            color = labelColor,
+            color = if (primary) InkBlack else InkGray500,
             style = MaterialTheme.typography.labelSmall,
-            fontWeight = if (level == StatLevel.PRIMARY) FontWeight.Bold else FontWeight.Medium,
+            fontWeight = if (primary) FontWeight.Bold else FontWeight.Medium,
         )
     }
 }
@@ -193,34 +173,135 @@ private fun StatDivider() {
     Box(Modifier.height(36.dp).width(0.5.dp).background(InkGray200))
 }
 
-/** 4 個 tile 格子 — B 變數 */
+/**
+ * Bento Grid: 左大塊「檢視母版」+ 右側 4 小塊(2x2)
+ */
 @Composable
-private fun ActionTilesSection(navController: NavHostController) {
+private fun BentoActions(navController: NavHostController) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp),
+            .padding(horizontal = 24.dp)
+            .height(220.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        ActionTile("檢視母版", Icons.Outlined.Visibility, BrandOrange, Modifier.weight(1f)) {
-            navController.navigate(Routes.RESUME_PROFILE)
-        }
-        ActionTile("編輯", Icons.Outlined.Edit, BrandDeepOrange, Modifier.weight(1f)) {
-            navController.navigate(Routes.RESUME_EDITOR)
-        }
-        ActionTile("經歷網", Icons.Outlined.AccountTree, GlowPurple, Modifier.weight(1f)) {
-            navController.navigate(Routes.EXPERIENCE_NETWORK)
-        }
-        ActionTile("PDF 匯入", Icons.Outlined.FileUpload, AccentGreen, Modifier.weight(1f)) {
-            navController.navigate(Routes.RESUME_UPLOAD_PROCESSING)
+        // 左:大塊「檢視母版」
+        BentoMain(
+            modifier = Modifier.weight(1.2f).fillMaxHeight(),
+            onClick = { navController.navigate(Routes.RESUME_PROFILE) },
+        )
+
+        // 右:4 小塊 2x2
+        Column(
+            modifier = Modifier.weight(1f).fillMaxHeight(),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Row(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                BentoSmall(
+                    icon = Icons.Outlined.Edit,
+                    label = "編輯",
+                    accent = BrandDeepOrange,
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    onClick = { navController.navigate(Routes.RESUME_EDITOR) },
+                )
+                BentoSmall(
+                    icon = Icons.Outlined.AccountTree,
+                    label = "經歷網",
+                    accent = GlowPurple,
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    onClick = { navController.navigate(Routes.EXPERIENCE_NETWORK) },
+                )
+            }
+            Row(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                BentoSmall(
+                    icon = Icons.Outlined.FileUpload,
+                    label = "PDF",
+                    accent = AccentGreen,
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    onClick = { navController.navigate(Routes.RESUME_UPLOAD_PROCESSING) },
+                )
+                BentoSmall(
+                    icon = Icons.Outlined.Analytics,
+                    label = "適配分析",
+                    accent = BrandAmber,
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    onClick = { /* TODO 適配分析頁 */ },
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun ActionTile(
-    label: String,
+private fun BentoMain(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(BrandDeepOrange)
+            .pressScale(onClick = onClick)
+            .padding(18.dp),
+    ) {
+        Box(
+            Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(PaperWhite.copy(alpha = 0.2f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                Icons.Outlined.Visibility,
+                contentDescription = null,
+                tint = PaperWhite,
+                modifier = Modifier.size(24.dp),
+            )
+        }
+        Spacer(Modifier.weight(1f))
+        Text(
+            "檢視母版",
+            color = PaperWhite,
+            fontWeight = FontWeight.Black,
+            fontSize = 22.sp,
+            lineHeight = 26.sp,
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "看看完整的自己",
+            color = PaperWhite.copy(alpha = 0.85f),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Spacer(Modifier.height(10.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "${MockData.masterResume.totalExperiences} 段經歷",
+                color = PaperWhite.copy(alpha = 0.9f),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.width(8.dp))
+            Icon(
+                Icons.Outlined.ArrowForward,
+                contentDescription = null,
+                tint = PaperWhite,
+                modifier = Modifier.size(14.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun BentoSmall(
     icon: ImageVector,
+    label: String,
     accent: Color,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
@@ -228,31 +309,35 @@ private fun ActionTile(
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
-            .background(accent.copy(alpha = 0.08f))
+            .background(accent.copy(alpha = 0.1f))
             .pressScale(onClick = onClick)
-            .padding(vertical = 14.dp, horizontal = 6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+            .padding(12.dp),
+        verticalArrangement = Arrangement.SpaceBetween,
     ) {
         Box(
             Modifier
-                .size(36.dp)
+                .size(30.dp)
                 .clip(CircleShape)
                 .background(PaperWhite),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(18.dp))
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = accent,
+                modifier = Modifier.size(16.dp),
+            )
         }
-        Spacer(Modifier.height(8.dp))
         Text(
             label,
             color = InkBlack,
+            fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold,
         )
     }
 }
 
-/** 職缺區 — C 變數,大卡片 + 進度條 */
+/** 針對職缺(維持上版字級層次) */
 @Composable
 private fun JobApplicationsSection(navController: NavHostController) {
     Column(modifier = Modifier.padding(horizontal = 24.dp)) {
@@ -264,7 +349,7 @@ private fun JobApplicationsSection(navController: NavHostController) {
                 },
                 color = InkBlack,
                 fontWeight = FontWeight.Black,
-                fontSize = 28.sp,
+                fontSize = 24.sp,
                 modifier = Modifier.weight(1f),
             )
             Text("+ 新增",
@@ -276,11 +361,13 @@ private fun JobApplicationsSection(navController: NavHostController) {
                 })
         }
         Spacer(Modifier.height(4.dp))
-        Text("${MockData.jobApplications.size} 個職缺,各自有不同版本",
+        Text(
+            "${MockData.jobApplications.size} 個職缺,各自有不同版本",
             color = InkGray500,
-            style = MaterialTheme.typography.bodyMedium)
+            style = MaterialTheme.typography.bodyMedium,
+        )
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(16.dp))
 
         MockData.jobApplications.forEach { job ->
             JobProgressCard(job) {
@@ -291,10 +378,6 @@ private fun JobApplicationsSection(navController: NavHostController) {
     }
 }
 
-/**
- * 職缺卡 — 字級主次:
- * 適配度 44sp (最大,最重要) > 職位 17sp > 公司+狀態 13sp > meta 11sp
- */
 @Composable
 private fun JobProgressCard(
     job: JobApplication,
@@ -326,7 +409,6 @@ private fun JobProgressCard(
             .pressScale(onClick = onClick)
             .padding(16.dp),
     ) {
-        // 頭:左邊文字 + 右邊大適配度
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -344,7 +426,6 @@ private fun JobProgressCard(
                     lineHeight = 16.sp,
                 )
             }
-            // 適配度 — 最大最粗,主視覺
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     "${job.matchScore}",
@@ -364,12 +445,10 @@ private fun JobProgressCard(
 
         Spacer(Modifier.height(14.dp))
 
-        // 進度條
         ProgressBar(progress = job.matchScore / 100f, accent = matchColor)
 
         Spacer(Modifier.height(12.dp))
 
-        // Meta 列 — 最小,輔助資訊
         Row(verticalAlignment = Alignment.CenterVertically) {
             MetaItem(value = "${job.versions.size}", label = "版本")
             Spacer(Modifier.width(16.dp))
@@ -394,7 +473,6 @@ private fun MetaItem(value: String, label: String) {
     }
 }
 
-/** 進度條 — 用 Canvas 畫漸層 */
 @Composable
 private fun ProgressBar(progress: Float, accent: Color) {
     Canvas(
@@ -402,13 +480,11 @@ private fun ProgressBar(progress: Float, accent: Color) {
             .fillMaxWidth()
             .height(6.dp),
     ) {
-        // 軌道
         drawRoundRect(
             color = InkGray200,
             size = Size(size.width, size.height),
             cornerRadius = CornerRadius(3.dp.toPx()),
         )
-        // 填充(漸層)
         val w = size.width * progress.coerceIn(0f, 1f)
         if (w > 0f) {
             drawRoundRect(
