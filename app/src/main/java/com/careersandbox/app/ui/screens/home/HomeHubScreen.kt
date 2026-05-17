@@ -363,8 +363,6 @@ private fun BorderlessModuleRow(
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
-@Composable
 private fun ArticleSection(navController: NavHostController) {
     val articles = MockData.articles
     val pagerState = androidx.compose.foundation.pager.rememberPagerState(
