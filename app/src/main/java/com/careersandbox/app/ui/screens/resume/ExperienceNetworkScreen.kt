@@ -4,7 +4,6 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,7 +11,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.OpenInFull
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,10 +21,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
@@ -40,31 +35,28 @@ import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.data.model.Experience
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
+import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
-import kotlin.math.PI
+
+private val CATEGORIES = listOf("社團", "工作", "競賽", "學業")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExperienceNetworkScreen(navController: NavHostController) {
     val experiences = MockData.experiences
 
+    val byCategory = remember(experiences) {
+        CATEGORIES.associateWith { cat ->
+            experiences.filter { it.category == cat }
+        }
+    }
+
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
-    var focusedId by remember { mutableStateOf<String?>(null) }
     var previewId by remember { mutableStateOf<String?>(null) }
     var modalId by remember { mutableStateOf<String?>(null) }
-    var scale by remember { mutableStateOf(1f) }
-    var pan by remember { mutableStateOf(Offset.Zero) }
 
-    val infinite = rememberInfiniteTransition(label = "flow")
-    val flowPhase by infinite.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 3000, easing = LinearEasing),
-        ),
-        label = "phase"
-    )
+    val infinite = rememberInfiniteTransition(label = "halo")
     val haloAlpha by infinite.animateFloat(
         initialValue = 0.25f,
         targetValue = 0.5f,
@@ -72,14 +64,14 @@ fun ExperienceNetworkScreen(navController: NavHostController) {
             animation = tween(2200, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse,
         ),
-        label = "halo"
+        label = "halo-anim",
     )
 
     Scaffold(
         containerColor = PaperWhite,
         topBar = {
             TopAppBar(
-                title = { Text("經歷關聯網", fontWeight = FontWeight.Bold, color = InkBlack) },
+                title = { Text("經歷網", fontWeight = FontWeight.Bold, color = InkBlack) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Outlined.ArrowBack, contentDescription = null, tint = InkBlack)
@@ -95,88 +87,55 @@ fun ExperienceNetworkScreen(navController: NavHostController) {
                 .fillMaxSize()
                 .background(PaperWhite),
         ) {
-            NetworkCanvas(
+            CategoryNetworkCanvas(
                 experiences = experiences,
+                byCategory = byCategory,
                 canvasSize = canvasSize,
-                focusedId = focusedId,
-                flowPhase = flowPhase,
                 haloAlpha = haloAlpha,
-                scale = scale,
-                pan = pan,
                 onSizeChanged = { canvasSize = it },
                 onSingleTap = { id -> previewId = id },
-                onDoubleTap = { id -> focusedId = if (focusedId == id) null else id },
                 onLongPress = { id -> modalId = id },
-                onPanZoom = { dPan, dScale ->
-                    pan += dPan
-                    scale = (scale * dScale).coerceIn(0.5f, 2.5f)
-                },
                 modifier = Modifier
                     .fillMaxSize()
                     .blur(if (modalId != null) 8.dp else 0.dp),
             )
 
-            // Hint card
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(horizontal = 20.dp, vertical = 8.dp)
                     .clip(RoundedCornerShape(14.dp))
-                    .background(GlowPurple.copy(alpha = 0.1f))
+                    .background(BrandDeepOrange.copy(alpha = 0.08f))
                     .padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
                     Icons.Outlined.AutoAwesome,
                     contentDescription = null,
-                    tint = GlowPurple,
+                    tint = BrandDeepOrange,
                     modifier = Modifier.size(16.dp),
                 )
                 Spacer(Modifier.width(8.dp))
                 Column(modifier = Modifier.weight(1f)) {
+                    val activeCats = CATEGORIES.count { byCategory[it]?.isNotEmpty() == true }
                     Text(
-                        "點:預覽 · 雙點:聚焦 · 長按:詳情",
-                        color = GlowPurple,
+                        "你的 ${experiences.size} 段經歷,分 $activeCats 大類",
+                        color = BrandDeepOrange,
                         fontWeight = FontWeight.Bold,
                         fontSize = 11.sp,
                     )
                     Spacer(Modifier.height(1.dp))
                     Text(
-                        "雙指縮放 · 拖曳移動",
+                        "點:預覽 · 長按:詳情",
                         color = InkGray500,
                         fontSize = 10.sp,
                     )
                 }
             }
 
-            // Reset 按鈕
-            if (focusedId != null || scale != 1f || pan != Offset.Zero) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(20.dp)
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(InkBlack.copy(alpha = 0.85f))
-                        .pressScale {
-                            focusedId = null
-                            scale = 1f
-                            pan = Offset.Zero
-                        },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        Icons.Outlined.OpenInFull,
-                        contentDescription = null,
-                        tint = PaperWhite,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-            }
-
             previewId?.let { id ->
                 val exp = experiences.firstOrNull { it.id == id } ?: return@let
-                PreviewSheet(
+                NetworkPreviewSheet(
                     experience = exp,
                     onDismiss = { previewId = null },
                     onSeeMore = {
@@ -188,7 +147,7 @@ fun ExperienceNetworkScreen(navController: NavHostController) {
 
             modalId?.let { id ->
                 val exp = experiences.firstOrNull { it.id == id } ?: return@let
-                DetailModal(
+                NetworkDetailModal(
                     experience = exp,
                     onDismiss = { modalId = null },
                 )
@@ -198,177 +157,147 @@ fun ExperienceNetworkScreen(navController: NavHostController) {
 }
 
 @Composable
-private fun NetworkCanvas(
+private fun CategoryNetworkCanvas(
     experiences: List<Experience>,
+    byCategory: Map<String, List<Experience>>,
     canvasSize: IntSize,
-    focusedId: String?,
-    flowPhase: Float,
     haloAlpha: Float,
-    scale: Float,
-    pan: Offset,
     onSizeChanged: (IntSize) -> Unit,
     onSingleTap: (String) -> Unit,
-    onDoubleTap: (String) -> Unit,
     onLongPress: (String) -> Unit,
-    onPanZoom: (Offset, Float) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val density = LocalDensity.current.density
 
-    val nodePositions = remember(canvasSize, focusedId) {
-        computeNodePositions(experiences, canvasSize, focusedId)
+    val positions = remember(canvasSize, byCategory) {
+        computeLayout(canvasSize, byCategory)
     }
-
-    val animatedPositions = nodePositions.mapValues { (id, target) ->
-        val x by animateFloatAsState(target.x, animationSpec = tween(500, easing = FastOutSlowInEasing), label = "x-$id")
-        val y by animateFloatAsState(target.y, animationSpec = tween(500, easing = FastOutSlowInEasing), label = "y-$id")
-        Offset(x, y)
-    }
-
-    val edges = remember(experiences) {
-        val list = mutableListOf<Pair<String, String>>()
-        for (i in experiences.indices) {
-            for (j in i + 1 until experiences.size) {
-                val a = experiences[i]
-                val b = experiences[j]
-                if (a.tags.intersect(b.tags.toSet()).isNotEmpty()) {
-                    list.add(a.id to b.id)
-                }
-            }
-        }
-        list
-    }
+    val expPositions = positions.expPositions
 
     Canvas(
         modifier = modifier
             .onSizeChanged(onSizeChanged)
-            .pointerInput(Unit) {
-                detectTransformGestures { _, panDelta, zoom, _ ->
-                    onPanZoom(panDelta, zoom)
-                }
-            }
-            .pointerInput(canvasSize, animatedPositions, scale, pan) {
+            .pointerInput(canvasSize, expPositions) {
                 detectTapGestures(
                     onTap = { tapOffset ->
-                        findHitNode(tapOffset, animatedPositions, scale, pan)?.let { onSingleTap(it) }
-                    },
-                    onDoubleTap = { tapOffset ->
-                        findHitNode(tapOffset, animatedPositions, scale, pan)?.let { onDoubleTap(it) }
+                        findHitExperience(tapOffset, expPositions)?.let { onSingleTap(it) }
                     },
                     onLongPress = { tapOffset ->
-                        findHitNode(tapOffset, animatedPositions, scale, pan)?.let { onLongPress(it) }
+                        findHitExperience(tapOffset, expPositions)?.let { onLongPress(it) }
                     },
                 )
-            }
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-                translationX = pan.x
-                translationY = pan.y
             },
     ) {
         drawStardust(size)
-        drawOrbits(size)
 
-        for ((aId, bId) in edges) {
-            val pa = animatedPositions[aId] ?: continue
-            val pb = animatedPositions[bId] ?: continue
-            drawConnection(pa, pb, focusedId == aId || focusedId == bId)
-            drawFlowDot(pa, pb, flowPhase)
+        positions.categoryPositions.forEach { (_, catPos) ->
+            drawConnection(positions.center, catPos)
         }
 
-        drawCenterNode(size, haloAlpha)
+        byCategory.forEach { (cat, exps) ->
+            val catPos = positions.categoryPositions[cat] ?: return@forEach
+            exps.forEach { exp ->
+                val expPos = expPositions[exp.id] ?: return@forEach
+                drawConnection(catPos, expPos)
+            }
+        }
+
+        drawCenterNode(positions.center, haloAlpha)
+
+        positions.categoryPositions.forEach { (cat, pos) ->
+            drawCategoryNode(pos, cat, byCategory[cat]?.size ?: 0, density)
+        }
 
         experiences.forEach { exp ->
-            val pos = animatedPositions[exp.id] ?: return@forEach
-            drawExperienceNode(pos, exp, focusedId == exp.id, density)
+            val pos = expPositions[exp.id] ?: return@forEach
+            drawExperienceLeaf(pos, exp, density)
         }
     }
 }
 
-private fun computeNodePositions(
-    experiences: List<Experience>,
+private data class NetworkLayout(
+    val center: Offset,
+    val categoryPositions: Map<String, Offset>,
+    val expPositions: Map<String, Offset>,
+)
+
+private fun computeLayout(
     canvasSize: IntSize,
-    focusedId: String?,
-): Map<String, Offset> {
-    if (canvasSize.width == 0 || canvasSize.height == 0) return emptyMap()
+    byCategory: Map<String, List<Experience>>,
+): NetworkLayout {
+    if (canvasSize.width == 0 || canvasSize.height == 0) {
+        return NetworkLayout(Offset.Zero, emptyMap(), emptyMap())
+    }
 
     val cx = canvasSize.width / 2f
     val cy = canvasSize.height / 2f
-    val maxR = minOf(cx, cy) * 0.78f
-    val result = mutableMapOf<String, Offset>()
+    val center = Offset(cx, cy)
+    val maxR = minOf(cx, cy) * 0.85f
 
-    if (focusedId != null) {
-        val focused = experiences.firstOrNull { it.id == focusedId }
-        val others = experiences.filter { it.id != focusedId }
+    val catRadius = maxR * 0.45f
+    val catAngles = mapOf(
+        "社團" to (-PI / 2),
+        "工作" to 0.0,
+        "競賽" to (PI / 2),
+        "學業" to PI,
+    )
+    val categoryPositions = CATEGORIES.associateWith { cat ->
+        val angle = catAngles[cat] ?: 0.0
+        Offset(
+            (cx + cos(angle) * catRadius).toFloat(),
+            (cy + sin(angle) * catRadius).toFloat(),
+        )
+    }
 
-        focused?.let {
-            result[it.id] = Offset(cx, cy - maxR * 0.35f)
-        }
+    val expPositions = mutableMapOf<String, Offset>()
+    byCategory.forEach { (cat, exps) ->
+        if (exps.isEmpty()) return@forEach
+        val catAngle = catAngles[cat] ?: 0.0
+        val expRadius = maxR * 0.85f
 
-        val angleStep = 2 * PI / others.size
-        others.forEachIndexed { idx, exp ->
-            val angle = idx * angleStep - PI / 2
-            val radius = maxR * 0.85f
-            result[exp.id] = Offset(
-                (cx + cos(angle) * radius).toFloat(),
-                (cy + sin(angle) * radius).toFloat(),
+        if (exps.size == 1) {
+            expPositions[exps[0].id] = Offset(
+                (cx + cos(catAngle) * expRadius).toFloat(),
+                (cy + sin(catAngle) * expRadius).toFloat(),
             )
-        }
-    } else {
-        val inner = experiences.take(3)
-        val outer = experiences.drop(3)
-
-        val innerR = maxR * 0.5f
-        val outerR = maxR * 0.85f
-
-        inner.forEachIndexed { idx, exp ->
-            val angle = idx * (2 * PI / inner.size) - PI / 2
-            result[exp.id] = Offset(
-                (cx + cos(angle) * innerR).toFloat(),
-                (cy + sin(angle) * innerR).toFloat(),
-            )
-        }
-        outer.forEachIndexed { idx, exp ->
-            val baseAngle = idx * (2 * PI / outer.size)
-            val angle = baseAngle - PI / 2 + (PI / outer.size)
-            result[exp.id] = Offset(
-                (cx + cos(angle) * outerR).toFloat(),
-                (cy + sin(angle) * outerR).toFloat(),
-            )
+        } else {
+            val spread = (PI / 3).toFloat()
+            val step = if (exps.size > 1) spread * 2f / (exps.size - 1) else 0f
+            exps.forEachIndexed { idx, exp ->
+                val expAngle = catAngle - spread + step * idx
+                expPositions[exp.id] = Offset(
+                    (cx + cos(expAngle) * expRadius).toFloat(),
+                    (cy + sin(expAngle) * expRadius).toFloat(),
+                )
+            }
         }
     }
-    return result
+
+    return NetworkLayout(center, categoryPositions, expPositions)
 }
 
-private fun findHitNode(
-    tapOffset: Offset,
+private fun findHitExperience(
+    tap: Offset,
     positions: Map<String, Offset>,
-    scale: Float,
-    pan: Offset,
 ): String? {
-    val real = Offset(
-        (tapOffset.x - pan.x) / scale,
-        (tapOffset.y - pan.y) / scale,
-    )
-    val hitRadius = 36f
+    val hitR = 36f
     return positions.entries
         .minByOrNull { (_, p) ->
-            val dx = p.x - real.x
-            val dy = p.y - real.y
+            val dx = p.x - tap.x
+            val dy = p.y - tap.y
             dx * dx + dy * dy
         }
         ?.takeIf { (_, p) ->
-            val dx = p.x - real.x
-            val dy = p.y - real.y
-            kotlin.math.sqrt(dx * dx + dy * dy) < hitRadius
+            val dx = p.x - tap.x
+            val dy = p.y - tap.y
+            kotlin.math.sqrt(dx * dx + dy * dy) < hitR
         }
         ?.key
 }
 
 private fun DrawScope.drawStardust(size: Size) {
-    var s = 7
-    repeat(24) {
+    var s = 17
+    repeat(20) {
         s = (s * 1103515245 + 12345) and 0x7fffffff
         val x = (s % 1000) / 1000f * size.width
         s = (s * 1103515245 + 12345) and 0x7fffffff
@@ -376,7 +305,7 @@ private fun DrawScope.drawStardust(size: Size) {
         s = (s * 1103515245 + 12345) and 0x7fffffff
         val r = ((s % 1000) / 1000f) * 1.5f + 0.5f
         s = (s * 1103515245 + 12345) and 0x7fffffff
-        val alpha = ((s % 1000) / 1000f) * 0.3f + 0.1f
+        val alpha = ((s % 1000) / 1000f) * 0.25f + 0.08f
         drawCircle(
             color = BrandOrange.copy(alpha = alpha),
             radius = r,
@@ -385,25 +314,23 @@ private fun DrawScope.drawStardust(size: Size) {
     }
 }
 
-private fun DrawScope.drawOrbits(size: Size) {
-    val cx = size.width / 2f
-    val cy = size.height / 2f
-    val maxR = minOf(cx, cy) * 0.78f
-    val dashEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 6f), 0f)
-
-    listOf(0.5f, 0.85f).forEach { factor ->
-        drawCircle(
-            color = BrandOrange.copy(alpha = 0.12f),
-            radius = maxR * factor,
-            center = Offset(cx, cy),
-            style = Stroke(width = 1f, pathEffect = dashEffect),
-        )
-    }
+private fun DrawScope.drawConnection(a: Offset, b: Offset) {
+    drawLine(
+        brush = Brush.linearGradient(
+            colors = listOf(
+                BrandDeepOrange.copy(alpha = 0.45f),
+                BrandAmber.copy(alpha = 0.25f),
+            ),
+            start = a,
+            end = b,
+        ),
+        start = a,
+        end = b,
+        strokeWidth = 1.8f,
+    )
 }
 
-private fun DrawScope.drawCenterNode(size: Size, haloAlpha: Float) {
-    val center = Offset(size.width / 2f, size.height / 2f)
-
+private fun DrawScope.drawCenterNode(center: Offset, haloAlpha: Float) {
     drawCircle(
         brush = Brush.radialGradient(
             colors = listOf(
@@ -411,128 +338,146 @@ private fun DrawScope.drawCenterNode(size: Size, haloAlpha: Float) {
                 BrandDeepOrange.copy(alpha = 0f),
             ),
             center = center,
-            radius = 50f,
+            radius = 55f,
         ),
-        radius = 50f,
+        radius = 55f,
         center = center,
     )
     drawCircle(
         brush = Brush.radialGradient(
-            colors = listOf(
-                BrandAmber,
-                BrandDeepOrange,
-                Color(0xFF993C1D),
-            ),
-            center = Offset(center.x - 5, center.y - 5),
-            radius = 28f,
+            colors = listOf(BrandAmber, BrandDeepOrange, Color(0xFF993C1D)),
+            center = Offset(center.x - 6, center.y - 6),
+            radius = 32f,
         ),
-        radius = 28f,
+        radius = 30f,
         center = center,
+    )
+    drawCircle(
+        color = Color.White.copy(alpha = 0.3f),
+        radius = 12f,
+        center = Offset(center.x - 8, center.y - 8),
     )
     drawContext.canvas.nativeCanvas.let { canvas ->
         val paint = android.graphics.Paint().apply {
             setColor(android.graphics.Color.WHITE)
-            textSize = 28f
+            textSize = 30f
             isFakeBoldText = true
             textAlign = android.graphics.Paint.Align.CENTER
             isAntiAlias = true
         }
-        canvas.drawText("你", center.x, center.y + 10f, paint)
+        canvas.drawText("你", center.x, center.y + 11f, paint)
     }
 }
 
-private fun DrawScope.drawExperienceNode(
+private fun DrawScope.drawCategoryNode(
     pos: Offset,
-    experience: Experience,
-    isFocused: Boolean,
+    category: String,
+    count: Int,
     density: Float,
 ) {
-    val color = colorForCategory(experience.category)
-    val baseRadius = if (isFocused) 32f else 24f
+    val isActive = count > 0
+    val color = if (isActive) BrandDeepOrange else InkGray400
+    val radius = 22f
+
+    if (isActive) {
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    color.copy(alpha = 0.3f),
+                    color.copy(alpha = 0f),
+                ),
+                center = pos,
+                radius = radius * 1.9f,
+            ),
+            radius = radius * 1.9f,
+            center = pos,
+        )
+    }
+    drawCircle(color = color, radius = radius, center = pos)
+    drawCircle(
+        color = Color.White.copy(alpha = 0.35f),
+        radius = radius * 0.4f,
+        center = Offset(pos.x - radius * 0.35f, pos.y - radius * 0.35f),
+    )
+    drawContext.canvas.nativeCanvas.let { canvas ->
+        val paint = android.graphics.Paint().apply {
+            setColor(android.graphics.Color.WHITE)
+            textSize = 13f * density
+            isFakeBoldText = true
+            textAlign = android.graphics.Paint.Align.CENTER
+            isAntiAlias = true
+        }
+        canvas.drawText(category, pos.x, pos.y + 5f, paint)
+    }
+    drawContext.canvas.nativeCanvas.let { canvas ->
+        val paint = android.graphics.Paint().apply {
+            setColor(android.graphics.Color.parseColor("#6B7280"))
+            textSize = 10f * density
+            textAlign = android.graphics.Paint.Align.CENTER
+            isAntiAlias = true
+        }
+        canvas.drawText("$count 段", pos.x, pos.y + radius + 18f, paint)
+    }
+}
+
+private fun DrawScope.drawExperienceLeaf(
+    pos: Offset,
+    experience: Experience,
+    density: Float,
+) {
+    val radius = 18f
 
     drawCircle(
         brush = Brush.radialGradient(
             colors = listOf(
-                color.copy(alpha = if (isFocused) 0.35f else 0.18f),
-                color.copy(alpha = 0f),
+                BrandAmber.copy(alpha = 0.35f),
+                BrandAmber.copy(alpha = 0f),
             ),
             center = pos,
-            radius = baseRadius * 1.8f,
+            radius = radius * 2f,
         ),
-        radius = baseRadius * 1.8f,
+        radius = radius * 2f,
         center = pos,
     )
-    drawCircle(color = color, radius = baseRadius, center = pos)
     drawCircle(
-        color = Color.White.copy(alpha = 0.3f),
-        radius = baseRadius * 0.45f,
-        center = Offset(pos.x - baseRadius * 0.35f, pos.y - baseRadius * 0.35f),
+        brush = Brush.radialGradient(
+            colors = listOf(BrandAmber, BrandDeepOrange),
+            center = Offset(pos.x - 4, pos.y - 4),
+            radius = radius * 1.2f,
+        ),
+        radius = radius,
+        center = pos,
     )
-
+    drawCircle(
+        color = Color.White.copy(alpha = 0.4f),
+        radius = radius * 0.4f,
+        center = Offset(pos.x - radius * 0.35f, pos.y - radius * 0.35f),
+    )
+    val shortTitle = if (experience.title.length > 7) {
+        experience.title.take(7) + "…"
+    } else {
+        experience.title
+    }
     drawContext.canvas.nativeCanvas.let { canvas ->
         val paint = android.graphics.Paint().apply {
-            setColor(android.graphics.Color.parseColor("#2A2A2A"))
-            textSize = if (isFocused) 12f * density else 10f * density
+            setColor(android.graphics.Color.parseColor("#0B0E14"))
+            textSize = 10f * density
             isFakeBoldText = true
             textAlign = android.graphics.Paint.Align.CENTER
             isAntiAlias = true
         }
-        canvas.drawText(
-            experience.category,
-            pos.x,
-            pos.y + baseRadius + 18f,
-            paint,
-        )
+        canvas.drawText(shortTitle, pos.x, pos.y + radius + 18f, paint)
     }
-}
-
-private fun DrawScope.drawConnection(a: Offset, b: Offset, isFocused: Boolean) {
-    drawLine(
-        color = if (isFocused) BrandDeepOrange.copy(alpha = 0.65f) else BrandOrange.copy(alpha = 0.3f),
-        start = a,
-        end = b,
-        strokeWidth = if (isFocused) 2.5f else 1.5f,
-    )
-}
-
-private fun DrawScope.drawFlowDot(a: Offset, b: Offset, phase: Float) {
-    listOf(0f, 0.33f, 0.66f).forEach { offset ->
-        val t = (phase + offset) % 1f
-        val x = a.x + (b.x - a.x) * t
-        val y = a.y + (b.y - a.y) * t
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(
-                    BrandAmber.copy(alpha = 0.4f),
-                    BrandAmber.copy(alpha = 0f),
-                ),
-                center = Offset(x, y),
-                radius = 6f,
-            ),
-            radius = 6f,
-            center = Offset(x, y),
-        )
-        drawCircle(color = BrandAmber, radius = 2f, center = Offset(x, y))
-    }
-}
-
-private fun colorForCategory(category: String): Color = when (category) {
-    "社團" -> GlowPurple
-    "工作" -> BrandDeepOrange
-    "競賽" -> AccentGreen
-    "學術" -> BrandAmber
-    else -> InkGray500
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PreviewSheet(
+private fun NetworkPreviewSheet(
     experience: Experience,
     onDismiss: () -> Unit,
     onSeeMore: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState()
-    val color = colorForCategory(experience.category)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -548,7 +493,7 @@ private fun PreviewSheet(
             Box(
                 Modifier
                     .clip(CircleShape)
-                    .background(color)
+                    .background(BrandDeepOrange)
                     .padding(horizontal = 12.dp, vertical = 4.dp),
             ) {
                 Text(
@@ -559,7 +504,6 @@ private fun PreviewSheet(
                 )
             }
             Spacer(Modifier.height(12.dp))
-
             Text(
                 experience.title,
                 color = InkBlack,
@@ -573,9 +517,7 @@ private fun PreviewSheet(
                 color = InkGray500,
                 fontSize = 12.sp,
             )
-
             Spacer(Modifier.height(14.dp))
-
             Text(
                 experience.description,
                 color = InkGray700,
@@ -583,30 +525,26 @@ private fun PreviewSheet(
                 lineHeight = 22.sp,
                 maxLines = 3,
             )
-
             Spacer(Modifier.height(16.dp))
-
             Row(modifier = Modifier.fillMaxWidth()) {
                 experience.tags.take(4).forEach { tag ->
                     Box(
                         Modifier
                             .padding(end = 6.dp)
                             .clip(CircleShape)
-                            .background(color.copy(alpha = 0.12f))
+                            .background(BrandDeepOrange.copy(alpha = 0.12f))
                             .padding(horizontal = 10.dp, vertical = 4.dp),
                     ) {
                         Text(
                             tag,
-                            color = color,
+                            color = BrandDeepOrange,
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.labelSmall,
                         )
                     }
                 }
             }
-
             Spacer(Modifier.height(18.dp))
-
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -628,12 +566,10 @@ private fun PreviewSheet(
 }
 
 @Composable
-private fun DetailModal(
+private fun NetworkDetailModal(
     experience: Experience,
     onDismiss: () -> Unit,
 ) {
-    val color = colorForCategory(experience.category)
-
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -657,7 +593,7 @@ private fun DetailModal(
                 Box(
                     Modifier
                         .clip(CircleShape)
-                        .background(color)
+                        .background(BrandDeepOrange)
                         .padding(horizontal = 12.dp, vertical = 4.dp),
                 ) {
                     Text(
@@ -685,7 +621,6 @@ private fun DetailModal(
                 }
             }
             Spacer(Modifier.height(16.dp))
-
             Text(
                 experience.title,
                 color = InkBlack,
@@ -699,9 +634,7 @@ private fun DetailModal(
                 color = InkGray500,
                 fontSize = 13.sp,
             )
-
             Spacer(Modifier.height(20.dp))
-
             Text(
                 "經歷描述",
                 color = InkGray500,
@@ -715,9 +648,7 @@ private fun DetailModal(
                 fontSize = 15.sp,
                 lineHeight = 24.sp,
             )
-
             Spacer(Modifier.height(20.dp))
-
             Text(
                 "相關技能",
                 color = InkGray500,
@@ -731,12 +662,12 @@ private fun DetailModal(
                         Modifier
                             .padding(end = 6.dp)
                             .clip(CircleShape)
-                            .background(color.copy(alpha = 0.15f))
+                            .background(BrandDeepOrange.copy(alpha = 0.15f))
                             .padding(horizontal = 12.dp, vertical = 5.dp),
                     ) {
                         Text(
                             tag,
-                            color = color,
+                            color = BrandDeepOrange,
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.labelSmall,
                         )

@@ -346,7 +346,7 @@ private fun BentoActions(navController: NavHostController) {
                     label = "適配分析",
                     accent = BrandAmber,
                     modifier = Modifier.weight(1f).fillMaxHeight(),
-                    onClick = { /* TODO 適配分析頁 */ },
+                    onClick = { navController.navigate(Routes.FIT_ANALYSIS) },
                 )
             }
         }

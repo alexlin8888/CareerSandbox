@@ -31,6 +31,7 @@ object Routes {
     const val RESUME_UPLOAD_PROCESSING = "resume_upload_processing"
     const val JD_CUSTOMIZE_RESULT = "jd_customize_result"
     const val EXPERIENCE_NETWORK = "experience_network"
+    const val FIT_ANALYSIS = "fit_analysis"
     const val NEW_JOB_APPLICATION = "new_job_application"
     const val JOB_APPLICATION_DETAIL = "job_application_detail/{jobId}"
     fun jobApplicationDetail(jobId: String) = "job_application_detail/$jobId"
