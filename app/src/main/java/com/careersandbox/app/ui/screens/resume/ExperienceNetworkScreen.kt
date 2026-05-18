@@ -431,7 +431,7 @@ private fun DrawScope.drawCenterNode(size: Size, haloAlpha: Float) {
     )
     drawContext.canvas.nativeCanvas.let { canvas ->
         val paint = android.graphics.Paint().apply {
-            color = android.graphics.Color.WHITE
+            setColor(android.graphics.Color.WHITE)
             textSize = 28f
             isFakeBoldText = true
             textAlign = android.graphics.Paint.Align.CENTER
@@ -471,7 +471,7 @@ private fun DrawScope.drawExperienceNode(
 
     drawContext.canvas.nativeCanvas.let { canvas ->
         val paint = android.graphics.Paint().apply {
-            color = android.graphics.Color.parseColor("#2A2A2A")
+            setColor(android.graphics.Color.parseColor("#2A2A2A"))
             textSize = if (isFocused) 12f * density else 10f * density
             isFakeBoldText = true
             textAlign = android.graphics.Paint.Align.CENTER
