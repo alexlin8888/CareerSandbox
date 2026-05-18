@@ -3,29 +3,36 @@ package com.careersandbox.app.ui.screens.resume
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.OpenInFull
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
@@ -33,41 +40,46 @@ import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.data.model.Experience
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
-import kotlinx.coroutines.delay
 import kotlin.math.cos
 import kotlin.math.sin
-import kotlin.math.sqrt
-import kotlin.random.Random
+import kotlin.math.PI
 
-/**
- * Force-directed graph 視覺化
- * - 節點互推(repulsion)
- * - 共同 tag 的節點互拉(attraction)
- * - 持續微震動,看起來像浮動的 3D 感
- */
-private data class NodeState(
-    val id: String,
-    val experience: Experience,
-    var pos: Offset,
-    var velocity: Offset = Offset.Zero,
-)
-
-@OptIn(
-    ExperimentalMaterial3Api::class,
-    androidx.compose.foundation.layout.ExperimentalLayoutApi::class
-)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExperienceNetworkScreen(navController: NavHostController) {
     val experiences = MockData.experiences
-    var selectedId by remember { mutableStateOf<String?>(null) }
+
+    var canvasSize by remember { mutableStateOf(IntSize.Zero) }
+    var focusedId by remember { mutableStateOf<String?>(null) }
+    var previewId by remember { mutableStateOf<String?>(null) }
+    var modalId by remember { mutableStateOf<String?>(null) }
+    var scale by remember { mutableStateOf(1f) }
+    var pan by remember { mutableStateOf(Offset.Zero) }
+
+    val infinite = rememberInfiniteTransition(label = "flow")
+    val flowPhase by infinite.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 3000, easing = LinearEasing),
+        ),
+        label = "phase"
+    )
+    val haloAlpha by infinite.animateFloat(
+        initialValue = 0.25f,
+        targetValue = 0.5f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "halo"
+    )
 
     Scaffold(
         containerColor = PaperWhite,
         topBar = {
             TopAppBar(
-                title = {
-                    Text("經歷關聯網", fontWeight = FontWeight.Bold, color = InkBlack)
-                },
+                title = { Text("經歷關聯網", fontWeight = FontWeight.Bold, color = InkBlack) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Outlined.ArrowBack, contentDescription = null, tint = InkBlack)
@@ -77,428 +89,660 @@ fun ExperienceNetworkScreen(navController: NavHostController) {
             )
         },
     ) { pad ->
-        Column(
+        Box(
             modifier = Modifier
                 .padding(pad)
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
+                .background(PaperWhite),
         ) {
-            // 介紹卡
+            NetworkCanvas(
+                experiences = experiences,
+                canvasSize = canvasSize,
+                focusedId = focusedId,
+                flowPhase = flowPhase,
+                haloAlpha = haloAlpha,
+                scale = scale,
+                pan = pan,
+                onSizeChanged = { canvasSize = it },
+                onSingleTap = { id -> previewId = id },
+                onDoubleTap = { id -> focusedId = if (focusedId == id) null else id },
+                onLongPress = { id -> modalId = id },
+                onPanZoom = { dPan, dScale ->
+                    pan += dPan
+                    scale = (scale * dScale).coerceIn(0.5f, 2.5f)
+                },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .blur(if (modalId != null) 8.dp else 0.dp),
+            )
+
+            // Hint card
             Row(
                 modifier = Modifier
+                    .align(Alignment.TopCenter)
                     .padding(horizontal = 20.dp, vertical = 8.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(GlowPurple.copy(alpha = 0.08f))
-                    .padding(14.dp),
-                verticalAlignment = Alignment.Top,
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(GlowPurple.copy(alpha = 0.1f))
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
                     Icons.Outlined.AutoAwesome,
                     contentDescription = null,
                     tint = GlowPurple,
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(16.dp),
                 )
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(8.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        "共同技能會連起來",
+                        "點:預覽 · 雙點:聚焦 · 長按:詳情",
                         color = GlowPurple,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp,
                     )
-                    Spacer(Modifier.height(2.dp))
+                    Spacer(Modifier.height(1.dp))
                     Text(
-                        "點任一節點看相連的經歷,可拖拉節點重新排列",
-                        color = InkGray700,
-                        style = MaterialTheme.typography.bodySmall,
-                        lineHeight = 18.sp,
+                        "雙指縮放 · 拖曳移動",
+                        color = InkGray500,
+                        fontSize = 10.sp,
                     )
                 }
             }
 
-            // 圖
-            ForceDirectedNetwork(
-                experiences = experiences,
-                selectedId = selectedId,
-                onSelect = { id ->
-                    selectedId = if (selectedId == id) null else id
-                },
-            )
-
-            // 詳情卡
-            selectedId?.let { id ->
-                val exp = experiences.firstOrNull { it.id == id } ?: return@let
-                Column(
+            // Reset 按鈕
+            if (focusedId != null || scale != 1f || pan != Offset.Zero) {
+                Box(
                     modifier = Modifier
-                        .padding(horizontal = 20.dp, vertical = 12.dp)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(BrandPeach.copy(alpha = 0.4f))
-                        .padding(18.dp),
+                        .align(Alignment.BottomEnd)
+                        .padding(20.dp)
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(InkBlack.copy(alpha = 0.85f))
+                        .pressScale {
+                            focusedId = null
+                            scale = 1f
+                            pan = Offset.Zero
+                        },
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        exp.title,
-                        color = InkBlack,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 17.sp,
+                    Icon(
+                        Icons.Outlined.OpenInFull,
+                        contentDescription = null,
+                        tint = PaperWhite,
+                        modifier = Modifier.size(20.dp),
                     )
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        "${exp.category} · ${exp.timeRange}",
-                        color = Color(0xFF993C1D),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Spacer(Modifier.height(10.dp))
-                    Text(
-                        exp.description,
-                        color = InkGray700,
-                        style = MaterialTheme.typography.bodyMedium,
-                        lineHeight = 22.sp,
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    androidx.compose.foundation.layout.FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        exp.tags.forEach { tag ->
-                            Box(
-                                Modifier
-                                    .clip(CircleShape)
-                                    .background(BrandDeepOrange)
-                                    .padding(horizontal = 10.dp, vertical = 4.dp),
-                            ) {
-                                Text(
-                                    tag,
-                                    color = PaperWhite,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                )
-                            }
-                        }
-                    }
                 }
             }
 
-            Text(
-                "全部經歷",
-                color = InkGray500,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 3.sp,
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
-            )
-
-            experiences.forEach { exp ->
-                ExperienceListRow(
-                    exp = exp,
-                    isSelected = selectedId == exp.id,
-                    onClick = { selectedId = if (selectedId == exp.id) null else exp.id },
+            previewId?.let { id ->
+                val exp = experiences.firstOrNull { it.id == id } ?: return@let
+                PreviewSheet(
+                    experience = exp,
+                    onDismiss = { previewId = null },
+                    onSeeMore = {
+                        previewId = null
+                        modalId = id
+                    },
                 )
             }
 
-            Spacer(Modifier.height(40.dp))
+            modalId?.let { id ->
+                val exp = experiences.firstOrNull { it.id == id } ?: return@let
+                DetailModal(
+                    experience = exp,
+                    onDismiss = { modalId = null },
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun ForceDirectedNetwork(
+private fun NetworkCanvas(
     experiences: List<Experience>,
-    selectedId: String?,
-    onSelect: (String) -> Unit,
+    canvasSize: IntSize,
+    focusedId: String?,
+    flowPhase: Float,
+    haloAlpha: Float,
+    scale: Float,
+    pan: Offset,
+    onSizeChanged: (IntSize) -> Unit,
+    onSingleTap: (String) -> Unit,
+    onDoubleTap: (String) -> Unit,
+    onLongPress: (String) -> Unit,
+    onPanZoom: (Offset, Float) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val canvasHeight = 360.dp
-    val nodeRadius = 32f
-    val density = LocalDensity.current
+    val density = LocalDensity.current.density
 
-    // 計算節點間共同 tag 連結強度
+    val nodePositions = remember(canvasSize, focusedId) {
+        computeNodePositions(experiences, canvasSize, focusedId)
+    }
+
+    val animatedPositions = nodePositions.mapValues { (id, target) ->
+        val x by animateFloatAsState(target.x, animationSpec = tween(500, easing = FastOutSlowInEasing), label = "x-$id")
+        val y by animateFloatAsState(target.y, animationSpec = tween(500, easing = FastOutSlowInEasing), label = "y-$id")
+        Offset(x, y)
+    }
+
     val edges = remember(experiences) {
-        val list = mutableListOf<Triple<Int, Int, Int>>()
+        val list = mutableListOf<Pair<String, String>>()
         for (i in experiences.indices) {
             for (j in i + 1 until experiences.size) {
-                val common = experiences[i].tags.intersect(experiences[j].tags.toSet()).size
-                if (common > 0) list.add(Triple(i, j, common))
+                val a = experiences[i]
+                val b = experiences[j]
+                if (a.tags.intersect(b.tags.toSet()).isNotEmpty()) {
+                    list.add(a.id to b.id)
+                }
             }
         }
         list
     }
 
-    // canvas size
-    var size by remember { mutableStateOf(androidx.compose.ui.geometry.Size.Zero) }
-
-    // 節點狀態(用 mutableStateListOf 觸發重繪)
-    val nodes = remember(experiences, size) {
-        if (size == androidx.compose.ui.geometry.Size.Zero) {
-            mutableStateListOf<NodeState>()
-        } else {
-            val cx = size.width / 2
-            val cy = size.height / 2
-            val r = minOf(cx, cy) * 0.6f
-            val random = Random(42)
-            mutableStateListOf<NodeState>().apply {
-                experiences.forEachIndexed { idx, exp ->
-                    val angle = (2 * Math.PI * idx / experiences.size).toFloat() +
-                            random.nextFloat() * 0.3f
-                    add(
-                        NodeState(
-                            id = exp.id,
-                            experience = exp,
-                            pos = Offset(
-                                cx + r * cos(angle),
-                                cy + r * sin(angle),
-                            ),
-                        )
-                    )
+    Canvas(
+        modifier = modifier
+            .onSizeChanged(onSizeChanged)
+            .pointerInput(Unit) {
+                detectTransformGestures { _, panDelta, zoom, _ ->
+                    onPanZoom(panDelta, zoom)
                 }
             }
-        }
-    }
-
-    // 動畫 tick(每 16ms 觸發 simulation step)
-    var tick by remember { mutableIntStateOf(0) }
-    LaunchedEffect(size, experiences) {
-        if (size == androidx.compose.ui.geometry.Size.Zero) return@LaunchedEffect
-        while (true) {
-            delay(33L) // ~30fps
-            tick++
-        }
-    }
-
-    // 拖曳狀態
-    var draggedIdx by remember { mutableStateOf<Int?>(null) }
-
-    // Force simulation
-    LaunchedEffect(tick) {
-        if (nodes.isEmpty() || size == androidx.compose.ui.geometry.Size.Zero) return@LaunchedEffect
-
-        val cx = size.width / 2
-        val cy = size.height / 2
-
-        // 累積每個節點的力
-        val forces = Array(nodes.size) { Offset.Zero }
-
-        // 1. 互推(repulsion)
-        for (i in nodes.indices) {
-            for (j in nodes.indices) {
-                if (i == j) continue
-                val dx = nodes[i].pos.x - nodes[j].pos.x
-                val dy = nodes[i].pos.y - nodes[j].pos.y
-                val distSq = (dx * dx + dy * dy).coerceAtLeast(100f)
-                val dist = sqrt(distSq)
-                val force = 8000f / distSq
-                forces[i] = forces[i] + Offset(dx / dist * force, dy / dist * force)
+            .pointerInput(canvasSize, animatedPositions, scale, pan) {
+                detectTapGestures(
+                    onTap = { tapOffset ->
+                        findHitNode(tapOffset, animatedPositions, scale, pan)?.let { onSingleTap(it) }
+                    },
+                    onDoubleTap = { tapOffset ->
+                        findHitNode(tapOffset, animatedPositions, scale, pan)?.let { onDoubleTap(it) }
+                    },
+                    onLongPress = { tapOffset ->
+                        findHitNode(tapOffset, animatedPositions, scale, pan)?.let { onLongPress(it) }
+                    },
+                )
             }
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+                translationX = pan.x
+                translationY = pan.y
+            },
+    ) {
+        drawStardust(size)
+        drawOrbits(size)
+
+        for ((aId, bId) in edges) {
+            val pa = animatedPositions[aId] ?: continue
+            val pb = animatedPositions[bId] ?: continue
+            drawConnection(pa, pb, focusedId == aId || focusedId == bId)
+            drawFlowDot(pa, pb, flowPhase)
         }
 
-        // 2. 連線拉近(attraction,根據共同 tag 數)
-        edges.forEach { (i, j, common) ->
-            val dx = nodes[j].pos.x - nodes[i].pos.x
-            val dy = nodes[j].pos.y - nodes[i].pos.y
-            val dist = sqrt(dx * dx + dy * dy).coerceAtLeast(1f)
-            val k = common * 0.0008f
-            forces[i] = forces[i] + Offset(dx * k, dy * k)
-            forces[j] = forces[j] + Offset(-dx * k, -dy * k)
+        drawCenterNode(size, haloAlpha)
+
+        experiences.forEach { exp ->
+            val pos = animatedPositions[exp.id] ?: return@forEach
+            drawExperienceNode(pos, exp, focusedId == exp.id, density)
+        }
+    }
+}
+
+private fun computeNodePositions(
+    experiences: List<Experience>,
+    canvasSize: IntSize,
+    focusedId: String?,
+): Map<String, Offset> {
+    if (canvasSize.width == 0 || canvasSize.height == 0) return emptyMap()
+
+    val cx = canvasSize.width / 2f
+    val cy = canvasSize.height / 2f
+    val maxR = minOf(cx, cy) * 0.78f
+    val result = mutableMapOf<String, Offset>()
+
+    if (focusedId != null) {
+        val focused = experiences.firstOrNull { it.id == focusedId }
+        val others = experiences.filter { it.id != focusedId }
+
+        focused?.let {
+            result[it.id] = Offset(cx, cy - maxR * 0.35f)
         }
 
-        // 3. 拉回中心(中心引力)
-        for (i in nodes.indices) {
-            val dx = cx - nodes[i].pos.x
-            val dy = cy - nodes[i].pos.y
-            forces[i] = forces[i] + Offset(dx * 0.001f, dy * 0.001f)
+        val angleStep = 2 * PI / others.size
+        others.forEachIndexed { idx, exp ->
+            val angle = idx * angleStep - PI / 2
+            val radius = maxR * 0.85f
+            result[exp.id] = Offset(
+                (cx + cos(angle) * radius).toFloat(),
+                (cy + sin(angle) * radius).toFloat(),
+            )
         }
+    } else {
+        val inner = experiences.take(3)
+        val outer = experiences.drop(3)
 
-        // 4. 更新位置(速度 + damping)
-        for (i in nodes.indices) {
-            if (i == draggedIdx) continue
-            val damping = 0.85f
-            val newVel = (nodes[i].velocity + forces[i]) * damping
-            val newPos = nodes[i].pos + newVel
-            // 邊界限制
-            val margin = nodeRadius + 8f
-            val clampedX = newPos.x.coerceIn(margin, size.width - margin)
-            val clampedY = newPos.y.coerceIn(margin, size.height - margin)
-            nodes[i] = nodes[i].copy(
-                pos = Offset(clampedX, clampedY),
-                velocity = newVel,
+        val innerR = maxR * 0.5f
+        val outerR = maxR * 0.85f
+
+        inner.forEachIndexed { idx, exp ->
+            val angle = idx * (2 * PI / inner.size) - PI / 2
+            result[exp.id] = Offset(
+                (cx + cos(angle) * innerR).toFloat(),
+                (cy + sin(angle) * innerR).toFloat(),
+            )
+        }
+        outer.forEachIndexed { idx, exp ->
+            val baseAngle = idx * (2 * PI / outer.size)
+            val angle = baseAngle - PI / 2 + (PI / outer.size)
+            result[exp.id] = Offset(
+                (cx + cos(angle) * outerR).toFloat(),
+                (cy + sin(angle) * outerR).toFloat(),
             )
         }
     }
+    return result
+}
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(canvasHeight)
-            .padding(horizontal = 16.dp)
-            .clip(RoundedCornerShape(24.dp))
-            .background(InkGray100.copy(alpha = 0.4f))
-            .onSizeChanged { intSize ->
-                size = androidx.compose.ui.geometry.Size(
-                    intSize.width.toFloat(),
-                    intSize.height.toFloat(),
-                )
-            },
+private fun findHitNode(
+    tapOffset: Offset,
+    positions: Map<String, Offset>,
+    scale: Float,
+    pan: Offset,
+): String? {
+    val real = Offset(
+        (tapOffset.x - pan.x) / scale,
+        (tapOffset.y - pan.y) / scale,
+    )
+    val hitRadius = 36f
+    return positions.entries
+        .minByOrNull { (_, p) ->
+            val dx = p.x - real.x
+            val dy = p.y - real.y
+            dx * dx + dy * dy
+        }
+        ?.takeIf { (_, p) ->
+            val dx = p.x - real.x
+            val dy = p.y - real.y
+            kotlin.math.sqrt(dx * dx + dy * dy) < hitRadius
+        }
+        ?.key
+}
+
+private fun DrawScope.drawStardust(size: Size) {
+    var s = 7
+    repeat(24) {
+        s = (s * 1103515245 + 12345) and 0x7fffffff
+        val x = (s % 1000) / 1000f * size.width
+        s = (s * 1103515245 + 12345) and 0x7fffffff
+        val y = (s % 1000) / 1000f * size.height
+        s = (s * 1103515245 + 12345) and 0x7fffffff
+        val r = ((s % 1000) / 1000f) * 1.5f + 0.5f
+        s = (s * 1103515245 + 12345) and 0x7fffffff
+        val alpha = ((s % 1000) / 1000f) * 0.3f + 0.1f
+        drawCircle(
+            color = BrandOrange.copy(alpha = alpha),
+            radius = r,
+            center = Offset(x, y),
+        )
+    }
+}
+
+private fun DrawScope.drawOrbits(size: Size) {
+    val cx = size.width / 2f
+    val cy = size.height / 2f
+    val maxR = minOf(cx, cy) * 0.78f
+    val dashEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 6f), 0f)
+
+    listOf(0.5f, 0.85f).forEach { factor ->
+        drawCircle(
+            color = BrandOrange.copy(alpha = 0.12f),
+            radius = maxR * factor,
+            center = Offset(cx, cy),
+            style = Stroke(width = 1f, pathEffect = dashEffect),
+        )
+    }
+}
+
+private fun DrawScope.drawCenterNode(size: Size, haloAlpha: Float) {
+    val center = Offset(size.width / 2f, size.height / 2f)
+
+    drawCircle(
+        brush = Brush.radialGradient(
+            colors = listOf(
+                BrandDeepOrange.copy(alpha = haloAlpha),
+                BrandDeepOrange.copy(alpha = 0f),
+            ),
+            center = center,
+            radius = 50f,
+        ),
+        radius = 50f,
+        center = center,
+    )
+    drawCircle(
+        brush = Brush.radialGradient(
+            colors = listOf(
+                BrandAmber,
+                BrandDeepOrange,
+                Color(0xFF993C1D),
+            ),
+            center = Offset(center.x - 5, center.y - 5),
+            radius = 28f,
+        ),
+        radius = 28f,
+        center = center,
+    )
+    drawContext.canvas.nativeCanvas.let { canvas ->
+        val paint = android.graphics.Paint().apply {
+            color = android.graphics.Color.WHITE
+            textSize = 28f
+            isFakeBoldText = true
+            textAlign = android.graphics.Paint.Align.CENTER
+            isAntiAlias = true
+        }
+        canvas.drawText("你", center.x, center.y + 10f, paint)
+    }
+}
+
+private fun DrawScope.drawExperienceNode(
+    pos: Offset,
+    experience: Experience,
+    isFocused: Boolean,
+    density: Float,
+) {
+    val color = colorForCategory(experience.category)
+    val baseRadius = if (isFocused) 32f else 24f
+
+    drawCircle(
+        brush = Brush.radialGradient(
+            colors = listOf(
+                color.copy(alpha = if (isFocused) 0.35f else 0.18f),
+                color.copy(alpha = 0f),
+            ),
+            center = pos,
+            radius = baseRadius * 1.8f,
+        ),
+        radius = baseRadius * 1.8f,
+        center = pos,
+    )
+    drawCircle(color = color, radius = baseRadius, center = pos)
+    drawCircle(
+        color = Color.White.copy(alpha = 0.3f),
+        radius = baseRadius * 0.45f,
+        center = Offset(pos.x - baseRadius * 0.35f, pos.y - baseRadius * 0.35f),
+    )
+
+    drawContext.canvas.nativeCanvas.let { canvas ->
+        val paint = android.graphics.Paint().apply {
+            color = android.graphics.Color.parseColor("#2A2A2A")
+            textSize = if (isFocused) 12f * density else 10f * density
+            isFakeBoldText = true
+            textAlign = android.graphics.Paint.Align.CENTER
+            isAntiAlias = true
+        }
+        canvas.drawText(
+            experience.category,
+            pos.x,
+            pos.y + baseRadius + 18f,
+            paint,
+        )
+    }
+}
+
+private fun DrawScope.drawConnection(a: Offset, b: Offset, isFocused: Boolean) {
+    drawLine(
+        color = if (isFocused) BrandDeepOrange.copy(alpha = 0.65f) else BrandOrange.copy(alpha = 0.3f),
+        start = a,
+        end = b,
+        strokeWidth = if (isFocused) 2.5f else 1.5f,
+    )
+}
+
+private fun DrawScope.drawFlowDot(a: Offset, b: Offset, phase: Float) {
+    listOf(0f, 0.33f, 0.66f).forEach { offset ->
+        val t = (phase + offset) % 1f
+        val x = a.x + (b.x - a.x) * t
+        val y = a.y + (b.y - a.y) * t
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    BrandAmber.copy(alpha = 0.4f),
+                    BrandAmber.copy(alpha = 0f),
+                ),
+                center = Offset(x, y),
+                radius = 6f,
+            ),
+            radius = 6f,
+            center = Offset(x, y),
+        )
+        drawCircle(color = BrandAmber, radius = 2f, center = Offset(x, y))
+    }
+}
+
+private fun colorForCategory(category: String): Color = when (category) {
+    "社團" -> GlowPurple
+    "工作" -> BrandDeepOrange
+    "競賽" -> AccentGreen
+    "學術" -> BrandAmber
+    else -> InkGray500
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PreviewSheet(
+    experience: Experience,
+    onDismiss: () -> Unit,
+    onSeeMore: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState()
+    val color = colorForCategory(experience.category)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = PaperWhite,
     ) {
-        Canvas(
+        Column(
             modifier = Modifier
-                .fillMaxSize()
-                .pointerInput(experiences) {
-                    detectTapGestures { tap ->
-                        val hit = nodes.firstOrNull { node ->
-                            val dx = tap.x - node.pos.x
-                            val dy = tap.y - node.pos.y
-                            dx * dx + dy * dy <= (nodeRadius + 8) * (nodeRadius + 8)
-                        }
-                        hit?.let { onSelect(it.id) }
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp),
+        ) {
+            Box(
+                Modifier
+                    .clip(CircleShape)
+                    .background(color)
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+            ) {
+                Text(
+                    experience.category,
+                    color = PaperWhite,
+                    fontWeight = FontWeight.Black,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+
+            Text(
+                experience.title,
+                color = InkBlack,
+                fontWeight = FontWeight.Black,
+                fontSize = 22.sp,
+                lineHeight = 26.sp,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                experience.timeRange,
+                color = InkGray500,
+                fontSize = 12.sp,
+            )
+
+            Spacer(Modifier.height(14.dp))
+
+            Text(
+                experience.description,
+                color = InkGray700,
+                fontSize = 14.sp,
+                lineHeight = 22.sp,
+                maxLines = 3,
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            Row(modifier = Modifier.fillMaxWidth()) {
+                experience.tags.take(4).forEach { tag ->
+                    Box(
+                        Modifier
+                            .padding(end = 6.dp)
+                            .clip(CircleShape)
+                            .background(color.copy(alpha = 0.12f))
+                            .padding(horizontal = 10.dp, vertical = 4.dp),
+                    ) {
+                        Text(
+                            tag,
+                            color = color,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.labelSmall,
+                        )
                     }
                 }
-                .pointerInput(experiences) {
-                    detectDragGestures(
-                        onDragStart = { offset ->
-                            draggedIdx = nodes.indexOfFirst { node ->
-                                val dx = offset.x - node.pos.x
-                                val dy = offset.y - node.pos.y
-                                dx * dx + dy * dy <= (nodeRadius + 8) * (nodeRadius + 8)
-                            }.takeIf { it >= 0 }
-                        },
-                        onDrag = { change, dragAmount ->
-                            change.consume()
-                            draggedIdx?.let { idx ->
-                                val current = nodes[idx]
-                                nodes[idx] = current.copy(
-                                    pos = current.pos + dragAmount,
-                                    velocity = Offset.Zero,
-                                )
-                            }
-                        },
-                        onDragEnd = { draggedIdx = null },
-                        onDragCancel = { draggedIdx = null },
-                    )
-                },
-        ) {
-            if (nodes.isEmpty()) return@Canvas
-
-            // 畫連線
-            edges.forEach { (i, j, common) ->
-                val a = nodes[i].pos
-                val b = nodes[j].pos
-                val highlighted = selectedId == nodes[i].id || selectedId == nodes[j].id
-                drawLine(
-                    color = if (highlighted) BrandDeepOrange
-                    else InkGray300.copy(alpha = 0.5f),
-                    start = a,
-                    end = b,
-                    strokeWidth = if (highlighted) 2.5f + common * 0.5f else 1f + common * 0.3f,
-                )
             }
 
-            // 畫節點(每個節點:外圈 halo + 主圓)
-            nodes.forEach { node ->
-                val color = categoryColor(node.experience.category)
-                val isSelected = selectedId == node.id
+            Spacer(Modifier.height(18.dp))
 
-                // 外圈
-                drawCircle(
-                    color = color.copy(alpha = if (isSelected) 0.3f else 0.18f),
-                    radius = nodeRadius + (if (isSelected) 12f else 6f),
-                    center = node.pos,
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(BrandDeepOrange)
+                    .pressScale(onClick = onSeeMore)
+                    .padding(vertical = 12.dp),
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                Text(
+                    "看完整內容",
+                    color = PaperWhite,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 14.sp,
                 )
-                // 主節點
-                drawCircle(
-                    color = color,
-                    radius = nodeRadius,
-                    center = node.pos,
-                )
-                // 選中外環
-                if (isSelected) {
-                    drawCircle(
-                        color = color,
-                        radius = nodeRadius + 14f,
-                        center = node.pos,
-                        style = Stroke(width = 2.5f),
-                    )
-                }
-            }
-        }
-
-        // 文字(Compose 而非 Canvas)
-        nodes.forEach { node ->
-            with(density) {
-                Box(
-                    modifier = Modifier
-                        .offset(
-                            x = (node.pos.x.toDp() - 40.dp),
-                            y = (node.pos.y.toDp() - 8.dp),
-                        )
-                        .width(80.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        node.experience.title.take(6),
-                        color = PaperWhite,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 9.sp,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                        lineHeight = 11.sp,
-                    )
-                }
             }
         }
     }
 }
 
 @Composable
-private fun ExperienceListRow(
-    exp: Experience,
-    isSelected: Boolean,
-    onClick: () -> Unit,
+private fun DetailModal(
+    experience: Experience,
+    onDismiss: () -> Unit,
 ) {
-    Row(
+    val color = colorForCategory(experience.category)
+
+    Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(
-                if (isSelected) BrandPeach.copy(alpha = 0.3f)
-                else MaterialTheme.colorScheme.surface
-            )
-            .pressScale(onClick = onClick)
-            .padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .fillMaxSize()
+            .background(InkBlack.copy(alpha = 0.55f))
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = { onDismiss() })
+            },
+        contentAlignment = Alignment.Center,
     ) {
-        Box(
-            Modifier
-                .size(10.dp)
-                .clip(CircleShape)
-                .background(categoryColor(exp.category)),
-        )
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 24.dp)
+                .clip(RoundedCornerShape(24.dp))
+                .background(PaperWhite)
+                .padding(24.dp)
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = { })
+                },
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier
+                        .clip(CircleShape)
+                        .background(color)
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                ) {
+                    Text(
+                        experience.category,
+                        color = PaperWhite,
+                        fontWeight = FontWeight.Black,
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+                Box(
+                    Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(InkGray100)
+                        .pressScale(onClick = onDismiss),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Outlined.Close,
+                        contentDescription = null,
+                        tint = InkBlack,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+
             Text(
-                exp.title,
+                experience.title,
                 color = InkBlack,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Black,
+                fontSize = 24.sp,
+                lineHeight = 30.sp,
             )
+            Spacer(Modifier.height(4.dp))
             Text(
-                "${exp.category} · ${exp.timeRange}",
+                experience.timeRange,
                 color = InkGray500,
-                style = MaterialTheme.typography.labelSmall,
+                fontSize = 13.sp,
             )
+
+            Spacer(Modifier.height(20.dp))
+
+            Text(
+                "經歷描述",
+                color = InkGray500,
+                fontWeight = FontWeight.Bold,
+                fontSize = 11.sp,
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                experience.description,
+                color = InkBlack,
+                fontSize = 15.sp,
+                lineHeight = 24.sp,
+            )
+
+            Spacer(Modifier.height(20.dp))
+
+            Text(
+                "相關技能",
+                color = InkGray500,
+                fontWeight = FontWeight.Bold,
+                fontSize = 11.sp,
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(modifier = Modifier.fillMaxWidth()) {
+                experience.tags.forEach { tag ->
+                    Box(
+                        Modifier
+                            .padding(end = 6.dp)
+                            .clip(CircleShape)
+                            .background(color.copy(alpha = 0.15f))
+                            .padding(horizontal = 12.dp, vertical = 5.dp),
+                    ) {
+                        Text(
+                            tag,
+                            color = color,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    }
+                }
+            }
         }
-        Text(
-            "${exp.tags.size} 標籤",
-            color = InkGray400,
-            style = MaterialTheme.typography.labelSmall,
-        )
     }
 }
-
-private fun categoryColor(category: String): Color = when (category) {
-    "工作" -> BrandDeepOrange
-    "競賽" -> AccentGreen
-    "社團" -> GlowPurple
-    "學業" -> BrandAmber
-    else -> InkGray500
-}
-
-private operator fun Offset.times(scalar: Float): Offset = Offset(x * scalar, y * scalar)
