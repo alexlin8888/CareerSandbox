@@ -97,7 +97,7 @@ fun CareerSandboxNavHost(
         composable(Routes.JD_CUSTOMIZE) { JdCustomizeScreen(navController) }
         composable(Routes.RESUME_PROFILE) { ResumeProfileScreen(navController) }
         composable(Routes.RESUME_UPLOAD_PROCESSING) { ResumeUploadProcessingScreen(navController) }
-        composable(Routes.EXPERIENCE_NETWORK) { ExperienceNetworkScreen(navController) }
+        composable(Routes.CAREER_EXPLORATION) { CareerExplorationScreen(navController) }
         composable(Routes.FIT_ANALYSIS) { FitAnalysisScreen(navController) }
         composable(Routes.NEW_JOB_APPLICATION) { NewJobApplicationScreen(navController) }
         composable(

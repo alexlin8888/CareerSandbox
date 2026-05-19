@@ -1,6 +1,5 @@
 package com.careersandbox.app.ui.screens.resume
 
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -9,21 +8,16 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.text.font.FontWeight
@@ -36,71 +30,61 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
-/**
- * 適配分析 (Batch 28)
- * - mobile 化的 talent dashboard
- * - 花瓣圖(8 花瓣,4 色分群)+ 推薦行動 checklist + 技能進度
- */
-
-private data class PetalSkill(
+private data class Capability(
+    val key: String,
     val label: String,
     val score: Int, // 0-100
-    val cluster: Int, // 0..3,4 個 cluster 對應 4 色
 )
 
-private data class RecommendedAction(
+private data class FitTask(
+    val id: String,
+    val tag: String,
+    val tagDelta: String, // e.g. "創新 +12"
     val title: String,
     val description: String,
-)
-
-private data class SkillProgress(
-    val name: String,
-    val score: Int, // 0-100
+    var done: Boolean = false,
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FitAnalysisScreen(navController: NavHostController) {
-    // mock data
-    val skills = remember {
+    val capabilities = remember {
         listOf(
-            PetalSkill("學習力", 96, 0),
-            PetalSkill("適應力", 72, 0),
-            PetalSkill("時間管理", 76, 1),
-            PetalSkill("抗壓性", 90, 1),
-            PetalSkill("倫理判斷", 58, 2),
-            PetalSkill("溝通", 92, 2),
-            PetalSkill("協作", 65, 3),
-            PetalSkill("創新", 74, 3),
+            Capability("data", "數據", 96),
+            Capability("comm", "溝通", 90),
+            Capability("lead", "領導", 72),
+            Capability("team", "團隊", 76),
+            Capability("inno", "創新", 58),
+            Capability("stress", "抗壓", 65),
         )
     }
-    val actions = remember {
-        listOf(
-            RecommendedAction(
-                "補一段「失敗復原」經歷",
-                "面試常問挫折題,你目前 2 段相關經歷不夠",
-            ),
-            RecommendedAction(
-                "強化數據相關描述",
-                "你的職位目標需要量化能力,可在 2 段經歷補上數據",
-            ),
-            RecommendedAction(
-                "練一輪團體面試模擬",
-                "團體面試是你最弱類型,建議下週前完成 1 場",
-            ),
+    val fingerprint = "數據導向型"
+    val overallScore = 78
+
+    var tasks by remember {
+        mutableStateOf(
+            listOf(
+                FitTask(
+                    "t1", "創新", "創新 +12",
+                    "參加一場黑客松 / 設計衝刺",
+                    "建議 4 月前完成,可補一段創新類經歷",
+                    false,
+                ),
+                FitTask(
+                    "t2", "抗壓", "抗壓 +8",
+                    "寫一段失敗復原經歷",
+                    "面試考古題顯示挫折題出現率高",
+                    false,
+                ),
+                FitTask(
+                    "t3", "數據", "數據 +5",
+                    "完成電商實習量化描述",
+                    "2 週前完成",
+                    true,
+                ),
+            )
         )
     }
-    val skillProgress = remember {
-        listOf(
-            SkillProgress("溝通表達", 88),
-            SkillProgress("批判思考", 76),
-            SkillProgress("創意發想", 65),
-            SkillProgress("協作能力", 82),
-            SkillProgress("數據敏感", 70),
-            SkillProgress("學習速度", 92),
-        )
-    }
-    var checkedActions by remember { mutableStateOf(setOf<Int>()) }
 
     Scaffold(
         containerColor = PaperWhite,
@@ -110,6 +94,11 @@ fun FitAnalysisScreen(navController: NavHostController) {
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Outlined.ArrowBack, contentDescription = null, tint = InkBlack)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { /* share */ }) {
+                        Icon(Icons.Outlined.Share, contentDescription = null, tint = InkGray500)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = PaperWhite),
@@ -123,129 +112,97 @@ fun FitAnalysisScreen(navController: NavHostController) {
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 32.dp),
         ) {
-            // ===== 1. Hero =====
-            HeroSection()
+            // ===== 1. Target + Score =====
+            TargetHeader(score = overallScore)
 
-            Spacer(Modifier.height(20.dp))
-
-            // ===== 2. 花瓣圖 =====
-            SectionTitle("能力分布")
             Spacer(Modifier.height(8.dp))
-            PetalChartCard(skills = skills)
 
-            Spacer(Modifier.height(20.dp))
+            // ===== 2. Fingerprint =====
+            FingerprintCard(
+                capabilities = capabilities,
+                fingerprintLabel = fingerprint,
+            )
 
-            // ===== 3. 推薦行動 =====
-            SectionTitle("下一步推薦")
-            Spacer(Modifier.height(8.dp))
-            ActionsCard(
-                actions = actions,
-                checked = checkedActions,
-                onToggle = { idx ->
-                    checkedActions = if (idx in checkedActions) {
-                        checkedActions - idx
-                    } else {
-                        checkedActions + idx
+            Spacer(Modifier.height(14.dp))
+
+            // ===== 3. Strength / Growth dual cards =====
+            StrengthGrowthRow(capabilities)
+
+            Spacer(Modifier.height(22.dp))
+
+            // ===== 4. Section divider =====
+            SectionDivider()
+
+            // ===== 5. Tasks =====
+            Spacer(Modifier.height(16.dp))
+            TaskSection(
+                tasks = tasks,
+                onToggle = { id ->
+                    tasks = tasks.map {
+                        if (it.id == id) it.copy(done = !it.done) else it
                     }
                 },
             )
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(22.dp))
+            SectionDivider()
+            Spacer(Modifier.height(16.dp))
 
-            // ===== 4. 技能熟練度 =====
-            SectionTitle("技能熟練度")
-            Spacer(Modifier.height(8.dp))
-            SkillProgressCard(skillProgress)
+            // ===== 6. Sources =====
+            SourcesRow(onEdit = { /* TODO */ })
         }
     }
 }
 
 // ============================================================
-// Hero
+// Target Header
 // ============================================================
 
 @Composable
-private fun HeroSection() {
+private fun TargetHeader(score: Int) {
     Row(
         modifier = Modifier
-            .padding(horizontal = 20.dp)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(
-                        BrandPeach.copy(alpha = 0.6f),
-                        PaperWhite,
-                    ),
-                ),
-            )
-            .padding(20.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .padding(horizontal = 20.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.Bottom,
     ) {
-        // 大頭照圓
-        Box(
-            modifier = Modifier
-                .size(56.dp)
-                .clip(CircleShape)
-                .background(
-                    Brush.radialGradient(
-                        listOf(BrandAmber, BrandDeepOrange),
-                    ),
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                "A",
-                color = PaperWhite,
-                fontSize = 26.sp,
-                fontWeight = FontWeight.Black,
-            )
-        }
-        Spacer(Modifier.width(14.dp))
-        // 姓名 + 目標
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                "Alex 政大資管大三",
+                "TARGET",
+                color = InkGray500,
+                fontSize = 10.sp,
+                letterSpacing = 2.sp,
+                fontWeight = FontWeight.Medium,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Junior PM",
                 color = InkBlack,
-                fontWeight = FontWeight.Black,
-                fontSize = 15.sp,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                lineHeight = 26.sp,
             )
             Spacer(Modifier.height(2.dp))
             Text(
-                "目標:Junior PM",
+                "Acer · 產品實習",
                 color = InkGray500,
                 fontSize = 11.sp,
             )
-            Spacer(Modifier.height(6.dp))
-            Box(
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(BrandDeepOrange.copy(alpha = 0.1f))
-                    .padding(horizontal = 8.dp, vertical = 3.dp),
-            ) {
-                Text(
-                    "Pending · 7 段經歷可用",
-                    color = BrandDeepOrange,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 9.sp,
-                )
-            }
         }
-        // 適配度大數字
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(horizontalAlignment = Alignment.End) {
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(
-                    "78",
+                    "$score",
                     color = BrandDeepOrange,
-                    fontWeight = FontWeight.Black,
                     fontSize = 36.sp,
+                    fontWeight = FontWeight.Black,
                     lineHeight = 36.sp,
                 )
                 Text(
                     "%",
                     color = BrandDeepOrange,
-                    fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 4.dp),
                 )
             }
@@ -259,206 +216,295 @@ private fun HeroSection() {
 }
 
 // ============================================================
-// Section title
+// Fingerprint Card
 // ============================================================
 
 @Composable
-private fun SectionTitle(text: String) {
-    Text(
-        text,
-        modifier = Modifier.padding(horizontal = 20.dp),
-        color = InkBlack,
-        fontWeight = FontWeight.Black,
-        fontSize = 16.sp,
-    )
-}
-
-// ============================================================
-// Petal Chart Card
-// ============================================================
-
-@Composable
-private fun PetalChartCard(skills: List<PetalSkill>) {
+private fun FingerprintCard(
+    capabilities: List<Capability>,
+    fingerprintLabel: String,
+) {
     Box(
         modifier = Modifier
-            .padding(horizontal = 20.dp)
             .fillMaxWidth()
+            .padding(horizontal = 20.dp)
             .clip(RoundedCornerShape(20.dp))
-            .background(PaperWhite)
-            .background(InkGray100.copy(alpha = 0.4f))
-            .padding(vertical = 24.dp, horizontal = 16.dp),
+            .background(PaperWhite),
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            // Canvas with petals
-            Canvas(modifier = Modifier.size(280.dp)) {
-                drawPetalChart(size = size, skills = skills)
-            }
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f),
+        ) {
+            val cx = size.width / 2f
+            val cy = size.height / 2f
+            val maxR = minOf(cx, cy) * 0.78f
 
-            Spacer(Modifier.height(16.dp))
-
-            // 簡述
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(BrandPeach.copy(alpha = 0.25f))
-                    .padding(12.dp),
-                verticalAlignment = Alignment.Top,
-            ) {
-                Icon(
-                    Icons.Outlined.AutoAwesome,
-                    contentDescription = null,
-                    tint = BrandDeepOrange,
-                    modifier = Modifier.size(16.dp),
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    "你的學習力、溝通、抗壓性最強,協作與倫理判斷可再加強。",
-                    color = InkGray700,
-                    fontSize = 12.sp,
-                    lineHeight = 18.sp,
+            // 1. 3 圈虛線軌道
+            listOf(0.4f, 0.7f, 1f).forEach { factor ->
+                drawCircle(
+                    color = InkGray200.copy(alpha = 0.5f),
+                    radius = maxR * factor,
+                    center = Offset(cx, cy),
+                    style = Stroke(
+                        width = 0.5.dp.toPx(),
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 6f), 0f),
+                    ),
                 )
             }
-        }
-    }
-}
 
-private fun DrawScope.drawPetalChart(size: Size, skills: List<PetalSkill>) {
-    val center = Offset(size.width / 2f, size.height / 2f)
-    val maxR = minOf(size.width, size.height) / 2f * 0.92f
-    val petalCount = skills.size
-    val anglePer = 2 * PI / petalCount
-
-    // 顏色 cluster
-    val clusterColors = listOf(
-        BrandDeepOrange,
-        BrandAmber,
-        GlowPurple,
-        AccentGreen,
-    )
-
-    skills.forEachIndexed { idx, skill ->
-        val angle = idx * anglePer - PI / 2 // 從頂部開始
-        val petalLength = maxR * (skill.score / 100f)
-        val color = clusterColors[skill.cluster % clusterColors.size]
-
-        // 花瓣中心點
-        val tipX = (center.x + cos(angle) * petalLength).toFloat()
-        val tipY = (center.y + sin(angle) * petalLength).toFloat()
-
-        // 花瓣寬度(在中心附近往兩側張開)
-        val petalWidth = (2 * PI / petalCount).toFloat() * petalLength * 0.55f
-
-        // 用 bezier 畫花瓣形狀
-        val perpAngle = angle + PI / 2
-        val side1X = (center.x + cos(angle) * petalLength * 0.5f + cos(perpAngle) * petalWidth).toFloat()
-        val side1Y = (center.y + sin(angle) * petalLength * 0.5f + sin(perpAngle) * petalWidth).toFloat()
-        val side2X = (center.x + cos(angle) * petalLength * 0.5f - cos(perpAngle) * petalWidth).toFloat()
-        val side2Y = (center.y + sin(angle) * petalLength * 0.5f - sin(perpAngle) * petalWidth).toFloat()
-
-        val path = Path().apply {
-            moveTo(center.x, center.y)
-            quadraticBezierTo(side1X, side1Y, tipX, tipY)
-            quadraticBezierTo(side2X, side2Y, center.x, center.y)
-            close()
-        }
-
-        // 漸層花瓣
-        drawPath(
-            path = path,
-            brush = Brush.radialGradient(
-                colors = listOf(
-                    color.copy(alpha = 0.85f),
-                    color.copy(alpha = 0.45f),
-                ),
-                center = center,
-                radius = petalLength,
-            ),
-        )
-        // 邊框
-        drawPath(
-            path = path,
-            color = color,
-            style = Stroke(width = 1.2f),
-        )
-
-        // 中心數字
-        val labelX = (center.x + cos(angle) * petalLength * 0.55f).toFloat()
-        val labelY = (center.y + sin(angle) * petalLength * 0.55f).toFloat()
-        drawContext.canvas.nativeCanvas.let { canvas ->
-            val paint = android.graphics.Paint().apply {
-                setColor(android.graphics.Color.WHITE)
-                textSize = 26f
-                isFakeBoldText = true
-                textAlign = android.graphics.Paint.Align.CENTER
-                isAntiAlias = true
+            // 2. 計算 6 個能力的極座標點
+            val points = capabilities.mapIndexed { idx, cap ->
+                val angle = idx * (2 * PI / capabilities.size) - PI / 2
+                val radius = maxR * (cap.score / 100f)
+                Offset(
+                    (cx + cos(angle) * radius).toFloat(),
+                    (cy + sin(angle) * radius).toFloat(),
+                )
             }
-            canvas.drawText("${skill.score}%", labelX, labelY + 8f, paint)
-        }
 
-        // 花瓣外標籤
-        val outerLabelR = maxR * 1.08f
-        val outerX = (center.x + cos(angle) * outerLabelR).toFloat()
-        val outerY = (center.y + sin(angle) * outerLabelR).toFloat()
-        drawContext.canvas.nativeCanvas.let { canvas ->
-            val paint = android.graphics.Paint().apply {
-                setColor(android.graphics.Color.parseColor("#0B0E14"))
-                textSize = 22f
-                isFakeBoldText = true
-                textAlign = android.graphics.Paint.Align.CENTER
-                isAntiAlias = true
+            // 3. 用平滑 cubic bezier 連接成有機形狀
+            val path = Path().apply {
+                if (points.isNotEmpty()) {
+                    moveTo(points[0].x, points[0].y)
+                    for (i in points.indices) {
+                        val cur = points[i]
+                        val next = points[(i + 1) % points.size]
+                        val prev = points[(i - 1 + points.size) % points.size]
+                        val nextNext = points[(i + 2) % points.size]
+                        // Catmull-Rom → Cubic Bezier conversion(tension 0.18)
+                        val tension = 0.18f
+                        val ctrl1 = Offset(
+                            cur.x + (next.x - prev.x) * tension,
+                            cur.y + (next.y - prev.y) * tension,
+                        )
+                        val ctrl2 = Offset(
+                            next.x - (nextNext.x - cur.x) * tension,
+                            next.y - (nextNext.y - cur.y) * tension,
+                        )
+                        cubicTo(ctrl1.x, ctrl1.y, ctrl2.x, ctrl2.y, next.x, next.y)
+                    }
+                    close()
+                }
             }
-            canvas.drawText(skill.label, outerX, outerY + 7f, paint)
-        }
-    }
-}
 
-// ============================================================
-// Actions Card
-// ============================================================
-
-@Composable
-private fun ActionsCard(
-    actions: List<RecommendedAction>,
-    checked: Set<Int>,
-    onToggle: (Int) -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .padding(horizontal = 20.dp)
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(PaperWhite)
-            .padding(2.dp),
-    ) {
-        actions.forEachIndexed { idx, action ->
-            ActionRow(
-                action = action,
-                isChecked = idx in checked,
-                onToggle = { onToggle(idx) },
+            // 4. 填充半透明橘
+            drawPath(
+                path = path,
+                color = BrandDeepOrange.copy(alpha = 0.22f),
             )
-            if (idx < actions.size - 1) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .height(0.5.dp)
-                        .background(InkGray200),
+            // 5. 邊框實線橘
+            drawPath(
+                path = path,
+                color = BrandDeepOrange,
+                style = Stroke(width = 1.5.dp.toPx()),
+            )
+
+            // 6. 點(強項大,弱項小)
+            capabilities.forEachIndexed { idx, cap ->
+                val isStrong = cap.score >= 80
+                val isMid = cap.score in 60..79
+                val pointR = when {
+                    isStrong -> 4.5f.dp.toPx()
+                    isMid -> 3f.dp.toPx()
+                    else -> 2.5f.dp.toPx()
+                }
+                val pointColor = when {
+                    isStrong -> BrandDeepOrange
+                    isMid -> BrandAmber
+                    else -> BrandYellow
+                }
+                drawCircle(
+                    color = pointColor,
+                    radius = pointR,
+                    center = points[idx],
                 )
+            }
+
+            // 7. 外圍標籤
+            val labelR = maxR * 1.18f
+            capabilities.forEachIndexed { idx, cap ->
+                val angle = idx * (2 * PI / capabilities.size) - PI / 2
+                val lx = (cx + cos(angle) * labelR).toFloat()
+                val ly = (cy + sin(angle) * labelR).toFloat()
+                drawContext.canvas.nativeCanvas.let { canvas ->
+                    val labelPaint = android.graphics.Paint().apply {
+                        setColor(
+                            if (cap.score >= 80)
+                                android.graphics.Color.parseColor("#0B0E14")
+                            else
+                                android.graphics.Color.parseColor("#888780"),
+                        )
+                        textSize = 11.sp.toPx()
+                        isFakeBoldText = cap.score >= 80
+                        textAlign = android.graphics.Paint.Align.CENTER
+                        isAntiAlias = true
+                    }
+                    canvas.drawText(cap.label, lx, ly, labelPaint)
+                    val scorePaint = android.graphics.Paint().apply {
+                        setColor(
+                            if (cap.score >= 80)
+                                android.graphics.Color.parseColor("#D85A30")
+                            else
+                                android.graphics.Color.parseColor("#888780"),
+                        )
+                        textSize = 9.sp.toPx()
+                        isFakeBoldText = true
+                        textAlign = android.graphics.Paint.Align.CENTER
+                        isAntiAlias = true
+                    }
+                    canvas.drawText("${cap.score}", lx, ly + 12.sp.toPx(), scorePaint)
+                }
+            }
+
+            // 8. 中心 label
+            drawContext.canvas.nativeCanvas.let { canvas ->
+                val labelPaint = android.graphics.Paint().apply {
+                    setColor(android.graphics.Color.parseColor("#888780"))
+                    textSize = 9.sp.toPx()
+                    letterSpacing = 0.15f
+                    textAlign = android.graphics.Paint.Align.CENTER
+                    isAntiAlias = true
+                }
+                canvas.drawText("FINGERPRINT", cx, cy - 4.sp.toPx(), labelPaint)
+
+                val typePaint = android.graphics.Paint().apply {
+                    setColor(android.graphics.Color.parseColor("#0B0E14"))
+                    textSize = 12.sp.toPx()
+                    isFakeBoldText = true
+                    textAlign = android.graphics.Paint.Align.CENTER
+                    isAntiAlias = true
+                }
+                canvas.drawText(fingerprintLabel, cx, cy + 10.sp.toPx(), typePaint)
             }
         }
     }
 }
 
+// ============================================================
+// Strength / Growth Row
+// ============================================================
+
 @Composable
-private fun ActionRow(
-    action: RecommendedAction,
-    isChecked: Boolean,
+private fun StrengthGrowthRow(capabilities: List<Capability>) {
+    val sorted = capabilities.sortedByDescending { it.score }
+    val top2 = sorted.take(2)
+    val bottom2 = sorted.takeLast(2)
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        // Strength
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(12.dp))
+                .background(BrandDeepOrange.copy(alpha = 0.08f))
+                .padding(12.dp),
+        ) {
+            Text(
+                "STRENGTH",
+                color = Color(0xFF993C1D),
+                fontSize = 9.sp,
+                letterSpacing = 1.5.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                top2.joinToString(" · ") { it.label },
+                color = InkBlack,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        // Growth
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(12.dp))
+                .background(BrandDeepOrange.copy(alpha = 0.04f))
+                .padding(12.dp),
+        ) {
+            Text(
+                "GROWTH",
+                color = InkGray500,
+                fontSize = 9.sp,
+                letterSpacing = 1.5.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                bottom2.joinToString(" · ") { it.label },
+                color = InkBlack,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+    }
+}
+
+// ============================================================
+// Section Divider
+// ============================================================
+
+@Composable
+private fun SectionDivider() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(6.dp)
+            .background(InkGray100.copy(alpha = 0.5f)),
+    )
+}
+
+// ============================================================
+// Task Section
+// ============================================================
+
+@Composable
+private fun TaskSection(
+    tasks: List<FitTask>,
+    onToggle: (String) -> Unit,
+) {
+    Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(
+                "補強路徑",
+                modifier = Modifier.weight(1f),
+                color = InkBlack,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Black,
+            )
+            Text(
+                "${tasks.size} 項任務",
+                color = InkGray500,
+                fontSize = 10.sp,
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+        tasks.forEach { task ->
+            FitTaskCard(
+                task = task,
+                onToggle = { onToggle(task.id) },
+            )
+            Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+@Composable
+private fun FitTaskCard(
+    task: FitTask,
     onToggle: () -> Unit,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(PaperWhite)
             .pressScale(onClick = onToggle)
             .padding(14.dp),
         verticalAlignment = Alignment.Top,
@@ -466,13 +512,12 @@ private fun ActionRow(
         // Checkbox
         Box(
             modifier = Modifier
-                .size(22.dp)
-                .clip(RoundedCornerShape(6.dp))
-                .background(if (isChecked) BrandDeepOrange else PaperWhite)
-                .padding(2.dp),
+                .size(20.dp)
+                .clip(RoundedCornerShape(5.dp))
+                .background(if (task.done) BrandDeepOrange else Color.Transparent),
             contentAlignment = Alignment.Center,
         ) {
-            if (isChecked) {
+            if (task.done) {
                 Icon(
                     Icons.Outlined.Check,
                     contentDescription = null,
@@ -480,103 +525,131 @@ private fun ActionRow(
                     modifier = Modifier.size(14.dp),
                 )
             } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(PaperWhite),
-                ) {
-                    Canvas(modifier = Modifier.fillMaxSize()) {
-                        drawRoundRect(
-                            color = InkGray300,
-                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(6.dp.toPx()),
-                            style = Stroke(width = 1.2.dp.toPx()),
-                        )
-                    }
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    drawRoundRect(
+                        color = InkGray300,
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(5.dp.toPx()),
+                        style = Stroke(width = 1.2.dp.toPx()),
+                    )
                 }
             }
         }
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {
+            if (!task.done) {
+                // Tag chip
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(BrandPeach.copy(alpha = 0.6f))
+                        .padding(horizontal = 6.dp, vertical = 1.dp),
+                ) {
+                    Text(
+                        task.tagDelta,
+                        color = Color(0xFF993C1D),
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
+            }
             Text(
-                action.title,
-                color = if (isChecked) InkGray500 else InkBlack,
+                task.title,
+                color = if (task.done) InkGray500 else InkBlack,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
-                fontSize = 13.sp,
+                textDecoration = if (task.done)
+                    androidx.compose.ui.text.style.TextDecoration.LineThrough
+                else null,
             )
             Spacer(Modifier.height(2.dp))
             Text(
-                action.description,
-                color = InkGray500,
-                fontSize = 11.sp,
-                lineHeight = 16.sp,
+                task.description,
+                color = if (task.done) Color(0xFFB4B2A9) else InkGray500,
+                fontSize = 10.sp,
+                lineHeight = 15.sp,
             )
         }
     }
 }
 
 // ============================================================
-// Skill Progress
+// Sources Row
 // ============================================================
 
 @Composable
-private fun SkillProgressCard(progress: List<SkillProgress>) {
-    Column(
-        modifier = Modifier
-            .padding(horizontal = 20.dp)
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(PaperWhite)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        progress.forEach { skill ->
-            SkillProgressRow(skill)
-        }
-    }
-}
-
-@Composable
-private fun SkillProgressRow(skill: SkillProgress) {
-    Column {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+private fun SourcesRow(onEdit: () -> Unit) {
+    Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+        Row(verticalAlignment = Alignment.Bottom) {
             Text(
-                skill.name,
+                "資料來源",
                 modifier = Modifier.weight(1f),
                 color = InkBlack,
-                fontWeight = FontWeight.Medium,
-                fontSize = 12.sp,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Black,
             )
             Text(
-                "${skill.score}",
+                "編輯 ↗",
                 color = BrandDeepOrange,
-                fontWeight = FontWeight.Black,
-                fontSize = 13.sp,
+                fontSize = 10.sp,
+                modifier = Modifier.pressScale(onClick = onEdit),
             )
         }
-        Spacer(Modifier.height(6.dp))
-        // 進度條
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(6.dp)
-                .clip(CircleShape)
-                .background(InkGray100),
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(skill.score / 100f)
-                    .fillMaxHeight()
-                    .clip(CircleShape)
-                    .background(
-                        Brush.horizontalGradient(
-                            listOf(BrandAmber, BrandDeepOrange),
-                        ),
-                    ),
+        Spacer(Modifier.height(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SourceCard(
+                icon = Icons.Outlined.Folder,
+                value = "4 段",
+                label = "經歷",
+                modifier = Modifier.weight(1f),
+            )
+            SourceCard(
+                icon = Icons.Outlined.School,
+                value = "42 門",
+                label = "修課",
+                modifier = Modifier.weight(1f),
+            )
+            SourceCard(
+                icon = Icons.Outlined.GpsFixed,
+                value = "1 個",
+                label = "目標",
+                modifier = Modifier.weight(1f),
             )
         }
+    }
+}
+
+@Composable
+private fun SourceCard(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    value: String,
+    label: String,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(PaperWhite)
+            .padding(vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = BrandDeepOrange,
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            value,
+            color = InkBlack,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            label,
+            color = InkGray500,
+            fontSize = 9.sp,
+        )
     }
 }

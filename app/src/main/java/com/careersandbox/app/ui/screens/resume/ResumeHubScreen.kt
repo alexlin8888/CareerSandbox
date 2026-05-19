@@ -323,11 +323,11 @@ private fun BentoActions(navController: NavHostController) {
                     onClick = { navController.navigate(Routes.RESUME_EDITOR) },
                 )
                 BentoSmall(
-                    icon = Icons.Outlined.AccountTree,
-                    label = "經歷網",
+                    icon = Icons.Outlined.Explore,
+                    label = "職涯探索",
                     accent = GlowPurple,
                     modifier = Modifier.weight(1f).fillMaxHeight(),
-                    onClick = { navController.navigate(Routes.EXPERIENCE_NETWORK) },
+                    onClick = { navController.navigate(Routes.CAREER_EXPLORATION) },
                 )
             }
             Row(
