@@ -80,7 +80,7 @@ fun CareerExplorationScreen(navController: NavHostController) {
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
-                    Text("職涯探索", fontWeight = FontWeight.Medium, fontSize = 13.sp, color = InkGray500)
+                    Text("職涯探索", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = InkBlack)
                 },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
@@ -197,13 +197,13 @@ private fun IntroBanner() {
             Text(
                 "3 條最適合你的路徑",
                 color = InkBlack,
-                fontSize = 13.sp,
+                fontSize = 17.sp,
                 fontWeight = FontWeight.Bold,
             )
             Text(
                 "基於 4 段經歷 · 42 門修課",
                 color = Color(0xFF993C1D),
-                fontSize = 9.sp,
+                fontSize = 11.sp,
             )
         }
     }
@@ -244,29 +244,29 @@ private fun TopMatchCard(rec: JobRec) {
                     Text(
                         rec.title,
                         color = InkBlack,
-                        fontSize = 16.sp,
+                        fontSize = 20.sp,
                         fontWeight = FontWeight.Black,
                     )
                     Text(
                         rec.titleEn,
                         color = InkGray500,
-                        fontSize = 10.sp,
+                        fontSize = 13.sp,
                     )
                     Spacer(Modifier.height(8.dp))
                     Row {
-                        Text("月薪 ", color = InkGray500, fontSize = 10.sp)
+                        Text("月薪 ", color = InkGray500, fontSize = 13.sp)
                         Text(
                             rec.salaryRange,
                             color = InkBlack,
-                            fontSize = 10.sp,
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                         )
                         Spacer(Modifier.width(10.dp))
-                        Text("職缺 ", color = InkGray500, fontSize = 10.sp)
+                        Text("職缺 ", color = InkGray500, fontSize = 13.sp)
                         Text(
                             "${rec.openings}",
                             color = InkBlack,
-                            fontSize = 10.sp,
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                         )
                     }
@@ -275,14 +275,14 @@ private fun TopMatchCard(rec: JobRec) {
                     Text(
                         "$animatedMatch",
                         color = BrandDeepOrange,
-                        fontSize = 36.sp,
+                        fontSize = 48.sp,
                         fontWeight = FontWeight.Black,
-                        lineHeight = 36.sp,
+                        lineHeight = 48.sp,
                     )
                     Text(
                         "%",
                         color = BrandDeepOrange,
-                        fontSize = 12.sp,
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(top = 4.dp),
                     )
@@ -310,7 +310,7 @@ private fun TopMatchCard(rec: JobRec) {
             }
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("缺 :", color = InkGray500, fontSize = 9.sp)
+                Text("缺 :", color = InkGray500, fontSize = 11.sp)
                 Spacer(Modifier.width(4.dp))
                 Box(
                     modifier = Modifier
@@ -318,7 +318,7 @@ private fun TopMatchCard(rec: JobRec) {
                         .background(InkGray100)
                         .padding(horizontal = 6.dp, vertical = 2.dp),
                 ) {
-                    Text("SQL 進階", color = InkBlack, fontSize = 9.sp)
+                    Text("SQL 進階", color = InkBlack, fontSize = 11.sp)
                 }
                 Spacer(Modifier.width(4.dp))
                 Box(
@@ -327,7 +327,7 @@ private fun TopMatchCard(rec: JobRec) {
                         .background(InkGray100)
                         .padding(horizontal = 6.dp, vertical = 2.dp),
                 ) {
-                    Text("A/B test", color = InkBlack, fontSize = 9.sp)
+                    Text("A/B test", color = InkBlack, fontSize = 11.sp)
                 }
             }
         }
@@ -335,15 +335,15 @@ private fun TopMatchCard(rec: JobRec) {
         Box(
             modifier = Modifier
                 .padding(start = 16.dp)
-                .offset(y = (-7).dp)
+                .offset(y = (-9).dp)
                 .clip(CircleShape)
                 .background(BrandDeepOrange)
-                .padding(horizontal = 8.dp, vertical = 2.dp),
+                .padding(horizontal = 10.dp, vertical = 4.dp),
         ) {
             Text(
                 "TOP MATCH",
                 color = PaperWhite,
-                fontSize = 8.sp,
+                fontSize = 11.sp,
                 letterSpacing = 1.2.sp,
                 fontWeight = FontWeight.Black,
             )
@@ -399,27 +399,27 @@ private fun OtherRecCard(
                 Text(
                     rec.title,
                     color = InkBlack,
-                    fontSize = 13.sp,
+                    fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
                     rec.titleEn,
                     color = InkGray500,
-                    fontSize = 9.sp,
+                    fontSize = 11.sp,
                 )
             }
             Row(verticalAlignment = Alignment.Top) {
                 Text(
                     "$animatedMatch",
                     color = color,
-                    fontSize = 18.sp,
+                    fontSize = 22.sp,
                     fontWeight = FontWeight.Black,
-                    lineHeight = 18.sp,
+                    lineHeight = 22.sp,
                 )
                 Text(
                     "%",
                     color = color,
-                    fontSize = 9.sp,
+                    fontSize = 11.sp,
                     modifier = Modifier.padding(top = 2.dp),
                 )
             }
@@ -444,7 +444,7 @@ private fun OtherRecCard(
         Text(
             "${rec.salaryRange} · 缺 ${rec.gap}",
             color = InkGray500,
-            fontSize = 9.sp,
+            fontSize = 11.sp,
         )
     }
 }
@@ -481,13 +481,13 @@ private fun SearchRow(
                 Text(
                     "搜尋其他職位...",
                     color = InkGray400,
-                    fontSize = 11.sp,
+                    fontSize = 15.sp,
                 )
             }
             BasicTextField(
                 value = value,
                 onValueChange = onChange,
-                textStyle = TextStyle(color = InkBlack, fontSize = 11.sp),
+                textStyle = TextStyle(color = InkBlack, fontSize = 15.sp),
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -503,7 +503,7 @@ private fun SearchRow(
                 Text(
                     kw,
                     color = InkBlack,
-                    fontSize = 9.sp,
+                    fontSize = 11.sp,
                 )
             }
         }
@@ -525,13 +525,13 @@ private fun LearningPathSection(
                 "給「$targetTitle」的學習路徑",
                 modifier = Modifier.weight(1f),
                 color = InkBlack,
-                fontSize = 13.sp,
+                fontSize = 17.sp,
                 fontWeight = FontWeight.Bold,
             )
             Text(
                 "展開 ›",
                 color = BrandDeepOrange,
-                fontSize = 10.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.pressScale(onClick = { }),
             )
@@ -596,7 +596,7 @@ private fun LearningStepCard(
             Text(
                 "${idx + 1}",
                 color = textOnColor,
-                fontSize = 11.sp,
+                fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
             )
         }
@@ -604,7 +604,7 @@ private fun LearningStepCard(
         Text(
             step.phase,
             color = color,
-            fontSize = 9.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
             letterSpacing = 0.5.sp,
         )
@@ -612,15 +612,15 @@ private fun LearningStepCard(
         Text(
             step.title,
             color = InkBlack,
-            fontSize = 11.sp,
+            fontSize = 15.sp,
             fontWeight = FontWeight.Bold,
-            lineHeight = 13.sp,
+            lineHeight = 17.sp,
         )
         Spacer(Modifier.height(1.dp))
         Text(
             step.source,
             color = InkGray500,
-            fontSize = 9.sp,
+            fontSize = 11.sp,
             lineHeight = 11.sp,
         )
     }

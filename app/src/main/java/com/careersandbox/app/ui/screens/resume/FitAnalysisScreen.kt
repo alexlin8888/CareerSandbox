@@ -87,7 +87,7 @@ fun FitAnalysisScreen(navController: NavHostController) {
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
-                    Text("適配分析", fontWeight = FontWeight.Medium, fontSize = 13.sp, color = InkGray500)
+                    Text("適配分析", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = InkBlack)
                 },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
@@ -202,7 +202,7 @@ private fun HeroRow(score: Int, capabilities: List<Capability>) {
                 Text(
                     "MATCH",
                     color = Color(0xFF993C1D),
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                     letterSpacing = 1.5.sp,
                     fontWeight = FontWeight.Bold,
                 )
@@ -211,14 +211,14 @@ private fun HeroRow(score: Int, capabilities: List<Capability>) {
                     Text(
                         "$animatedScore",
                         color = InkBlack,
-                        fontSize = 44.sp,
+                        fontSize = 48.sp,
                         fontWeight = FontWeight.Black,
-                        lineHeight = 44.sp,
+                        lineHeight = 48.sp,
                     )
                     Text(
                         "%",
                         color = Color(0xFF993C1D),
-                        fontSize = 14.sp,
+                        fontSize = 17.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(bottom = 4.dp, start = 2.dp),
                     )
@@ -227,13 +227,13 @@ private fun HeroRow(score: Int, capabilities: List<Capability>) {
                 Text(
                     "Junior PM",
                     color = InkBlack,
-                    fontSize = 12.sp,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
                     "Acer · 產品實習",
                     color = InkGray500,
-                    fontSize = 9.sp,
+                    fontSize = 11.sp,
                 )
             }
         }
@@ -277,7 +277,7 @@ private fun MiniStatCard(
         Text(
             label,
             color = InkGray500,
-            fontSize = 9.sp,
+            fontSize = 11.sp,
             letterSpacing = 1.sp,
             fontWeight = FontWeight.Medium,
         )
@@ -285,13 +285,13 @@ private fun MiniStatCard(
         Text(
             title,
             color = InkBlack,
-            fontSize = 12.sp,
+            fontSize = 15.sp,
             fontWeight = FontWeight.Bold,
         )
         Text(
             value,
             color = InkGray500,
-            fontSize = 9.sp,
+            fontSize = 11.sp,
         )
     }
 }
@@ -315,7 +315,7 @@ private fun CapabilitiesGrid(capabilities: List<Capability>) {
                 "能力分布",
                 modifier = Modifier.weight(1f),
                 color = InkBlack,
-                fontSize = 12.sp,
+                fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
             )
             Box(
@@ -327,7 +327,7 @@ private fun CapabilitiesGrid(capabilities: List<Capability>) {
                 Text(
                     "數據導向型",
                     color = AccentGreen,
-                    fontSize = 9.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                 )
             }
@@ -382,9 +382,9 @@ private fun CapabilityRowItem(cap: Capability, modifier: Modifier = Modifier) {
         Text(
             cap.label,
             color = textColor,
-            fontSize = 11.sp,
+            fontSize = 15.sp,
             fontWeight = FontWeight.Medium,
-            modifier = Modifier.width(28.dp),
+            modifier = Modifier.width(36.dp),
         )
         Spacer(Modifier.width(8.dp))
         Box(
@@ -406,9 +406,9 @@ private fun CapabilityRowItem(cap: Capability, modifier: Modifier = Modifier) {
         Text(
             "${cap.score}",
             color = textColor,
-            fontSize = 11.sp,
+            fontSize = 15.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.width(18.dp),
+            modifier = Modifier.width(24.dp),
         )
     }
 }
@@ -428,14 +428,14 @@ private fun TasksSection(
                 "補強路徑",
                 modifier = Modifier.weight(1f),
                 color = InkBlack,
-                fontSize = 13.sp,
+                fontSize = 17.sp,
                 fontWeight = FontWeight.Bold,
             )
             val doneCount = tasks.count { it.done }
             Text(
                 "$doneCount / ${tasks.size} 完成",
                 color = InkGray500,
-                fontSize = 10.sp,
+                fontSize = 13.sp,
             )
         }
         Spacer(Modifier.height(10.dp))
@@ -469,7 +469,7 @@ private fun TasksSection(
             "完成補強,讓你的指紋更接近目標",
             modifier = Modifier.fillMaxWidth(),
             color = InkGray500,
-            fontSize = 10.sp,
+            fontSize = 13.sp,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
     }
@@ -493,7 +493,7 @@ private fun TaskCard(
             .background(if (task.done) InkGray100.copy(alpha = 0.6f) else PaperWhite)
             .border(0.5.dp, InkGray200.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
             .pressScale(onClick = onToggle)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .padding(horizontal = 14.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // Checkbox
@@ -526,7 +526,7 @@ private fun TaskCard(
             Text(
                 task.title,
                 color = if (task.done) InkGray500 else InkBlack,
-                fontSize = 12.sp,
+                fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 textDecoration = if (task.done) TextDecoration.LineThrough else null,
             )
@@ -535,7 +535,7 @@ private fun TaskCard(
                 Text(
                     task.description,
                     color = InkGray500,
-                    fontSize = 10.sp,
+                    fontSize = 13.sp,
                 )
             }
         }
@@ -550,7 +550,7 @@ private fun TaskCard(
                 Text(
                     task.tagDelta,
                     color = Color(0xFF993C1D),
-                    fontSize = 9.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                 )
             }
@@ -577,7 +577,7 @@ private fun FooterSourcesRow() {
         Text(
             "編輯 ›",
             color = BrandDeepOrange,
-            fontSize = 11.sp,
+            fontSize = 15.sp,
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.pressScale(onClick = { }),
         )
@@ -596,7 +596,7 @@ private fun SourceChip(
         Text(
             "$value $label",
             color = InkGray500,
-            fontSize = 10.sp,
+            fontSize = 13.sp,
         )
     }
 }
