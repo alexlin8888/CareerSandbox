@@ -59,7 +59,7 @@ fun ResumeHubScreen(navController: NavHostController) {
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { visible = true }
 
-    Box(modifier = Modifier.fillMaxSize().background(PaperWhite)) {
+    Box(modifier = Modifier.fillMaxSize().background(PaperWarm)) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -238,9 +238,9 @@ private fun SubmissionStatsCard() {
                 }
             }
 
-            Box(modifier = Modifier.size(80.dp), contentAlignment = Alignment.Center) {
-                Canvas(modifier = Modifier.size(80.dp)) {
-                    val strokeW = 7.dp.toPx()
+            Box(modifier = Modifier.size(110.dp), contentAlignment = Alignment.Center) {
+                Canvas(modifier = Modifier.size(110.dp)) {
+                    val strokeW = 9.dp.toPx()
                     val diameter = size.minDimension - strokeW
                     val topLeft = Offset((size.width - diameter) / 2f, (size.height - diameter) / 2f)
                     val arcSize = Size(diameter, diameter)
@@ -266,9 +266,9 @@ private fun SubmissionStatsCard() {
                     }
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("$animPct%", color = BrandDeepOrange, fontWeight = FontWeight.Black, fontSize = 18.sp, lineHeight = 18.sp)
-                    Spacer(Modifier.height(2.dp))
-                    Text("回覆率", color = InkGray400, fontSize = 9.sp)
+                    Text("$animPct%", color = BrandDeepOrange, fontWeight = FontWeight.Black, fontSize = 24.sp, lineHeight = 24.sp)
+                    Spacer(Modifier.height(3.dp))
+                    Text("回覆率", color = InkGray400, fontSize = 11.sp, fontWeight = FontWeight.Medium)
                 }
             }
         }
@@ -411,7 +411,7 @@ private fun ToolStrip(navController: NavHostController) {
         ToolButton(Icons.Outlined.FileUpload, "PDF 匯出", Modifier.weight(1f)) {
             navController.navigate(Routes.RESUME_UPLOAD_PROCESSING)
         }
-        ToolButton(Icons.Outlined.Analytics, "適配 78%", Modifier.weight(1f)) {
+        ToolButton(Icons.Outlined.Analytics, "適配分析", Modifier.weight(1f)) {
             navController.navigate(Routes.FIT_ANALYSIS)
         }
     }

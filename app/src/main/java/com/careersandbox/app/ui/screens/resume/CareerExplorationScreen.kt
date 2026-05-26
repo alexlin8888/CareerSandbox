@@ -29,10 +29,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -87,7 +83,7 @@ fun CareerExplorationScreen(navController: NavHostController) {
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { visible = true }
 
-    Box(modifier = Modifier.fillMaxSize().background(PaperWhite)) {
+    Box(modifier = Modifier.fillMaxSize().background(PaperWarm)) {
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         ) {
@@ -213,19 +209,13 @@ private fun CareerHeroSection(onBack: () -> Unit) {
             Icon(Icons.Outlined.ArrowBack, contentDescription = null, tint = PaperWhite, modifier = Modifier.size(20.dp))
         }
 
-        // === v9 spec: compass + dashed path illustration ===
-        CareerCompassIllustration(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 14.dp, end = 4.dp)
-                .size(width = 150.dp, height = 120.dp)
-        )
+        // (v31.8) 子頁面不放線條插畫 — 只保留弧形 + 文字
 
         Column(
             modifier = Modifier
                 .padding(horizontal = 24.dp)
                 .padding(top = 70.dp)
-                .fillMaxWidth(0.65f),
+                .fillMaxWidth(),
         ) {
             Text("CAREER PATHS",
                 color = Color(0xFF993C1D),
@@ -258,74 +248,6 @@ private fun CareerHeroSection(onBack: () -> Unit) {
                     fontSize = 11.sp)
             }
         }
-    }
-}
-
-/**
- * Compass + dashed path, scaled by viewBox 150×120 → actual dp.
- * Matches career_exploration_v9_animated.html.
- */
-@Composable
-private fun CareerCompassIllustration(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val sx = size.width / 150f
-        val sy = size.height / 120f
-        val s = minOf(sx, sy)
-
-        // Compass circle at (100, 36) radius 22
-        val cx = 100f * sx
-        val cy = 36f * sy
-        drawCircle(
-            color = PaperWhite.copy(alpha = 0.8f),
-            radius = 22f * s,
-            center = Offset(cx, cy),
-            style = Stroke(width = 1.5f * s),
-        )
-        // Crosshair: vertical (100,22)-(100,50)
-        drawLine(
-            color = PaperWhite.copy(alpha = 0.8f),
-            start = Offset(100f * sx, 22f * sy),
-            end = Offset(100f * sx, 50f * sy),
-            strokeWidth = 1.5f * s,
-            cap = StrokeCap.Round,
-        )
-        // Crosshair: horizontal (86,36)-(114,36)
-        drawLine(
-            color = PaperWhite.copy(alpha = 0.8f),
-            start = Offset(86f * sx, 36f * sy),
-            end = Offset(114f * sx, 36f * sy),
-            strokeWidth = 1.5f * s,
-            cap = StrokeCap.Round,
-        )
-        // N indicator: filled polygon (100,22) (96,32) (100,30) (104,32)
-        val nArrow = Path().apply {
-            moveTo(100f * sx, 22f * sy)
-            lineTo(96f * sx, 32f * sy)
-            lineTo(100f * sx, 30f * sy)
-            lineTo(104f * sx, 32f * sy)
-            close()
-        }
-        drawPath(nArrow, PaperWhite)
-
-        // Dashed path: Q-curve (50,95) Q(70,75) (90,95) Q(110,115) (130,95)
-        val dashed = Path().apply {
-            moveTo(50f * sx, 95f * sy)
-            quadraticBezierTo(70f * sx, 75f * sy, 90f * sx, 95f * sy)
-            quadraticBezierTo(110f * sx, 115f * sy, 130f * sx, 95f * sy)
-        }
-        drawPath(
-            dashed,
-            color = PaperWhite.copy(alpha = 0.8f),
-            style = Stroke(
-                width = 1.5f * s,
-                cap = StrokeCap.Round,
-                pathEffect = PathEffect.dashPathEffect(floatArrayOf(3f * s, 3f * s)),
-            ),
-        )
-        // 3 dots at (50,95) (90,95) (130,95) radius 3.5
-        drawCircle(PaperWhite, radius = 3.5f * s, center = Offset(50f * sx, 95f * sy))
-        drawCircle(PaperWhite.copy(alpha = 0.8f), radius = 3.5f * s, center = Offset(90f * sx, 95f * sy))
-        drawCircle(PaperWhite.copy(alpha = 0.8f), radius = 3.5f * s, center = Offset(130f * sx, 95f * sy))
     }
 }
 
