@@ -1,17 +1,20 @@
 package com.careersandbox.app.ui.screens.resume
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
@@ -19,648 +22,516 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.careersandbox.app.R
+import com.careersandbox.app.ui.components.ScatteredDecorations
+import com.careersandbox.app.ui.components.WaveHeroBackground
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 
-private data class JobRec(
+private data class CareerRec(
     val title: String,
-    val titleEn: String,
-    val match: Int,
-    val gap: String,
-    val salaryRange: String,
-    val openings: Int,
+    val subtitleEn: String,
+    val salary: String,
+    val openings: String,
+    val matchScore: Int,
+    val missingSkills: List<String>,
 )
 
 private data class LearningStep(
-    val phase: String,
+    val stepNum: Int,
+    val term: String,
     val title: String,
-    val source: String,
+    val subtitle: String,
+    val tier: StepTier,
 )
+private enum class StepTier { Primary, Secondary, Tertiary }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CareerExplorationScreen(navController: NavHostController) {
-    val topRec = remember {
-        JobRec("資料分析師", "Data Analyst", 92, "SQL 進階 · A/B test", "45–65k", 1240)
-    }
-    val otherRecs = remember {
-        listOf(
-            JobRec("產品經理", "PM", 78, "用戶研究", "50–80k", 980),
-            JobRec("行銷策略", "Growth", 71, "品牌經營", "42–58k", 760),
+    val topMatch = remember {
+        CareerRec(
+            title = "資料分析師",
+            subtitleEn = "Data Analyst",
+            salary = "45-65k",
+            openings = "1,240",
+            matchScore = 92,
+            missingSkills = listOf("SQL 進階", "A/B test", "用戶研究"),
         )
     }
-    val learningSteps = remember {
+    val secondaryRecs = remember {
         listOf(
-            LearningStep("本學期", "資料庫管理", "商管院 · 3 學分"),
-            LearningStep("下學期", "GDA 證照", "Coursera · 6 月"),
-            LearningStep("暑假", "外商 BI 實習", "補用戶研究"),
+            "產品經理" to 78,
+            "行銷策略" to 71,
         )
     }
-    val suggestedKeywords = listOf("UX 設計師", "數位行銷", "創投分析")
-
-    var searchInput by remember { mutableStateOf("") }
+    val steps = remember {
+        listOf(
+            LearningStep(1, "本學期", "資料庫管理", "商管院 · 3 學分", StepTier.Primary),
+            LearningStep(2, "下學期", "GDA 證照", "Coursera · 6 月", StepTier.Secondary),
+            LearningStep(3, "暑期", "外商 BI 實習", "補用戶研究短板", StepTier.Tertiary),
+        )
+    }
+    val chipScroll = rememberScrollState()
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { visible = true }
 
-    Scaffold(
-        containerColor = PaperWarm,
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text("職涯探索", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = InkBlack)
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Outlined.ArrowBackIosNew, contentDescription = null, tint = InkBlack, modifier = Modifier.size(18.dp))
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { }) {
-                        Icon(Icons.Outlined.BookmarkBorder, contentDescription = null, tint = InkGray500, modifier = Modifier.size(18.dp))
-                    }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = PaperWarm),
-            )
-        },
-    ) { pad ->
+    Box(modifier = Modifier.fillMaxSize().background(PaperWhite)) {
         Column(
-            modifier = Modifier
-                .padding(pad)
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp)
-                .padding(top = 4.dp, bottom = 32.dp),
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         ) {
-            // ===== 1. Banner =====
-            AnimatedSection(visible, 0) {
-                IntroBanner()
-            }
+            CareerHeroSection(onBack = { navController.popBackStack() })
 
-            Spacer(Modifier.height(12.dp))
+            Column(modifier = Modifier.padding(horizontal = 24.dp).padding(top = 20.dp, bottom = 40.dp)) {
+                AnimatedSection(visible = visible, delayMs = 0) {
+                    SearchBar()
+                }
+                Spacer(Modifier.height(12.dp))
 
-            // ===== 2. Top match card =====
-            AnimatedSection(visible, 120) {
-                TopMatchCard(topRec)
-            }
+                AnimatedSection(visible = visible, delayMs = 80) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(chipScroll),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        FilterPill("全部", active = true)
+                        FilterPill("應屆", active = false)
+                        FilterPill("數據", active = false)
+                        FilterPill("產品", active = false)
+                        FilterPill("設計", active = false)
+                    }
+                }
+                Spacer(Modifier.height(18.dp))
 
-            Spacer(Modifier.height(8.dp))
+                AnimatedSection(visible = visible, delayMs = 160) {
+                    TopMatchCard(rec = topMatch)
+                }
+                Spacer(Modifier.height(12.dp))
 
-            // ===== 3. 2/3 名橫排 =====
-            AnimatedSection(visible, 240) {
-                OtherRecsRow(otherRecs)
-            }
+                AnimatedSection(visible = visible, delayMs = 240) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                        SecondaryRecCard(
+                            title = secondaryRecs[0].first,
+                            subtitle = "PM · 50-80k",
+                            score = secondaryRecs[0].second,
+                            icon = Icons.Outlined.WorkOutline,
+                            modifier = Modifier.weight(1f),
+                        )
+                        SecondaryRecCard(
+                            title = secondaryRecs[1].first,
+                            subtitle = "Growth · 42-58k",
+                            score = secondaryRecs[1].second,
+                            icon = Icons.Outlined.TrendingUp,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+                Spacer(Modifier.height(28.dp))
 
-            Spacer(Modifier.height(14.dp))
+                AnimatedSection(visible = visible, delayMs = 320) {
+                    Text(
+                        "給「${topMatch.title}」的學習路徑",
+                        color = InkBlack,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 20.sp,
+                    )
+                }
+                Spacer(Modifier.height(12.dp))
 
-            // ===== 4. Search row =====
-            AnimatedSection(visible, 360) {
-                SearchRow(
-                    value = searchInput,
-                    onChange = { searchInput = it },
-                    suggestions = suggestedKeywords,
-                    onSuggestionClick = { searchInput = it },
-                )
-            }
+                AnimatedSection(visible = visible, delayMs = 400) {
+                    Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                        steps.forEach { step ->
+                            LearningStepCard(step)
+                        }
+                    }
+                }
+                Spacer(Modifier.height(28.dp))
 
-            Spacer(Modifier.height(18.dp))
-
-            // ===== 5. Learning path =====
-            AnimatedSection(visible, 480) {
-                LearningPathSection(
-                    targetTitle = topRec.title,
-                    steps = learningSteps,
-                )
+                AnimatedSection(visible = visible, delayMs = 520) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(InkBlack)
+                            .pressScale { /* TODO: start learning path */ },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text("開始學習路徑", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                    }
+                }
             }
         }
     }
 }
 
-// (shared with FitAnalysis — 但避免衝突重新定義)
 @Composable
-private fun AnimatedSection(
-    visible: Boolean,
-    delayMs: Int,
-    content: @Composable () -> Unit,
-) {
+private fun AnimatedSection(visible: Boolean, delayMs: Int, content: @Composable () -> Unit) {
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(animationSpec = tween(400, delayMillis = delayMs)) +
+        enter = fadeIn(animationSpec = tween(550, delayMillis = delayMs, easing = FastOutSlowInEasing)) +
             slideInVertically(
                 initialOffsetY = { it / 4 },
-                animationSpec = tween(400, delayMillis = delayMs, easing = FastOutSlowInEasing),
+                animationSpec = tween(550, delayMillis = delayMs, easing = FastOutSlowInEasing),
             ),
     ) {
         content()
     }
 }
 
-// ============================================================
-// Banner
-// ============================================================
+@Composable
+private fun CareerHeroSection(onBack: () -> Unit) {
+    Box(modifier = Modifier.fillMaxWidth().height(240.dp)) {
+        WaveHeroBackground(
+            gradient = Brush.linearGradient(
+                colors = listOf(BrandYellow, BrandAmber, BrandOrange),
+            ),
+            heightDp = 240,
+        )
+        ScatteredDecorations(modifier = Modifier.fillMaxSize().alpha(0.6f))
+
+        Box(
+            Modifier
+                .padding(16.dp)
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(PaperWhite.copy(alpha = 0.2f))
+                .pressScale(onClick = onBack),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Outlined.ArrowBack, contentDescription = null, tint = PaperWhite, modifier = Modifier.size(20.dp))
+        }
+
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 24.dp)
+                .padding(top = 70.dp)
+                .fillMaxWidth(0.65f),
+        ) {
+            Text("CAREER PATHS",
+                color = Color(0xFF993C1D),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 3.sp)
+            Spacer(Modifier.height(10.dp))
+            Text("職涯探索",
+                color = PaperWhite,
+                fontWeight = FontWeight.Black,
+                fontSize = 32.sp,
+                lineHeight = 36.sp)
+            Spacer(Modifier.height(6.dp))
+            Text("3 條最適合你的路徑",
+                color = PaperWhite,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(10.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(PaperWhite)
+                    .padding(horizontal = 11.dp, vertical = 4.dp),
+            ) {
+                Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = BrandDeepOrange, modifier = Modifier.size(12.dp))
+                Spacer(Modifier.width(5.dp))
+                Text("基於 4 段經歷 · 42 門修課",
+                    color = BrandDeepOrange,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 11.sp)
+            }
+        }
+
+        Image(
+            painter = painterResource(R.drawable.undraw_feedback_ebmx),
+            contentDescription = null,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .offset(x = (-8).dp, y = 8.dp)
+                .size(150.dp)
+                .alpha(0.92f),
+            contentScale = ContentScale.Fit,
+        )
+    }
+}
 
 @Composable
-private fun IntroBanner() {
+private fun SearchBar() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(InkGray100.copy(alpha = 0.5f))
+            .padding(horizontal = 14.dp, vertical = 11.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Outlined.Search, contentDescription = null, tint = InkGray400, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(10.dp))
+        Text("搜尋其他職位...", color = InkGray400, fontSize = 13.sp, modifier = Modifier.weight(1f))
+        Icon(Icons.Outlined.Tune, contentDescription = null, tint = InkGray500, modifier = Modifier.size(16.dp))
+    }
+}
+
+@Composable
+private fun FilterPill(text: String, active: Boolean) {
+    Box(
+        modifier = Modifier
+            .clip(CircleShape)
+            .background(if (active) InkBlack else InkGray100)
+            .padding(horizontal = 13.dp, vertical = 6.dp),
+    ) {
+        Text(
+            text,
+            color = if (active) PaperWhite else InkGray700,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 12.sp,
+        )
+    }
+}
+
+@Composable
+private fun TopMatchCard(rec: CareerRec) {
+    val animScore by animateIntAsState(
+        targetValue = rec.matchScore,
+        animationSpec = tween(1200, easing = FastOutSlowInEasing),
+        label = "top_match",
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(Brush.linearGradient(listOf(BrandOrange, BrandDeepOrange))),
+    ) {
+        Box(
+            Modifier
+                .align(Alignment.TopEnd)
+                .offset(x = 20.dp, y = (-20).dp)
+                .size(100.dp)
+                .clip(CircleShape)
+                .background(PaperWhite.copy(alpha = 0.08f)),
+        )
+
+        Column(modifier = Modifier.padding(18.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(PaperWhite)
+                        .padding(horizontal = 11.dp, vertical = 4.dp),
+                ) {
+                    Text("TOP MATCH",
+                        color = BrandDeepOrange,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 10.sp,
+                        letterSpacing = 1.2.sp)
+                }
+                Icon(Icons.Outlined.BookmarkBorder, contentDescription = null, tint = PaperWhite.copy(alpha = 0.85f), modifier = Modifier.size(20.dp))
+            }
+            Spacer(Modifier.height(14.dp))
+            Text(rec.title, color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 24.sp, lineHeight = 28.sp)
+            Spacer(Modifier.height(2.dp))
+            Text(rec.subtitleEn, color = PaperWhite.copy(alpha = 0.8f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(14.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column {
+                    Text("月薪", color = PaperWhite.copy(alpha = 0.7f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(2.dp))
+                    Text(rec.salary, color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 17.sp)
+                }
+                Column {
+                    Text("職缺", color = PaperWhite.copy(alpha = 0.7f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(2.dp))
+                    Text(rec.openings, color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 17.sp)
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("FIT", color = PaperWhite.copy(alpha = 0.7f), fontSize = 10.sp, letterSpacing = 1.2.sp, fontWeight = FontWeight.SemiBold)
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text("$animScore", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 44.sp, lineHeight = 44.sp)
+                        Text("%", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 16.sp, modifier = Modifier.padding(bottom = 5.dp))
+                    }
+                }
+            }
+            Spacer(Modifier.height(14.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                rec.missingSkills.forEach { skill ->
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(PaperWhite.copy(alpha = 0.2f))
+                            .padding(horizontal = 11.dp, vertical = 4.dp),
+                    ) {
+                        Text(skill, color = PaperWhite, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
+                    }
+                }
+            }
+            Spacer(Modifier.height(14.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(46.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(PaperWhite)
+                    .pressScale { /* navigate to detail */ },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("查看完整路徑", color = BrandDeepOrange, fontWeight = FontWeight.Black, fontSize = 13.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SecondaryRecCard(
+    title: String,
+    subtitle: String,
+    score: Int,
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+) {
+    val (scoreColor, barColor, iconBg, iconTint) = when {
+        score >= 75 -> arrayOf(BrandDeepOrange, BrandDeepOrange, BrandPeach.copy(alpha = 0.6f), BrandDeepOrange)
+        else -> arrayOf(Color(0xFFBA7517), BrandAmber, BrandYellow.copy(alpha = 0.3f), Color(0xFFBA7517))
+    }
+    val animScore by animateIntAsState(
+        targetValue = score,
+        animationSpec = tween(1200, easing = FastOutSlowInEasing),
+        label = "$title-score",
+    )
+    val animBar by animateFloatAsState(
+        targetValue = score / 100f,
+        animationSpec = tween(1100, delayMillis = 350, easing = FastOutSlowInEasing),
+        label = "$title-bar",
+    )
+
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(InkGray100.copy(alpha = 0.5f))
+            .pressScale {}
+            .padding(13.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier.size(32.dp).clip(RoundedCornerShape(10.dp)).background(iconBg as Color),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(icon, contentDescription = null, tint = iconTint as Color, modifier = Modifier.size(16.dp))
+            }
+            Icon(Icons.Outlined.BookmarkBorder, contentDescription = null, tint = InkGray300, modifier = Modifier.size(14.dp))
+        }
+        Spacer(Modifier.height(10.dp))
+        Text(title, color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        Spacer(Modifier.height(2.dp))
+        Text(subtitle, color = InkGray500, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(10.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            Text("FIT", color = InkGray400, fontSize = 10.sp, letterSpacing = 1.sp, fontWeight = FontWeight.SemiBold)
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text("$animScore", color = scoreColor as Color, fontWeight = FontWeight.Black, fontSize = 22.sp, lineHeight = 22.sp)
+                Text("%", color = scoreColor, fontWeight = FontWeight.Black, fontSize = 11.sp, modifier = Modifier.padding(bottom = 3.dp))
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Canvas(modifier = Modifier.fillMaxWidth().height(4.dp)) {
+            drawRoundRect(
+                color = InkGray200,
+                size = Size(size.width, size.height),
+                cornerRadius = CornerRadius(2.dp.toPx()),
+            )
+            val w = size.width * animBar.coerceIn(0f, 1f)
+            if (w > 0f) {
+                drawRoundRect(
+                    color = barColor as Color,
+                    topLeft = Offset(0f, 0f),
+                    size = Size(w, size.height),
+                    cornerRadius = CornerRadius(2.dp.toPx()),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LearningStepCard(step: LearningStep) {
+    val numBg: Color = when (step.tier) {
+        StepTier.Primary -> BrandDeepOrange
+        StepTier.Secondary -> BrandAmber
+        StepTier.Tertiary -> InkGray200
+    }
+    val numTextColor: Color = when (step.tier) {
+        StepTier.Tertiary -> InkGray500
+        else -> PaperWhite
+    }
+    val chipBg: Color = when (step.tier) {
+        StepTier.Primary -> BrandPeach
+        StepTier.Secondary -> BrandPeach.copy(alpha = 0.6f)
+        StepTier.Tertiary -> InkGray100
+    }
+    val chipTextColor: Color = when (step.tier) {
+        StepTier.Tertiary -> InkGray500
+        else -> BrandDeepOrange
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(Color(0xFFFCEFD9), PaperWarm),
-                ),
-            )
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .background(InkGray100.copy(alpha = 0.5f))
+            .pressScale {}
+            .padding(horizontal = 14.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // 插畫 — sparkle
         Box(
-            modifier = Modifier.size(40.dp),
+            modifier = Modifier.size(36.dp).clip(RoundedCornerShape(11.dp)).background(numBg),
             contentAlignment = Alignment.Center,
         ) {
-            SparkleFigure()
+            Text("${step.stepNum}", color = numTextColor, fontWeight = FontWeight.Black, fontSize = 16.sp)
         }
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                "3 條最適合你的路徑",
-                color = InkBlack,
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                "基於 4 段經歷 · 42 門修課",
-                color = Color(0xFF993C1D),
-                fontSize = 11.sp,
-            )
-        }
-    }
-}
-
-// ============================================================
-// Top match card with count-up + animated bar
-// ============================================================
-
-@Composable
-private fun TopMatchCard(rec: JobRec) {
-    var triggered by remember { mutableStateOf(false) }
-    val animatedMatch by animateIntAsState(
-        targetValue = if (triggered) rec.match else 0,
-        animationSpec = tween(1200, easing = FastOutSlowInEasing),
-        label = "match",
-    )
-    val animatedProgress by animateFloatAsState(
-        targetValue = if (triggered) rec.match / 100f else 0f,
-        animationSpec = tween(1200, easing = FastOutSlowInEasing),
-        label = "bar",
-    )
-    LaunchedEffect(Unit) { triggered = true }
-
-    Box {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .shadow(2.dp, RoundedCornerShape(18.dp))
-                .clip(RoundedCornerShape(18.dp))
-                .background(PaperWhite)
-                .border(1.5.dp, BrandDeepOrange, RoundedCornerShape(18.dp))
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-        ) {
-            Spacer(Modifier.height(2.dp))
-            Row(verticalAlignment = Alignment.Top) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        rec.title,
-                        color = InkBlack,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Black,
-                    )
-                    Text(
-                        rec.titleEn,
-                        color = InkGray500,
-                        fontSize = 13.sp,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Row {
-                        Text("月薪 ", color = InkGray500, fontSize = 13.sp)
-                        Text(
-                            rec.salaryRange,
-                            color = InkBlack,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                        )
-                        Spacer(Modifier.width(10.dp))
-                        Text("職缺 ", color = InkGray500, fontSize = 13.sp)
-                        Text(
-                            "${rec.openings}",
-                            color = InkBlack,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
-                }
-                Row(verticalAlignment = Alignment.Top) {
-                    Text(
-                        "$animatedMatch",
-                        color = BrandDeepOrange,
-                        fontSize = 48.sp,
-                        fontWeight = FontWeight.Black,
-                        lineHeight = 48.sp,
-                    )
-                    Text(
-                        "%",
-                        color = BrandDeepOrange,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(top = 4.dp),
-                    )
-                }
-            }
-            Spacer(Modifier.height(10.dp))
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(4.dp)
-                    .clip(CircleShape)
-                    .background(InkGray100),
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(chipBg)
+                    .padding(horizontal = 7.dp, vertical = 2.dp),
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(animatedProgress)
-                        .fillMaxHeight()
-                        .clip(CircleShape)
-                        .background(
-                            Brush.horizontalGradient(
-                                listOf(BrandAmber, BrandDeepOrange),
-                            ),
-                        ),
-                )
+                Text(step.term, color = chipTextColor, fontWeight = FontWeight.Black, fontSize = 9.sp, letterSpacing = 0.5.sp)
             }
-            Spacer(Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("缺 :", color = InkGray500, fontSize = 11.sp)
-                Spacer(Modifier.width(4.dp))
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(InkGray100)
-                        .padding(horizontal = 6.dp, vertical = 2.dp),
-                ) {
-                    Text("SQL 進階", color = InkBlack, fontSize = 11.sp)
-                }
-                Spacer(Modifier.width(4.dp))
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(InkGray100)
-                        .padding(horizontal = 6.dp, vertical = 2.dp),
-                ) {
-                    Text("A/B test", color = InkBlack, fontSize = 11.sp)
-                }
-            }
+            Spacer(Modifier.height(4.dp))
+            Text(step.title, color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Spacer(Modifier.height(1.dp))
+            Text(step.subtitle, color = InkGray500, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
         }
-        // TOP MATCH 標籤
-        Box(
-            modifier = Modifier
-                .padding(start = 16.dp)
-                .offset(y = (-9).dp)
-                .clip(CircleShape)
-                .background(BrandDeepOrange)
-                .padding(horizontal = 10.dp, vertical = 4.dp),
-        ) {
-            Text(
-                "TOP MATCH",
-                color = PaperWhite,
-                fontSize = 11.sp,
-                letterSpacing = 1.2.sp,
-                fontWeight = FontWeight.Black,
-            )
-        }
+        Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = InkGray400, modifier = Modifier.size(18.dp))
     }
-}
-
-// ============================================================
-// Other recs row
-// ============================================================
-
-@Composable
-private fun OtherRecsRow(recs: List<JobRec>) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        recs.forEachIndexed { idx, rec ->
-            val color = if (idx == 0) BrandAmber else BrandYellow
-            OtherRecCard(rec = rec, color = color, modifier = Modifier.weight(1f))
-        }
-    }
-}
-
-@Composable
-private fun OtherRecCard(
-    rec: JobRec,
-    color: Color,
-    modifier: Modifier = Modifier,
-) {
-    var triggered by remember { mutableStateOf(false) }
-    val animatedMatch by animateIntAsState(
-        targetValue = if (triggered) rec.match else 0,
-        animationSpec = tween(1000, easing = FastOutSlowInEasing),
-        label = "om-${rec.title}",
-    )
-    val animatedProgress by animateFloatAsState(
-        targetValue = if (triggered) rec.match / 100f else 0f,
-        animationSpec = tween(1000, easing = FastOutSlowInEasing),
-        label = "ob-${rec.title}",
-    )
-    LaunchedEffect(Unit) { triggered = true }
-
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(PaperWhite)
-            .border(0.5.dp, InkGray200.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
-            .padding(horizontal = 12.dp, vertical = 12.dp),
-    ) {
-        Row(verticalAlignment = Alignment.Top) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    rec.title,
-                    color = InkBlack,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    rec.titleEn,
-                    color = InkGray500,
-                    fontSize = 11.sp,
-                )
-            }
-            Row(verticalAlignment = Alignment.Top) {
-                Text(
-                    "$animatedMatch",
-                    color = color,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Black,
-                    lineHeight = 22.sp,
-                )
-                Text(
-                    "%",
-                    color = color,
-                    fontSize = 11.sp,
-                    modifier = Modifier.padding(top = 2.dp),
-                )
-            }
-        }
-        Spacer(Modifier.height(8.dp))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(3.dp)
-                .clip(CircleShape)
-                .background(InkGray100),
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(animatedProgress)
-                    .fillMaxHeight()
-                    .clip(CircleShape)
-                    .background(color),
-            )
-        }
-        Spacer(Modifier.height(6.dp))
-        Text(
-            "${rec.salaryRange} · 缺 ${rec.gap}",
-            color = InkGray500,
-            fontSize = 11.sp,
-        )
-    }
-}
-
-// ============================================================
-// Search row
-// ============================================================
-
-@Composable
-private fun SearchRow(
-    value: String,
-    onChange: (String) -> Unit,
-    suggestions: List<String>,
-    onSuggestionClick: (String) -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(PaperWhite)
-            .border(0.5.dp, InkGray200.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            Icons.Outlined.Search,
-            contentDescription = null,
-            tint = InkGray500,
-            modifier = Modifier.size(14.dp),
-        )
-        Spacer(Modifier.width(8.dp))
-        Box(modifier = Modifier.weight(1f)) {
-            if (value.isEmpty()) {
-                Text(
-                    "搜尋其他職位...",
-                    color = InkGray400,
-                    fontSize = 15.sp,
-                )
-            }
-            BasicTextField(
-                value = value,
-                onValueChange = onChange,
-                textStyle = TextStyle(color = InkBlack, fontSize = 15.sp),
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-        suggestions.take(2).forEach { kw ->
-            Spacer(Modifier.width(4.dp))
-            Box(
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(InkGray100)
-                    .pressScale(onClick = { onSuggestionClick(kw) })
-                    .padding(horizontal = 8.dp, vertical = 3.dp),
-            ) {
-                Text(
-                    kw,
-                    color = InkBlack,
-                    fontSize = 11.sp,
-                )
-            }
-        }
-    }
-}
-
-// ============================================================
-// Learning Path (3 mini cards horizontal)
-// ============================================================
-
-@Composable
-private fun LearningPathSection(
-    targetTitle: String,
-    steps: List<LearningStep>,
-) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                "給「$targetTitle」的學習路徑",
-                modifier = Modifier.weight(1f),
-                color = InkBlack,
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                "展開 ›",
-                color = BrandDeepOrange,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.pressScale(onClick = { }),
-            )
-        }
-        Spacer(Modifier.height(10.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            steps.forEachIndexed { idx, step ->
-                val color = when (idx) {
-                    0 -> BrandDeepOrange
-                    1 -> BrandAmber
-                    else -> BrandYellow
-                }
-                val textOnColor = if (idx >= 2) Color(0xFF993C1D) else PaperWhite
-                // 不對稱微旋轉
-                val rotation = when (idx) {
-                    0 -> -0.5f
-                    1 -> 0.4f
-                    else -> -0.3f
-                }
-                LearningStepCard(
-                    idx = idx,
-                    step = step,
-                    color = color,
-                    textOnColor = textOnColor,
-                    rotation = rotation,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun LearningStepCard(
-    idx: Int,
-    step: LearningStep,
-    color: Color,
-    textOnColor: Color,
-    rotation: Float,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .rotate(rotation)
-            .shadow(1.dp, RoundedCornerShape(12.dp))
-            .clip(RoundedCornerShape(12.dp))
-            .background(PaperWhite)
-            .border(0.5.dp, InkGray200.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-            .padding(11.dp),
-    ) {
-        Box(
-            modifier = Modifier
-                .size(22.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(color),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                "${idx + 1}",
-                color = textOnColor,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-            )
-        }
-        Spacer(Modifier.height(6.dp))
-        Text(
-            step.phase,
-            color = color,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 0.5.sp,
-        )
-        Spacer(Modifier.height(2.dp))
-        Text(
-            step.title,
-            color = InkBlack,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Bold,
-            lineHeight = 17.sp,
-        )
-        Spacer(Modifier.height(1.dp))
-        Text(
-            step.source,
-            color = InkGray500,
-            fontSize = 11.sp,
-            lineHeight = 11.sp,
-        )
-    }
-}
-
-// ============================================================
-// Sparkle illustration
-// ============================================================
-
-@Composable
-private fun SparkleFigure() {
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        val w = size.width
-        val h = size.height
-        val cx = w / 2f
-        val cy = h / 2f
-
-        // 4-pointer star main
-        val mainSize = w * 0.45f
-        drawStar4(cx, cy, mainSize, BrandDeepOrange)
-
-        // 2 個小 sparkles
-        drawStar4(cx - w * 0.32f, cy - h * 0.28f, w * 0.18f, BrandAmber)
-        drawStar4(cx + w * 0.3f, cy + h * 0.28f, w * 0.15f, BrandYellow)
-    }
-}
-
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawStar4(
-    cx: Float,
-    cy: Float,
-    size: Float,
-    color: Color,
-) {
-    val path = androidx.compose.ui.graphics.Path().apply {
-        moveTo(cx, cy - size)
-        cubicTo(cx + size * 0.2f, cy - size * 0.2f, cx + size * 0.2f, cy - size * 0.2f, cx + size, cy)
-        cubicTo(cx + size * 0.2f, cy + size * 0.2f, cx + size * 0.2f, cy + size * 0.2f, cx, cy + size)
-        cubicTo(cx - size * 0.2f, cy + size * 0.2f, cx - size * 0.2f, cy + size * 0.2f, cx - size, cy)
-        cubicTo(cx - size * 0.2f, cy - size * 0.2f, cx - size * 0.2f, cy - size * 0.2f, cx, cy - size)
-        close()
-    }
-    drawPath(path, color)
 }
