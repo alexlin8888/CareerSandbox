@@ -8,7 +8,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -28,16 +27,14 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.careersandbox.app.R
 import com.careersandbox.app.ui.components.ScatteredDecorations
 import com.careersandbox.app.ui.components.WaveHeroBackground
 import com.careersandbox.app.ui.components.pressScale
@@ -189,41 +186,131 @@ private fun FitHeroSection(onBack: () -> Unit) {
             Icon(Icons.Outlined.ArrowBack, contentDescription = null, tint = PaperWhite, modifier = Modifier.size(20.dp))
         }
 
-        // Title
+        // === v9 spec: target + bar chart illustration ===
+        FitTargetIllustration(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 14.dp, end = 4.dp)
+                .size(width = 150.dp, height = 120.dp)
+        )
+
+        // Title block
         Column(
             modifier = Modifier
                 .padding(horizontal = 24.dp)
                 .padding(top = 70.dp)
-                .fillMaxWidth(0.6f),
+                .fillMaxWidth(0.62f),
         ) {
             Text("FIT ANALYSIS",
-                color = PaperWhite.copy(alpha = 0.85f),
+                color = PaperWhite.copy(alpha = 0.75f),
                 style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = 3.sp)
-            Spacer(Modifier.height(10.dp))
+                fontWeight = FontWeight.Medium,
+                letterSpacing = 2.sp)
+            Spacer(Modifier.height(8.dp))
             Text("適配分析",
                 color = PaperWhite,
                 fontWeight = FontWeight.Black,
-                fontSize = 32.sp,
-                lineHeight = 36.sp)
-            Spacer(Modifier.height(6.dp))
+                fontSize = 30.sp,
+                lineHeight = 30.sp)
+            Spacer(Modifier.height(7.dp))
             Text("看看你和目標職位的距離",
-                color = PaperWhite.copy(alpha = 0.9f),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold)
+                color = PaperWhite.copy(alpha = 0.92f),
+                fontSize = 12.sp)
+            Spacer(Modifier.height(14.dp))
+            // === Junior PM · Acer chip with circle "A" avatar ===
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(PaperWhite)
+                    .padding(start = 5.dp, end = 11.dp, top = 5.dp, bottom = 5.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(18.dp)
+                        .clip(CircleShape)
+                        .background(BrandDeepOrange),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("A", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 10.sp)
+                }
+                Spacer(Modifier.width(7.dp))
+                Text("Junior PM · Acer",
+                    color = BrandDeepOrange,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 11.sp)
+            }
         }
+    }
+}
 
-        Image(
-            painter = painterResource(R.drawable.undraw_feedback_ebmx),
-            contentDescription = null,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .offset(x = (-8).dp, y = 8.dp)
-                .size(160.dp)
-                .alpha(0.92f),
-            contentScale = ContentScale.Fit,
+/**
+ * Target with arrow + 5-bar chart, scaled by viewBox 150×120 → actual dp.
+ * Matches fit_analysis_v9_animated.html.
+ */
+@Composable
+private fun FitTargetIllustration(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val sx = size.width / 150f
+        val sy = size.height / 120f
+        val s = minOf(sx, sy)
+
+        // 3 concentric target circles at (100, 34)
+        val cx = 100f * sx
+        val cy = 34f * sy
+        drawCircle(
+            color = PaperWhite.copy(alpha = 0.75f),
+            radius = 22f * s,
+            center = Offset(cx, cy),
+            style = Stroke(width = 1.5f * s),
         )
+        drawCircle(
+            color = PaperWhite.copy(alpha = 0.75f),
+            radius = 13f * s,
+            center = Offset(cx, cy),
+            style = Stroke(width = 1.5f * s),
+        )
+        drawCircle(
+            color = PaperWhite,
+            radius = 5f * s,
+            center = Offset(cx, cy),
+        )
+        // Arrow line from (60,60) to (93,38)
+        drawLine(
+            color = PaperWhite.copy(alpha = 0.75f),
+            start = Offset(60f * sx, 60f * sy),
+            end = Offset(93f * sx, 38f * sy),
+            strokeWidth = 1.5f * s,
+            cap = StrokeCap.Round,
+        )
+        // Arrow head triangle (90,36) (96,32) (94,42)
+        val arrow = Path().apply {
+            moveTo(90f * sx, 36f * sy)
+            lineTo(96f * sx, 32f * sy)
+            lineTo(94f * sx, 42f * sy)
+            close()
+        }
+        drawPath(arrow, PaperWhite.copy(alpha = 0.75f))
+
+        // 5 chart bars at x=68,80,92,104,116; y=80,72,62,68,76; h=22,30,40,34,26
+        val barXs = listOf(68f, 80f, 92f, 104f, 116f)
+        val barYs = listOf(80f, 72f, 62f, 68f, 76f)
+        val barHs = listOf(22f, 30f, 40f, 34f, 26f)
+        val barColors = listOf(
+            PaperWhite.copy(alpha = 0.6f),
+            PaperWhite.copy(alpha = 0.7f),
+            BrandYellow,
+            PaperWhite.copy(alpha = 0.7f),
+            PaperWhite.copy(alpha = 0.6f),
+        )
+        for (i in 0 until 5) {
+            drawRoundRect(
+                color = barColors[i],
+                topLeft = Offset(barXs[i] * sx, barYs[i] * sy),
+                size = Size(6f * sx, barHs[i] * sy),
+                cornerRadius = CornerRadius(1f * s),
+            )
+        }
     }
 }
 
@@ -242,7 +329,6 @@ private fun FitHeroJobCard() {
             .background(PaperWhite)
             .padding(18.dp),
     ) {
-        // Top row: logo + title + bookmark
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier
@@ -262,7 +348,6 @@ private fun FitHeroJobCard() {
         }
         Spacer(Modifier.height(14.dp))
 
-        // Chips
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             listOf("產品實習", "全職", "初級").forEach { chip ->
                 Box(
@@ -279,7 +364,6 @@ private fun FitHeroJobCard() {
         Box(Modifier.fillMaxWidth().height(1.dp).background(InkGray100))
         Spacer(Modifier.height(14.dp))
 
-        // Bottom: match score + salary
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.Bottom,

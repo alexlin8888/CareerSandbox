@@ -50,6 +50,10 @@ import com.careersandbox.app.ui.components.WaveHeroBackground
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 
+private val DarkOrangeText = Color(0xFF993C1D)
+private val SuccessGreenLight = Color(0xFFD1FAE5)
+private val SuccessGreenText = Color(0xFF047857)
+
 @Composable
 fun ResumeHubScreen(navController: NavHostController) {
     var visible by remember { mutableStateOf(false) }
@@ -62,16 +66,20 @@ fun ResumeHubScreen(navController: NavHostController) {
                 .verticalScroll(rememberScrollState()),
         ) {
             HeroSection()
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(14.dp))
             AnimatedSection(visible = visible, delayMs = 0) {
-                StatsRow()
+                SubmissionStatsCard()
             }
-            Spacer(Modifier.height(18.dp))
-            AnimatedSection(visible = visible, delayMs = 120) {
+            Spacer(Modifier.height(10.dp))
+            AnimatedSection(visible = visible, delayMs = 60) {
+                MiniStatsRow()
+            }
+            Spacer(Modifier.height(14.dp))
+            AnimatedSection(visible = visible, delayMs = 140) {
                 BentoActions(navController)
             }
-            Spacer(Modifier.height(24.dp))
-            AnimatedSection(visible = visible, delayMs = 240) {
+            Spacer(Modifier.height(20.dp))
+            AnimatedSection(visible = visible, delayMs = 260) {
                 JobApplicationsSection(navController)
             }
             Spacer(Modifier.height(32.dp))
@@ -97,7 +105,7 @@ private fun AnimatedSection(
     }
 }
 
-/** Hero — 完全沿用之前(不動) */
+/** Hero — 完全沿用 31.5 */
 @Composable
 private fun HeroSection() {
     Box(modifier = Modifier.fillMaxWidth().height(260.dp)) {
@@ -157,15 +165,22 @@ private fun HeroSection() {
     }
 }
 
-/** Stats:左大數字 + 右環圈 + 底 3 mini cards(完全沿用) */
+/**
+ * ===== v12 投遞統計卡(白底大圓角,line 80-104)=====
+ * Label「本月已投遞」+ 44sp 數字 + 件 + 已回覆/審核中 點點 + 80dp ring 標「回覆率」
+ */
 @Composable
-private fun StatsRow() {
-    val totalVersions = MockData.jobApplications.sumOf { it.versions.size }
+private fun SubmissionStatsCard() {
     val totalSubmitted = MockData.jobApplications.flatMap { it.versions }
         .count { it.status == VersionStatus.SUBMITTED }
-    val totalJobs = MockData.jobApplications.size
-    val submitRate = if (totalJobs > 0) totalSubmitted.toFloat() / totalJobs else 0f
-    val submitPct = (submitRate * 100).toInt()
+    val totalEditing = MockData.jobApplications.flatMap { it.versions }
+        .count { it.status == VersionStatus.EDITING }
+    // 把 SUBMITTED 視為「已回覆」、EDITING 視為「審核中」 — 等真實 reply 欄位再改
+    val repliedCount = totalSubmitted
+    val reviewCount = totalEditing
+    val totalActive = repliedCount + reviewCount
+    val replyRate = if (totalActive > 0) repliedCount.toFloat() / totalActive else 0f
+    val replyPct = (replyRate * 100).toInt()
 
     val animSubmitted by animateIntAsState(
         targetValue = totalSubmitted,
@@ -173,108 +188,152 @@ private fun StatsRow() {
         label = "submitted",
     )
     val animPct by animateIntAsState(
-        targetValue = submitPct,
+        targetValue = replyPct,
         animationSpec = tween(1200, easing = FastOutSlowInEasing),
         label = "pct",
     )
     val animRing by animateFloatAsState(
-        targetValue = submitRate,
+        targetValue = replyRate,
         animationSpec = tween(1300, easing = FastOutSlowInEasing),
         label = "ring",
     )
 
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+    Box(
+        modifier = Modifier
+            .padding(horizontal = 14.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(PaperWhite)
+            .padding(horizontal = 18.dp, vertical = 16.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Column {
                 Text(
-                    text = animSubmitted.toString(),
-                    color = BrandDeepOrange,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 56.sp,
-                    lineHeight = 56.sp,
+                    "本月已投遞",
+                    color = InkGray400,
+                    fontSize = 10.sp,
+                    letterSpacing = 1.5.sp,
+                    fontWeight = FontWeight.Medium,
                 )
-                Spacer(Modifier.height(2.dp))
-                Text("已投遞職缺", color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Spacer(Modifier.height(2.dp))
-                Text("這週你做了 $totalSubmitted 件事", color = InkGray500, fontSize = 11.sp)
+                Spacer(Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        "$animSubmitted",
+                        color = BrandDeepOrange,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 44.sp,
+                        lineHeight = 44.sp,
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text("件", color = InkGray500, fontSize = 14.sp, modifier = Modifier.padding(bottom = 6.dp))
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    DotLabel(color = AccentGreen, text = "已回覆 $repliedCount")
+                    DotLabel(color = BrandAmber, text = "審核中 $reviewCount")
+                }
             }
-            SubmitRateRing(
-                percent = animPct,
-                progress = animRing,
-                modifier = Modifier.size(90.dp),
-            )
-        }
 
-        Spacer(Modifier.height(14.dp))
-
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            MiniStatCard(label = "職缺", value = totalJobs.toString(), modifier = Modifier.weight(1f))
-            MiniStatCard(label = "版本", value = totalVersions.toString(), modifier = Modifier.weight(1f))
-            MiniStatCard(label = "技能", value = MockData.masterResume.totalSkills.toString(), modifier = Modifier.weight(1f))
+            Box(modifier = Modifier.size(80.dp), contentAlignment = Alignment.Center) {
+                Canvas(modifier = Modifier.size(80.dp)) {
+                    val strokeW = 7.dp.toPx()
+                    val diameter = size.minDimension - strokeW
+                    val topLeft = Offset((size.width - diameter) / 2f, (size.height - diameter) / 2f)
+                    val arcSize = Size(diameter, diameter)
+                    drawArc(
+                        color = InkGray100,
+                        startAngle = 0f,
+                        sweepAngle = 360f,
+                        useCenter = false,
+                        topLeft = topLeft,
+                        size = arcSize,
+                        style = Stroke(width = strokeW, cap = StrokeCap.Round),
+                    )
+                    if (animRing > 0f) {
+                        drawArc(
+                            color = BrandDeepOrange,
+                            startAngle = -90f,
+                            sweepAngle = 360f * animRing.coerceIn(0f, 1f),
+                            useCenter = false,
+                            topLeft = topLeft,
+                            size = arcSize,
+                            style = Stroke(width = strokeW, cap = StrokeCap.Round),
+                        )
+                    }
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("$animPct%", color = BrandDeepOrange, fontWeight = FontWeight.Black, fontSize = 18.sp, lineHeight = 18.sp)
+                    Spacer(Modifier.height(2.dp))
+                    Text("回覆率", color = InkGray400, fontSize = 9.sp)
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun SubmitRateRing(percent: Int, progress: Float, modifier: Modifier = Modifier) {
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val strokeWidthPx = 6.dp.toPx()
-            val diameter = size.minDimension - strokeWidthPx
-            val topLeft = Offset((size.width - diameter) / 2f, (size.height - diameter) / 2f)
-            val arcSize = Size(diameter, diameter)
-            drawArc(
-                color = InkGray200,
-                startAngle = 0f,
-                sweepAngle = 360f,
-                useCenter = false,
-                topLeft = topLeft,
-                size = arcSize,
-                style = Stroke(width = strokeWidthPx, cap = StrokeCap.Round),
-            )
-            if (progress > 0f) {
-                drawArc(
-                    color = BrandDeepOrange,
-                    startAngle = -90f,
-                    sweepAngle = 360f * progress.coerceIn(0f, 1f),
-                    useCenter = false,
-                    topLeft = topLeft,
-                    size = arcSize,
-                    style = Stroke(width = strokeWidthPx, cap = StrokeCap.Round),
-                )
-            }
-        }
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("$percent%", color = BrandDeepOrange, fontWeight = FontWeight.Black, fontSize = 18.sp, lineHeight = 18.sp)
-            Spacer(Modifier.height(1.dp))
-            Text("投遞率", color = InkGray500, fontSize = 9.sp, fontWeight = FontWeight.Medium)
-        }
+private fun DotLabel(color: Color, text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(6.dp)
+                .clip(CircleShape)
+                .background(color),
+        )
+        Spacer(Modifier.width(4.dp))
+        Text(text, color = InkGray500, fontSize = 11.sp)
+    }
+}
+
+/**
+ * ===== 3 個 mini stat cards(line 106-119)=====
+ */
+@Composable
+private fun MiniStatsRow() {
+    val totalVersions = MockData.jobApplications.sumOf { it.versions.size }
+    val totalJobs = MockData.jobApplications.size
+    val totalSkills = MockData.masterResume.totalSkills
+
+    Row(
+        modifier = Modifier.padding(horizontal = 14.dp).fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        MiniStatCard(label = "職缺", value = totalJobs, modifier = Modifier.weight(1f))
+        MiniStatCard(label = "版本", value = totalVersions, modifier = Modifier.weight(1f))
+        MiniStatCard(label = "技能", value = totalSkills, modifier = Modifier.weight(1f))
     }
 }
 
 @Composable
-private fun MiniStatCard(label: String, value: String, modifier: Modifier = Modifier) {
+private fun MiniStatCard(label: String, value: Int, modifier: Modifier = Modifier) {
+    val animated by animateIntAsState(
+        targetValue = value,
+        animationSpec = tween(1200, easing = FastOutSlowInEasing),
+        label = "$label-count",
+    )
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(InkGray100.copy(alpha = 0.5f))
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+            .clip(RoundedCornerShape(14.dp))
+            .background(PaperWhite)
+            .padding(horizontal = 12.dp, vertical = 11.dp),
     ) {
-        Text(label, color = InkGray500, fontSize = 10.sp, fontWeight = FontWeight.Medium)
-        Spacer(Modifier.height(2.dp))
-        Text(value, color = InkBlack, fontWeight = FontWeight.Black, fontSize = 18.sp, lineHeight = 18.sp)
+        Text(label, color = InkGray400, fontSize = 10.sp, letterSpacing = 0.5.sp)
+        Spacer(Modifier.height(4.dp))
+        Text("$animated", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 22.sp, lineHeight = 22.sp)
     }
 }
 
 /**
  * ===== v12 BENTO =====
- * MASTER 全寬大卡 + 4 個透明工具(無圓框,icon 全 BrandDeepOrange)
+ * MASTER 全寬大卡 + 4 個透明工具
  */
 @Composable
 private fun BentoActions(navController: NavHostController) {
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp)) {
         BentoMaster(onClick = { navController.navigate(Routes.RESUME_PROFILE) })
         Spacer(Modifier.height(4.dp))
         ToolStrip(navController)
@@ -291,7 +350,6 @@ private fun BentoMaster(onClick: () -> Unit) {
             .background(BrandDeepOrange)
             .pressScale(onClick = onClick),
     ) {
-        // 背景圓
         Box(
             Modifier
                 .align(Alignment.TopEnd)
@@ -300,7 +358,6 @@ private fun BentoMaster(onClick: () -> Unit) {
                 .clip(CircleShape)
                 .background(PaperWhite.copy(alpha = 0.08f)),
         )
-        // ReadingFigure (right side)
         Image(
             painter = painterResource(R.drawable.undraw_reading_a_book_4cap),
             contentDescription = null,
@@ -311,7 +368,6 @@ private fun BentoMaster(onClick: () -> Unit) {
                 .alpha(0.95f),
             contentScale = ContentScale.Fit,
         )
-        // 文字 (left side)
         Column(modifier = Modifier.align(Alignment.CenterStart).padding(start = 18.dp).fillMaxWidth(0.55f)) {
             Text("MASTER",
                 color = PaperWhite.copy(alpha = 0.85f),
@@ -337,12 +393,7 @@ private fun BentoMaster(onClick: () -> Unit) {
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.labelSmall)
                 Spacer(Modifier.width(5.dp))
-                Icon(
-                    Icons.Outlined.ArrowForward,
-                    contentDescription = null,
-                    tint = PaperWhite,
-                    modifier = Modifier.size(13.dp),
-                )
+                Icon(Icons.Outlined.ArrowForward, contentDescription = null, tint = PaperWhite, modifier = Modifier.size(13.dp))
             }
         }
     }
@@ -350,9 +401,7 @@ private fun BentoMaster(onClick: () -> Unit) {
 
 @Composable
 private fun ToolStrip(navController: NavHostController) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 6.dp),
-    ) {
+    Row(modifier = Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 6.dp)) {
         ToolButton(Icons.Outlined.Edit, "編輯", Modifier.weight(1f)) {
             navController.navigate(Routes.RESUME_EDITOR)
         }
@@ -388,28 +437,31 @@ private fun ToolButton(
     }
 }
 
-/** 針對職缺 — 加 count-up 動畫 */
+/** 針對職缺 + v12 卡片 */
 @Composable
 private fun JobApplicationsSection(navController: NavHostController) {
-    Column(modifier = Modifier.padding(horizontal = 24.dp)) {
+    Column(modifier = Modifier.padding(horizontal = 14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = buildAnnotatedString {
                     append("針對")
-                    withStyle(SpanStyle(color = BrandOrange)) { append("職缺") }
+                    withStyle(SpanStyle(color = BrandDeepOrange)) { append("職缺") }
                 },
                 color = InkBlack,
                 fontWeight = FontWeight.Black,
-                fontSize = 24.sp,
+                fontSize = 17.sp,
                 modifier = Modifier.weight(1f),
             )
-            Text("+ 新增",
-                color = BrandDeepOrange,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.labelLarge,
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.pressScale {
                     navController.navigate(Routes.NEW_JOB_APPLICATION)
-                })
+                },
+            ) {
+                Icon(Icons.Outlined.Add, contentDescription = "新增", tint = BrandDeepOrange, modifier = Modifier.size(13.dp))
+                Spacer(Modifier.width(3.dp))
+                Text("新增", color = BrandDeepOrange, fontWeight = FontWeight.Medium, fontSize = 12.sp)
+            }
         }
         Spacer(Modifier.height(4.dp))
         Text(
@@ -421,7 +473,11 @@ private fun JobApplicationsSection(navController: NavHostController) {
         Spacer(Modifier.height(12.dp))
 
         MockData.jobApplications.forEachIndexed { idx, job ->
-            JobProgressCard(job, animDelayMs = idx * 80) {
+            JobProgressCard(
+                job = job,
+                cardIndex = idx,
+                animDelayMs = idx * 80,
+            ) {
                 navController.navigate(Routes.jobApplicationDetail(job.id))
             }
             Spacer(Modifier.height(10.dp))
@@ -429,17 +485,17 @@ private fun JobApplicationsSection(navController: NavHostController) {
     }
 }
 
+/**
+ * ===== v12 職缺卡(line 177-218)=====
+ * 白底,42dp avatar(idx=0 漸層,其他 peach),38sp BrandDeepOrange %,3 chips,4dp bar
+ */
 @Composable
 private fun JobProgressCard(
     job: JobApplication,
+    cardIndex: Int = 0,
     animDelayMs: Int = 0,
     onClick: () -> Unit,
 ) {
-    val matchColor = when {
-        job.matchScore >= 75 -> AccentGreen
-        job.matchScore >= 50 -> BrandOrange
-        else -> InkGray400
-    }
     val submittedCount = job.versions.count { it.status == VersionStatus.SUBMITTED }
     val latest = job.versions.maxByOrNull { it.versionNumber }
     val latestLabel = when (latest?.status) {
@@ -449,9 +505,6 @@ private fun JobProgressCard(
         VersionStatus.ARCHIVED -> "封存 v${latest.versionNumber}"
         null -> "尚無版本"
     }
-    val latestDate = latest?.let {
-        if (it.status == VersionStatus.SUBMITTED) it.submittedAt else it.createdAt
-    } ?: ""
 
     val animScore by animateIntAsState(
         targetValue = job.matchScore,
@@ -464,70 +517,110 @@ private fun JobProgressCard(
         label = "${job.id}-bar",
     )
 
+    val avatarLetter = job.company.firstOrNull()?.toString() ?: "?"
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
-            .background(InkGray100.copy(alpha = 0.5f))
+            .background(PaperWhite)
             .pressScale(onClick = onClick)
-            .padding(16.dp),
+            .padding(horizontal = 15.dp, vertical = 14.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(job.position, color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 17.sp, lineHeight = 21.sp)
-                Spacer(Modifier.height(3.dp))
-                Text("${job.company} · $latestLabel", color = InkGray500, fontSize = 13.sp, lineHeight = 16.sp)
+            // 42dp avatar box
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .then(
+                        if (cardIndex == 0) Modifier.background(Brush.linearGradient(listOf(BrandDeepOrange, BrandAmber)))
+                        else Modifier.background(BrandPeach)
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    avatarLetter,
+                    color = if (cardIndex == 0) PaperWhite else DarkOrangeText,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                )
             }
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(job.position, color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Spacer(Modifier.height(2.dp))
+                Text("${job.company} · $latestLabel", color = InkGray500, fontSize = 11.sp)
+            }
+            // Right column: big %
             Column(horizontalAlignment = Alignment.End) {
-                Text("$animScore", color = matchColor, fontWeight = FontWeight.Black, fontSize = 44.sp, lineHeight = 44.sp)
-                Text("適配度", color = matchColor.copy(alpha = 0.7f), fontWeight = FontWeight.SemiBold, fontSize = 10.sp)
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        "$animScore",
+                        color = BrandDeepOrange,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 38.sp,
+                        lineHeight = 38.sp,
+                    )
+                    Text(
+                        "%",
+                        color = BrandDeepOrange,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 17.sp,
+                        modifier = Modifier.padding(bottom = 5.dp),
+                    )
+                }
+                Spacer(Modifier.height(2.dp))
+                Text("適配度", color = InkGray400, fontSize = 9.sp, letterSpacing = 1.sp)
             }
         }
-
-        Spacer(Modifier.height(14.dp))
-
-        AnimatedProgressBar(progress = animBar, accent = matchColor)
 
         Spacer(Modifier.height(12.dp))
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            MetaItem(value = "${job.versions.size}", label = "版本")
-            Spacer(Modifier.width(16.dp))
-            MetaItem(value = "$submittedCount", label = "投遞")
-            Spacer(Modifier.weight(1f))
-            Text(latestDate, color = InkGray400, fontSize = 10.sp)
+        // 3 chips:版本 / 投遞 / 狀態
+        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            StatusChip(text = "${job.versions.size} 版本", bg = BrandPeach, textColor = DarkOrangeText)
+            StatusChip(text = "$submittedCount 投遞", bg = BrandPeach, textColor = DarkOrangeText)
+            // Third chip: latest status
+            when (latest?.status) {
+                VersionStatus.SUBMITTED -> StatusChip(text = "已投遞", bg = SuccessGreenLight, textColor = SuccessGreenText)
+                VersionStatus.EDITING -> StatusChip(text = "編輯中", bg = BrandPeach, textColor = DarkOrangeText)
+                VersionStatus.DRAFT -> StatusChip(text = "草稿", bg = InkGray100, textColor = InkGray500)
+                VersionStatus.ARCHIVED -> StatusChip(text = "封存", bg = InkGray100, textColor = InkGray500)
+                null -> StatusChip(text = "無版本", bg = InkGray100, textColor = InkGray500)
+            }
         }
-    }
-}
 
-@Composable
-private fun MetaItem(value: String, label: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(value, color = InkGray700, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-        Spacer(Modifier.width(3.dp))
-        Text(label, color = InkGray400, fontSize = 10.sp)
-    }
-}
+        Spacer(Modifier.height(10.dp))
 
-@Composable
-private fun AnimatedProgressBar(progress: Float, accent: Color) {
-    Canvas(modifier = Modifier.fillMaxWidth().height(6.dp)) {
-        drawRoundRect(
-            color = InkGray200,
-            size = Size(size.width, size.height),
-            cornerRadius = CornerRadius(3.dp.toPx()),
-        )
-        val w = size.width * progress.coerceIn(0f, 1f)
-        if (w > 0f) {
+        // 4dp BrandDeepOrange bar
+        Canvas(modifier = Modifier.fillMaxWidth().height(4.dp)) {
             drawRoundRect(
-                brush = Brush.horizontalGradient(
-                    colors = listOf(accent, accent.copy(alpha = 0.7f)),
-                    endX = w,
-                ),
-                topLeft = Offset(0f, 0f),
-                size = Size(w, size.height),
-                cornerRadius = CornerRadius(3.dp.toPx()),
+                color = InkGray100,
+                size = Size(size.width, size.height),
+                cornerRadius = CornerRadius(2.dp.toPx()),
             )
+            val w = size.width * animBar.coerceIn(0f, 1f)
+            if (w > 0f) {
+                drawRoundRect(
+                    color = BrandDeepOrange,
+                    topLeft = Offset(0f, 0f),
+                    size = Size(w, size.height),
+                    cornerRadius = CornerRadius(2.dp.toPx()),
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun StatusChip(text: String, bg: Color, textColor: Color) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(bg)
+            .padding(horizontal = 8.dp, vertical = 3.dp),
+    ) {
+        Text(text, color = textColor, fontWeight = FontWeight.Medium, fontSize = 10.sp)
     }
 }

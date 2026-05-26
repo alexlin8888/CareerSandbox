@@ -8,8 +8,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -29,14 +29,15 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.careersandbox.app.R
 import com.careersandbox.app.ui.components.ScatteredDecorations
 import com.careersandbox.app.ui.components.WaveHeroBackground
 import com.careersandbox.app.ui.components.pressScale
@@ -73,10 +74,7 @@ fun CareerExplorationScreen(navController: NavHostController) {
         )
     }
     val secondaryRecs = remember {
-        listOf(
-            "產品經理" to 78,
-            "行銷策略" to 71,
-        )
+        listOf("產品經理" to 78, "行銷策略" to 71)
     }
     val steps = remember {
         listOf(
@@ -202,6 +200,7 @@ private fun CareerHeroSection(onBack: () -> Unit) {
         )
         ScatteredDecorations(modifier = Modifier.fillMaxSize().alpha(0.6f))
 
+        // Back button
         Box(
             Modifier
                 .padding(16.dp)
@@ -214,6 +213,14 @@ private fun CareerHeroSection(onBack: () -> Unit) {
             Icon(Icons.Outlined.ArrowBack, contentDescription = null, tint = PaperWhite, modifier = Modifier.size(20.dp))
         }
 
+        // === v9 spec: compass + dashed path illustration ===
+        CareerCompassIllustration(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 14.dp, end = 4.dp)
+                .size(width = 150.dp, height = 120.dp)
+        )
+
         Column(
             modifier = Modifier
                 .padding(horizontal = 24.dp)
@@ -224,45 +231,101 @@ private fun CareerHeroSection(onBack: () -> Unit) {
                 color = Color(0xFF993C1D),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Black,
-                letterSpacing = 3.sp)
-            Spacer(Modifier.height(10.dp))
+                letterSpacing = 2.sp)
+            Spacer(Modifier.height(8.dp))
             Text("職涯探索",
                 color = PaperWhite,
                 fontWeight = FontWeight.Black,
-                fontSize = 32.sp,
-                lineHeight = 36.sp)
-            Spacer(Modifier.height(6.dp))
+                fontSize = 30.sp,
+                lineHeight = 30.sp)
+            Spacer(Modifier.height(7.dp))
             Text("3 條最適合你的路徑",
-                color = PaperWhite,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.height(10.dp))
+                color = PaperWhite.copy(alpha = 0.95f),
+                fontSize = 12.sp)
+            Spacer(Modifier.height(14.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .clip(CircleShape)
+                    .clip(RoundedCornerShape(14.dp))
                     .background(PaperWhite)
-                    .padding(horizontal = 11.dp, vertical = 4.dp),
+                    .padding(horizontal = 11.dp, vertical = 5.dp),
             ) {
                 Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = BrandDeepOrange, modifier = Modifier.size(12.dp))
-                Spacer(Modifier.width(5.dp))
+                Spacer(Modifier.width(6.dp))
                 Text("基於 4 段經歷 · 42 門修課",
                     color = BrandDeepOrange,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.Medium,
                     fontSize = 11.sp)
             }
         }
+    }
+}
 
-        Image(
-            painter = painterResource(R.drawable.undraw_feedback_ebmx),
-            contentDescription = null,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .offset(x = (-8).dp, y = 8.dp)
-                .size(150.dp)
-                .alpha(0.92f),
-            contentScale = ContentScale.Fit,
+/**
+ * Compass + dashed path, scaled by viewBox 150×120 → actual dp.
+ * Matches career_exploration_v9_animated.html.
+ */
+@Composable
+private fun CareerCompassIllustration(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val sx = size.width / 150f
+        val sy = size.height / 120f
+        val s = minOf(sx, sy)
+
+        // Compass circle at (100, 36) radius 22
+        val cx = 100f * sx
+        val cy = 36f * sy
+        drawCircle(
+            color = PaperWhite.copy(alpha = 0.8f),
+            radius = 22f * s,
+            center = Offset(cx, cy),
+            style = Stroke(width = 1.5f * s),
         )
+        // Crosshair: vertical (100,22)-(100,50)
+        drawLine(
+            color = PaperWhite.copy(alpha = 0.8f),
+            start = Offset(100f * sx, 22f * sy),
+            end = Offset(100f * sx, 50f * sy),
+            strokeWidth = 1.5f * s,
+            cap = StrokeCap.Round,
+        )
+        // Crosshair: horizontal (86,36)-(114,36)
+        drawLine(
+            color = PaperWhite.copy(alpha = 0.8f),
+            start = Offset(86f * sx, 36f * sy),
+            end = Offset(114f * sx, 36f * sy),
+            strokeWidth = 1.5f * s,
+            cap = StrokeCap.Round,
+        )
+        // N indicator: filled polygon (100,22) (96,32) (100,30) (104,32)
+        val nArrow = Path().apply {
+            moveTo(100f * sx, 22f * sy)
+            lineTo(96f * sx, 32f * sy)
+            lineTo(100f * sx, 30f * sy)
+            lineTo(104f * sx, 32f * sy)
+            close()
+        }
+        drawPath(nArrow, PaperWhite)
+
+        // Dashed path: Q-curve (50,95) Q(70,75) (90,95) Q(110,115) (130,95)
+        val dashed = Path().apply {
+            moveTo(50f * sx, 95f * sy)
+            quadraticBezierTo(70f * sx, 75f * sy, 90f * sx, 95f * sy)
+            quadraticBezierTo(110f * sx, 115f * sy, 130f * sx, 95f * sy)
+        }
+        drawPath(
+            dashed,
+            color = PaperWhite.copy(alpha = 0.8f),
+            style = Stroke(
+                width = 1.5f * s,
+                cap = StrokeCap.Round,
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(3f * s, 3f * s)),
+            ),
+        )
+        // 3 dots at (50,95) (90,95) (130,95) radius 3.5
+        drawCircle(PaperWhite, radius = 3.5f * s, center = Offset(50f * sx, 95f * sy))
+        drawCircle(PaperWhite.copy(alpha = 0.8f), radius = 3.5f * s, center = Offset(90f * sx, 95f * sy))
+        drawCircle(PaperWhite.copy(alpha = 0.8f), radius = 3.5f * s, center = Offset(130f * sx, 95f * sy))
     }
 }
 
@@ -272,7 +335,8 @@ private fun SearchBar() {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(InkGray100.copy(alpha = 0.5f))
+            .background(PaperWhite)
+            .border(1.dp, InkGray100, RoundedCornerShape(14.dp))
             .padding(horizontal = 14.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -285,15 +349,22 @@ private fun SearchBar() {
 
 @Composable
 private fun FilterPill(text: String, active: Boolean) {
-    Box(
-        modifier = Modifier
+    val modifier = if (active) {
+        Modifier
             .clip(CircleShape)
-            .background(if (active) InkBlack else InkGray100)
-            .padding(horizontal = 13.dp, vertical = 6.dp),
+            .background(InkBlack)
+    } else {
+        Modifier
+            .clip(CircleShape)
+            .background(PaperWhite)
+            .border(1.dp, InkGray200, CircleShape)
+    }
+    Box(
+        modifier = modifier.padding(horizontal = 13.dp, vertical = 6.dp),
     ) {
         Text(
             text,
-            color = if (active) PaperWhite else InkGray700,
+            color = if (active) PaperWhite else InkBlack,
             fontWeight = FontWeight.SemiBold,
             fontSize = 12.sp,
         )
@@ -429,7 +500,7 @@ private fun SecondaryRecCard(
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
-            .background(InkGray100.copy(alpha = 0.5f))
+            .background(PaperWhite)
             .pressScale {}
             .padding(13.dp),
     ) {
@@ -506,7 +577,7 @@ private fun LearningStepCard(step: LearningStep) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(InkGray100.copy(alpha = 0.5f))
+            .background(PaperWhite)
             .pressScale {}
             .padding(horizontal = 14.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically,
