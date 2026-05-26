@@ -8,6 +8,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -28,11 +29,14 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.careersandbox.app.R
 import com.careersandbox.app.ui.components.ScatteredDecorations
 import com.careersandbox.app.ui.components.WaveHeroBackground
 import com.careersandbox.app.ui.components.pressScale
@@ -184,14 +188,24 @@ private fun FitHeroSection(onBack: () -> Unit) {
             Icon(Icons.Outlined.ArrowBack, contentDescription = null, tint = PaperWhite, modifier = Modifier.size(20.dp))
         }
 
-        // (v31.8) 子頁面不放線條插畫 — 只保留弧形 + 文字
+        // === undraw personal data illustration ===
+        Image(
+            painter = painterResource(R.drawable.undraw_personal_data_a1n8),
+            contentDescription = null,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .offset(x = (-4).dp, y = 8.dp)
+                .size(width = 175.dp, height = 110.dp)
+                .alpha(0.95f),
+            contentScale = ContentScale.Fit,
+        )
 
         // Title block
         Column(
             modifier = Modifier
                 .padding(horizontal = 24.dp)
                 .padding(top = 70.dp)
-                .fillMaxWidth(),
+                .fillMaxWidth(0.55f),
         ) {
             Text("FIT ANALYSIS",
                 color = PaperWhite.copy(alpha = 0.75f),

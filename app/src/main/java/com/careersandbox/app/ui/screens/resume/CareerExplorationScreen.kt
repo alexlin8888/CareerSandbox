@@ -8,6 +8,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
@@ -30,10 +31,13 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.careersandbox.app.R
 import com.careersandbox.app.ui.components.ScatteredDecorations
 import com.careersandbox.app.ui.components.WaveHeroBackground
 import com.careersandbox.app.ui.components.pressScale
@@ -209,13 +213,23 @@ private fun CareerHeroSection(onBack: () -> Unit) {
             Icon(Icons.Outlined.ArrowBack, contentDescription = null, tint = PaperWhite, modifier = Modifier.size(20.dp))
         }
 
-        // (v31.8) 子頁面不放線條插畫 — 只保留弧形 + 文字
+        // === undraw exploring illustration ===
+        Image(
+            painter = painterResource(R.drawable.undraw_exploring_fzmr),
+            contentDescription = null,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .offset(x = (-8).dp, y = 8.dp)
+                .size(150.dp)
+                .alpha(0.95f),
+            contentScale = ContentScale.Fit,
+        )
 
         Column(
             modifier = Modifier
                 .padding(horizontal = 24.dp)
                 .padding(top = 70.dp)
-                .fillMaxWidth(),
+                .fillMaxWidth(0.6f),
         ) {
             Text("CAREER PATHS",
                 color = Color(0xFF993C1D),
