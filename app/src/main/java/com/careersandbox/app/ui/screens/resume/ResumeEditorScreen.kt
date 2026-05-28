@@ -17,6 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
 
@@ -37,8 +38,8 @@ fun ResumeEditorScreen(navController: NavHostController) {
                     }
                 },
                 actions = {
-                    IconButton(onClick = {}) { Icon(Icons.Outlined.Save, contentDescription = null, tint = InkBlack) }
-                    IconButton(onClick = {}) { Icon(Icons.Outlined.FileDownload, contentDescription = null, tint = InkBlack) }
+                    IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.Outlined.Save, contentDescription = "儲存", tint = InkBlack) }
+                    IconButton(onClick = { navController.navigate(Routes.pdfExportDialog("master")) }) { Icon(Icons.Outlined.FileDownload, contentDescription = "匯出", tint = InkBlack) }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = PaperOff),
             )

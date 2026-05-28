@@ -90,7 +90,7 @@ fun ResumeProfileScreen(navController: NavHostController) {
                             .height(52.dp)
                             .clip(RoundedCornerShape(14.dp))
                             .background(InkGray100)
-                            .pressScale {},
+                            .pressScale { navController.navigate(Routes.FIT_ANALYSIS) },
                         contentAlignment = Alignment.Center,
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {

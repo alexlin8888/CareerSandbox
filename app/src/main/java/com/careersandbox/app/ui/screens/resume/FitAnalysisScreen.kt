@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
+import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.ScatteredDecorations
 import com.careersandbox.app.ui.components.WaveHeroBackground
 import com.careersandbox.app.ui.components.pressScale
@@ -139,7 +140,7 @@ fun FitAnalysisScreen(navController: NavHostController) {
                             .height(56.dp)
                             .clip(RoundedCornerShape(16.dp))
                             .background(InkBlack)
-                            .pressScale { /* TODO: start reinforcement flow */ },
+                            .pressScale { navController.navigate(Routes.EXPERIENCE_EDIT) },
                         contentAlignment = Alignment.Center,
                     ) {
                         Text("開始補強", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 16.sp)
@@ -319,7 +320,11 @@ private fun TabBar(tabs: List<String>, activeIndex: Int) {
         Row(modifier = Modifier.fillMaxWidth()) {
             tabs.forEachIndexed { i, label ->
                 val isActive = i == activeIndex
-                Column(modifier = Modifier.padding(end = 24.dp)) {
+                Column(
+                    modifier = Modifier
+                        .padding(end = 24.dp)
+                        .width(IntrinsicSize.Max),
+                ) {
                     Text(
                         label,
                         color = if (isActive) InkBlack else InkGray400,

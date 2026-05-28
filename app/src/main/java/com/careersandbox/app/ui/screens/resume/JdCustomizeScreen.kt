@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 import kotlinx.coroutines.delay
@@ -75,6 +76,7 @@ fun JdCustomizeScreen(navController: NavHostController) {
             )
             JdPhase.RESULT -> ResultPhase(
                 onBack = { phase = JdPhase.INPUT },
+                onExport = { navController.navigate(Routes.pdfExportDialog("custom")) },
                 contentPadding = pad,
             )
         }
@@ -372,7 +374,7 @@ private fun AnalyzingPhase(onDone: () -> Unit, contentPadding: PaddingValues) {
 
 // ========== 階段 3:結果 ==========
 @Composable
-private fun ResultPhase(onBack: () -> Unit, contentPadding: PaddingValues) {
+private fun ResultPhase(onBack: () -> Unit, onExport: () -> Unit, contentPadding: PaddingValues) {
     Column(
         modifier = Modifier
             .padding(contentPadding)
@@ -436,7 +438,7 @@ private fun ResultPhase(onBack: () -> Unit, contentPadding: PaddingValues) {
                 .height(56.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .background(InkBlack)
-                .pressScale {},
+                .pressScale(onClick = onExport),
             contentAlignment = Alignment.Center,
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {

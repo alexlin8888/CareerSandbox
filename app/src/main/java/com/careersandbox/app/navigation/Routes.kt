@@ -29,7 +29,6 @@ object Routes {
 
     const val RESUME_PROFILE = "resume_profile"
     const val RESUME_UPLOAD_PROCESSING = "resume_upload_processing"
-    const val JD_CUSTOMIZE_RESULT = "jd_customize_result"
     const val CAREER_EXPLORATION = "career_exploration"
     const val FIT_ANALYSIS = "fit_analysis"
     const val NEW_JOB_APPLICATION = "new_job_application"
