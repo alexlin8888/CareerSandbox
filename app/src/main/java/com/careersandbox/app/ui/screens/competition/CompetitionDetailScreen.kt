@@ -103,7 +103,7 @@ fun CompetitionDetailScreen(navController: NavHostController, compId: String) {
                             modifier = Modifier.clip(CircleShape).background(PaperWhite)
                                 .border(1.dp, InkGray200, CircleShape).padding(horizontal = 11.dp, vertical = 5.dp),
                         ) {
-                            Text(tag, color = InkGray600, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                            Text(tag, color = InkGray700, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }
@@ -244,7 +244,7 @@ private fun TeammateCard(tm: TeamMate, invited: Boolean, onInvite: () -> Unit) {
                 Text("${tm.school} · ${tm.dept}", color = InkGray500, fontSize = 11.sp)
             }
             Spacer(Modifier.height(3.dp))
-            Text(tm.matchReason, color = InkGray600, fontSize = 11.sp, lineHeight = 15.sp)
+            Text(tm.matchReason, color = InkGray700, fontSize = 11.sp, lineHeight = 15.sp)
             Spacer(Modifier.height(6.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 tm.skills.take(3).forEach { s ->
@@ -303,7 +303,7 @@ private fun TeamCard(team: CompetitionTeam, joined: Boolean, onToggle: () -> Uni
             }
         }
         Spacer(Modifier.height(10.dp))
-        Text(team.note, color = InkGray600, fontSize = 12.sp, lineHeight = 17.sp)
+        Text(team.note, color = InkGray700, fontSize = 12.sp, lineHeight = 17.sp)
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("還缺:", color = InkGray400, fontSize = 11.sp)

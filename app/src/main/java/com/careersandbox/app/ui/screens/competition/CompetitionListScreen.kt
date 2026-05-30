@@ -33,7 +33,7 @@ import com.careersandbox.app.ui.components.WaveHeroBackground
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 
-private fun accentFor(coverColor: String): Color = when (coverColor) {
+internal fun accentFor(coverColor: String): Color = when (coverColor) {
     "orange" -> BrandOrange
     "green" -> AccentGreen
     "purple" -> GlowPurple
