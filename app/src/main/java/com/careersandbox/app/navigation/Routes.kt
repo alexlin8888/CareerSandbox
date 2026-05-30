@@ -31,6 +31,10 @@ object Routes {
     const val RESUME_UPLOAD_PROCESSING = "resume_upload_processing"
     const val CAREER_EXPLORATION = "career_exploration"
     const val FIT_ANALYSIS = "fit_analysis"
+
+    const val COMPETITION_LIST = "competition_list"
+    const val COMPETITION_DETAIL = "competition_detail/{compId}"
+    fun competitionDetail(compId: String) = "competition_detail/$compId"
     const val NEW_JOB_APPLICATION = "new_job_application"
     const val JOB_APPLICATION_DETAIL = "job_application_detail/{jobId}"
     fun jobApplicationDetail(jobId: String) = "job_application_detail/$jobId"

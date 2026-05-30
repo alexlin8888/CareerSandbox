@@ -363,7 +363,7 @@ private fun ModuleSection(navController: NavHostController) {
             tagColor = Color.Transparent,
             accent = AccentGreen,
             icon = Icons.Outlined.Groups,
-            onClick = {},
+            onClick = { navController.navigate(Routes.COMPETITION_LIST) },
         )
     }
 }
@@ -749,14 +749,14 @@ private fun CompetitionSection(navController: NavHostController) {
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             items(MockData.competitions) { competition ->
-                CompetitionCard(competition)
+                CompetitionCard(competition, navController)
             }
         }
     }
 }
 
 @Composable
-private fun CompetitionCard(competition: com.careersandbox.app.data.model.Competition) {
+private fun CompetitionCard(competition: com.careersandbox.app.data.model.Competition, navController: NavHostController) {
     val accentColor = when (competition.coverColor) {
         "orange" -> BrandOrange
         "green" -> AccentGreen
@@ -771,7 +771,7 @@ private fun CompetitionCard(competition: com.careersandbox.app.data.model.Compet
             .height(230.dp)
             .clip(RoundedCornerShape(18.dp))
             .background(MaterialTheme.colorScheme.surface)
-            .pressScale {},
+            .pressScale { navController.navigate(Routes.competitionDetail(competition.id)) },
     ) {
         // 上半:類別 + 截止日 chip
         Box(

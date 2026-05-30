@@ -458,4 +458,44 @@ object MockData {
             coverImageUrl = "https://images.unsplash.com/photo-1517048676732-d65bc937f952?w=600&q=80",
         ),
     )
+
+    fun competitionById(id: String): Competition? = competitions.firstOrNull { it.id == id }
+
+    /** 推薦隊友 — 跟使用者(資料/研究強、設計/工程弱)互補 */
+    val recommendedTeammates = listOf(
+        TeamMate(
+            id = "tm1", name = "陳柏宇", school = "政大", dept = "資科系",
+            skills = listOf("Python", "後端 API", "資料庫"),
+            matchReason = "補你的工程短板,你負責分析他負責實作",
+            matchScore = 94,
+        ),
+        TeamMate(
+            id = "tm2", name = "林子晴", school = "台科大", dept = "工商設計",
+            skills = listOf("Figma", "UI 設計", "簡報視覺"),
+            matchReason = "你缺的視覺設計,簡報質感一起拉高",
+            matchScore = 88,
+        ),
+        TeamMate(
+            id = "tm3", name = "黃詠晴", school = "政大", dept = "企管系",
+            skills = listOf("財務模型", "商業簡報", "市場分析"),
+            matchReason = "商業個案的財務試算交給她",
+            matchScore = 81,
+        ),
+    )
+
+    /** 現有可加入的隊伍 */
+    val existingTeams = listOf(
+        CompetitionTeam(
+            id = "team1", name = "Data Driven", leaderName = "王" ,
+            currentSize = 2, targetSize = 4,
+            lookingFor = listOf("資料分析", "簡報"),
+            note = "已有工程 + 設計,缺一個會講故事的分析腦",
+        ),
+        CompetitionTeam(
+            id = "team2", name = "破框者", leaderName = "李",
+            currentSize = 3, targetSize = 5,
+            lookingFor = listOf("使用者研究"),
+            note = "差一個做訪談的,你的 UX 背景剛好",
+        ),
+    )
 }

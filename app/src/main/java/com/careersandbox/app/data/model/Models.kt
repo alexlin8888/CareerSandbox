@@ -171,3 +171,25 @@ enum class CompetitionCategory(val label: String) {
     DESIGN("設計"),
     RESEARCH("研究"),
 }
+
+/** 推薦隊友 — 依職能標籤互補性媒合(模組 ④)*/
+data class TeamMate(
+    val id: String,
+    val name: String,
+    val school: String,
+    val dept: String,
+    val skills: List<String>,
+    val matchReason: String,
+    val matchScore: Int,
+)
+
+/** 現有可加入的隊伍 */
+data class CompetitionTeam(
+    val id: String,
+    val name: String,
+    val leaderName: String,
+    val currentSize: Int,
+    val targetSize: Int,
+    val lookingFor: List<String>,
+    val note: String,
+)

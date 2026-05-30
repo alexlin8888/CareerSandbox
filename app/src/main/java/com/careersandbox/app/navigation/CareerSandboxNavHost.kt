@@ -11,6 +11,8 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.careersandbox.app.ui.screens.competition.CompetitionDetailScreen
+import com.careersandbox.app.ui.screens.competition.CompetitionListScreen
 import com.careersandbox.app.ui.screens.home.ArticleDetailScreen
 import com.careersandbox.app.ui.screens.home.HomeHubScreen
 import com.careersandbox.app.ui.screens.home.NotificationsAllScreen
@@ -99,6 +101,17 @@ fun CareerSandboxNavHost(
         composable(Routes.RESUME_UPLOAD_PROCESSING) { ResumeUploadProcessingScreen(navController) }
         composable(Routes.CAREER_EXPLORATION) { CareerExplorationScreen(navController) }
         composable(Routes.FIT_ANALYSIS) { FitAnalysisScreen(navController) }
+
+        composable(Routes.COMPETITION_LIST) { CompetitionListScreen(navController) }
+        composable(
+            route = Routes.COMPETITION_DETAIL,
+            arguments = listOf(navArgument("compId") { type = NavType.StringType }),
+        ) { backStackEntry ->
+            CompetitionDetailScreen(
+                navController = navController,
+                compId = backStackEntry.arguments?.getString("compId") ?: "",
+            )
+        }
         composable(Routes.NEW_JOB_APPLICATION) { NewJobApplicationScreen(navController) }
         composable(
             route = Routes.JOB_APPLICATION_DETAIL,
