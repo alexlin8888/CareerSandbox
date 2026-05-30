@@ -417,13 +417,21 @@ private fun ResultPhase(onBack: () -> Unit, onExport: () -> Unit, contentPadding
 
         Spacer(Modifier.height(28.dp))
 
-        // 已弱化(隱藏)
-        SectionTitle("已弱化", "AI 認為跟這份 JD 相關性低,自動隱藏")
-        DimmedItem("IG 從 0 經營到 1200 追蹤")
-        Spacer(Modifier.height(8.dp))
-        DimmedItem("辦過 3 場校園活動 220+ 人到場")
-
-        Spacer(Modifier.height(28.dp))
+        // 已弱化(減法)— 使用者可主動拉回
+        val dimmedItems = remember {
+            mutableStateListOf(
+                "IG 從 0 經營到 1200 追蹤",
+                "辦過 3 場校園活動 220+ 人到場",
+            )
+        }
+        if (dimmedItems.isNotEmpty()) {
+            SectionTitle("已弱化 ${dimmedItems.size} 段", "移除無關經歷,讓 recruiter 30 秒抓到重點")
+            dimmedItems.forEachIndexed { idx, item ->
+                DimmedItem(text = item, onRestore = { dimmedItems.remove(item) })
+                if (idx < dimmedItems.size - 1) Spacer(Modifier.height(8.dp))
+            }
+            Spacer(Modifier.height(28.dp))
+        }
 
         // 缺失關鍵字
         SectionTitle("建議補強", "這些 JD 關鍵字你的檔案沒提到")
@@ -635,16 +643,16 @@ private fun HighlightItem(text: String, matched: List<String>) {
 }
 
 @Composable
-private fun DimmedItem(text: String) {
+private fun DimmedItem(text: String, onRestore: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
             .background(InkGray100)
-            .padding(start = 16.dp, top = 12.dp, end = 14.dp, bottom = 12.dp),
+            .padding(start = 16.dp, top = 10.dp, end = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(Icons.Outlined.Close,
+        Icon(Icons.Outlined.VisibilityOff,
             contentDescription = null,
             tint = InkGray400,
             modifier = Modifier.size(16.dp))
@@ -654,6 +662,16 @@ private fun DimmedItem(text: String) {
             style = MaterialTheme.typography.bodyMedium,
             textDecoration = TextDecoration.LineThrough,
             modifier = Modifier.weight(1f))
+        Spacer(Modifier.width(8.dp))
+        Box(
+            modifier = Modifier
+                .clip(CircleShape)
+                .background(BrandPeach)
+                .pressScale(onClick = onRestore)
+                .padding(horizontal = 12.dp, vertical = 5.dp),
+        ) {
+            Text("拉回", color = BrandDeepOrange, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+        }
     }
 }
 

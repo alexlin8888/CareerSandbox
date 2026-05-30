@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
@@ -30,26 +31,35 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
+import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.ScatteredDecorations
 import com.careersandbox.app.ui.components.WaveHeroBackground
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 
 private data class CareerRec(
+    val id: String,
     val title: String,
     val subtitleEn: String,
+    val shortSubtitle: String,
     val salary: String,
     val openings: String,
     val matchScore: Int,
     val missingSkills: List<String>,
+    val category: String,
+    val icon: ImageVector,
+    val isAcademic: Boolean = false,
+    val academicNote: String = "",
 )
 
 private data class LearningStep(
@@ -61,21 +71,45 @@ private data class LearningStep(
 )
 private enum class StepTier { Primary, Secondary, Tertiary }
 
+private val allCareerRecs = listOf(
+    CareerRec(
+        id = "data_analyst", title = "資料分析師", subtitleEn = "Data Analyst",
+        shortSubtitle = "數據 · 45-65k", salary = "45-65k", openings = "1,240",
+        matchScore = 92, missingSkills = listOf("SQL 進階", "A/B test", "用戶研究"),
+        category = "數據", icon = Icons.Outlined.Analytics,
+    ),
+    CareerRec(
+        id = "pm", title = "產品經理", subtitleEn = "Product Manager",
+        shortSubtitle = "PM · 50-80k", salary = "50-80k", openings = "890",
+        matchScore = 78, missingSkills = listOf("PRD 撰寫", "user story", "SaaS 邏輯"),
+        category = "產品", icon = Icons.Outlined.WorkOutline,
+    ),
+    CareerRec(
+        id = "growth", title = "行銷策略", subtitleEn = "Growth Marketing",
+        shortSubtitle = "Growth · 42-58k", salary = "42-58k", openings = "1,050",
+        matchScore = 71, missingSkills = listOf("成長駭客", "SEO", "數據追蹤"),
+        category = "產品", icon = Icons.Outlined.TrendingUp,
+    ),
+    CareerRec(
+        id = "ux", title = "UX 設計師", subtitleEn = "UX Designer",
+        shortSubtitle = "Design · 48-70k", salary = "48-70k", openings = "620",
+        matchScore = 68, missingSkills = listOf("Figma", "使用者訪談", "原型測試"),
+        category = "設計", icon = Icons.Outlined.Brush,
+    ),
+    CareerRec(
+        id = "researcher", title = "研究員", subtitleEn = "Researcher",
+        shortSubtitle = "學術 · 依機構", salary = "依機構", openings = "380",
+        matchScore = 65, missingSkills = listOf("論文發表", "研究方法", "碩博學歷"),
+        category = "學術", icon = Icons.Outlined.School,
+        isAcademic = true,
+        academicNote = "想走學術路線?先看看研究員的一天,以及碩博升學的時程規劃。",
+    ),
+)
+
+private val careerFilters = listOf("全部", "數據", "產品", "設計", "學術")
+
 @Composable
 fun CareerExplorationScreen(navController: NavHostController) {
-    val topMatch = remember {
-        CareerRec(
-            title = "資料分析師",
-            subtitleEn = "Data Analyst",
-            salary = "45-65k",
-            openings = "1,240",
-            matchScore = 92,
-            missingSkills = listOf("SQL 進階", "A/B test", "用戶研究"),
-        )
-    }
-    val secondaryRecs = remember {
-        listOf("產品經理" to 78, "行銷策略" to 71)
-    }
     val steps = remember {
         listOf(
             LearningStep(1, "本學期", "資料庫管理", "商管院 · 3 學分", StepTier.Primary),
@@ -87,6 +121,25 @@ fun CareerExplorationScreen(navController: NavHostController) {
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { visible = true }
 
+    // === 互動狀態 ===
+    var searchQuery by remember { mutableStateOf("") }
+    var activeFilter by remember { mutableStateOf("全部") }
+    var selectedId by remember { mutableStateOf("data_analyst") }
+    val excludedIds = remember { mutableStateListOf<String>() }
+
+    // === 衍生清單 ===
+    val visibleRecs = allCareerRecs.filter { rec ->
+        rec.id !in excludedIds &&
+            (activeFilter == "全部" || rec.category == activeFilter) &&
+            (searchQuery.isBlank() ||
+                rec.title.contains(searchQuery, ignoreCase = true) ||
+                rec.subtitleEn.contains(searchQuery, ignoreCase = true))
+    }
+    val focusedRec = visibleRecs.firstOrNull { it.id == selectedId }
+        ?: visibleRecs.maxByOrNull { it.matchScore }
+    val otherRecs = visibleRecs.filter { it.id != focusedRec?.id }
+    val excludedRecs = allCareerRecs.filter { it.id in excludedIds }
+
     Box(modifier = Modifier.fillMaxSize().background(PaperWarm)) {
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
@@ -95,7 +148,7 @@ fun CareerExplorationScreen(navController: NavHostController) {
 
             Column(modifier = Modifier.padding(horizontal = 24.dp).padding(top = 20.dp, bottom = 40.dp)) {
                 AnimatedSection(visible = visible, delayMs = 0) {
-                    SearchBar()
+                    SearchBar(query = searchQuery, onQueryChange = { searchQuery = it })
                 }
                 Spacer(Modifier.height(12.dp))
 
@@ -104,70 +157,107 @@ fun CareerExplorationScreen(navController: NavHostController) {
                         modifier = Modifier.fillMaxWidth().horizontalScroll(chipScroll),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
-                        FilterPill("全部", active = true)
-                        FilterPill("應屆", active = false)
-                        FilterPill("數據", active = false)
-                        FilterPill("產品", active = false)
-                        FilterPill("設計", active = false)
+                        careerFilters.forEach { f ->
+                            FilterPill(
+                                text = f,
+                                active = activeFilter == f,
+                                onClick = { activeFilter = f },
+                            )
+                        }
                     }
                 }
                 Spacer(Modifier.height(18.dp))
 
-                AnimatedSection(visible = visible, delayMs = 160) {
-                    TopMatchCard(rec = topMatch)
+                // === 學術路線 banner(只在學術 filter 出現)===
+                if (activeFilter == "學術") {
+                    val academicRec = allCareerRecs.first { it.isAcademic }
+                    AcademicBanner(note = academicRec.academicNote)
+                    Spacer(Modifier.height(14.dp))
                 }
-                Spacer(Modifier.height(12.dp))
 
-                AnimatedSection(visible = visible, delayMs = 240) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                        SecondaryRecCard(
-                            title = secondaryRecs[0].first,
-                            subtitle = "PM · 50-80k",
-                            score = secondaryRecs[0].second,
-                            icon = Icons.Outlined.WorkOutline,
-                            modifier = Modifier.weight(1f),
-                        )
-                        SecondaryRecCard(
-                            title = secondaryRecs[1].first,
-                            subtitle = "Growth · 42-58k",
-                            score = secondaryRecs[1].second,
-                            icon = Icons.Outlined.TrendingUp,
-                            modifier = Modifier.weight(1f),
-                        )
+                if (focusedRec != null) {
+                    AnimatedSection(visible = visible, delayMs = 160) {
+                        TopMatchCard(rec = focusedRec, onViewPath = { navController.navigate(Routes.FIT_ANALYSIS) })
                     }
-                }
-                Spacer(Modifier.height(28.dp))
-
-                AnimatedSection(visible = visible, delayMs = 320) {
-                    Text(
-                        "給「${topMatch.title}」的學習路徑",
-                        color = InkBlack,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 20.sp,
+                    Spacer(Modifier.height(12.dp))
+                } else {
+                    // 全被排除 / 搜尋無結果
+                    EmptyRecState(
+                        hasExcluded = excludedRecs.isNotEmpty(),
+                        onClearFilter = {
+                            searchQuery = ""; activeFilter = "全部"
+                        },
                     )
+                    Spacer(Modifier.height(12.dp))
                 }
-                Spacer(Modifier.height(12.dp))
 
-                AnimatedSection(visible = visible, delayMs = 400) {
-                    Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                        steps.forEach { step ->
-                            LearningStepCard(step)
+                // === 其他推薦(可點選聚焦 + 可排除)===
+                if (otherRecs.isNotEmpty()) {
+                    AnimatedSection(visible = visible, delayMs = 240) {
+                        Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                            otherRecs.chunked(2).forEach { rowItems ->
+                                Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                                    rowItems.forEach { rec ->
+                                        SecondaryRecCard(
+                                            rec = rec,
+                                            onClick = { selectedId = rec.id },
+                                            onExclude = {
+                                                if (rec.id !in excludedIds) excludedIds.add(rec.id)
+                                                if (selectedId == rec.id) selectedId = ""
+                                            },
+                                            modifier = Modifier.weight(1f),
+                                        )
+                                    }
+                                    if (rowItems.size == 1) Spacer(Modifier.weight(1f))
+                                }
+                            }
                         }
                     }
+                    Spacer(Modifier.height(18.dp))
                 }
-                Spacer(Modifier.height(28.dp))
 
-                AnimatedSection(visible = visible, delayMs = 520) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(InkBlack)
-                            .pressScale { /* TODO: start learning path */ },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text("開始學習路徑", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                // === 已排除(減法)===
+                if (excludedRecs.isNotEmpty()) {
+                    ExcludedSection(
+                        excluded = excludedRecs,
+                        onRestore = { id -> excludedIds.remove(id) },
+                    )
+                    Spacer(Modifier.height(24.dp))
+                }
+
+                // === 學習路徑(跟著聚焦職位變)===
+                if (focusedRec != null) {
+                    AnimatedSection(visible = visible, delayMs = 320) {
+                        Text(
+                            "給「${focusedRec.title}」的學習路徑",
+                            color = InkBlack,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 20.sp,
+                        )
+                    }
+                    Spacer(Modifier.height(12.dp))
+
+                    AnimatedSection(visible = visible, delayMs = 400) {
+                        Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                            steps.forEach { step ->
+                                LearningStepCard(step)
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(28.dp))
+
+                    AnimatedSection(visible = visible, delayMs = 520) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(InkBlack)
+                                .pressScale { navController.navigate(Routes.FIT_ANALYSIS) },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text("看我跟這條路的差距", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                        }
                     }
                 }
             }
@@ -266,7 +356,7 @@ private fun CareerHeroSection(onBack: () -> Unit) {
 }
 
 @Composable
-private fun SearchBar() {
+private fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -278,14 +368,35 @@ private fun SearchBar() {
     ) {
         Icon(Icons.Outlined.Search, contentDescription = null, tint = InkGray400, modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(10.dp))
-        Text("搜尋其他職位...", color = InkGray400, fontSize = 13.sp, modifier = Modifier.weight(1f))
-        Icon(Icons.Outlined.Tune, contentDescription = null, tint = InkGray500, modifier = Modifier.size(16.dp))
+        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+            if (query.isEmpty()) {
+                Text("搜尋職位,例如 設計、PM...", color = InkGray400, fontSize = 13.sp)
+            }
+            BasicTextField(
+                value = query,
+                onValueChange = onQueryChange,
+                singleLine = true,
+                textStyle = TextStyle(color = InkBlack, fontSize = 13.sp),
+                cursorBrush = SolidColor(BrandDeepOrange),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        if (query.isNotEmpty()) {
+            Icon(
+                Icons.Outlined.Close,
+                contentDescription = "清除",
+                tint = InkGray400,
+                modifier = Modifier.size(16.dp).pressScale { onQueryChange("") },
+            )
+        } else {
+            Icon(Icons.Outlined.Tune, contentDescription = null, tint = InkGray500, modifier = Modifier.size(16.dp))
+        }
     }
 }
 
 @Composable
-private fun FilterPill(text: String, active: Boolean) {
-    val modifier = if (active) {
+private fun FilterPill(text: String, active: Boolean, onClick: () -> Unit) {
+    val base = if (active) {
         Modifier
             .clip(CircleShape)
             .background(InkBlack)
@@ -296,7 +407,9 @@ private fun FilterPill(text: String, active: Boolean) {
             .border(1.dp, InkGray200, CircleShape)
     }
     Box(
-        modifier = modifier.padding(horizontal = 13.dp, vertical = 6.dp),
+        modifier = base
+            .pressScale(onClick = onClick)
+            .padding(horizontal = 13.dp, vertical = 6.dp),
     ) {
         Text(
             text,
@@ -307,8 +420,127 @@ private fun FilterPill(text: String, active: Boolean) {
     }
 }
 
+/** 學術路線 banner — 訪談洞察:受訪者想「看研究員生活、更早決定方向」 */
 @Composable
-private fun TopMatchCard(rec: CareerRec) {
+private fun AcademicBanner(note: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Brush.linearGradient(listOf(InkDeepBlue, InkSlate)))
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(PaperWhite.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Outlined.School, contentDescription = null, tint = PaperWhite, modifier = Modifier.size(20.dp))
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text("學術路線", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 14.sp)
+            Spacer(Modifier.height(3.dp))
+            Text(note, color = PaperWhite.copy(alpha = 0.85f), fontSize = 11.sp, lineHeight = 16.sp)
+        }
+    }
+}
+
+/** 全排除 / 搜尋無結果空狀態 */
+@Composable
+private fun EmptyRecState(hasExcluded: Boolean, onClearFilter: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(PaperWhite)
+            .border(1.dp, InkGray100, RoundedCornerShape(20.dp))
+            .padding(vertical = 32.dp, horizontal = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(Icons.Outlined.SearchOff, contentDescription = null, tint = InkGray300, modifier = Modifier.size(40.dp))
+        Spacer(Modifier.height(12.dp))
+        Text(
+            if (hasExcluded) "這個條件下的職位都被你排除了" else "找不到符合的職位",
+            color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 15.sp,
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "試試換個關鍵字或篩選",
+            color = InkGray500, fontSize = 12.sp,
+        )
+        Spacer(Modifier.height(14.dp))
+        Box(
+            modifier = Modifier
+                .clip(CircleShape)
+                .background(InkGray100)
+                .pressScale(onClick = onClearFilter)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+        ) {
+            Text("清除條件", color = InkBlack, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+        }
+    }
+}
+
+/** 已排除區(減法)— 可還原 */
+@Composable
+private fun ExcludedSection(excluded: List<CareerRec>, onRestore: (String) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(InkGray100.copy(alpha = 0.5f))
+            .padding(14.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().pressScale { expanded = !expanded },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Outlined.FilterAltOff, contentDescription = null, tint = InkGray500, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(
+                "已排除 ${excluded.size} 個職位",
+                color = InkGray700, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                modifier = Modifier.weight(1f),
+            )
+            Text("讓推薦更聚焦", color = InkGray400, fontSize = 11.sp)
+            Spacer(Modifier.width(6.dp))
+            Icon(
+                if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                contentDescription = null, tint = InkGray500, modifier = Modifier.size(18.dp),
+            )
+        }
+        if (expanded) {
+            Spacer(Modifier.height(10.dp))
+            excluded.forEach { rec ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(rec.title, color = InkGray500, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(BrandPeach)
+                            .pressScale { onRestore(rec.id) }
+                            .padding(horizontal = 12.dp, vertical = 5.dp),
+                    ) {
+                        Text("拉回", color = BrandDeepOrange, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TopMatchCard(rec: CareerRec, onViewPath: () -> Unit = {}) {
     val animScore by animateIntAsState(
         targetValue = rec.matchScore,
         animationSpec = tween(1200, easing = FastOutSlowInEasing),
@@ -401,7 +633,7 @@ private fun TopMatchCard(rec: CareerRec) {
                     .height(46.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(PaperWhite)
-                    .pressScale { /* navigate to detail */ },
+                    .pressScale(onClick = onViewPath),
                 contentAlignment = Alignment.Center,
             ) {
                 Text("查看完整路徑", color = BrandDeepOrange, fontWeight = FontWeight.Black, fontSize = 13.sp)
@@ -412,12 +644,12 @@ private fun TopMatchCard(rec: CareerRec) {
 
 @Composable
 private fun SecondaryRecCard(
-    title: String,
-    subtitle: String,
-    score: Int,
-    icon: ImageVector,
+    rec: CareerRec,
+    onClick: () -> Unit,
+    onExclude: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val score = rec.matchScore
     val (scoreColor, barColor, iconBg, iconTint) = when {
         score >= 75 -> arrayOf(BrandDeepOrange, BrandDeepOrange, BrandPeach.copy(alpha = 0.6f), BrandDeepOrange)
         else -> arrayOf(Color(0xFFBA7517), BrandAmber, BrandYellow.copy(alpha = 0.3f), Color(0xFFBA7517))
@@ -425,19 +657,19 @@ private fun SecondaryRecCard(
     val animScore by animateIntAsState(
         targetValue = score,
         animationSpec = tween(1200, easing = FastOutSlowInEasing),
-        label = "$title-score",
+        label = "${rec.id}-score",
     )
     val animBar by animateFloatAsState(
         targetValue = score / 100f,
         animationSpec = tween(1100, delayMillis = 350, easing = FastOutSlowInEasing),
-        label = "$title-bar",
+        label = "${rec.id}-bar",
     )
 
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
             .background(PaperWhite)
-            .pressScale {}
+            .pressScale(onClick = onClick)
             .padding(13.dp),
     ) {
         Row(
@@ -449,14 +681,20 @@ private fun SecondaryRecCard(
                 modifier = Modifier.size(32.dp).clip(RoundedCornerShape(10.dp)).background(iconBg as Color),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(icon, contentDescription = null, tint = iconTint as Color, modifier = Modifier.size(16.dp))
+                Icon(rec.icon, contentDescription = null, tint = iconTint as Color, modifier = Modifier.size(16.dp))
             }
-            Icon(Icons.Outlined.BookmarkBorder, contentDescription = null, tint = InkGray300, modifier = Modifier.size(14.dp))
+            // 排除按鈕(減法)
+            Icon(
+                Icons.Outlined.Close,
+                contentDescription = "不想看這類",
+                tint = InkGray400,
+                modifier = Modifier.size(16.dp).pressScale(onClick = onExclude),
+            )
         }
         Spacer(Modifier.height(10.dp))
-        Text(title, color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        Text(rec.title, color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 14.sp)
         Spacer(Modifier.height(2.dp))
-        Text(subtitle, color = InkGray500, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+        Text(rec.shortSubtitle, color = InkGray500, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(10.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),

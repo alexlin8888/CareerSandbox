@@ -95,6 +95,11 @@ fun FitAnalysisScreen(navController: NavHostController) {
                 Spacer(Modifier.height(20.dp))
 
                 AnimatedSection(visible = visible, delayMs = 200) {
+                    CapabilityRadar(capabilities = capabilities, animateProgress = visible)
+                }
+                Spacer(Modifier.height(20.dp))
+
+                AnimatedSection(visible = visible, delayMs = 280) {
                     Column(verticalArrangement = Arrangement.spacedBy(13.dp)) {
                         capabilities.forEach { cap ->
                             CapabilityRow(cap)
@@ -342,8 +347,86 @@ private fun TabBar(tabs: List<String>, activeIndex: Int) {
     }
 }
 
+/**
+ * 能力雷達圖(計畫要求的「能力雷達圖」)
+ * 6 軸對應 6 個能力,多邊形面積 = 能力輪廓。進場時從中心展開。
+ */
 @Composable
-private fun CapabilityRow(cap: Capability) {
+private fun CapabilityRadar(capabilities: List<Capability>, animateProgress: Boolean) {
+    val n = capabilities.size
+    val anim by animateFloatAsState(
+        targetValue = if (animateProgress) 1f else 0f,
+        animationSpec = tween(1300, easing = FastOutSlowInEasing),
+        label = "radar",
+    )
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(PaperWhite)
+            .padding(vertical = 20.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(modifier = Modifier.size(220.dp)) {
+            val cx = size.width / 2f
+            val cy = size.height / 2f
+            val radius = size.minDimension / 2f * 0.78f
+            // 從正上方開始,順時針
+            fun axisAngle(i: Int): Double = -Math.PI / 2 + 2 * Math.PI * i / n
+            fun point(i: Int, r: Float): Offset {
+                val a = axisAngle(i)
+                return Offset(cx + (r * kotlin.math.cos(a)).toFloat(), cy + (r * kotlin.math.sin(a)).toFloat())
+            }
+
+            // 背景同心多邊形(4 圈)
+            for (ring in 1..4) {
+                val rr = radius * ring / 4f
+                val path = androidx.compose.ui.graphics.Path()
+                for (i in 0 until n) {
+                    val p = point(i, rr)
+                    if (i == 0) path.moveTo(p.x, p.y) else path.lineTo(p.x, p.y)
+                }
+                path.close()
+                drawPath(path, color = InkGray200, style = Stroke(width = 1f))
+            }
+            // 軸線
+            for (i in 0 until n) {
+                drawLine(InkGray200, start = Offset(cx, cy), end = point(i, radius), strokeWidth = 1f)
+            }
+            // 能力多邊形(動畫展開)
+            val dataPath = androidx.compose.ui.graphics.Path()
+            for (i in 0 until n) {
+                val ratio = (capabilities[i].score / 100f) * anim
+                val p = point(i, radius * ratio)
+                if (i == 0) dataPath.moveTo(p.x, p.y) else dataPath.lineTo(p.x, p.y)
+            }
+            dataPath.close()
+            drawPath(dataPath, color = BrandDeepOrange.copy(alpha = 0.18f))
+            drawPath(dataPath, color = BrandDeepOrange, style = Stroke(width = 2f))
+            // 頂點圓點
+            for (i in 0 until n) {
+                val ratio = (capabilities[i].score / 100f) * anim
+                drawCircle(BrandDeepOrange, radius = 3f, center = point(i, radius * ratio))
+            }
+        }
+        // 軸標籤(用 6 個定位的 Text 疊上去)
+        capabilities.forEachIndexed { i, cap ->
+            val a = -Math.PI / 2 + 2 * Math.PI * i / n
+            val labelR = 0.5f  // 相對 fraction,用 offset 近似
+            val dx = (kotlin.math.cos(a) * 118).toFloat()
+            val dy = (kotlin.math.sin(a) * 118).toFloat()
+            Text(
+                cap.label,
+                color = InkGray700,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.offset(x = dx.dp, y = dy.dp),
+            )
+        }
+    }
+}
+
+
     val (textColor, barColor) = when {
         cap.score >= 85 -> BrandDeepOrange to BrandDeepOrange
         cap.score >= 70 -> Color(0xFFBA7517) to BrandAmber

@@ -170,6 +170,7 @@ private fun EditField(label: String, value: String, onChange: (String) -> Unit, 
 
 @Composable
 private fun PreviewTab() {
+    var selectedTemplate by remember { mutableStateOf(0) }
     Column(
         modifier = Modifier.fillMaxSize().padding(20.dp).verticalScroll(rememberScrollState()),
     ) {
@@ -177,13 +178,13 @@ private fun PreviewTab() {
             listOf("簡約", "現代", "經典").forEachIndexed { i, name ->
                 Box(
                     Modifier.weight(1f).clip(RoundedCornerShape(10.dp))
-                        .background(if (i == 0) InkBlack else InkGray100)
-                        .pressScale {}
+                        .background(if (i == selectedTemplate) InkBlack else InkGray100)
+                        .pressScale { selectedTemplate = i }
                         .padding(vertical = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(name, style = MaterialTheme.typography.labelLarge,
-                        color = if (i == 0) PaperWhite else InkGray500,
+                        color = if (i == selectedTemplate) PaperWhite else InkGray500,
                         fontWeight = FontWeight.SemiBold)
                 }
             }
