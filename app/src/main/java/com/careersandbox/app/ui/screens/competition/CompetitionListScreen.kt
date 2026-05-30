@@ -146,11 +146,11 @@ private fun CompetitionRow(comp: Competition, onClick: () -> Unit) {
             Text(comp.organizer, color = InkGray500, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.Schedule, contentDescription = null, tint = InkGray400, modifier = Modifier.size(12.dp))
+                Icon(Icons.Outlined.Timer, contentDescription = null, tint = InkGray400, modifier = Modifier.size(12.dp))
                 Spacer(Modifier.width(3.dp))
                 Text(comp.deadline, color = InkGray500, fontSize = 10.sp)
                 Spacer(Modifier.width(10.dp))
-                Icon(Icons.Outlined.Group, contentDescription = null, tint = InkGray400, modifier = Modifier.size(12.dp))
+                Icon(Icons.Outlined.Groups, contentDescription = null, tint = InkGray400, modifier = Modifier.size(12.dp))
                 Spacer(Modifier.width(3.dp))
                 Text(comp.teamSize, color = InkGray500, fontSize = 10.sp)
             }

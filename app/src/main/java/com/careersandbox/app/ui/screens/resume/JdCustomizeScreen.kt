@@ -652,7 +652,7 @@ private fun DimmedItem(text: String, onRestore: () -> Unit) {
             .padding(start = 16.dp, top = 10.dp, end = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(Icons.Outlined.VisibilityOff,
+        Icon(Icons.Outlined.Close,
             contentDescription = null,
             tint = InkGray400,
             modifier = Modifier.size(16.dp))

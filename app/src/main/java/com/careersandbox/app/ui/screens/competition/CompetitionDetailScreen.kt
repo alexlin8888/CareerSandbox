@@ -91,8 +91,8 @@ fun CompetitionDetailScreen(navController: NavHostController, compId: String) {
             Column(modifier = Modifier.padding(horizontal = 24.dp).padding(top = 20.dp, bottom = 40.dp)) {
                 // === 關鍵資訊 3 格 ===
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    InfoCell("截止", comp.deadline, Icons.Outlined.Schedule, Modifier.weight(1f))
-                    InfoCell("隊伍", comp.teamSize, Icons.Outlined.Group, Modifier.weight(1f))
+                    InfoCell("截止", comp.deadline, Icons.Outlined.Timer, Modifier.weight(1f))
+                    InfoCell("隊伍", comp.teamSize, Icons.Outlined.Groups, Modifier.weight(1f))
                     InfoCell("獎金", comp.prize, Icons.Outlined.EmojiEvents, Modifier.weight(1f))
                 }
                 Spacer(Modifier.height(10.dp))
@@ -159,7 +159,7 @@ fun CompetitionDetailScreen(navController: NavHostController, compId: String) {
                     contentAlignment = Alignment.Center,
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.GroupAdd, contentDescription = null, tint = PaperWhite, modifier = Modifier.size(20.dp))
+                        Icon(Icons.Outlined.Groups, contentDescription = null, tint = PaperWhite, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
                         Text(
                             if (invitedIds.isEmpty()) "建立我的隊伍" else "建立隊伍(已邀 ${invitedIds.size} 人)",

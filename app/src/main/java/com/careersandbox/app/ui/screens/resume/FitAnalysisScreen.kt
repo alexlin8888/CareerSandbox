@@ -426,7 +426,8 @@ private fun CapabilityRadar(capabilities: List<Capability>, animateProgress: Boo
     }
 }
 
-
+@Composable
+private fun CapabilityRow(cap: Capability) {
     val (textColor, barColor) = when {
         cap.score >= 85 -> BrandDeepOrange to BrandDeepOrange
         cap.score >= 70 -> Color(0xFFBA7517) to BrandAmber

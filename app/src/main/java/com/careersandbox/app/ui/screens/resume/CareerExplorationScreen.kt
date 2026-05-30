@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -94,13 +95,13 @@ private val allCareerRecs = listOf(
         id = "ux", title = "UX 設計師", subtitleEn = "UX Designer",
         shortSubtitle = "Design · 48-70k", salary = "48-70k", openings = "620",
         matchScore = 68, missingSkills = listOf("Figma", "使用者訪談", "原型測試"),
-        category = "設計", icon = Icons.Outlined.Brush,
+        category = "設計", icon = Icons.Outlined.Edit,
     ),
     CareerRec(
         id = "researcher", title = "研究員", subtitleEn = "Researcher",
         shortSubtitle = "學術 · 依機構", salary = "依機構", openings = "380",
         matchScore = 65, missingSkills = listOf("論文發表", "研究方法", "碩博學歷"),
-        category = "學術", icon = Icons.Outlined.School,
+        category = "學術", icon = Icons.Outlined.Lightbulb,
         isAcademic = true,
         academicNote = "想走學術路線?先看看研究員的一天,以及碩博升學的時程規劃。",
     ),
@@ -438,7 +439,7 @@ private fun AcademicBanner(note: String) {
                 .background(PaperWhite.copy(alpha = 0.15f)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Outlined.School, contentDescription = null, tint = PaperWhite, modifier = Modifier.size(20.dp))
+            Icon(Icons.Outlined.Lightbulb, contentDescription = null, tint = PaperWhite, modifier = Modifier.size(20.dp))
         }
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -461,7 +462,7 @@ private fun EmptyRecState(hasExcluded: Boolean, onClearFilter: () -> Unit) {
             .padding(vertical = 32.dp, horizontal = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Icon(Icons.Outlined.SearchOff, contentDescription = null, tint = InkGray300, modifier = Modifier.size(40.dp))
+        Icon(Icons.Outlined.Search, contentDescription = null, tint = InkGray300, modifier = Modifier.size(40.dp))
         Spacer(Modifier.height(12.dp))
         Text(
             if (hasExcluded) "這個條件下的職位都被你排除了" else "找不到符合的職位",
@@ -500,7 +501,7 @@ private fun ExcludedSection(excluded: List<CareerRec>, onRestore: (String) -> Un
             modifier = Modifier.fillMaxWidth().pressScale { expanded = !expanded },
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(Icons.Outlined.FilterAltOff, contentDescription = null, tint = InkGray500, modifier = Modifier.size(16.dp))
+            Icon(Icons.Outlined.Tune, contentDescription = null, tint = InkGray500, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(8.dp))
             Text(
                 "已排除 ${excluded.size} 個職位",
@@ -510,8 +511,9 @@ private fun ExcludedSection(excluded: List<CareerRec>, onRestore: (String) -> Un
             Text("讓推薦更聚焦", color = InkGray400, fontSize = 11.sp)
             Spacer(Modifier.width(6.dp))
             Icon(
-                if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
-                contentDescription = null, tint = InkGray500, modifier = Modifier.size(18.dp),
+                Icons.Outlined.KeyboardArrowUp,
+                contentDescription = null, tint = InkGray500,
+                modifier = Modifier.size(18.dp).rotate(if (expanded) 0f else 180f),
             )
         }
         if (expanded) {
