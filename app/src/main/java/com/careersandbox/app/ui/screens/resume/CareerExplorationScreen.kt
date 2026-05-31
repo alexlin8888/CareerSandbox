@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
 import com.careersandbox.app.navigation.Routes
+import com.careersandbox.app.ui.components.HandDrawnUnderline
 import com.careersandbox.app.ui.components.ScatteredDecorations
 import com.careersandbox.app.ui.components.WaveHeroBackground
 import com.careersandbox.app.ui.components.pressScale
@@ -328,11 +329,23 @@ private fun CareerHeroSection(onBack: () -> Unit) {
                 fontWeight = FontWeight.Black,
                 letterSpacing = 2.sp)
             Spacer(Modifier.height(8.dp))
-            Text("職涯探索",
-                color = PaperWhite,
-                fontWeight = FontWeight.Black,
-                fontSize = 30.sp,
-                lineHeight = 30.sp)
+            Box {
+                Text("職涯探索",
+                    color = PaperWhite,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 30.sp,
+                    lineHeight = 30.sp)
+                HandDrawnUnderline(
+                    width = 84.dp,
+                    color = BrandYellow,
+                    strokeWidth = 3.5f,
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .offset(y = 5.dp)
+                        .height(9.dp)
+                        .width(84.dp),
+                )
+            }
             Spacer(Modifier.height(7.dp))
             Text("3 條最適合你的路徑",
                 color = PaperWhite.copy(alpha = 0.95f),

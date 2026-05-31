@@ -25,6 +25,7 @@ import coil.compose.AsyncImage
 import com.careersandbox.app.data.model.CompetitionTeam
 import com.careersandbox.app.data.model.TeamMate
 import com.careersandbox.app.data.mock.MockData
+import com.careersandbox.app.ui.components.StickyNote
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 
@@ -119,14 +120,33 @@ fun CompetitionDetailScreen(navController: NavHostController, compId: String) {
                 Text("依你的職能輪廓,推薦互補的夥伴", color = InkGray500, fontSize = 12.sp)
                 Spacer(Modifier.height(12.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                    teammates.forEach { tm ->
-                        TeammateCard(
-                            tm = tm,
-                            invited = tm.id in invitedIds,
-                            onInvite = {
-                                if (tm.id in invitedIds) invitedIds.remove(tm.id) else invitedIds.add(tm.id)
-                            },
-                        )
+                    teammates.forEachIndexed { idx, tm ->
+                        if (idx == 0) {
+                            Box {
+                                TeammateCard(
+                                    tm = tm,
+                                    invited = tm.id in invitedIds,
+                                    onInvite = {
+                                        if (tm.id in invitedIds) invitedIds.remove(tm.id) else invitedIds.add(tm.id)
+                                    },
+                                )
+                                StickyNote(
+                                    text = "你缺的他剛好有",
+                                    rotation = -4f,
+                                    modifier = Modifier
+                                        .align(Alignment.TopStart)
+                                        .offset(x = 24.dp, y = (-12).dp),
+                                )
+                            }
+                        } else {
+                            TeammateCard(
+                                tm = tm,
+                                invited = tm.id in invitedIds,
+                                onInvite = {
+                                    if (tm.id in invitedIds) invitedIds.remove(tm.id) else invitedIds.add(tm.id)
+                                },
+                            )
+                        }
                     }
                 }
                 Spacer(Modifier.height(28.dp))

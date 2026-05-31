@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.navigation.Routes
+import com.careersandbox.app.ui.components.StickyNote
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 import kotlinx.coroutines.delay
@@ -425,7 +426,15 @@ private fun ResultPhase(onBack: () -> Unit, onExport: () -> Unit, contentPadding
             )
         }
         if (dimmedItems.isNotEmpty()) {
-            SectionTitle("已弱化 ${dimmedItems.size} 段", "移除無關經歷,讓 recruiter 30 秒抓到重點")
+            Box(modifier = Modifier.fillMaxWidth()) {
+                SectionTitle("已弱化 ${dimmedItems.size} 段", "移除無關經歷,讓 recruiter 30 秒抓到重點")
+                StickyNote(
+                    text = "想留就拉回",
+                    rotation = 4f,
+                    modifier = Modifier.align(Alignment.TopEnd).offset(y = (-6).dp),
+                )
+            }
+            Spacer(Modifier.height(4.dp))
             dimmedItems.forEachIndexed { idx, item ->
                 DimmedItem(text = item, onRestore = { dimmedItems.remove(item) })
                 if (idx < dimmedItems.size - 1) Spacer(Modifier.height(8.dp))

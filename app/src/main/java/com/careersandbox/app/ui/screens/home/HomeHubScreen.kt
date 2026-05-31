@@ -109,11 +109,24 @@ private fun HeroSection(navController: NavHostController) {
             Spacer(Modifier.height(4.dp))
             // 姓名 + 年級
             Row(verticalAlignment = Alignment.Bottom) {
-                Text(MockData.currentUser.name,
-                    color = PaperWhite,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 40.sp,
-                    lineHeight = 44.sp)
+                Box {
+                    Text(MockData.currentUser.name,
+                        color = PaperWhite,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 40.sp,
+                        lineHeight = 44.sp)
+                    HandDrawnUnderline(
+                        width = 84.dp,
+                        color = BrandYellow,
+                        strokeWidth = 4f,
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(top = 2.dp)
+                            .offset(y = 6.dp)
+                            .height(10.dp)
+                            .width(84.dp),
+                    )
+                }
                 Spacer(Modifier.width(8.dp))
                 Text("大三",
                     color = BrandYellow,
