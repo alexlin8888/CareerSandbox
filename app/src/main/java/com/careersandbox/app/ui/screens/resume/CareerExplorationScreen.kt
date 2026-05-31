@@ -227,26 +227,30 @@ fun CareerExplorationScreen(navController: NavHostController) {
                     Spacer(Modifier.height(24.dp))
                 }
 
-                // === 學習路徑(跟著聚焦職位變)===
+                // === 學習路徑(整塊色塊,打破白卡框)===
                 if (focusedRec != null) {
                     AnimatedSection(visible = visible, delayMs = 320) {
-                        Text(
-                            "給「${focusedRec.title}」的學習路徑",
-                            color = InkBlack,
-                            fontWeight = FontWeight.Black,
-                            fontSize = 20.sp,
-                        )
-                    }
-                    Spacer(Modifier.height(12.dp))
-
-                    AnimatedSection(visible = visible, delayMs = 400) {
-                        Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(18.dp))
+                                .background(BrandPeach.copy(alpha = 0.45f))
+                                .padding(horizontal = 18.dp, vertical = 18.dp),
+                        ) {
+                            Text(
+                                "給「${focusedRec.title}」的學習路徑",
+                                color = Color(0xFF7A3A00),
+                                fontWeight = FontWeight.Black,
+                                fontSize = 18.sp,
+                            )
+                            Spacer(Modifier.height(12.dp))
                             steps.forEach { step ->
                                 LearningStepCard(step)
+                                Spacer(Modifier.height(9.dp))
                             }
                         }
                     }
-                    Spacer(Modifier.height(28.dp))
+                    Spacer(Modifier.height(20.dp))
 
                     AnimatedSection(visible = visible, delayMs = 520) {
                         Box(
@@ -765,14 +769,14 @@ private fun LearningStepCard(step: LearningStep) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(PaperWhite)
+            .clip(RoundedCornerShape(12.dp))
+            .background(PaperWhite.copy(alpha = 0.6f))
             .pressScale {}
-            .padding(horizontal = 14.dp, vertical = 13.dp),
+            .padding(horizontal = 12.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            modifier = Modifier.size(36.dp).clip(RoundedCornerShape(11.dp)).background(numBg),
+            modifier = Modifier.size(34.dp).clip(RoundedCornerShape(4.dp)).background(numBg),
             contentAlignment = Alignment.Center,
         ) {
             Text("${step.stepNum}", color = numTextColor, fontWeight = FontWeight.Black, fontSize = 16.sp)
