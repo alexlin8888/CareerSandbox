@@ -88,6 +88,17 @@ private fun HeroSection(navController: NavHostController) {
             modifier = Modifier.fillMaxSize().alpha(0.6f)
         )
 
+        // 2.5 品牌大使河狸(右下角招手)
+        Image(
+            painter = painterResource(R.drawable.beaver_wave),
+            contentDescription = null,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 8.dp)
+                .size(132.dp),
+            contentScale = ContentScale.Fit,
+        )
+
         // 3. 文字內容(避開右下插畫位置)
         Column(
             modifier = Modifier

@@ -479,8 +479,13 @@ private fun EmptyRecState(hasExcluded: Boolean, onClearFilter: () -> Unit) {
             .padding(vertical = 32.dp, horizontal = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Icon(Icons.Outlined.Search, contentDescription = null, tint = InkGray300, modifier = Modifier.size(40.dp))
-        Spacer(Modifier.height(12.dp))
+        Image(
+            painter = painterResource(R.drawable.beaver_empty),
+            contentDescription = null,
+            modifier = Modifier.size(120.dp),
+            contentScale = ContentScale.Fit,
+        )
+        Spacer(Modifier.height(8.dp))
         Text(
             if (hasExcluded) "這個條件下的職位都被你排除了" else "找不到符合的職位",
             color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 15.sp,
