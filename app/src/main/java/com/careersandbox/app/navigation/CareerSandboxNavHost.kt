@@ -13,6 +13,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.careersandbox.app.ui.screens.competition.CompetitionDetailScreen
 import com.careersandbox.app.ui.screens.competition.CompetitionListScreen
+import com.careersandbox.app.ui.screens.competition.TeamChatScreen
 import com.careersandbox.app.ui.screens.home.ArticleDetailScreen
 import com.careersandbox.app.ui.screens.home.HomeHubScreen
 import com.careersandbox.app.ui.screens.home.NotificationsAllScreen
@@ -93,8 +94,7 @@ fun CareerSandboxNavHost(
         composable(Routes.WORKPLACE_SANDBOX) { WorkplaceSandboxScreen() }
         composable(Routes.PROFILE) { ProfileScreen(navController) }
 
-        composable(Routes.EXPERIENCE_LIST) { ExperienceListScreen(navController) }
-        composable(Routes.EXPERIENCE_EDIT) { ExperienceEditScreen(navController) }
+        composable(Routes.EXPERIENCE_LIST) { ExperienceListScreen(navController) }        composable(Routes.EXPERIENCE_EDIT) { ExperienceEditScreen(navController) }
         composable(Routes.RESUME_EDITOR) { ResumeEditorScreen(navController) }
         composable(Routes.JD_CUSTOMIZE) { JdCustomizeScreen(navController) }
         composable(Routes.RESUME_PROFILE) { ResumeProfileScreen(navController) }
@@ -103,6 +103,7 @@ fun CareerSandboxNavHost(
         composable(Routes.FIT_ANALYSIS) { FitAnalysisScreen(navController) }
 
         composable(Routes.COMPETITION_LIST) { CompetitionListScreen(navController) }
+        composable(Routes.TEAM_CHAT) { TeamChatScreen(navController) }
         composable(
             route = Routes.COMPETITION_DETAIL,
             arguments = listOf(navArgument("compId") { type = NavType.StringType }),

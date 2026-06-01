@@ -13,6 +13,7 @@ object Routes {
 
     const val EXPERIENCE_LIST = "experience_list"
     const val EXPERIENCE_EDIT = "experience_edit"
+    const val TEAM_CHAT = "team_chat"
     const val RESUME_EDITOR = "resume_editor"
     const val JD_CUSTOMIZE = "jd_customize"
 

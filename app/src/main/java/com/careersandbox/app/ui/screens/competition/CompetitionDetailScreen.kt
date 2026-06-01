@@ -27,6 +27,7 @@ import coil.compose.AsyncImage
 import com.careersandbox.app.data.model.CompetitionTeam
 import com.careersandbox.app.data.model.TeamMate
 import com.careersandbox.app.data.mock.MockData
+import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.StickyNote
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
@@ -258,6 +259,15 @@ fun CompetitionDetailScreen(navController: NavHostController, compId: String) {
                         if (invitedIds.isEmpty()) {
                             Spacer(Modifier.height(8.dp))
                             Text("還沒邀請任何人,往上滑邀請推薦隊友", color = InkGray400, fontSize = 12.sp)
+                        }
+                        Spacer(Modifier.height(14.dp))
+                        Box(
+                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                                .background(BrandOrange).pressScale { navController.navigate(Routes.TEAM_CHAT) }
+                                .padding(vertical = 12.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text("進入隊伍聊天室", color = PaperWhite, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         }
                     }
                 }

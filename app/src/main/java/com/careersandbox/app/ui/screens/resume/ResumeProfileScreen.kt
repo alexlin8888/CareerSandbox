@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.data.mock.MockData
+import com.careersandbox.app.data.model.LanguageProficiency
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.SectionDivider
 import com.careersandbox.app.ui.components.StaggeredAppear
@@ -49,6 +50,14 @@ fun ResumeProfileScreen(navController: NavHostController) {
     // 「技能」可編輯(已有的技能,可增刪)
     val skillsHave = remember { mutableStateListOf(*user.skillsHave.toTypedArray()) }
     var editingSkills by remember { mutableStateOf(false) }
+    // 「語言」可編輯(語言 + 程度,可增刪)
+    val languages = remember { mutableStateListOf(*user.languages.toTypedArray()) }
+    var editingLangs by remember { mutableStateOf(false) }
+    // 「連結」可編輯
+    var linkedinUrl by remember { mutableStateOf(user.linkedin) }
+    var githubUrl by remember { mutableStateOf(user.github) }
+    var portfolioUrl by remember { mutableStateOf(user.portfolio) }
+    var editingLinks by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = PaperWhite,
@@ -322,8 +331,8 @@ fun ResumeProfileScreen(navController: NavHostController) {
             }
 
             // === 語言 ===
-            SectionLabel("語言", onEdit = { Toast.makeText(ctxScreen, "編輯語言:功能開發中", Toast.LENGTH_SHORT).show() })
-            user.languages.forEach { lang ->
+            SectionLabel("語言", onEdit = { editingLangs = true })
+            languages.forEach { lang ->
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -337,16 +346,16 @@ fun ResumeProfileScreen(navController: NavHostController) {
                         color = InkGray500,
                         style = MaterialTheme.typography.bodyMedium)
                 }
-                if (lang != user.languages.last()) {
+                if (lang != languages.last()) {
                     SectionDivider(modifier = Modifier.padding(vertical = 2.dp))
                 }
             }
 
             // === 連結 ===
-            SectionLabel("連結", onEdit = { Toast.makeText(ctxScreen, "編輯連結:功能開發中", Toast.LENGTH_SHORT).show() })
-            if (user.linkedin.isNotEmpty()) LinkRow("LinkedIn", user.linkedin)
-            if (user.github.isNotEmpty()) LinkRow("GitHub", user.github)
-            if (user.portfolio.isNotEmpty()) LinkRow("作品集", user.portfolio)
+            SectionLabel("連結", onEdit = { editingLinks = true })
+            if (linkedinUrl.isNotEmpty()) LinkRow("LinkedIn", linkedinUrl)
+            if (githubUrl.isNotEmpty()) LinkRow("GitHub", githubUrl)
+            if (portfolioUrl.isNotEmpty()) LinkRow("作品集", portfolioUrl)
 
             Spacer(Modifier.height(40.dp))
         }
@@ -441,6 +450,120 @@ fun ResumeProfileScreen(navController: NavHostController) {
                         .pressScale { editingSkills = false }
                         .padding(horizontal = 20.dp, vertical = 10.dp),
                 ) { Text("完成", color = PaperWhite, fontWeight = FontWeight.Bold) }
+            },
+        )
+    }
+
+    // 「語言」編輯對話框(語言+程度,可增刪)
+    if (editingLangs) {
+        var newLang by remember { mutableStateOf("") }
+        var newLevel by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { editingLangs = false },
+            title = { Text("編輯語言", fontWeight = FontWeight.Black) },
+            text = {
+                Column {
+                    Text("點 × 移除,或在下方新增", color = InkGray500, fontSize = 13.sp)
+                    Spacer(Modifier.height(12.dp))
+                    languages.forEach { lang ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(lang.language, color = InkBlack, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                            Text(lang.level, color = InkGray500, fontSize = 12.sp)
+                            Spacer(Modifier.width(8.dp))
+                            Box(
+                                modifier = Modifier.size(20.dp).clip(CircleShape).background(InkGray100)
+                                    .pressScale { languages.remove(lang) },
+                                contentAlignment = Alignment.Center,
+                            ) { Text("×", color = InkGray500, fontSize = 14.sp, fontWeight = FontWeight.Bold) }
+                        }
+                    }
+                    Spacer(Modifier.height(14.dp))
+                    OutlinedTextField(
+                        value = newLang, onValueChange = { newLang = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("語言(例:法文)") },
+                        shape = RoundedCornerShape(12.dp), singleLine = true,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = newLevel, onValueChange = { newLevel = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("程度(例:DELF B2)") },
+                        shape = RoundedCornerShape(12.dp), singleLine = true,
+                        trailingIcon = {
+                            if (newLang.isNotBlank()) {
+                                Box(
+                                    modifier = Modifier.padding(end = 6.dp).clip(RoundedCornerShape(8.dp)).background(BrandOrange)
+                                        .pressScale {
+                                            if (newLang.isNotBlank()) {
+                                                languages.add(LanguageProficiency(newLang.trim(), newLevel.trim().ifBlank { "—" }))
+                                                newLang = ""; newLevel = ""
+                                            }
+                                        }
+                                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                                ) { Text("加入", color = PaperWhite, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+                            }
+                        },
+                    )
+                }
+            },
+            confirmButton = {
+                Box(
+                    modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(BrandOrange)
+                        .pressScale { editingLangs = false }
+                        .padding(horizontal = 20.dp, vertical = 10.dp),
+                ) { Text("完成", color = PaperWhite, fontWeight = FontWeight.Bold) }
+            },
+        )
+    }
+
+    // 「連結」編輯對話框
+    if (editingLinks) {
+        var li by remember { mutableStateOf(linkedinUrl) }
+        var gh by remember { mutableStateOf(githubUrl) }
+        var pf by remember { mutableStateOf(portfolioUrl) }
+        AlertDialog(
+            onDismissRequest = { editingLinks = false },
+            title = { Text("編輯連結", fontWeight = FontWeight.Black) },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = li, onValueChange = { li = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("LinkedIn") }, placeholder = { Text("linkedin.com/in/…") },
+                        shape = RoundedCornerShape(12.dp), singleLine = true,
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = gh, onValueChange = { gh = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("GitHub") }, placeholder = { Text("github.com/…") },
+                        shape = RoundedCornerShape(12.dp), singleLine = true,
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = pf, onValueChange = { pf = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("作品集") }, placeholder = { Text("你的作品集網址") },
+                        shape = RoundedCornerShape(12.dp), singleLine = true,
+                    )
+                }
+            },
+            confirmButton = {
+                Box(
+                    modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(BrandOrange)
+                        .pressScale {
+                            linkedinUrl = li.trim(); githubUrl = gh.trim(); portfolioUrl = pf.trim()
+                            editingLinks = false
+                        }
+                        .padding(horizontal = 20.dp, vertical = 10.dp),
+                ) { Text("儲存", color = PaperWhite, fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                Text("取消", color = InkGray500, modifier = Modifier.pressScale { editingLinks = false }.padding(12.dp))
             },
         )
     }
