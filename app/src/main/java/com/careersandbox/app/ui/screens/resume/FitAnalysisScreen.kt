@@ -29,6 +29,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -89,68 +90,111 @@ fun FitAnalysisScreen(navController: NavHostController) {
                 }
                 Spacer(Modifier.height(20.dp))
 
+                var activeTab by remember { mutableStateOf(0) }
                 AnimatedSection(visible = visible, delayMs = 120) {
-                    TabBar(tabs = listOf("能力分布", "補強路徑", "推薦行動"), activeIndex = 0)
+                    TabBar(
+                        tabs = listOf("能力分布", "補強路徑", "推薦行動"),
+                        activeIndex = activeTab,
+                        onTabSelected = { activeTab = it },
+                    )
                 }
                 Spacer(Modifier.height(20.dp))
 
-                AnimatedSection(visible = visible, delayMs = 200) {
-                    CapabilityRadar(capabilities = capabilities, animateProgress = visible)
-                }
-                Spacer(Modifier.height(20.dp))
-
-                AnimatedSection(visible = visible, delayMs = 280) {
-                    Column(verticalArrangement = Arrangement.spacedBy(13.dp)) {
-                        capabilities.forEach { cap ->
-                            CapabilityRow(cap)
+                when (activeTab) {
+                    0 -> {
+                        // === 能力分布:雷達 + bar ===
+                        CapabilityRadar(capabilities = capabilities, animateProgress = visible)
+                        Spacer(Modifier.height(20.dp))
+                        Column(verticalArrangement = Arrangement.spacedBy(13.dp)) {
+                            capabilities.forEach { cap -> CapabilityRow(cap) }
+                        }
+                        Spacer(Modifier.height(28.dp))
+                        Box(
+                            modifier = Modifier.fillMaxWidth().height(56.dp).clip(RoundedCornerShape(16.dp))
+                                .background(InkBlack).pressScale { activeTab = 1 },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text("看補強路徑", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 16.sp)
                         }
                     }
-                }
-                Spacer(Modifier.height(28.dp))
-
-                AnimatedSection(visible = visible, delayMs = 320) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text("補強路徑", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 20.sp)
-                        val doneCount = tasks.count { it.done }
-                        Text("$doneCount / ${tasks.size} 完成",
-                            color = InkGray500, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                    }
-                }
-                Spacer(Modifier.height(12.dp))
-
-                AnimatedSection(visible = visible, delayMs = 400) {
-                    Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                        tasks.forEach { task ->
-                            TaskCard(
-                                task = task,
-                                onToggle = {
-                                    tasks = tasks.map {
-                                        if (it.id == task.id) it.copy(done = !it.done) else it
-                                    }
-                                },
-                            )
+                    1 -> {
+                        // === 補強路徑:任務清單 ===
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text("補強路徑", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 20.sp)
+                            val doneCount = tasks.count { it.done }
+                            Text("$doneCount / ${tasks.size} 完成",
+                                color = InkGray500, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                            tasks.forEach { task ->
+                                TaskCard(
+                                    task = task,
+                                    onToggle = {
+                                        tasks = tasks.map {
+                                            if (it.id == task.id) it.copy(done = !it.done) else it
+                                        }
+                                    },
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(28.dp))
+                        Box(
+                            modifier = Modifier.fillMaxWidth().height(56.dp).clip(RoundedCornerShape(16.dp))
+                                .background(InkBlack).pressScale { navController.navigate(Routes.EXPERIENCE_EDIT) },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text("開始補強", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 16.sp)
                         }
                     }
-                }
-                Spacer(Modifier.height(28.dp))
-
-                AnimatedSection(visible = visible, delayMs = 520) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(InkBlack)
-                            .pressScale { navController.navigate(Routes.EXPERIENCE_EDIT) },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text("開始補強", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                    else -> {
+                        // === 推薦行動 ===
+                        RecommendedActions(navController)
                     }
                 }
+            }
+        }
+    }
+}
+
+/** 推薦行動:依能力缺口給的具體下一步 */
+@Composable
+private fun RecommendedActions(navController: NavHostController) {
+    data class ActionItem(val icon: ImageVector, val title: String, val desc: String, val cta: String, val route: String)
+    val actions = listOf(
+        ActionItem(Icons.Outlined.Edit, "補上量化數字", "你的經歷少了具體成果數字,recruiter 最在意這個", "去編輯經歷", Routes.EXPERIENCE_LIST),
+        ActionItem(Icons.Outlined.Explore, "看相近的職位", "根據你的能力輪廓,還有幾個適合的方向", "探索職涯", Routes.CAREER_EXPLORATION),
+        ActionItem(Icons.Outlined.Description, "為這份 JD 客製履歷", "把母版調整成更貼近這個職缺的版本", "開始客製", Routes.JD_CUSTOMIZE),
+    )
+    Text("推薦行動", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 20.sp)
+    Spacer(Modifier.height(2.dp))
+    Text("根據你的能力缺口,這是接下來最值得做的", color = InkGray500, fontSize = 12.sp)
+    Spacer(Modifier.height(14.dp))
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        actions.forEach { a ->
+            Row(
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+                    .background(PaperWhite).pressScale { navController.navigate(a.route) }.padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(BrandPeach.copy(alpha = 0.5f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(a.icon, contentDescription = null, tint = BrandDeepOrange, modifier = Modifier.size(20.dp))
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(a.title, color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Spacer(Modifier.height(2.dp))
+                    Text(a.desc, color = InkGray500, fontSize = 11.sp, lineHeight = 15.sp)
+                }
+                Spacer(Modifier.width(8.dp))
+                Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = InkGray400, modifier = Modifier.size(18.dp))
             }
         }
     }
@@ -320,7 +364,7 @@ private fun FitHeroJobCard() {
 }
 
 @Composable
-private fun TabBar(tabs: List<String>, activeIndex: Int) {
+private fun TabBar(tabs: List<String>, activeIndex: Int, onTabSelected: (Int) -> Unit = {}) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.fillMaxWidth()) {
             tabs.forEachIndexed { i, label ->
@@ -328,7 +372,8 @@ private fun TabBar(tabs: List<String>, activeIndex: Int) {
                 Column(
                     modifier = Modifier
                         .padding(end = 24.dp)
-                        .width(IntrinsicSize.Max),
+                        .width(IntrinsicSize.Max)
+                        .pressScale { onTabSelected(i) },
                 ) {
                     Text(
                         label,

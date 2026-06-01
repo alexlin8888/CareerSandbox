@@ -481,6 +481,24 @@ object MockData {
             matchReason = "商業個案的財務試算交給她",
             matchScore = 81,
         ),
+        TeamMate(
+            id = "tm4", name = "張庭瑋", school = "台大", dept = "資管系",
+            skills = listOf("資料視覺化", "Tableau", "SQL"),
+            matchReason = "把你的分析做成漂亮的圖表",
+            matchScore = 79,
+        ),
+        TeamMate(
+            id = "tm5", name = "李宗翰", school = "交大", dept = "電機系",
+            skills = listOf("機器學習", "Python", "雲端部署"),
+            matchReason = "技術競賽需要的硬實力他都有",
+            matchScore = 76,
+        ),
+        TeamMate(
+            id = "tm6", name = "吳家瑜", school = "師大", dept = "傳播學院",
+            skills = listOf("行銷企劃", "社群經營", "文案"),
+            matchReason = "行銷類競賽的提案包裝高手",
+            matchScore = 72,
+        ),
     )
 
     /** 現有可加入的隊伍 */
@@ -496,6 +514,18 @@ object MockData {
             currentSize = 3, targetSize = 5,
             lookingFor = listOf("使用者研究"),
             note = "差一個做訪談的,你的 UX 背景剛好",
+        ),
+        CompetitionTeam(
+            id = "team3", name = "原型工廠", leaderName = "陳",
+            currentSize = 2, targetSize = 4,
+            lookingFor = listOf("前端", "產品設計"),
+            note = "做 side project 起家,想衝黑客松",
+        ),
+        CompetitionTeam(
+            id = "team4", name = "商案連線", leaderName = "林",
+            currentSize = 3, targetSize = 4,
+            lookingFor = listOf("財務分析"),
+            note = "三個商學院的,缺一個跑得動財務模型的",
         ),
     )
 }

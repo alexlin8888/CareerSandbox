@@ -380,6 +380,11 @@ private fun BentoMaster(onClick: () -> Unit) {
                 fontWeight = FontWeight.Black,
                 fontSize = 24.sp,
                 lineHeight = 28.sp)
+            Spacer(Modifier.height(4.dp))
+            Text("你的 ${MockData.masterResume.totalExperiences} 段經歷組成了這份完整履歷",
+                color = PaperWhite.copy(alpha = 0.9f),
+                fontSize = 12.sp,
+                lineHeight = 16.sp)
             Spacer(Modifier.height(10.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -402,13 +407,13 @@ private fun BentoMaster(onClick: () -> Unit) {
 @Composable
 private fun ToolStrip(navController: NavHostController) {
     Row(modifier = Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 6.dp)) {
-        ToolButton(Icons.Outlined.Edit, "編輯", Modifier.weight(1f)) {
-            navController.navigate(Routes.RESUME_EDITOR)
+        ToolButton(Icons.Outlined.Edit, "我的經歷", Modifier.weight(1f)) {
+            navController.navigate(Routes.EXPERIENCE_LIST)
         }
         ToolButton(Icons.Outlined.Explore, "職涯探索", Modifier.weight(1f)) {
             navController.navigate(Routes.CAREER_EXPLORATION)
         }
-        ToolButton(Icons.Outlined.FileUpload, "PDF 匯出", Modifier.weight(1f)) {
+        ToolButton(Icons.Outlined.FileUpload, "上傳履歷", Modifier.weight(1f)) {
             navController.navigate(Routes.RESUME_UPLOAD_PROCESSING)
         }
         ToolButton(Icons.Outlined.Analytics, "適配分析", Modifier.weight(1f)) {
@@ -465,7 +470,7 @@ private fun JobApplicationsSection(navController: NavHostController) {
         }
         Spacer(Modifier.height(4.dp))
         Text(
-            "${MockData.jobApplications.size} 個職缺,各自有不同版本",
+            "從你的母版,為每家公司生成客製版本",
             color = InkGray500,
             style = MaterialTheme.typography.bodyMedium,
         )

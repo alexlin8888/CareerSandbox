@@ -69,13 +69,13 @@ fun CompetitionListScreen(navController: NavHostController) {
                 ) {
                     Icon(Icons.Outlined.ArrowBack, contentDescription = null, tint = PaperWhite, modifier = Modifier.size(20.dp))
                 }
-                Column(modifier = Modifier.padding(horizontal = 24.dp).padding(top = 78.dp)) {
+                Column(modifier = Modifier.padding(horizontal = 24.dp).padding(top = 60.dp)) {
                     Text("COMPETITIONS", color = Color(0xFF0A5A40),
                         fontWeight = FontWeight.Black, fontSize = 12.sp, letterSpacing = 2.sp)
-                    Spacer(Modifier.height(8.dp))
-                    Text("競賽組隊媒合", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 30.sp)
                     Spacer(Modifier.height(6.dp))
-                    Text("找對的競賽,配互補的夥伴", color = PaperWhite.copy(alpha = 0.95f), fontSize = 12.sp)
+                    Text("競賽組隊媒合", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 26.sp)
+                    Spacer(Modifier.height(5.dp))
+                    Text("找對的競賽,配互補的夥伴", color = PaperWhite.copy(alpha = 0.95f), fontSize = 12.sp, maxLines = 1)
                 }
             }
 

@@ -73,21 +73,22 @@ fun ExperienceListScreen(navController: NavHostController) {
                     Spacer(Modifier.height(40.dp))
                     androidx.compose.foundation.Image(
                         painter = androidx.compose.ui.res.painterResource(
-                            id = com.careersandbox.app.R.drawable.undraw_no_data_ig65
+                            id = com.careersandbox.app.R.drawable.beaver_resume
                         ),
                         contentDescription = null,
-                        modifier = Modifier.size(200.dp),
+                        modifier = Modifier.size(180.dp),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Fit,
                     )
-                    Spacer(Modifier.height(24.dp))
+                    Spacer(Modifier.height(20.dp))
                     Text(
-                        "這個分類還沒有經驗",
+                        if (selectedCategory == "全部") "還沒有任何經歷" else "這個分類還沒有經歷",
                         color = InkBlack,
                         fontWeight = FontWeight.Black,
                         fontSize = 18.sp,
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "用右上角的 + 按鈕新增第一筆",
+                        "用右上角的 + 新增第一筆,它們會組成你的母版履歷",
                         color = InkGray500,
                         style = MaterialTheme.typography.bodyMedium,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,

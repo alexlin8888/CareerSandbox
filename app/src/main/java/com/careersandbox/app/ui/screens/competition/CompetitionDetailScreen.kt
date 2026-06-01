@@ -204,6 +204,58 @@ fun CompetitionDetailScreen(navController: NavHostController, compId: String) {
                         )
                     }
                 }
+
+                // 建立後:展開「我的隊伍」狀態卡(真實產出,不只 Toast)
+                if (teamCreated) {
+                    Spacer(Modifier.height(16.dp))
+                    Column(
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+                            .background(AccentGreen.copy(alpha = 0.1f)).padding(16.dp),
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Outlined.Groups, contentDescription = null, tint = AccentGreen, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("我的隊伍", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                        }
+                        Spacer(Modifier.height(4.dp))
+                        Text(comp.title, color = InkGray500, fontSize = 12.sp)
+                        Spacer(Modifier.height(12.dp))
+                        // 隊長(自己)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier.size(36.dp).clip(CircleShape).background(BrandOrange),
+                                contentAlignment = Alignment.Center,
+                            ) { Text("我", color = PaperWhite, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
+                            Spacer(Modifier.width(10.dp))
+                            Column {
+                                Text("你(隊長)", color = InkBlack, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                Text("已就位", color = AccentGreen, fontSize = 11.sp)
+                            }
+                        }
+                        // 已邀請的成員
+                        invitedIds.forEach { id ->
+                            val tm = MockData.recommendedTeammates.find { it.id == id }
+                            if (tm != null) {
+                                Spacer(Modifier.height(8.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier.size(36.dp).clip(CircleShape).background(InkGray100),
+                                        contentAlignment = Alignment.Center,
+                                    ) { Text(tm.name.first().toString(), color = InkGray500, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
+                                    Spacer(Modifier.width(10.dp))
+                                    Column {
+                                        Text(tm.name, color = InkBlack, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                        Text("邀請已送出 · 等待回覆", color = BrandDeepOrange, fontSize = 11.sp)
+                                    }
+                                }
+                            }
+                        }
+                        if (invitedIds.isEmpty()) {
+                            Spacer(Modifier.height(8.dp))
+                            Text("還沒邀請任何人,往上滑邀請推薦隊友", color = InkGray400, fontSize = 12.sp)
+                        }
+                    }
+                }
             }
         }
     }

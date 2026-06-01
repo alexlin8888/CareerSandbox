@@ -70,6 +70,16 @@ private fun HeroSection() {
         ScatteredDecorations(
             modifier = Modifier.fillMaxSize().alpha(0.6f)
         )
+        // 品牌大使(打氣,右下角)
+        Image(
+            painter = painterResource(R.drawable.beaver_celebrate),
+            contentDescription = null,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 12.dp, bottom = 4.dp)
+                .size(96.dp),
+            contentScale = ContentScale.Fit,
+        )
         Column(
             modifier = Modifier
                 .padding(horizontal = 24.dp, vertical = 24.dp)
