@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -45,6 +46,9 @@ fun ResumeProfileScreen(navController: NavHostController) {
     // 「關於我」可編輯(local state,套用後即時顯示)
     var bioText by remember { mutableStateOf(user.bio) }
     var editingBio by remember { mutableStateOf(false) }
+    // 「技能」可編輯(已有的技能,可增刪)
+    val skillsHave = remember { mutableStateListOf(*user.skillsHave.toTypedArray()) }
+    var editingSkills by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = PaperWhite,
@@ -258,7 +262,7 @@ fun ResumeProfileScreen(navController: NavHostController) {
             }
 
             // === 技能 ===
-            SectionLabel("技能", onEdit = { Toast.makeText(ctxScreen, "編輯技能:功能開發中", Toast.LENGTH_SHORT).show() })
+            SectionLabel("技能", onEdit = { editingSkills = true })
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(6.dp).clip(CircleShape).background(BrandOrange))
                 Spacer(Modifier.width(8.dp))
@@ -273,7 +277,7 @@ fun ResumeProfileScreen(navController: NavHostController) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                user.skillsHave.forEach { skill ->
+                skillsHave.forEach { skill ->
                     Box(
                         modifier = Modifier
                             .clip(CircleShape)
@@ -374,6 +378,69 @@ fun ResumeProfileScreen(navController: NavHostController) {
             },
             dismissButton = {
                 Text("取消", color = InkGray500, modifier = Modifier.pressScale { editingBio = false }.padding(12.dp))
+            },
+        )
+    }
+
+    // 「技能」編輯對話框(可刪除現有、新增)
+    if (editingSkills) {
+        var newSkill by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { editingSkills = false },
+            title = { Text("編輯技能", fontWeight = FontWeight.Black) },
+            text = {
+                Column {
+                    Text("點 × 移除,或在下方新增", color = InkGray500, fontSize = 13.sp)
+                    Spacer(Modifier.height(12.dp))
+                    androidx.compose.foundation.layout.FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        skillsHave.forEach { skill ->
+                            Row(
+                                modifier = Modifier.clip(CircleShape).background(BrandOrange.copy(alpha = 0.1f))
+                                    .padding(start = 12.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(skill, color = BrandDeepOrange, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                Spacer(Modifier.width(4.dp))
+                                Box(
+                                    modifier = Modifier.size(18.dp).clip(CircleShape).background(BrandOrange.copy(alpha = 0.2f))
+                                        .pressScale { skillsHave.remove(skill) },
+                                    contentAlignment = Alignment.Center,
+                                ) { Text("×", color = BrandDeepOrange, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(14.dp))
+                    OutlinedTextField(
+                        value = newSkill, onValueChange = { newSkill = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("新增一項技能") },
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true,
+                        trailingIcon = {
+                            if (newSkill.isNotBlank()) {
+                                Box(
+                                    modifier = Modifier.padding(end = 6.dp).clip(RoundedCornerShape(8.dp)).background(BrandOrange)
+                                        .pressScale {
+                                            if (newSkill.isNotBlank() && newSkill !in skillsHave) {
+                                                skillsHave.add(newSkill.trim()); newSkill = ""
+                                            }
+                                        }
+                                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                                ) { Text("加入", color = PaperWhite, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+                            }
+                        },
+                    )
+                }
+            },
+            confirmButton = {
+                Box(
+                    modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(BrandOrange)
+                        .pressScale { editingSkills = false }
+                        .padding(horizontal = 20.dp, vertical = 10.dp),
+                ) { Text("完成", color = PaperWhite, fontWeight = FontWeight.Bold) }
             },
         )
     }
