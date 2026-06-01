@@ -472,15 +472,34 @@ private fun JobApplicationsSection(navController: NavHostController) {
 
         Spacer(Modifier.height(12.dp))
 
-        MockData.jobApplications.forEachIndexed { idx, job ->
-            JobProgressCard(
-                job = job,
-                cardIndex = idx,
-                animDelayMs = idx * 80,
+        if (MockData.jobApplications.isEmpty()) {
+            // 空狀態:還沒投遞任何工作(資料層接上、列表為空時自動顯示)
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                navController.navigate(Routes.jobApplicationDetail(job.id))
+                Image(
+                    painter = painterResource(R.drawable.beaver_mailbox),
+                    contentDescription = null,
+                    modifier = Modifier.size(130.dp),
+                    contentScale = ContentScale.Fit,
+                )
+                Spacer(Modifier.height(8.dp))
+                Text("還沒有投遞紀錄", color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Spacer(Modifier.height(4.dp))
+                Text("從履歷選一份,投出第一份申請吧", color = InkGray500, fontSize = 12.sp)
             }
-            Spacer(Modifier.height(10.dp))
+        } else {
+            MockData.jobApplications.forEachIndexed { idx, job ->
+                JobProgressCard(
+                    job = job,
+                    cardIndex = idx,
+                    animDelayMs = idx * 80,
+                ) {
+                    navController.navigate(Routes.jobApplicationDetail(job.id))
+                }
+                Spacer(Modifier.height(10.dp))
+            }
         }
     }
 }

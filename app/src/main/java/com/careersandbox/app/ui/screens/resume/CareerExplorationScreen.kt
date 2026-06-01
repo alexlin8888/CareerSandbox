@@ -482,7 +482,9 @@ private fun EmptyRecState(hasExcluded: Boolean, onClearFilter: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Image(
-            painter = painterResource(R.drawable.beaver_empty),
+            painter = painterResource(
+                if (hasExcluded) R.drawable.beaver_empty else R.drawable.beaver_search
+            ),
             contentDescription = null,
             modifier = Modifier.size(120.dp),
             contentScale = ContentScale.Fit,
