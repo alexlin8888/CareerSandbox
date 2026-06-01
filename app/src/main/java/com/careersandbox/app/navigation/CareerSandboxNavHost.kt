@@ -94,7 +94,8 @@ fun CareerSandboxNavHost(
         composable(Routes.WORKPLACE_SANDBOX) { WorkplaceSandboxScreen() }
         composable(Routes.PROFILE) { ProfileScreen(navController) }
 
-        composable(Routes.EXPERIENCE_LIST) { ExperienceListScreen(navController) }        composable(Routes.EXPERIENCE_EDIT) { ExperienceEditScreen(navController) }
+        composable(Routes.EXPERIENCE_LIST) { ExperienceListScreen(navController) }
+        composable(Routes.EXPERIENCE_EDIT) { ExperienceEditScreen(navController) }
         composable(Routes.RESUME_EDITOR) { ResumeEditorScreen(navController) }
         composable(Routes.JD_CUSTOMIZE) { JdCustomizeScreen(navController) }
         composable(Routes.RESUME_PROFILE) { ResumeProfileScreen(navController) }
