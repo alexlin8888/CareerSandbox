@@ -100,7 +100,7 @@ fun ExperienceListScreen(navController: NavHostController) {
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxSize(),
                 ) {
-                    items(filtered) { e -> ExperienceCard(e) }
+                    items(filtered) { e -> ExperienceCard(e) { navController.navigate(Routes.EXPERIENCE_EDIT) } }
                     item { Spacer(Modifier.height(24.dp)) }
                 }
             }
@@ -110,8 +110,8 @@ fun ExperienceListScreen(navController: NavHostController) {
 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun ExperienceCard(e: Experience) {
-    WhiteCard {
+private fun ExperienceCard(e: Experience, onClick: () -> Unit = {}) {
+    WhiteCard(onClick = onClick) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 Modifier
