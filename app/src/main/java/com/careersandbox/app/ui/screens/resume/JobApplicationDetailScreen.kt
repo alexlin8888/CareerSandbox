@@ -10,7 +10,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import android.widget.Toast
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -244,12 +246,15 @@ private fun VersionsSection(
 
         Spacer(Modifier.height(20.dp))
 
+        val ctx = LocalContext.current
         job.versions.forEach { ver ->
             VersionCard(
                 version = ver,
                 onClick = { navController.navigate(Routes.RESUME_PROFILE) },
                 onExport = { navController.navigate(Routes.pdfExportDialog(ver.id)) },
-                onMarkSubmitted = { /* TODO */ },
+                onMarkSubmitted = {
+                    Toast.makeText(ctx, "已標記為投遞:版本 v${ver.versionNumber}", Toast.LENGTH_SHORT).show()
+                },
             )
             Spacer(Modifier.height(12.dp))
         }

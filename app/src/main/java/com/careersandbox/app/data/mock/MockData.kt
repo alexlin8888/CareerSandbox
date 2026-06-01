@@ -122,7 +122,7 @@ object MockData {
 
     val notifications = listOf(
         NotificationItem("n1", "履歷 AI 建議", "「電商實習」段落可以加上量化數字", "10 分鐘前", read = false),
-        NotificationItem("n2", "面試提醒", "你設定了下午 4 點要練習一場面試", "1 小時前", read = false),
+        NotificationItem("n2", "練習一場面試", "準備好了嗎?隨時來模擬一場面試", "1 小時前", read = false),
         NotificationItem("n3", "競賽截止提醒", "全國行銷大賽還剩 3 天報名", "今天早上", read = true),
     )
 

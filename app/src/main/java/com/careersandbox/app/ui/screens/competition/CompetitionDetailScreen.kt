@@ -10,7 +10,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import android.widget.Toast
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,6 +45,7 @@ fun CompetitionDetailScreen(navController: NavHostController, compId: String) {
     val teams = MockData.existingTeams
 
     // 加入隊伍狀態
+    val ctx = LocalContext.current
     var joinedTeamId by remember { mutableStateOf<String?>(null) }
     var invitedIds = remember { mutableStateListOf<String>() }
 
@@ -169,20 +172,34 @@ fun CompetitionDetailScreen(navController: NavHostController, compId: String) {
                 }
                 Spacer(Modifier.height(28.dp))
 
-                // === 底部主 CTA:建立隊伍 ===
+                // === 底部主 CTA:建立隊伍(有確認回饋)===
+                var teamCreated by remember { mutableStateOf(false) }
                 Box(
                     modifier = Modifier.fillMaxWidth().height(56.dp).clip(RoundedCornerShape(16.dp))
-                        .background(InkBlack)
+                        .background(if (teamCreated) AccentGreen else InkBlack)
                         .pressScale {
-                            if (invitedIds.isEmpty()) invitedIds.add(MockData.recommendedTeammates.first().id)
+                            teamCreated = true
+                            val n = invitedIds.size
+                            Toast.makeText(
+                                ctx,
+                                if (n > 0) "隊伍已建立,已邀請 $n 位夥伴" else "隊伍已建立,快去邀請夥伴",
+                                Toast.LENGTH_SHORT,
+                            ).show()
                         },
                     contentAlignment = Alignment.Center,
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.Groups, contentDescription = null, tint = PaperWhite, modifier = Modifier.size(20.dp))
+                        Icon(
+                            if (teamCreated) Icons.Outlined.Check else Icons.Outlined.Groups,
+                            contentDescription = null, tint = PaperWhite, modifier = Modifier.size(20.dp),
+                        )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            if (invitedIds.isEmpty()) "建立我的隊伍" else "建立隊伍(已邀 ${invitedIds.size} 人)",
+                            when {
+                                teamCreated -> "隊伍已建立"
+                                invitedIds.isEmpty() -> "建立我的隊伍"
+                                else -> "建立隊伍(已邀 ${invitedIds.size} 人)"
+                            },
                             color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 16.sp,
                         )
                     }

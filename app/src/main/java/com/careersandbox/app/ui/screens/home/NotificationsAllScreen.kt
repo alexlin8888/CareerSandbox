@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -19,8 +20,10 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.data.model.NotificationItem
+import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.SectionDivider
 import com.careersandbox.app.ui.components.StaggeredAppear
+import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -101,12 +104,19 @@ fun NotificationsAllScreen(navController: NavHostController) {
                     letterSpacing = 2.sp)
                 Spacer(Modifier.height(12.dp))
             }
-            // 重複列表展示
-            val notiList = MockData.notifications + MockData.notifications
+            // 通知列表(依類型可點)
+            val notiList = MockData.notifications
             itemsIndexed(notiList) { index, n ->
                 StaggeredAppear(delayMillis = 80 + index * 50, durationMillis = 280) {
                     Column {
-                        NotificationRowFull(n)
+                        NotificationRowFull(n, onClick = {
+                            when (n.id) {
+                                "n1" -> navController.navigate(Routes.RESUME_HUB)
+                                "n2" -> navController.navigate(Routes.INTERVIEW_HUB)
+                                "n3" -> navController.navigate(Routes.COMPETITION_LIST)
+                                else -> {}
+                            }
+                        })
                         SectionDivider(modifier = Modifier.padding(vertical = 10.dp))
                     }
                 }
@@ -117,14 +127,14 @@ fun NotificationsAllScreen(navController: NavHostController) {
 }
 
 @Composable
-private fun NotificationRowFull(n: NotificationItem) {
+private fun NotificationRowFull(n: NotificationItem, onClick: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth().pressScale(onClick = onClick).padding(vertical = 4.dp),
         verticalAlignment = Alignment.Top,
     ) {
         Box(
             Modifier.size(8.dp).clip(CircleShape)
-                .background(BrandOrange)
+                .background(if (n.read) InkGray300 else BrandOrange)
                 .padding(top = 8.dp)
         )
         Spacer(Modifier.width(12.dp))
@@ -140,8 +150,13 @@ private fun NotificationRowFull(n: NotificationItem) {
                 lineHeight = 18.sp)
         }
         Spacer(Modifier.width(8.dp))
-        Text(n.time,
-            color = InkGray400,
-            style = MaterialTheme.typography.labelSmall)
+        Column(horizontalAlignment = Alignment.End) {
+            Text(n.time,
+                color = InkGray400,
+                style = MaterialTheme.typography.labelSmall)
+            Spacer(Modifier.height(4.dp))
+            Icon(Icons.Outlined.ChevronRight, contentDescription = null,
+                tint = InkGray300, modifier = Modifier.size(16.dp))
+        }
     }
 }
