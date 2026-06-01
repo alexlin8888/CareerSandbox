@@ -64,6 +64,26 @@ fun HomeHubScreen(navController: NavHostController) {
             Spacer(Modifier.height(28.dp))
             CompetitionSection(navController)
             Spacer(Modifier.height(32.dp))
+
+            // 頁尾品牌大使(招手)
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.beaver_wave),
+                    contentDescription = null,
+                    modifier = Modifier.size(120.dp),
+                    contentScale = ContentScale.Fit,
+                )
+                Text(
+                    "今天也一起加油!",
+                    color = InkGray500,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            Spacer(Modifier.height(16.dp))
         }
     }
 }
@@ -86,17 +106,6 @@ private fun HeroSection(navController: NavHostController) {
         // 2. 線稿裝飾(只在 hero 區內)
         ScatteredDecorations(
             modifier = Modifier.fillMaxSize().alpha(0.6f)
-        )
-
-        // 2.5 品牌大使河狸(右下角招手)
-        Image(
-            painter = painterResource(R.drawable.beaver_wave),
-            contentDescription = null,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 8.dp)
-                .size(132.dp),
-            contentScale = ContentScale.Fit,
         )
 
         // 3. 文字內容(避開右下插畫位置)

@@ -5,6 +5,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -22,11 +23,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.careersandbox.app.R
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.StickyNote
 import com.careersandbox.app.ui.components.pressScale
@@ -384,6 +388,25 @@ private fun ResultPhase(onBack: () -> Unit, onExport: () -> Unit, contentPadding
             .padding(horizontal = 24.dp),
     ) {
         Spacer(Modifier.height(8.dp))
+
+        // 完成慶祝(品牌大使)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("客製化完成", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 22.sp)
+                Spacer(Modifier.height(4.dp))
+                Text("已根據 JD 調整好這份履歷", color = InkGray500, fontSize = 13.sp)
+            }
+            Image(
+                painter = painterResource(R.drawable.beaver_celebrate),
+                contentDescription = null,
+                modifier = Modifier.size(88.dp),
+                contentScale = ContentScale.Fit,
+            )
+        }
+        Spacer(Modifier.height(16.dp))
 
         // 適配度大卡
         MatchScoreCard(score = 82)
