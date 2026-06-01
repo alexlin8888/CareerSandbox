@@ -22,6 +22,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -771,12 +773,15 @@ private fun LearningStepCard(step: LearningStep) {
         StepTier.Tertiary -> InkGray500
         else -> BrandDeepOrange
     }
+    val ctxStep = LocalContext.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(PaperWhite.copy(alpha = 0.6f))
-            .pressScale {}
+            .pressScale {
+                Toast.makeText(ctxStep, "「${step.title}」課程詳情開發中", Toast.LENGTH_SHORT).show()
+            }
             .padding(horizontal = 12.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

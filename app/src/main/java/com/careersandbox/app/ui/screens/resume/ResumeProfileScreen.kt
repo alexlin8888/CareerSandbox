@@ -3,6 +3,7 @@ package com.careersandbox.app.ui.screens.resume
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -50,8 +51,15 @@ fun ResumeProfileScreen(navController: NavHostController) {
                     }
                 },
                 actions = {
-                    IconButton(onClick = {}) {
-                        Icon(Icons.Outlined.Share, contentDescription = null, tint = InkBlack)
+                    val ctx = LocalContext.current
+                    IconButton(onClick = {
+                        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(android.content.Intent.EXTRA_TEXT, "這是我用 CareerSandbox 製作的履歷")
+                        }
+                        ctx.startActivity(android.content.Intent.createChooser(intent, "分享履歷"))
+                    }) {
+                        Icon(Icons.Outlined.Share, contentDescription = "分享", tint = InkBlack)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = PaperWhite),

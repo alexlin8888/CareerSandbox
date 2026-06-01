@@ -11,6 +11,8 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -134,6 +136,7 @@ private fun ContentEditTab() {
 
 @Composable
 private fun EditField(label: String, value: String, onChange: (String) -> Unit, multiline: Boolean = false) {
+    val ctxEdit = LocalContext.current
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(label, style = MaterialTheme.typography.titleSmall,
@@ -142,7 +145,9 @@ private fun EditField(label: String, value: String, onChange: (String) -> Unit, 
                 modifier = Modifier
                     .clip(RoundedCornerShape(50))
                     .background(BrandPeach)
-                    .pressScale {}
+                    .pressScale {
+                        Toast.makeText(ctxEdit, "AI 優化建議生成中", Toast.LENGTH_SHORT).show()
+                    }
                     .padding(horizontal = 10.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {

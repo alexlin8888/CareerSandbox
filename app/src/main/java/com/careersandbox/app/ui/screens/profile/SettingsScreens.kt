@@ -20,6 +20,8 @@ import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -102,13 +104,16 @@ fun SettingsProfileScreen(navController: NavHostController) {
                 }
             }
             Spacer(Modifier.height(8.dp))
+            val ctxAvatar = LocalContext.current
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text(
                     text = "更換大頭照",
                     color = BrandOrange,
                     fontWeight = FontWeight.SemiBold,
                     style = MaterialTheme.typography.labelLarge,
-                    modifier = Modifier.pressScale {},
+                    modifier = Modifier.pressScale {
+                        Toast.makeText(ctxAvatar, "相片上傳功能開發中", Toast.LENGTH_SHORT).show()
+                    },
                 )
             }
 
@@ -300,11 +305,14 @@ private fun ChipDisplaySection(label: String, items: List<String>, accent: Color
                 }
             }
             // 加 + 按鈕
+            val ctxAdd = LocalContext.current
             Box(
                 modifier = Modifier
                     .clip(CircleShape)
                     .background(InkGray100)
-                    .pressScale {}
+                    .pressScale {
+                        Toast.makeText(ctxAdd, "新增功能開發中", Toast.LENGTH_SHORT).show()
+                    }
                     .padding(horizontal = 14.dp, vertical = 6.dp),
             ) {
                 Text(

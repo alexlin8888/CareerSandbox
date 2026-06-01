@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -312,13 +313,21 @@ private fun DonePhase(onClose: () -> Unit, contentPadding: PaddingValues) {
         Spacer(Modifier.height(40.dp))
 
         Column(modifier = Modifier.fillMaxWidth()) {
+            val ctx = LocalContext.current
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
                     .clip(RoundedCornerShape(16.dp))
                     .background(InkBlack)
-                    .pressScale {},
+                    .pressScale {
+                        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(android.content.Intent.EXTRA_SUBJECT, "我的履歷 - CareerSandbox")
+                            putExtra(android.content.Intent.EXTRA_TEXT, "這是我用 CareerSandbox 製作的履歷")
+                        }
+                        ctx.startActivity(android.content.Intent.createChooser(intent, "分享履歷"))
+                    },
                 contentAlignment = Alignment.Center,
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
