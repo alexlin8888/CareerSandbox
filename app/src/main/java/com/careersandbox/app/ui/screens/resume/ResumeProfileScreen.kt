@@ -42,6 +42,9 @@ import com.careersandbox.app.ui.theme.*
 fun ResumeProfileScreen(navController: NavHostController) {
     val user = MockData.currentUser
     val ctxScreen = LocalContext.current
+    // 「關於我」可編輯(local state,套用後即時顯示)
+    var bioText by remember { mutableStateOf(user.bio) }
+    var editingBio by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = PaperWhite,
@@ -210,11 +213,9 @@ fun ResumeProfileScreen(navController: NavHostController) {
             // === 關於我 ===
             StaggeredAppear(delayMillis = 220) {
                 Column {
-                    SectionLabel("關於我", onEdit = {
-                        Toast.makeText(ctxScreen, "編輯關於我:功能開發中", Toast.LENGTH_SHORT).show()
-                    })
+                    SectionLabel("關於我", onEdit = { editingBio = true })
                     Text(
-                        user.bio,
+                        bioText,
                         color = InkBlack,
                         style = MaterialTheme.typography.bodyLarge,
                         lineHeight = 28.sp,
@@ -345,6 +346,36 @@ fun ResumeProfileScreen(navController: NavHostController) {
 
             Spacer(Modifier.height(40.dp))
         }
+    }
+
+    // 「關於我」編輯對話框(真的能改,local state)
+    if (editingBio) {
+        var draft by remember { mutableStateOf(bioText) }
+        AlertDialog(
+            onDismissRequest = { editingBio = false },
+            title = { Text("編輯關於我", fontWeight = FontWeight.Black) },
+            text = {
+                Column {
+                    Text("寫一段自我介紹,會顯示在履歷最前面", color = InkGray500, fontSize = 13.sp)
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = draft, onValueChange = { draft = it },
+                        modifier = Modifier.fillMaxWidth(), minLines = 4,
+                        shape = RoundedCornerShape(12.dp),
+                    )
+                }
+            },
+            confirmButton = {
+                Box(
+                    modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(BrandOrange)
+                        .pressScale { bioText = draft; editingBio = false }
+                        .padding(horizontal = 20.dp, vertical = 10.dp),
+                ) { Text("儲存", color = PaperWhite, fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                Text("取消", color = InkGray500, modifier = Modifier.pressScale { editingBio = false }.padding(12.dp))
+            },
+        )
     }
 }
 

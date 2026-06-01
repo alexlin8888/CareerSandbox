@@ -136,7 +136,7 @@ private fun ContentEditTab() {
 
 @Composable
 private fun EditField(label: String, value: String, onChange: (String) -> Unit, multiline: Boolean = false) {
-    val ctxEdit = LocalContext.current
+    var showAiDialog by remember { mutableStateOf(false) }
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(label, style = MaterialTheme.typography.titleSmall,
@@ -145,9 +145,7 @@ private fun EditField(label: String, value: String, onChange: (String) -> Unit, 
                 modifier = Modifier
                     .clip(RoundedCornerShape(50))
                     .background(BrandPeach)
-                    .pressScale {
-                        Toast.makeText(ctxEdit, "AI 優化建議生成中", Toast.LENGTH_SHORT).show()
-                    }
+                    .pressScale { showAiDialog = true }
                     .padding(horizontal = 10.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -169,6 +167,46 @@ private fun EditField(label: String, value: String, onChange: (String) -> Unit, 
                 focusedContainerColor = MaterialTheme.colorScheme.surface,
                 unfocusedContainerColor = MaterialTheme.colorScheme.surface,
             )
+        )
+    }
+
+    // AI 優化建議弹窗(mock — 展示用,套用會改寫欄位)
+    if (showAiDialog) {
+        val suggestions = remember(value) {
+            listOf(
+                "用動詞開頭,強調你的具體行動(例:「主導」「優化」「建立」)",
+                "加入可量化的成果數字(例:提升 30%、服務 200+ 人)",
+                "把「負責 XX」改成「透過 XX 達成 YY」,凸顯影響力",
+            )
+        }
+        AlertDialog(
+            onDismissRequest = { showAiDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = BrandDeepOrange, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("AI 優化建議", fontWeight = FontWeight.Black)
+                }
+            },
+            text = {
+                Column {
+                    Text("針對「$label」,AI 給你這些建議:", color = InkGray500, fontSize = 13.sp)
+                    Spacer(Modifier.height(12.dp))
+                    suggestions.forEachIndexed { i, s ->
+                        Row(modifier = Modifier.padding(vertical = 6.dp)) {
+                            Text("${i + 1}.", color = BrandDeepOrange, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Spacer(Modifier.width(8.dp))
+                            Text(s, color = InkBlack, fontSize = 13.sp, lineHeight = 19.sp)
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text("※ 示範建議,實際 AI 改寫需接後端", color = InkGray400, fontSize = 11.sp)
+                }
+            },
+            confirmButton = {
+                Text("我知道了", color = BrandDeepOrange, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.pressScale { showAiDialog = false }.padding(12.dp))
+            },
         )
     }
 }
