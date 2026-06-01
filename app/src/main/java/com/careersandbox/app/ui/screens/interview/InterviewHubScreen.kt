@@ -76,8 +76,8 @@ private fun HeroSection() {
             contentDescription = null,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 12.dp, bottom = 4.dp)
-                .size(96.dp),
+                .padding(end = 10.dp, bottom = 4.dp)
+                .size(118.dp),
             contentScale = ContentScale.Fit,
         )
         Column(

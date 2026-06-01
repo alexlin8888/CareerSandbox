@@ -402,7 +402,7 @@ private fun ResultPhase(onBack: () -> Unit, onExport: () -> Unit, contentPadding
             Image(
                 painter = painterResource(R.drawable.beaver_celebrate),
                 contentDescription = null,
-                modifier = Modifier.size(88.dp),
+                modifier = Modifier.size(120.dp),
                 contentScale = ContentScale.Fit,
             )
         }
@@ -449,12 +449,14 @@ private fun ResultPhase(onBack: () -> Unit, onExport: () -> Unit, contentPadding
             )
         }
         if (dimmedItems.isNotEmpty()) {
-            Box(modifier = Modifier.fillMaxWidth()) {
+            Box(modifier = Modifier.fillMaxWidth().padding(end = 64.dp)) {
                 SectionTitle("已弱化 ${dimmedItems.size} 段", "移除無關經歷,讓 recruiter 30 秒抓到重點")
+            }
+            Box(modifier = Modifier.fillMaxWidth()) {
                 StickyNote(
                     text = "想留就拉回",
                     rotation = 4f,
-                    modifier = Modifier.align(Alignment.TopEnd).offset(y = (-6).dp),
+                    modifier = Modifier.align(Alignment.TopEnd).offset(y = (-44).dp),
                 )
             }
             Spacer(Modifier.height(4.dp))

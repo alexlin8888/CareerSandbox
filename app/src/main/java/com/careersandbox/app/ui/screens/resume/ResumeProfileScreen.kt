@@ -4,6 +4,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -39,6 +40,7 @@ import com.careersandbox.app.ui.theme.*
 @Composable
 fun ResumeProfileScreen(navController: NavHostController) {
     val user = MockData.currentUser
+    val ctxScreen = LocalContext.current
 
     Scaffold(
         containerColor = PaperWhite,
@@ -207,7 +209,9 @@ fun ResumeProfileScreen(navController: NavHostController) {
             // === 關於我 ===
             StaggeredAppear(delayMillis = 220) {
                 Column {
-                    SectionLabel("關於我")
+                    SectionLabel("關於我", onEdit = {
+                        Toast.makeText(ctxScreen, "編輯關於我:功能開發中", Toast.LENGTH_SHORT).show()
+                    })
                     Text(
                         user.bio,
                         color = InkBlack,
@@ -219,7 +223,7 @@ fun ResumeProfileScreen(navController: NavHostController) {
 
             // === 經歷 ===
             StaggeredAppear(delayMillis = 320) {
-                Column { SectionLabel("經歷") }
+                Column { SectionLabel("經歷", onEdit = { navController.navigate(Routes.EXPERIENCE_LIST) }) }
             }
             user.activities.forEach { act ->
                 Column(modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
@@ -252,7 +256,7 @@ fun ResumeProfileScreen(navController: NavHostController) {
             }
 
             // === 技能 ===
-            SectionLabel("技能")
+            SectionLabel("技能", onEdit = { Toast.makeText(ctxScreen, "編輯技能:功能開發中", Toast.LENGTH_SHORT).show() })
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(6.dp).clip(CircleShape).background(BrandOrange))
                 Spacer(Modifier.width(8.dp))
@@ -312,7 +316,7 @@ fun ResumeProfileScreen(navController: NavHostController) {
             }
 
             // === 語言 ===
-            SectionLabel("語言")
+            SectionLabel("語言", onEdit = { Toast.makeText(ctxScreen, "編輯語言:功能開發中", Toast.LENGTH_SHORT).show() })
             user.languages.forEach { lang ->
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
@@ -333,7 +337,7 @@ fun ResumeProfileScreen(navController: NavHostController) {
             }
 
             // === 連結 ===
-            SectionLabel("連結")
+            SectionLabel("連結", onEdit = { Toast.makeText(ctxScreen, "編輯連結:功能開發中", Toast.LENGTH_SHORT).show() })
             if (user.linkedin.isNotEmpty()) LinkRow("LinkedIn", user.linkedin)
             if (user.github.isNotEmpty()) LinkRow("GitHub", user.github)
             if (user.portfolio.isNotEmpty()) LinkRow("作品集", user.portfolio)
@@ -344,13 +348,30 @@ fun ResumeProfileScreen(navController: NavHostController) {
 }
 
 @Composable
-private fun SectionLabel(text: String) {
+private fun SectionLabel(text: String, onEdit: (() -> Unit)? = null) {
     Spacer(Modifier.height(36.dp))
-    Text(text,
-        color = InkGray500,
-        style = MaterialTheme.typography.labelMedium,
-        fontWeight = FontWeight.Black,
-        letterSpacing = 3.sp)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(text,
+            color = InkGray500,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Black,
+            letterSpacing = 3.sp)
+        if (onEdit != null) {
+            Row(
+                modifier = Modifier.clip(RoundedCornerShape(50)).pressScale(onClick = onEdit)
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Outlined.Edit, contentDescription = "編輯", tint = BrandDeepOrange, modifier = Modifier.size(13.dp))
+                Spacer(Modifier.width(3.dp))
+                Text("編輯", color = BrandDeepOrange, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+            }
+        }
+    }
     Spacer(Modifier.height(12.dp))
 }
 

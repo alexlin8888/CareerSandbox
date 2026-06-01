@@ -381,7 +381,7 @@ private fun BentoMaster(onClick: () -> Unit) {
                 fontSize = 24.sp,
                 lineHeight = 28.sp)
             Spacer(Modifier.height(4.dp))
-            Text("你的 ${MockData.masterResume.totalExperiences} 段經歷組成了這份完整履歷",
+            Text("你的基本資料、經歷、技能,組成這份完整履歷",
                 color = PaperWhite.copy(alpha = 0.9f),
                 fontSize = 12.sp,
                 lineHeight = 16.sp)
