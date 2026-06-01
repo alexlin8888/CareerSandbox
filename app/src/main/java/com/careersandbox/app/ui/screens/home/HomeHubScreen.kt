@@ -297,7 +297,9 @@ private fun QuickActionsBorderless(navController: NavHostController) {
         BorderlessIconAction("寫履歷", Icons.Outlined.Description, GlowPurple) {
             navController.navigate(Routes.RESUME_EDITOR)
         }
-        BorderlessIconAction("找競賽", Icons.Outlined.EmojiEvents, AccentGreen) {}
+        BorderlessIconAction("找競賽", Icons.Outlined.EmojiEvents, AccentGreen) {
+            navController.navigate(Routes.COMPETITION_LIST)
+        }
     }
 }
 

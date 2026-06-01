@@ -48,6 +48,11 @@ fun CompetitionDetailScreen(navController: NavHostController, compId: String) {
     val ctx = LocalContext.current
     var joinedTeamId by remember { mutableStateOf<String?>(null) }
     var invitedIds = remember { mutableStateListOf<String>() }
+    var appliedTeamIds = remember { mutableStateListOf<String>() }
+    // 邀請對話框:存當前要邀請的隊友(null = 不顯示)
+    var inviteTarget by remember { mutableStateOf<TeamMate?>(null) }
+    // 申請對話框:存當前要申請的隊伍
+    var applyTarget by remember { mutableStateOf<CompetitionTeam?>(null) }
 
     Box(modifier = Modifier.fillMaxSize().background(PaperWarm)) {
         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
@@ -130,7 +135,7 @@ fun CompetitionDetailScreen(navController: NavHostController, compId: String) {
                                     tm = tm,
                                     invited = tm.id in invitedIds,
                                     onInvite = {
-                                        if (tm.id in invitedIds) invitedIds.remove(tm.id) else invitedIds.add(tm.id)
+                                        if (tm.id in invitedIds) invitedIds.remove(tm.id) else inviteTarget = tm
                                     },
                                 )
                                 StickyNote(
@@ -146,7 +151,7 @@ fun CompetitionDetailScreen(navController: NavHostController, compId: String) {
                                 tm = tm,
                                 invited = tm.id in invitedIds,
                                 onInvite = {
-                                    if (tm.id in invitedIds) invitedIds.remove(tm.id) else invitedIds.add(tm.id)
+                                    if (tm.id in invitedIds) invitedIds.remove(tm.id) else inviteTarget = tm
                                 },
                             )
                         }
@@ -163,9 +168,9 @@ fun CompetitionDetailScreen(navController: NavHostController, compId: String) {
                     teams.forEach { team ->
                         TeamCard(
                             team = team,
-                            joined = joinedTeamId == team.id,
+                            joined = team.id in appliedTeamIds,
                             onToggle = {
-                                joinedTeamId = if (joinedTeamId == team.id) null else team.id
+                                if (team.id in appliedTeamIds) appliedTeamIds.remove(team.id) else applyTarget = team
                             },
                         )
                     }
@@ -257,6 +262,76 @@ fun CompetitionDetailScreen(navController: NavHostController, compId: String) {
                     }
                 }
             }
+        }
+
+        // === 邀請隊友對話框 ===
+        inviteTarget?.let { target ->
+            var msg by remember(target.id) { mutableStateOf("嗨 ${target.name},看到你的背景跟我們競賽很搭,想邀你一起組隊!") }
+            AlertDialog(
+                onDismissRequest = { inviteTarget = null },
+                title = { Text("邀請 ${target.name}", fontWeight = FontWeight.Black) },
+                text = {
+                    Column {
+                        Text("送出一段邀請訊息給對方", color = InkGray500, fontSize = 13.sp)
+                        Spacer(Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = msg, onValueChange = { msg = it },
+                            modifier = Modifier.fillMaxWidth(), minLines = 3,
+                            shape = RoundedCornerShape(12.dp),
+                        )
+                    }
+                },
+                confirmButton = {
+                    Box(
+                        modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(BrandOrange)
+                            .pressScale {
+                                invitedIds.add(target.id)
+                                MockData.addNotification("邀請已送出", "已邀請 ${target.name} 加入隊伍,等待對方回覆")
+                                Toast.makeText(ctx, "已送出邀請給 ${target.name}", Toast.LENGTH_SHORT).show()
+                                inviteTarget = null
+                            }
+                            .padding(horizontal = 20.dp, vertical = 10.dp),
+                    ) { Text("送出邀請", color = PaperWhite, fontWeight = FontWeight.Bold) }
+                },
+                dismissButton = {
+                    Text("取消", color = InkGray500, modifier = Modifier.pressScale { inviteTarget = null }.padding(12.dp))
+                },
+            )
+        }
+
+        // === 申請加入隊伍對話框 ===
+        applyTarget?.let { target ->
+            var msg by remember(target.id) { mutableStateOf("你好,我想加入「${target.name}」,我的背景應該能補上你們需要的部分!") }
+            AlertDialog(
+                onDismissRequest = { applyTarget = null },
+                title = { Text("申請加入 ${target.name}", fontWeight = FontWeight.Black) },
+                text = {
+                    Column {
+                        Text("隊長 ${target.leaderName} 會收到你的申請", color = InkGray500, fontSize = 13.sp)
+                        Spacer(Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = msg, onValueChange = { msg = it },
+                            modifier = Modifier.fillMaxWidth(), minLines = 3,
+                            shape = RoundedCornerShape(12.dp),
+                        )
+                    }
+                },
+                confirmButton = {
+                    Box(
+                        modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(BrandOrange)
+                            .pressScale {
+                                appliedTeamIds.add(target.id)
+                                MockData.addNotification("申請已送出", "已申請加入「${target.name}」,等待隊長 ${target.leaderName} 回覆")
+                                Toast.makeText(ctx, "已送出申請", Toast.LENGTH_SHORT).show()
+                                applyTarget = null
+                            }
+                            .padding(horizontal = 20.dp, vertical = 10.dp),
+                    ) { Text("送出申請", color = PaperWhite, fontWeight = FontWeight.Bold) }
+                },
+                dismissButton = {
+                    Text("取消", color = InkGray500, modifier = Modifier.pressScale { applyTarget = null }.padding(12.dp))
+                },
+            )
         }
     }
 }

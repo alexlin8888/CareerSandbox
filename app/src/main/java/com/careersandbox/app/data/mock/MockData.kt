@@ -120,11 +120,16 @@ object MockData {
         InterviewRecord("i4", InterviewType.GROUP, "行銷企劃", 70, "上週"),
     )
 
-    val notifications = listOf(
+    val notifications = androidx.compose.runtime.mutableStateListOf(
         NotificationItem("n1", "履歷 AI 建議", "「電商實習」段落可以加上量化數字", "10 分鐘前", read = false),
         NotificationItem("n2", "練習一場面試", "準備好了嗎?隨時來模擬一場面試", "1 小時前", read = false),
         NotificationItem("n3", "競賽截止提醒", "全國行銷大賽還剩 3 天報名", "今天早上", read = true),
     )
+
+    /** 動態新增通知(競賽邀請/申請送出時呼叫)*/
+    fun addNotification(title: String, body: String) {
+        notifications.add(0, NotificationItem("n${System.currentTimeMillis()}", title, body, "剛剛", read = false))
+    }
 
     val individualInterviewScript = listOf(
         ChatMessage("m1", "面試官", "先請你做一個簡短的自我介紹,大約一分鐘。", isInterviewer = true),
