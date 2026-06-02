@@ -9,9 +9,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
@@ -30,6 +31,14 @@ import com.careersandbox.app.ui.theme.*
 
 @Composable
 fun InterviewReportScreen(navController: NavHostController) {
+    val ctx = LocalContext.current
+    val onShare: () -> Unit = {
+        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(android.content.Intent.EXTRA_TEXT, "我在 CareerSandbox 完成了一場模擬面試,整體 74 分,還在持續練習中。")
+        }
+        ctx.startActivity(android.content.Intent.createChooser(intent, "分享面試報告"))
+    }
     Box(modifier = Modifier.fillMaxSize().background(InkCharcoal)) {
         // 光暈
         Box(
@@ -89,10 +98,10 @@ fun InterviewReportScreen(navController: NavHostController) {
                 Box(
                     Modifier.size(40.dp).clip(CircleShape)
                         .background(Color(0x1AFFFFFF))
-                        .pressScale {},
+                        .pressScale(onClick = onShare),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.Outlined.Share, contentDescription = null,
+                    Icon(Icons.Outlined.Share, contentDescription = "分享報告",
                         tint = PaperWhite, modifier = Modifier.size(18.dp))
                 }
             }
@@ -165,8 +174,46 @@ fun InterviewReportScreen(navController: NavHostController) {
 
                 Spacer(Modifier.height(32.dp))
 
-                // 六項能力
-                SectionTitleDark("六項能力")
+                // === #3 三大面向 dashboard(內容 / 結構 / 表達)===
+                SectionTitleDark("三大面向")
+                Spacer(Modifier.height(12.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    FaceCard(
+                        letter = "內", name = "內容", score = 71,
+                        verdict = "有講到重點,但缺乏具體數字與亮點。",
+                        points = listOf(
+                            "自我介紹加 1-2 個量化成就(追蹤數、效率提升倍數)",
+                            "回答時多舉一個具體例子,少用空泛形容詞",
+                        ),
+                    )
+                    FaceCard(
+                        letter = "構", name = "結構", score = 82,
+                        verdict = "邏輯清楚,但講失敗經歷時 STAR 的 Result 段常缺。",
+                        points = listOf(
+                            "講經歷一律用 STAR:情境 → 任務 → 行動 → 結果",
+                            "結尾補一句「我從中學到什麼」",
+                        ),
+                    )
+                    FaceCard(
+                        letter = "達", name = "表達", score = 70,
+                        verdict = "整體流暢,但語速偏快、語調起伏不足。",
+                        points = listOf(
+                            "放慢語速,重點句講完停半秒",
+                            "用語調強調關鍵字,不要從頭平到尾",
+                        ),
+                        prosody = listOf(
+                            "語速" to "220 字/分 · 偏快",
+                            "停頓" to "偏少 · 句子間幾乎不停",
+                            "語調" to "起伏不足 · 偏平",
+                            "填充詞" to "「嗯 / 那個」8 次",
+                        ),
+                    )
+                }
+
+                Spacer(Modifier.height(32.dp))
+
+                // 細項分數
+                SectionTitleDark("細項分數")
                 Spacer(Modifier.height(12.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     DimensionRow("內容深度", 78)
@@ -199,6 +246,13 @@ fun InterviewReportScreen(navController: NavHostController) {
 
                 Spacer(Modifier.height(32.dp))
 
+                // === #5 該提、但沒提到 ===
+                SectionTitleDark("該提、但你沒提到")
+                Spacer(Modifier.height(12.dp))
+                OmissionSection()
+
+                Spacer(Modifier.height(32.dp))
+
                 // 下次可以試試
                 SectionTitleDark("下次可以試試")
                 Spacer(Modifier.height(12.dp))
@@ -221,7 +275,11 @@ fun InterviewReportScreen(navController: NavHostController) {
                         .weight(1f).height(56.dp)
                         .clip(RoundedCornerShape(16.dp))
                         .background(Color(0x1AFFFFFF))
-                        .pressScale {},
+                        .pressScale {
+                            android.widget.Toast.makeText(
+                                ctx, "報告已儲存到「面試紀錄」(示範)", android.widget.Toast.LENGTH_SHORT,
+                            ).show()
+                        },
                     contentAlignment = Alignment.Center,
                 ) {
                     Text("儲存報告",
@@ -415,5 +473,169 @@ private fun ImprovementCard(text: String) {
         Text(text,
             color = PaperWhite,
             style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+/* ===================== #3 / #4 三大面向(含語音語調)===================== */
+
+@Composable
+private fun FaceCard(
+    letter: String,
+    name: String,
+    score: Int,
+    verdict: String,
+    points: List<String>,
+    prosody: List<Pair<String, String>>? = null,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val scoreColor = when {
+        score >= 80 -> AccentGreen
+        score >= 65 -> BrandOrange
+        else -> AccentRed
+    }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(Color(0x14FFFFFF))
+            .pressScale { expanded = !expanded }
+            .padding(16.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(BrandYellow),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(letter, color = InkCharcoal, fontWeight = FontWeight.Black, fontSize = 16.sp)
+            }
+            Spacer(Modifier.width(12.dp))
+            Text(name, color = PaperWhite, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.weight(1f))
+            Text("$score", color = scoreColor, fontWeight = FontWeight.Black, fontSize = 24.sp, letterSpacing = (-0.5).sp)
+            Spacer(Modifier.width(6.dp))
+            Icon(
+                if (expanded) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
+                contentDescription = null, tint = InkGray400, modifier = Modifier.size(18.dp),
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+        Box(
+            Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(50)).background(Color(0x22FFFFFF)),
+        ) {
+            Box(
+                Modifier.fillMaxHeight().fillMaxWidth(score / 100f).clip(RoundedCornerShape(50)).background(SolidColor(scoreColor)),
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+        Text(verdict, color = PaperWhite.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall, lineHeight = 18.sp)
+
+        if (expanded) {
+            Spacer(Modifier.height(12.dp))
+            Text("可以怎麼做", color = BrandYellow, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(6.dp))
+            points.forEach { p ->
+                Row(modifier = Modifier.padding(vertical = 3.dp)) {
+                    Text("·", color = BrandYellow, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                    Spacer(Modifier.width(8.dp))
+                    Text(p, color = PaperWhite.copy(alpha = 0.9f), fontSize = 12.sp, lineHeight = 18.sp)
+                }
+            }
+            if (prosody != null) {
+                Spacer(Modifier.height(12.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0x1AFFFFFF))
+                        .padding(12.dp),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.Mic, contentDescription = null, tint = BrandYellow, modifier = Modifier.size(13.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("語音語調分析", color = BrandYellow, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.width(6.dp))
+                        Box(
+                            Modifier.clip(RoundedCornerShape(50)).background(Color(0x33FFFFFF)).padding(horizontal = 6.dp, vertical = 1.dp),
+                        ) {
+                            Text("beta", color = InkGray400, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    prosody.forEach { (k, v) ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Text(k, color = InkGray400, fontSize = 12.sp)
+                            Text(v, color = PaperWhite, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "語音分析需開啟錄音,接上後會用你的實際音檔分析。",
+                        color = InkGray400, fontSize = 10.sp, lineHeight = 14.sp,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun OmissionSection() {
+    data class Miss(val point: String, val why: String)
+    val misses = listOf(
+        Miss("SQL 把週報效率提升 4 倍", "這份 JD 很重視數據能力,但你整場沒提到這段量化成果。"),
+        Miss("社團 IG 從 0 經營到 1200 追蹤", "能證明你的成長行銷實作,面試官通常很買單。"),
+        Miss("帶 5 人團隊完成聯名專案", "JD 要求協作與領導,這段沒帶到很可惜。"),
+    )
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color(0x14FFFFFF))
+            .padding(18.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "根據這份 JD 和你的履歷,這些是你有、卻整場沒講到的加分點。",
+                color = PaperWhite.copy(alpha = 0.85f),
+                style = MaterialTheme.typography.bodySmall,
+                lineHeight = 18.sp,
+                modifier = Modifier.weight(1f),
+            )
+            Spacer(Modifier.width(8.dp))
+            Box(
+                Modifier.clip(RoundedCornerShape(50)).background(Color(0x33FFFFFF)).padding(horizontal = 7.dp, vertical = 2.dp),
+            ) {
+                Text("依 JD×履歷", color = InkGray400, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+        Spacer(Modifier.height(14.dp))
+        misses.forEachIndexed { idx, m ->
+            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+                Box(
+                    Modifier.size(22.dp).clip(CircleShape).background(BrandOrange.copy(alpha = 0.25f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("+", color = BrandYellow, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(m.point, color = PaperWhite, fontWeight = FontWeight.Bold, fontSize = 14.sp, lineHeight = 19.sp)
+                    Spacer(Modifier.height(2.dp))
+                    Text(m.why, color = InkGray400, fontSize = 11.sp, lineHeight = 16.sp)
+                }
+            }
+            if (idx < misses.size - 1) {
+                Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0x14FFFFFF)))
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0x22FFFFFF)))
+        Spacer(Modifier.height(10.dp))
+        Text(
+            "面試教練的重點:不只看你講了什麼,更看你「該講卻沒講」的。",
+            color = BrandYellow, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, lineHeight = 16.sp,
+        )
     }
 }
