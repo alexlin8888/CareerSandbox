@@ -25,9 +25,12 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -38,13 +41,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
+import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.ScatteredDecorations
 import com.careersandbox.app.ui.components.WaveHeroBackground
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 
-private data class Capability(val label: String, val score: Int)
+private data class Capability(
+    val label: String,
+    val score: Int,
+    val kind: String = "軟實力",
+    val basis: String = "",
+    val howTo: String = "",
+)
 
 private data class FitTask(
     val id: String,
@@ -58,12 +68,36 @@ private data class FitTask(
 fun FitAnalysisScreen(navController: NavHostController) {
     val capabilities = remember {
         listOf(
-            Capability("數據能力", 96),
-            Capability("溝通協作", 90),
-            Capability("團隊合作", 76),
-            Capability("領導力", 72),
-            Capability("抗壓性", 65),
-            Capability("創新思考", 58),
+            Capability(
+                "數據能力", 96, "硬實力",
+                "從你修過的資料庫、統計課,加上 2 段含量化成果的經歷推估。",
+                "已經很強,面試時直接用具體數字佐證即可。",
+            ),
+            Capability(
+                "溝通協作", 90, "軟實力",
+                "從社團幹部、簡報、跨組專案的敘述推估。",
+                "維持就好,可補一句處理意見衝突的例子讓它更立體。",
+            ),
+            Capability(
+                "團隊合作", 76, "軟實力",
+                "從 3 段團隊經歷推估,但多半是執行角色。",
+                "找一次主導或協調角色的經歷寫進去,分數會更有說服力。",
+            ),
+            Capability(
+                "領導力", 72, "軟實力",
+                "從幹部經歷推估,但缺帶人、帶專案的量化結果。",
+                "寫一段你帶領 N 個人完成某件事、結果如何的 STAR 敘述。",
+            ),
+            Capability(
+                "抗壓性", 65, "軟實力",
+                "面試常考的面向;你的履歷目前少有面對挫折的敘述。",
+                "補一段「遇到挫折 → 怎麼處理 → 結果」的經歷,這項會明顯拉高。",
+            ),
+            Capability(
+                "創新思考", 58, "軟實力",
+                "從專案的新穎性推估,目前偏少。",
+                "參加一次黑客松或提案活動,留下一個可以寫的成果。",
+            ),
         )
     }
     var tasks by remember {
@@ -102,12 +136,23 @@ fun FitAnalysisScreen(navController: NavHostController) {
 
                 when (activeTab) {
                     0 -> {
+                        // === #20 技能差距(文氏圖,強調差集)===
+                        SkillGapSection()
+                        Spacer(Modifier.height(20.dp))
+                        Box(Modifier.fillMaxWidth().height(1.dp).background(InkGray200))
+                        Spacer(Modifier.height(20.dp))
+
                         // === 能力分布:雷達 + bar ===
+                        Text("能力輪廓", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 18.sp)
+                        Spacer(Modifier.height(12.dp))
                         CapabilityRadar(capabilities = capabilities, animateProgress = visible)
                         Spacer(Modifier.height(20.dp))
                         Column(verticalArrangement = Arrangement.spacedBy(13.dp)) {
                             capabilities.forEach { cap -> CapabilityRow(cap) }
                         }
+                        Spacer(Modifier.height(14.dp))
+                        // === #12 分數怎麼算的解釋 ===
+                        ScoreExplainerCard()
                         Spacer(Modifier.height(28.dp))
                         Box(
                             modifier = Modifier.fillMaxWidth().height(56.dp).clip(RoundedCornerShape(16.dp))
@@ -473,6 +518,7 @@ private fun CapabilityRadar(capabilities: List<Capability>, animateProgress: Boo
 
 @Composable
 private fun CapabilityRow(cap: Capability) {
+    var expanded by remember { mutableStateOf(false) }
     val (textColor, barColor) = when {
         cap.score >= 85 -> BrandDeepOrange to BrandDeepOrange
         cap.score >= 70 -> Color(0xFFBA7517) to BrandAmber
@@ -488,13 +534,25 @@ private fun CapabilityRow(cap: Capability) {
         animationSpec = tween(1100, delayMillis = 300, easing = FastOutSlowInEasing),
         label = "${cap.label}-prog",
     )
-    Column(modifier = Modifier.fillMaxWidth()) {
+    Column(modifier = Modifier.fillMaxWidth().pressScale { expanded = !expanded }) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(cap.label, color = InkBlack, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-            Text("$animScore", color = textColor, fontWeight = FontWeight.Black, fontSize = 13.sp)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("$animScore", color = textColor, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                if (cap.howTo.isNotEmpty()) {
+                    Spacer(Modifier.width(5.dp))
+                    Icon(
+                        if (expanded) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
+                        contentDescription = "說明",
+                        tint = InkGray400,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+            }
         }
         Spacer(Modifier.height(5.dp))
         Canvas(modifier = Modifier.fillMaxWidth().height(6.dp)) {
@@ -511,6 +569,38 @@ private fun CapabilityRow(cap: Capability) {
                     size = Size(w, size.height),
                     cornerRadius = CornerRadius(3.dp.toPx()),
                 )
+            }
+        }
+        if (expanded && cap.howTo.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(InkGray100.copy(alpha = 0.5f))
+                    .padding(12.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(if (cap.kind == "硬實力") BrandPeach else InkGray200)
+                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                ) {
+                    Text(
+                        cap.kind,
+                        color = if (cap.kind == "硬實力") BrandDeepOrange else InkGray700,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                Text("怎麼算", color = InkGray400, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(2.dp))
+                Text(cap.basis, color = InkGray700, fontSize = 12.sp, lineHeight = 18.sp)
+                Spacer(Modifier.height(8.dp))
+                Text("怎麼提升", color = BrandDeepOrange, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(2.dp))
+                Text(cap.howTo, color = InkBlack, fontSize = 12.sp, lineHeight = 18.sp)
             }
         }
     }
@@ -573,6 +663,189 @@ private fun TaskCard(task: FitTask, onToggle: () -> Unit) {
             ) {
                 Text(task.tagText, color = BrandDeepOrange, fontWeight = FontWeight.Bold, fontSize = 11.sp)
             }
+        }
+    }
+}
+
+/* ===================== #20 技能差距(文氏圖差集)===================== */
+
+@Composable
+private fun SkillGapSection() {
+    val userHas = MockData.currentUser.skillsHave
+    // 這份 JD(產品經理)要求的技能
+    val roleRequires = listOf("SQL", "使用者訪談", "A/B 測試", "Figma", "Python", "GA4")
+    val gap = roleRequires.filter { it !in userHas }      // 差集:要、但你還沒有
+    val matched = roleRequires.filter { it in userHas }   // 交集:要、你有
+    val other = userHas.filter { it !in roleRequires }    // 你有、但這份 JD 沒要求
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(PaperWhite)
+            .padding(18.dp),
+    ) {
+        Text("技能差距", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 18.sp)
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "重點不是你已符合多少,而是你還缺什麼。",
+            color = InkGray500, fontSize = 13.sp, lineHeight = 19.sp,
+        )
+        Spacer(Modifier.height(16.dp))
+        SkillGapVenn(gapCount = gap.size, matchCount = matched.size)
+        Spacer(Modifier.height(18.dp))
+        GapGroup(dot = BrandDeepOrange, title = "還缺(這份 JD 要、你還沒有)", chips = gap, emphasized = true)
+        Spacer(Modifier.height(12.dp))
+        GapGroup(dot = AccentGreen, title = "已符合", chips = matched, emphasized = false)
+        Spacer(Modifier.height(12.dp))
+        GapGroup(dot = InkGray400, title = "你有、但這份 JD 沒特別要求", chips = other, emphasized = false)
+    }
+}
+
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun GapGroup(dot: Color, title: String, chips: List<String>, emphasized: Boolean) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(8.dp).clip(CircleShape).background(dot))
+            Spacer(Modifier.width(8.dp))
+            Text(
+                title,
+                color = if (emphasized) BrandDeepOrange else InkGray700,
+                fontWeight = if (emphasized) FontWeight.Black else FontWeight.SemiBold,
+                fontSize = 13.sp,
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        if (chips.isEmpty()) {
+            Text("(無)", color = InkGray400, fontSize = 12.sp)
+        } else {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                chips.forEach { c ->
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(if (emphasized) BrandPeach else InkGray100)
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                    ) {
+                        Text(
+                            c,
+                            color = if (emphasized) BrandDeepOrange else InkGray700,
+                            fontWeight = if (emphasized) FontWeight.Bold else FontWeight.Medium,
+                            fontSize = 12.sp,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SkillGapVenn(gapCount: Int, matchCount: Int) {
+    Box(
+        modifier = Modifier.fillMaxWidth().height(150.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(modifier = Modifier.fillMaxWidth().height(150.dp)) {
+            val r = size.height * 0.40f
+            val cy = size.height / 2f
+            val cxL = size.width / 2f - r * 0.55f
+            val cxR = size.width / 2f + r * 0.55f
+            val leftPath = Path().apply { addOval(Rect(Offset(cxL, cy), r)) }
+            val rightPath = Path().apply { addOval(Rect(Offset(cxR, cy), r)) }
+            val diff = Path().apply { op(leftPath, rightPath, PathOperation.Difference) }
+            val inter = Path().apply { op(leftPath, rightPath, PathOperation.Intersect) }
+            // 右圈(你有的)— 低調
+            drawPath(rightPath, color = InkGray200.copy(alpha = 0.55f))
+            // 交集 — 暖色淺
+            drawPath(inter, color = BrandPeach.copy(alpha = 0.6f))
+            // 差集(還缺)— 暖色強調
+            drawPath(diff, color = BrandDeepOrange.copy(alpha = 0.85f))
+            // 外框
+            drawPath(leftPath, color = BrandDeepOrange, style = Stroke(width = 2.5.dp.toPx()))
+            drawPath(rightPath, color = InkGray400, style = Stroke(width = 2.dp.toPx()))
+        }
+        // 標籤疊層
+        Text(
+            "職位要求",
+            color = BrandDeepOrange, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.TopStart).padding(start = 24.dp, top = 6.dp),
+        )
+        Text(
+            "你有的",
+            color = InkGray500, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.TopEnd).padding(end = 36.dp, top = 6.dp),
+        )
+        // 差集數字(白字,在左側新月)
+        Column(
+            modifier = Modifier.align(Alignment.CenterStart).padding(start = 26.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text("還缺", color = PaperWhite, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            Text("$gapCount", color = PaperWhite, fontSize = 20.sp, fontWeight = FontWeight.Black)
+        }
+        // 交集數字
+        Column(
+            modifier = Modifier.align(Alignment.Center),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text("符合", color = BrandDeepOrange, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            Text("$matchCount", color = BrandDeepOrange, fontSize = 16.sp, fontWeight = FontWeight.Black)
+        }
+    }
+}
+
+/* ===================== #12 分數怎麼算 ===================== */
+
+@Composable
+private fun ScoreExplainerCard() {
+    var open by remember { mutableStateOf(false) }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(InkGray100.copy(alpha = 0.5f))
+            .pressScale { open = !open }
+            .padding(14.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier.size(18.dp).clip(CircleShape).background(InkGray200),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("?", color = InkGray700, fontSize = 12.sp, fontWeight = FontWeight.Black)
+            }
+            Spacer(Modifier.width(8.dp))
+            Text(
+                "這些分數怎麼來的?",
+                color = InkGray700, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                modifier = Modifier.weight(1f),
+            )
+            Icon(
+                if (open) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
+                contentDescription = null, tint = InkGray500, modifier = Modifier.size(18.dp),
+            )
+        }
+        if (open) {
+            Spacer(Modifier.height(10.dp))
+            Text(
+                "這些是「軟實力」分數,不是考試成績 — 它們是從你的經歷敘述、修課、社團活動推估出來的。",
+                color = InkGray700, fontSize = 12.sp, lineHeight = 19.sp,
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "硬實力(像 SQL、Python)直接看履歷上的關鍵字命中,比較直覺;軟實力(像抗壓性、領導力)比較抽象,分數低通常不代表你不行,而是履歷上還沒有足夠的證據。",
+                color = InkGray700, fontSize = 12.sp, lineHeight = 19.sp,
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "點上面任一項能力,看它是怎麼算的、以及怎麼補。",
+                color = BrandDeepOrange, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, lineHeight = 19.sp,
+            )
         }
     }
 }
