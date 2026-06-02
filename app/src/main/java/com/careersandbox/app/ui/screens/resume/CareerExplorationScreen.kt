@@ -131,6 +131,10 @@ fun CareerExplorationScreen(navController: NavHostController) {
     var selectedId by remember { mutableStateOf("data_analyst") }
     val excludedIds = remember { mutableStateListOf<String>() }
 
+    // === #17/#18/#19 語意探索狀態 ===
+    var semanticText by remember { mutableStateOf("") }
+    var resolvedIntent by remember { mutableStateOf<ExploreIntent?>(null) }
+
     // === 衍生清單 ===
     val visibleRecs = allCareerRecs.filter { rec ->
         rec.id !in excludedIds &&
@@ -151,6 +155,30 @@ fun CareerExplorationScreen(navController: NavHostController) {
             CareerHeroSection(onBack = { navController.popBackStack() })
 
             Column(modifier = Modifier.padding(horizontal = 24.dp).padding(top = 20.dp, bottom = 40.dp)) {
+                // === #18 搜尋成為主角:自然語言語意探索 ===
+                AnimatedSection(visible = visible, delayMs = 0) {
+                    SemanticExplorePanel(
+                        text = semanticText,
+                        onTextChange = { semanticText = it },
+                        resolved = resolvedIntent,
+                        onSubmit = { resolvedIntent = resolveIntent(semanticText) },
+                        onPickExample = { ex -> semanticText = ex.label; resolvedIntent = ex.intent },
+                        onReset = { resolvedIntent = null; semanticText = "" },
+                    )
+                }
+                Spacer(Modifier.height(24.dp))
+                // 分隔:或直接瀏覽(關鍵字搜尋降為次要)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f).height(1.dp).background(InkGray200))
+                    Text(
+                        "或直接瀏覽全部職位",
+                        color = InkGray400, fontSize = 12.sp, fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                    )
+                    Box(Modifier.weight(1f).height(1.dp).background(InkGray200))
+                }
+                Spacer(Modifier.height(16.dp))
+
                 AnimatedSection(visible = visible, delayMs = 0) {
                     SearchBar(query = searchQuery, onQueryChange = { searchQuery = it })
                 }
@@ -809,5 +837,344 @@ private fun LearningStepCard(step: LearningStep) {
             Text(step.subtitle, color = InkGray500, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
         }
         Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = InkGray400, modifier = Modifier.size(18.dp))
+    }
+}
+
+/* ===================== #17/#18/#19 語意探索 ===================== */
+
+private data class RoleAxis(
+    val id: String,
+    val title: String,
+    val salary: Int,
+    val flexibility: Int,
+    val growth: Int,
+    val stability: Int,
+)
+
+private val exploreRoles = listOf(
+    RoleAxis("pm", "產品經理", 80, 58, 90, 58),
+    RoleAxis("quant", "量化研究", 95, 45, 72, 62),
+    RoleAxis("techpm", "技術產品", 88, 50, 82, 60),
+    RoleAxis("data", "資料分析師", 74, 60, 80, 66),
+    RoleAxis("growth", "行銷策略", 62, 68, 74, 54),
+    RoleAxis("ux", "UX 設計師", 66, 74, 68, 60),
+    RoleAxis("research", "研究員", 48, 78, 64, 84),
+    RoleAxis("freelance", "自由接案", 58, 96, 66, 34),
+    RoleAxis("soe", "國營/公職", 60, 40, 46, 97),
+)
+
+private data class ExploreIntent(
+    val priorities: List<String>,
+    val note: String,
+    val matched: Boolean,
+)
+
+private data class IntentChip(val label: String, val intent: ExploreIntent)
+
+private val intentChips = listOf(
+    IntentChip("想自己決定工作時間", ExploreIntent(listOf("彈性", "成長", "薪資", "穩定"), "你很在意時間與工作方式的自由度。", true)),
+    IntentChip("薪水越高越好", ExploreIntent(listOf("薪資", "成長", "彈性", "穩定"), "薪資是你的首要考量,其次是成長空間。", true)),
+    IntentChip("想要穩定有保障", ExploreIntent(listOf("穩定", "薪資", "彈性", "成長"), "你重視長期的穩定與保障。", true)),
+    IntentChip("想做有挑戰能成長的事", ExploreIntent(listOf("成長", "薪資", "彈性", "穩定"), "你想要能持續成長、有挑戰的工作。", true)),
+)
+
+private fun resolveIntent(text: String): ExploreIntent {
+    val flex = listOf("彈性", "時間", "遠端", "自由", "朝九", "在家")
+    val pay = listOf("薪", "錢", "待遇", "高薪", "收入", "報酬")
+    val stable = listOf("穩定", "保障", "鐵飯碗", "國營", "公職", "風險", "安穩")
+    val grow = listOf("成長", "挑戰", "學習", "發展", "歷練")
+    return when {
+        text.isBlank() ->
+            ExploreIntent(listOf("成長", "薪資", "彈性", "穩定"), "先用「成長 × 薪資」幫你看看,之後可以描述得更細。", false)
+        flex.any { text.contains(it) } ->
+            ExploreIntent(listOf("彈性", "成長", "薪資", "穩定"), "你很在意時間與工作方式的自由度。", true)
+        pay.any { text.contains(it) } ->
+            ExploreIntent(listOf("薪資", "成長", "彈性", "穩定"), "薪資是你的首要考量。", true)
+        stable.any { text.contains(it) } ->
+            ExploreIntent(listOf("穩定", "薪資", "彈性", "成長"), "你重視長期的穩定與保障。", true)
+        grow.any { text.contains(it) } ->
+            ExploreIntent(listOf("成長", "薪資", "彈性", "穩定"), "你想要能持續成長、有挑戰的工作。", true)
+        else ->
+            ExploreIntent(listOf("成長", "薪資", "彈性", "穩定"), "我先抓「成長 × 薪資」這組;換句話再描述一次,可以抓得更準。", false)
+    }
+}
+
+private fun axisVal(r: RoleAxis, key: String): Int = when (key) {
+    "薪資" -> r.salary
+    "彈性" -> r.flexibility
+    "成長" -> r.growth
+    else -> r.stability
+}
+
+private fun paretoFront(xKey: String, yKey: String): Set<String> =
+    exploreRoles.filter { r ->
+        exploreRoles.none { o ->
+            o.id != r.id &&
+                axisVal(o, xKey) >= axisVal(r, xKey) &&
+                axisVal(o, yKey) >= axisVal(r, yKey) &&
+                (axisVal(o, xKey) > axisVal(r, xKey) || axisVal(o, yKey) > axisVal(r, yKey))
+        }
+    }.map { it.id }.toSet()
+
+@Composable
+private fun SemanticExplorePanel(
+    text: String,
+    onTextChange: (String) -> Unit,
+    resolved: ExploreIntent?,
+    onSubmit: () -> Unit,
+    onPickExample: (IntentChip) -> Unit,
+    onReset: () -> Unit,
+) {
+    val exampleScroll = rememberScrollState()
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(PaperWhite)
+            .border(1.dp, InkGray100, RoundedCornerShape(20.dp))
+            .padding(18.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = BrandDeepOrange, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("用自己的話找方向", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 18.sp)
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "不確定想要什麼工作?說說你在意什麼,系統幫你把模糊的想法收斂成方向。",
+            color = InkGray500, fontSize = 13.sp, lineHeight = 19.sp,
+        )
+        Spacer(Modifier.height(14.dp))
+
+        // 輸入框(主角)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 64.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(PaperWarm)
+                .border(1.dp, InkGray100, RoundedCornerShape(14.dp))
+                .padding(14.dp),
+        ) {
+            if (text.isEmpty()) {
+                Text(
+                    "例如:我不喜歡朝九晚五,想自己決定工作時間",
+                    color = InkGray400, fontSize = 14.sp, lineHeight = 20.sp,
+                )
+            }
+            BasicTextField(
+                value = text,
+                onValueChange = onTextChange,
+                textStyle = TextStyle(color = InkBlack, fontSize = 14.sp, lineHeight = 20.sp),
+                cursorBrush = SolidColor(BrandDeepOrange),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+
+        Text("試試這些說法", color = InkGray400, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+        Spacer(Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(exampleScroll),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            intentChips.forEach { chip ->
+                Box(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(BrandPeach.copy(alpha = 0.5f))
+                        .pressScale { onPickExample(chip) }
+                        .padding(horizontal = 12.dp, vertical = 7.dp),
+                ) {
+                    Text(chip.label, color = BrandDeepOrange, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                }
+            }
+        }
+        Spacer(Modifier.height(14.dp))
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(if (text.isBlank()) InkGray200 else InkBlack)
+                .pressScale { if (text.isNotBlank()) onSubmit() },
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                "幫我找方向",
+                color = if (text.isBlank()) InkGray400 else PaperWhite,
+                fontWeight = FontWeight.Black, fontSize = 15.sp,
+            )
+        }
+
+        AnimatedVisibility(visible = resolved != null) {
+            if (resolved != null) {
+                Column {
+                    Spacer(Modifier.height(18.dp))
+                    Box(Modifier.fillMaxWidth().height(1.dp).background(InkGray100))
+                    Spacer(Modifier.height(16.dp))
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = BrandDeepOrange, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            if (resolved.matched) "我聽到你在意的是" else "先這樣抓,你可以再描述",
+                            color = InkGray500, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        resolved.priorities.take(3).forEachIndexed { idx, p ->
+                            PriorityPill(rank = idx + 1, label = p, emphasized = idx == 0)
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(resolved.note, color = InkGray500, fontSize = 12.sp, lineHeight = 18.sp)
+                    Spacer(Modifier.height(18.dp))
+
+                    val xKey = resolved.priorities[0]
+                    val yKey = resolved.priorities[1]
+                    val front = paretoFront(xKey, yKey)
+                    Text("取捨前緣 (Pareto)", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 15.sp)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "你在意的兩件事會互相牴觸。前緣上的選擇彼此「互不被輾壓」 — 取捨落在哪,由你決定。",
+                        color = InkGray500, fontSize = 12.sp, lineHeight = 18.sp,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    ParetoChart(xKey = xKey, yKey = yKey, front = front)
+                    Spacer(Modifier.height(14.dp))
+
+                    Text("落在前緣的選擇", color = InkGray700, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Spacer(Modifier.height(8.dp))
+                    exploreRoles.filter { it.id in front }
+                        .sortedByDescending { axisVal(it, xKey) }
+                        .forEach { role ->
+                            FrontierRoleRow(role = role, xKey = xKey, yKey = yKey)
+                            Spacer(Modifier.height(8.dp))
+                        }
+
+                    Spacer(Modifier.height(6.dp))
+                    Box(modifier = Modifier.pressScale { onReset() }.padding(vertical = 4.dp)) {
+                        Text("↻ 重新描述", color = BrandDeepOrange, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PriorityPill(rank: Int, label: String, emphasized: Boolean) {
+    val bg = if (emphasized) BrandDeepOrange else BrandPeach.copy(alpha = 0.6f)
+    val fg = if (emphasized) PaperWhite else BrandDeepOrange
+    Row(
+        modifier = Modifier
+            .clip(CircleShape)
+            .background(bg)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text("$rank", color = fg, fontWeight = FontWeight.Black, fontSize = 12.sp)
+        Spacer(Modifier.width(6.dp))
+        Text(label, color = fg, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+    }
+}
+
+@Composable
+private fun ParetoChart(xKey: String, yKey: String, front: Set<String>) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(200.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(PaperWarm)
+            .padding(16.dp),
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val pad = 14.dp.toPx()
+            val w = size.width
+            val h = size.height
+            val plotW = w - pad * 2
+            val plotH = h - pad * 2
+            drawLine(
+                color = InkGray200,
+                start = Offset(pad, h - pad),
+                end = Offset(w - pad, h - pad),
+                strokeWidth = 1.5.dp.toPx(),
+            )
+            drawLine(
+                color = InkGray200,
+                start = Offset(pad, pad),
+                end = Offset(pad, h - pad),
+                strokeWidth = 1.5.dp.toPx(),
+            )
+            fun px(v: Int) = pad + (v / 100f) * plotW
+            fun py(v: Int) = (h - pad) - (v / 100f) * plotH
+
+            val frontPts = exploreRoles.filter { it.id in front }
+                .sortedBy { axisVal(it, xKey) }
+            for (i in 0 until frontPts.size - 1) {
+                val a = frontPts[i]
+                val b = frontPts[i + 1]
+                drawLine(
+                    color = BrandDeepOrange.copy(alpha = 0.5f),
+                    start = Offset(px(axisVal(a, xKey)), py(axisVal(a, yKey))),
+                    end = Offset(px(axisVal(b, xKey)), py(axisVal(b, yKey))),
+                    strokeWidth = 2.dp.toPx(),
+                )
+            }
+            exploreRoles.forEach { r ->
+                val onFront = r.id in front
+                drawCircle(
+                    color = if (onFront) BrandDeepOrange else InkGray400.copy(alpha = 0.5f),
+                    radius = if (onFront) 6.dp.toPx() else 4.dp.toPx(),
+                    center = Offset(px(axisVal(r, xKey)), py(axisVal(r, yKey))),
+                )
+            }
+        }
+        Text(
+            "↑ $yKey",
+            color = InkGray500, fontSize = 10.sp, fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.align(Alignment.TopStart),
+        )
+        Text(
+            "$xKey →",
+            color = InkGray500, fontSize = 10.sp, fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.align(Alignment.BottomEnd),
+        )
+    }
+}
+
+@Composable
+private fun FrontierRoleRow(role: RoleAxis, xKey: String, yKey: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(PaperWhite)
+            .border(1.dp, BrandPeach, RoundedCornerShape(12.dp))
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(8.dp).clip(CircleShape).background(BrandDeepOrange))
+        Spacer(Modifier.width(10.dp))
+        Text(role.title, color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.weight(1f))
+        AxisChip(xKey, axisVal(role, xKey))
+        Spacer(Modifier.width(6.dp))
+        AxisChip(yKey, axisVal(role, yKey))
+    }
+}
+
+@Composable
+private fun AxisChip(key: String, value: Int) {
+    Box(
+        modifier = Modifier
+            .clip(CircleShape)
+            .background(BrandPeach.copy(alpha = 0.5f))
+            .padding(horizontal = 8.dp, vertical = 3.dp),
+    ) {
+        Text("$key $value", color = BrandDeepOrange, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
     }
 }
