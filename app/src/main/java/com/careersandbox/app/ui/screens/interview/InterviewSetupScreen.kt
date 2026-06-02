@@ -36,6 +36,7 @@ fun InterviewSetupScreen(navController: NavHostController) {
     var duration by remember { mutableStateOf("30 分鐘") }
     var language by remember { mutableStateOf("中文") }
     var jdText by remember { mutableStateOf("") }
+    var resumeVersion by remember { mutableStateOf("母版") }
 
     Scaffold(
         containerColor = PaperWhite,
@@ -179,6 +180,11 @@ fun InterviewSetupScreen(navController: NavHostController) {
                 }
             }
 
+            // === #2 選擇要給面試官看的履歷版本 ===
+            Field("給面試官看的履歷版本") {
+                ResumeVersionPicker(selected = resumeVersion, onSelect = { resumeVersion = it })
+            }
+
             Spacer(Modifier.height(20.dp))
         }
     }
@@ -213,3 +219,55 @@ private fun textFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedContainerColor = MaterialTheme.colorScheme.surface,
     unfocusedContainerColor = MaterialTheme.colorScheme.surface,
 )
+
+/* ===================== #2 履歷版本選擇器 ===================== */
+
+@Composable
+private fun ResumeVersionPicker(selected: String, onSelect: (String) -> Unit) {
+    val versions = listOf(
+        "母版" to "完整綜合履歷",
+        "台積電 PM 版" to "投遞中",
+        "新創 PM 版" to "草稿",
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        versions.forEach { (name, sub) ->
+            val isSel = name == selected
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(if (isSel) BrandPeach.copy(alpha = 0.5f) else InkGray100.copy(alpha = 0.5f))
+                    .pressScale { onSelect(name) }
+                    .padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    Modifier
+                        .size(20.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(if (isSel) BrandDeepOrange else InkGray200),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (isSel) {
+                        Box(Modifier.size(8.dp).clip(RoundedCornerShape(50)).background(PaperWhite))
+                    }
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(name, color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        sub,
+                        color = if (isSel) BrandDeepOrange else InkGray500,
+                        fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "面試官只會看到你選的這份版本來出題。對應母版 → 職缺 → 版本架構。",
+            color = InkGray500, fontSize = 11.sp, lineHeight = 16.sp,
+        )
+    }
+}

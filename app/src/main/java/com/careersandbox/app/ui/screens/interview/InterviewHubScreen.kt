@@ -43,7 +43,17 @@ fun InterviewHubScreen(navController: NavHostController) {
             // === Hero 區 ===
             HeroSection()
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(20.dp))
+
+            // === #6 Avatar 成長卡 ===
+            AvatarGrowthCard()
+
+            Spacer(Modifier.height(20.dp))
+
+            // === #1 快速練習(低門檻入口,與正式 mock 區分)===
+            QuickPracticeCard(navController)
+
+            Spacer(Modifier.height(32.dp))
 
             // === 兩個方案卡(都帶插畫)===
             PlanCards(navController)
@@ -324,5 +334,154 @@ private fun HistoryRow(r: InterviewRecord, onClick: () -> Unit) {
                 color = InkGray500,
                 modifier = Modifier.padding(bottom = 6.dp))
         }
+    }
+}
+
+/* ===================== #6 Avatar 成長卡 ===================== */
+
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun AvatarGrowthCard() {
+    val abilities = listOf(
+        Triple("內容深度", 78, 4),
+        Triple("邏輯清晰", 82, 2),
+        Triple("表達流暢", 71, 6),
+        Triple("互動", 68, 3),
+        Triple("應變", 64, 1),
+        Triple("自信", 80, 5),
+    )
+    Column(
+        modifier = Modifier
+            .padding(horizontal = 20.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
+            .background(Brush.linearGradient(listOf(BrandPeach.copy(alpha = 0.55f), PaperWhite)))
+            .padding(18.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(72.dp).clip(CircleShape).background(PaperWhite),
+                contentAlignment = Alignment.Center,
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.beaver_celebrate),
+                    contentDescription = null,
+                    modifier = Modifier.size(60.dp),
+                    contentScale = ContentScale.Fit,
+                )
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier.clip(RoundedCornerShape(50)).background(BrandDeepOrange).padding(horizontal = 8.dp, vertical = 2.dp),
+                    ) {
+                        Text("Lv.4", color = PaperWhite, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Text("面試新星", color = BrandDeepOrange, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                }
+                Spacer(Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        "面試力 ",
+                        color = InkGray700, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(bottom = 4.dp),
+                    )
+                    Text("74", color = InkBlack, fontSize = 30.sp, fontWeight = FontWeight.Black)
+                }
+                Spacer(Modifier.height(6.dp))
+                Box(
+                    Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(50)).background(Color(0x33D84315)),
+                ) {
+                    Box(Modifier.fillMaxHeight().fillMaxWidth(0.74f).clip(RoundedCornerShape(50)).background(BrandDeepOrange))
+                }
+                Spacer(Modifier.height(3.dp))
+                Text("距 Lv.5 還差 26 XP", color = InkGray500, fontSize = 10.sp)
+            }
+        }
+        Spacer(Modifier.height(14.dp))
+        Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0x22D84315)))
+        Spacer(Modifier.height(12.dp))
+        Text("六項能力(每練一次會成長)", color = InkGray700, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(8.dp))
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            abilities.forEach { (label, value, delta) ->
+                AbilityChip(label, value, delta)
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Text(
+            "上次練習後 +6 分 — 再練一場會更高。",
+            color = BrandDeepOrange, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
+
+@Composable
+private fun AbilityChip(label: String, value: Int, delta: Int) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(PaperWhite)
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(label, color = InkGray700, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+        Spacer(Modifier.width(5.dp))
+        Text("$value", color = InkBlack, fontSize = 12.sp, fontWeight = FontWeight.Black)
+        if (delta > 0) {
+            Spacer(Modifier.width(4.dp))
+            Text("↑$delta", color = AccentGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+/* ===================== #1 快速練習(低門檻入口)===================== */
+
+@Composable
+private fun QuickPracticeCard(navController: NavHostController) {
+    Row(
+        modifier = Modifier
+            .padding(horizontal = 20.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(Brush.linearGradient(listOf(BrandYellow.copy(alpha = 0.4f), BrandPeach.copy(alpha = 0.5f))))
+            .pressScale {
+                navController.navigate(Routes.INTERVIEW_LIVE_INDIVIDUAL) {
+                    popUpTo(Routes.INTERVIEW_HUB)
+                }
+            }
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier.size(48.dp).clip(CircleShape).background(PaperWhite),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Outlined.Timer, contentDescription = null, tint = BrandDeepOrange, modifier = Modifier.size(24.dp))
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("快速練習", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 18.sp)
+                Spacer(Modifier.width(8.dp))
+                Box(
+                    Modifier.clip(RoundedCornerShape(50)).background(PaperWhite).padding(horizontal = 8.dp, vertical = 2.dp),
+                ) {
+                    Text("約 5 分鐘", color = BrandDeepOrange, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                }
+            }
+            Spacer(Modifier.height(3.dp))
+            Text(
+                "1-3 題 · 不用設定 · 低壓力暖身,隨時來一場",
+                color = InkGray700, fontSize = 12.sp, lineHeight = 17.sp,
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = BrandDeepOrange)
     }
 }
