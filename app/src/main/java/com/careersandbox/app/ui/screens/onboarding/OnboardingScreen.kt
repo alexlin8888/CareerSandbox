@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -17,15 +18,31 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
 
-@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun OnboardingScreen(onDone: () -> Unit) {
+    // #25 / #11:第一次進來先用教學卡介紹四大功能與「母版」概念,再進入填資料表單
+    var showIntro by remember { mutableStateOf(true) }
+    if (showIntro) {
+        OnboardingIntro(onStart = { showIntro = false })
+    } else {
+        OnboardingForm(onDone = onDone)
+    }
+}
+
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun OnboardingForm(onDone: () -> Unit) {
     var step by remember { mutableIntStateOf(1) }
     val total = 4
     val interests = remember { mutableStateListOf<String>() }
@@ -214,6 +231,257 @@ private fun Step4() {
                             color = InkGray500)
                     }
                 }
+            }
+        }
+    }
+}
+
+/* ===================== #25 / #11 首次登入教學卡 ===================== */
+
+@Composable
+private fun OnboardingIntro(onStart: () -> Unit) {
+    val totalCards = 5
+    var card by remember { mutableIntStateOf(0) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(PaperOff)
+            .padding(horizontal = 24.dp),
+    ) {
+        Spacer(Modifier.height(48.dp))
+        // 跳過介紹
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            Text(
+                "跳過介紹",
+                color = InkGray400,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.pressScale { onStart() }.padding(8.dp),
+            )
+        }
+
+        AnimatedContent(
+            targetState = card,
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            transitionSpec = {
+                (fadeIn(tween(300)) + slideInHorizontally(tween(300)) { it / 4 })
+                    .togetherWith(fadeOut(tween(150)))
+            },
+            label = "introCard",
+        ) { c ->
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                when (c) {
+                    0 -> IntroBeaverCard(
+                        beaver = R.drawable.beaver_wave,
+                        title = "歡迎來到 CareerSandbox",
+                        highlight = null,
+                        body = "履歷、模擬面試、職涯探索、職場體驗 — 在同一個地方,把求職一次準備好。",
+                    )
+                    1 -> IntroBeaverCard(
+                        beaver = R.drawable.beaver_resume,
+                        title = "先建一份「母版」",
+                        highlight = "母版 = 你最完整的綜合履歷",
+                        body = "把所有經歷、技能、作品都放進去,先不為任何公司修飾。之後的客製版本,都從這份母版長出來。",
+                    )
+                    2 -> IntroTierCard()
+                    3 -> IntroBeaverCard(
+                        beaver = R.drawable.beaver_celebrate,
+                        title = "跟 AI 面試官練習",
+                        highlight = "想練幾分鐘,都可以",
+                        body = "可以調面試官的強度、貼上 JD、選擇要給他看哪一份履歷版本。練完拿到分面向的回饋:內容、結構、表達。",
+                    )
+                    4 -> IntroBeaverCard(
+                        beaver = R.drawable.beaver_search,
+                        title = "用自己的話找方向",
+                        highlight = "重點是你「還缺什麼」",
+                        body = "還不確定想要什麼工作?用一句話描述你在意的事,系統幫你收斂、清楚標出你還缺哪些技能。選定後,進職場沙盒提前體驗那份工作的一天。",
+                    )
+                }
+            }
+        }
+
+        // 進度圓點
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            repeat(totalCards) { i ->
+                Box(
+                    Modifier
+                        .padding(horizontal = 4.dp)
+                        .size(if (i == card) 9.dp else 7.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(if (i == card) BrandOrange else InkGray200),
+                )
+            }
+        }
+
+        Row(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp)) {
+            if (card > 0) {
+                SecondaryButton(
+                    text = "上一步",
+                    onClick = { card-- },
+                    modifier = Modifier.weight(1f),
+                )
+                Spacer(Modifier.width(12.dp))
+            }
+            PrimaryDarkButton(
+                text = if (card == totalCards - 1) "開始建立我的資料" else "下一步",
+                onClick = { if (card < totalCards - 1) card++ else onStart() },
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun IntroBeaverCard(
+    beaver: Int,
+    title: String,
+    highlight: String?,
+    body: String,
+) {
+    Image(
+        painter = painterResource(beaver),
+        contentDescription = null,
+        contentScale = ContentScale.Fit,
+        modifier = Modifier.size(160.dp),
+    )
+    Spacer(Modifier.height(28.dp))
+    Text(
+        title,
+        color = InkBlack,
+        fontWeight = FontWeight.Black,
+        fontSize = 26.sp,
+        textAlign = TextAlign.Center,
+    )
+    if (highlight != null) {
+        Spacer(Modifier.height(16.dp))
+        HighlighterText(
+            text = highlight,
+            highlightColor = BrandAmber,
+            textColor = InkBlack,
+            fontSize = 16,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+    Spacer(Modifier.height(16.dp))
+    Text(
+        body,
+        color = InkGray500,
+        fontSize = 15.sp,
+        lineHeight = 24.sp,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.padding(horizontal = 8.dp),
+    )
+}
+
+@Composable
+private fun IntroTierCard() {
+    Text(
+        "再依職缺客製版本",
+        color = InkBlack,
+        fontWeight = FontWeight.Black,
+        fontSize = 26.sp,
+        textAlign = TextAlign.Center,
+    )
+    Spacer(Modifier.height(10.dp))
+    Text(
+        "同一份母版,針對不同公司強調不同經歷。每個版本可以單獨標記投遞狀態。",
+        color = InkGray500,
+        fontSize = 15.sp,
+        lineHeight = 24.sp,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.padding(horizontal = 8.dp),
+    )
+    Spacer(Modifier.height(28.dp))
+
+    // 母版
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(BrandAmber)
+            .padding(vertical = 18.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("母版", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 18.sp)
+            Spacer(Modifier.height(2.dp))
+            Text(
+                "完整綜合履歷(不修飾)",
+                color = BrandDeepOrange,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+    }
+
+    // 手繪箭頭往下
+    HandDrawnArrow(
+        modifier = Modifier.height(40.dp).width(64.dp),
+        color = BrandDeepOrange,
+        strokeWidth = 2.5f,
+    )
+
+    // 兩個版本
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        VersionMini(
+            modifier = Modifier.weight(1f),
+            company = "台積電 PM 版",
+            accent = AccentGreen,
+            statusLabel = "投遞中",
+        )
+        VersionMini(
+            modifier = Modifier.weight(1f),
+            company = "新創 PM 版",
+            accent = BrandOrange,
+            statusLabel = "草稿",
+        )
+    }
+}
+
+@Composable
+private fun VersionMini(
+    modifier: Modifier = Modifier,
+    company: String,
+    accent: androidx.compose.ui.graphics.Color,
+    statusLabel: String,
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(PaperWhite)
+            .padding(14.dp),
+    ) {
+        Column {
+            Box(
+                Modifier
+                    .size(width = 28.dp, height = 4.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(accent),
+            )
+            Spacer(Modifier.height(10.dp))
+            Text(company, color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Spacer(Modifier.height(8.dp))
+            Box(
+                Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(accent.copy(alpha = 0.15f))
+                    .padding(horizontal = 8.dp, vertical = 3.dp),
+            ) {
+                Text(statusLabel, color = accent, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
             }
         }
     }
