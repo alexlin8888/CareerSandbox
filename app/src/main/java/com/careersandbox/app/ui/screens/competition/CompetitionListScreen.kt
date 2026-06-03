@@ -1,5 +1,6 @@
 package com.careersandbox.app.ui.screens.competition
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
@@ -19,16 +20,19 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
+import com.careersandbox.app.R
 import com.careersandbox.app.data.model.Competition
 import com.careersandbox.app.data.model.CompetitionCategory
 import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.ScatteredDecorations
+import com.careersandbox.app.ui.components.StaggeredAppear
 import com.careersandbox.app.ui.components.WaveHeroBackground
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
@@ -77,6 +81,16 @@ fun CompetitionListScreen(navController: NavHostController) {
                     Spacer(Modifier.height(5.dp))
                     Text("找對的競賽,配互補的夥伴", color = PaperWhite.copy(alpha = 0.95f), fontSize = 12.sp, maxLines = 1)
                 }
+                Image(
+                    painter = painterResource(R.drawable.beaver_trophy),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 10.dp)
+                        .size(118.dp)
+                        .alpha(0.96f),
+                    contentScale = ContentScale.Fit,
+                )
             }
 
             Column(modifier = Modifier.padding(horizontal = 24.dp).padding(top = 18.dp, bottom = 40.dp)) {
@@ -90,11 +104,32 @@ fun CompetitionListScreen(navController: NavHostController) {
                 }
                 Spacer(Modifier.height(18.dp))
 
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    visible.forEach { comp ->
-                        CompetitionRow(comp, onClick = {
-                            navController.navigate(Routes.competitionDetail(comp.id))
-                        })
+                if (visible.isEmpty()) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(top = 24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.beaver_empty),
+                            contentDescription = null,
+                            modifier = Modifier.size(120.dp),
+                            contentScale = ContentScale.Fit,
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Text("這個分類目前沒有競賽", color = InkGray500,
+                            fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                        Spacer(Modifier.height(4.dp))
+                        Text("換個分類看看,或晚點再回來", color = InkGray400, fontSize = 12.sp)
+                    }
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        visible.forEachIndexed { i, comp ->
+                            StaggeredAppear(delayMillis = i * 80) {
+                                CompetitionRow(comp, onClick = {
+                                    navController.navigate(Routes.competitionDetail(comp.id))
+                                })
+                            }
+                        }
                     }
                 }
             }
