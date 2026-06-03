@@ -41,32 +41,32 @@ fun InterviewHubScreen(navController: NavHostController) {
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         ) {
             // === Hero 區 ===
-            HeroSection()
+            StaggeredAppear(delayMillis = 0) { HeroSection() }
 
             Spacer(Modifier.height(20.dp))
 
             // === #6 Avatar 成長卡 ===
-            AvatarGrowthCard()
+            StaggeredAppear(delayMillis = 90) { AvatarGrowthCard() }
 
             Spacer(Modifier.height(20.dp))
 
             // === #1 快速練習(低門檻入口,與正式 mock 區分)===
-            QuickPracticeCard(navController)
+            StaggeredAppear(delayMillis = 170) { QuickPracticeCard(navController) }
 
             Spacer(Modifier.height(32.dp))
 
             // === 兩個方案卡(都帶插畫)===
-            PlanCards(navController)
+            StaggeredAppear(delayMillis = 250) { PlanCards(navController) }
 
             Spacer(Modifier.height(24.dp))
 
             // === #7 multi-agent 面試官 panel(殼 / 預告)===
-            MultiAgentTeaser()
+            StaggeredAppear(delayMillis = 330) { MultiAgentTeaser() }
 
             Spacer(Modifier.height(32.dp))
 
             // === 歷史紀錄(無框列表)===
-            HistorySection(navController)
+            StaggeredAppear(delayMillis = 410) { HistorySection(navController) }
 
             Spacer(Modifier.height(48.dp))
         }
@@ -393,13 +393,13 @@ private fun AvatarGrowthCard() {
                         color = InkGray700, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.padding(bottom = 4.dp),
                     )
-                    Text("74", color = InkBlack, fontSize = 30.sp, fontWeight = FontWeight.Black)
+                    Text("${rememberCountUp(74)}", color = InkBlack, fontSize = 30.sp, fontWeight = FontWeight.Black)
                 }
                 Spacer(Modifier.height(6.dp))
                 Box(
                     Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(50)).background(Color(0x33D84315)),
                 ) {
-                    Box(Modifier.fillMaxHeight().fillMaxWidth(0.74f).clip(RoundedCornerShape(50)).background(BrandDeepOrange))
+                    Box(Modifier.fillMaxHeight().fillMaxWidth(rememberProgressFill(0.74f)).clip(RoundedCornerShape(50)).background(BrandDeepOrange))
                 }
                 Spacer(Modifier.height(3.dp))
                 Text("距 Lv.5 還差 26 XP", color = InkGray500, fontSize = 10.sp)
@@ -437,7 +437,7 @@ private fun AbilityChip(label: String, value: Int, delta: Int) {
     ) {
         Text(label, color = InkGray700, fontSize = 11.sp, fontWeight = FontWeight.Medium)
         Spacer(Modifier.width(5.dp))
-        Text("$value", color = InkBlack, fontSize = 12.sp, fontWeight = FontWeight.Black)
+        Text("${rememberCountUp(value)}", color = InkBlack, fontSize = 12.sp, fontWeight = FontWeight.Black)
         if (delta > 0) {
             Spacer(Modifier.width(4.dp))
             Text("↑$delta", color = AccentGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold)
