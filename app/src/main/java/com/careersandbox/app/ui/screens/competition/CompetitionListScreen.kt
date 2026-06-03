@@ -82,7 +82,7 @@ fun CompetitionListScreen(navController: NavHostController) {
                     Text("找對的競賽,配互補的夥伴", color = PaperWhite.copy(alpha = 0.95f), fontSize = 12.sp, maxLines = 1)
                 }
                 Image(
-                    painter = painterResource(R.drawable.beaver_trophy),
+                    painter = painterResource(R.drawable.beaver_celebrate),
                     contentDescription = null,
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
