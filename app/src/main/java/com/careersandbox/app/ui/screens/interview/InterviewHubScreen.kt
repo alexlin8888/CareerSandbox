@@ -58,6 +58,11 @@ fun InterviewHubScreen(navController: NavHostController) {
             // === 兩個方案卡(都帶插畫)===
             PlanCards(navController)
 
+            Spacer(Modifier.height(24.dp))
+
+            // === #7 multi-agent 面試官 panel(殼 / 預告)===
+            MultiAgentTeaser()
+
             Spacer(Modifier.height(32.dp))
 
             // === 歷史紀錄(無框列表)===
@@ -483,5 +488,63 @@ private fun QuickPracticeCard(navController: NavHostController) {
         }
         Spacer(Modifier.width(8.dp))
         Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = BrandDeepOrange)
+    }
+}
+
+/* ===================== #7 multi-agent 面試官 panel(殼)===================== */
+
+@Composable
+private fun MultiAgentTeaser() {
+    val panel = listOf(
+        "HR 主管" to "看人格特質、團隊適配",
+        "技術主管" to "追問你的專業深度",
+        "用人主管" to "問實戰經驗與成果",
+    )
+    Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(24.dp))
+                .background(Brush.linearGradient(listOf(Color(0xFF1F2937), Color(0xFF374151))))
+                .padding(20.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier.clip(RoundedCornerShape(50)).background(BrandYellow).padding(horizontal = 8.dp, vertical = 3.dp),
+                ) {
+                    Text("即將推出", color = InkCharcoal, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                }
+                Spacer(Modifier.width(8.dp))
+                Text("最貼近真實 panel 面試", color = PaperWhite.copy(alpha = 0.7f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            }
+            Spacer(Modifier.height(12.dp))
+            Text("多人面試官 panel", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 24.sp)
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "多位 AI 面試官同時在場,輪流從不同角度提問 — 像真的關主面試一樣有壓力。",
+                color = PaperWhite.copy(alpha = 0.85f),
+                style = MaterialTheme.typography.bodySmall,
+                lineHeight = 19.sp,
+            )
+            Spacer(Modifier.height(16.dp))
+            panel.forEach { (role, angle) ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(Modifier.size(8.dp).clip(CircleShape).background(BrandYellow))
+                    Spacer(Modifier.width(12.dp))
+                    Text(role, color = PaperWhite, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Spacer(Modifier.width(8.dp))
+                    Text(angle, color = PaperWhite.copy(alpha = 0.6f), fontSize = 12.sp)
+                }
+            }
+            Spacer(Modifier.height(14.dp))
+            Box(
+                Modifier.clip(RoundedCornerShape(50)).background(BrandYellow.copy(alpha = 0.18f)).padding(horizontal = 12.dp, vertical = 6.dp),
+            ) {
+                Text("開發中 — 這是團隊投入設計的差異化重點", color = BrandYellow, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            }
+        }
     }
 }

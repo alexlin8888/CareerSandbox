@@ -2,6 +2,7 @@ package com.careersandbox.app.ui.screens.workplace
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -14,7 +15,7 @@ import androidx.compose.material.icons.outlined.SupervisorAccount
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -22,10 +23,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 
 @Composable
 fun WorkplaceSandboxScreen() {
+    var industry by remember { mutableStateOf("科技 / 網路") }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -73,10 +76,27 @@ fun WorkplaceSandboxScreen() {
                     style = MaterialTheme.typography.bodyMedium,
                     lineHeight = 24.sp,
                 )
+                Spacer(Modifier.height(12.dp))
+                Box(
+                    Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(BrandDeepOrange.copy(alpha = 0.12f))
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                ) {
+                    Text(
+                        "當成上工前的試玩關卡 — 在這裡踩雷,總比上班才踩好。",
+                        color = BrandDeepOrange, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                    )
+                }
             }
         }
 
         Spacer(Modifier.height(28.dp))
+
+        // === #22 產業選擇(系統設計成可擴充)===
+        IndustrySelector(selected = industry, onSelect = { industry = it })
+
+        Spacer(Modifier.height(24.dp))
 
         // 未來會推出的場景列表
         Text(
@@ -85,6 +105,15 @@ fun WorkplaceSandboxScreen() {
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Black,
             letterSpacing = 3.sp,
+            modifier = Modifier.padding(horizontal = 24.dp),
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            if (industry == "科技 / 網路") "目前以「科技 / 網路」的職場日常為主。"
+            else "「$industry」的場景規劃中 — 先用通用範例,上線後會換成這個產業的日常。",
+            color = InkGray400,
+            style = MaterialTheme.typography.bodySmall,
+            lineHeight = 18.sp,
             modifier = Modifier.padding(horizontal = 24.dp),
         )
         Spacer(Modifier.height(14.dp))
@@ -158,6 +187,67 @@ private fun SandboxPreview(
                 style = MaterialTheme.typography.bodyMedium,
                 lineHeight = 20.sp,
             )
+        }
+    }
+}
+
+/* ===================== #22 產業選擇(可擴充)===================== */
+
+@Composable
+private fun IndustrySelector(selected: String, onSelect: (String) -> Unit) {
+    val scroll = rememberScrollState()
+    val industries = listOf(
+        "科技 / 網路" to true,
+        "金融" to false,
+        "行銷 / 廣告" to false,
+        "製造 / 工程" to false,
+        "醫療" to false,
+        "公部門" to false,
+    )
+    Column {
+        Text(
+            "選一個產業",
+            color = InkGray500,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Black,
+            letterSpacing = 3.sp,
+            modifier = Modifier.padding(horizontal = 24.dp),
+        )
+        Spacer(Modifier.height(12.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(scroll)
+                .padding(horizontal = 24.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            industries.forEach { (name, ready) ->
+                val isSel = name == selected
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(if (isSel) BrandDeepOrange else MaterialTheme.colorScheme.surface)
+                        .pressScale { onSelect(name) }
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        name,
+                        color = if (isSel) PaperWhite else InkGray700,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    if (!ready) {
+                        Spacer(Modifier.width(5.dp))
+                        Text(
+                            "規劃中",
+                            color = if (isSel) PaperWhite.copy(alpha = 0.8f) else InkGray400,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
+            }
         }
     }
 }
