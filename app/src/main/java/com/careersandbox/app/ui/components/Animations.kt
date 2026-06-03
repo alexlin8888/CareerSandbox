@@ -82,3 +82,20 @@ fun rememberCountUp(target: Int, durationMillis: Int = 900, delayMillis: Int = 0
     )
     return value
 }
+
+/** 進度條寬度從 0 跑到 target(0f..1f)的 fill 動畫,進場自動觸發。
+ *  用法:Modifier.fillMaxWidth(rememberProgressFill(0.74f)) */
+@Composable
+fun rememberProgressFill(target: Float, durationMillis: Int = 1000, delayMillis: Int = 0): Float {
+    var started by remember { mutableStateOf(false) }
+    LaunchedEffect(target) {
+        if (delayMillis > 0) kotlinx.coroutines.delay(delayMillis.toLong())
+        started = true
+    }
+    val value by animateFloatAsState(
+        targetValue = if (started) target else 0f,
+        animationSpec = tween(durationMillis, easing = FastOutSlowInEasing),
+        label = "progressFill",
+    )
+    return value
+}

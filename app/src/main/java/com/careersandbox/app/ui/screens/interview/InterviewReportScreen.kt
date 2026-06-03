@@ -135,7 +135,7 @@ fun InterviewReportScreen(navController: NavHostController) {
                             }
                             Spacer(Modifier.height(20.dp))
                             // 超大數字
-                            Text("74",
+                            Text("${rememberCountUp(74, durationMillis = 1200)}",
                                 color = PaperWhite,
                                 fontSize = 128.sp,
                                 fontWeight = FontWeight.Black,
@@ -343,7 +343,7 @@ private fun DimensionRow(name: String, score: Int) {
                 color = PaperWhite,
                 style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.weight(1f))
-            Text("$score",
+            Text("${rememberCountUp(score)}",
                 color = color,
                 fontWeight = FontWeight.Black,
                 fontSize = 22.sp,
@@ -360,7 +360,7 @@ private fun DimensionRow(name: String, score: Int) {
             Box(
                 Modifier
                     .fillMaxHeight()
-                    .fillMaxWidth(score / 100f)
+                    .fillMaxWidth(rememberProgressFill(score / 100f))
                     .clip(RoundedCornerShape(50))
                     .background(SolidColor(color))
             )
@@ -510,7 +510,7 @@ private fun FaceCard(
             }
             Spacer(Modifier.width(12.dp))
             Text(name, color = PaperWhite, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.weight(1f))
-            Text("$score", color = scoreColor, fontWeight = FontWeight.Black, fontSize = 24.sp, letterSpacing = (-0.5).sp)
+            Text("${rememberCountUp(score)}", color = scoreColor, fontWeight = FontWeight.Black, fontSize = 24.sp, letterSpacing = (-0.5).sp)
             Spacer(Modifier.width(6.dp))
             Icon(
                 if (expanded) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
@@ -522,7 +522,7 @@ private fun FaceCard(
             Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(50)).background(Color(0x22FFFFFF)),
         ) {
             Box(
-                Modifier.fillMaxHeight().fillMaxWidth(score / 100f).clip(RoundedCornerShape(50)).background(SolidColor(scoreColor)),
+                Modifier.fillMaxHeight().fillMaxWidth(rememberProgressFill(score / 100f)).clip(RoundedCornerShape(50)).background(SolidColor(scoreColor)),
             )
         }
         Spacer(Modifier.height(10.dp))
