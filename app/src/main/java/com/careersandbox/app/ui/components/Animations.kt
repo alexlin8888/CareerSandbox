@@ -66,3 +66,19 @@ fun StaggeredAppear(
             ),
     ) { content() }
 }
+
+/** 數字從 0 跑到 target 的 count-up,進場時自動觸發。用法:Text("${rememberCountUp(64)}") */
+@Composable
+fun rememberCountUp(target: Int, durationMillis: Int = 900, delayMillis: Int = 0): Int {
+    var started by remember { mutableStateOf(false) }
+    LaunchedEffect(target) {
+        if (delayMillis > 0) kotlinx.coroutines.delay(delayMillis.toLong())
+        started = true
+    }
+    val value by animateIntAsState(
+        targetValue = if (started) target else 0,
+        animationSpec = tween(durationMillis, easing = FastOutSlowInEasing),
+        label = "countUp",
+    )
+    return value
+}

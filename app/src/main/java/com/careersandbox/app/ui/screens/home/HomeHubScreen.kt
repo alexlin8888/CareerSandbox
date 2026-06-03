@@ -54,34 +54,36 @@ fun HomeHubScreen(navController: NavHostController) {
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         ) {
-            HeroSection(navController)
+            StaggeredAppear(delayMillis = 0) { HeroSection(navController) }
             Spacer(Modifier.height(20.dp))
-            ArticleSection(navController)
+            StaggeredAppear(delayMillis = 90) { ArticleSection(navController) }
             Spacer(Modifier.height(24.dp))
-            QuickActionsBorderless(navController)
+            StaggeredAppear(delayMillis = 170) { QuickActionsBorderless(navController) }
             Spacer(Modifier.height(28.dp))
-            ModuleSection(navController)
+            StaggeredAppear(delayMillis = 250) { ModuleSection(navController) }
             Spacer(Modifier.height(28.dp))
-            CompetitionSection(navController)
+            StaggeredAppear(delayMillis = 330) { CompetitionSection(navController) }
             Spacer(Modifier.height(32.dp))
 
             // 頁尾品牌大使(招手)
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Image(
-                    painter = painterResource(R.drawable.beaver_wave),
-                    contentDescription = null,
-                    modifier = Modifier.size(120.dp),
-                    contentScale = ContentScale.Fit,
-                )
-                Text(
-                    "今天也一起加油!",
-                    color = InkGray500,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                )
+            StaggeredAppear(delayMillis = 410) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.beaver_wave),
+                        contentDescription = null,
+                        modifier = Modifier.size(120.dp),
+                        contentScale = ContentScale.Fit,
+                    )
+                    Text(
+                        "今天也一起加油!",
+                        color = InkGray500,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
             }
             Spacer(Modifier.height(16.dp))
         }
@@ -92,6 +94,7 @@ fun HomeHubScreen(navController: NavHostController) {
 @Composable
 private fun HeroSection(navController: NavHostController) {
     val stat = MockData.homeStat
+    val pct = rememberCountUp(stat.resumeCompletion)
     Box(modifier = Modifier.fillMaxWidth().height(360.dp)) {
         // 1. wave 漸層背景(最底層)
         WaveHeroBackground(
@@ -173,7 +176,7 @@ private fun HeroSection(navController: NavHostController) {
                     Spacer(Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.Bottom) {
                         Text(
-                            "${stat.resumeCompletion}",
+                            "$pct",
                             color = PaperWhite,
                             fontWeight = FontWeight.Black,
                             fontSize = 56.sp,
