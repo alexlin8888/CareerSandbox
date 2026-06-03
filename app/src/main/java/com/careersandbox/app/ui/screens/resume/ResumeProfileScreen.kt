@@ -44,6 +44,14 @@ import com.careersandbox.app.ui.theme.*
 fun ResumeProfileScreen(navController: NavHostController) {
     val user = MockData.currentUser
     val ctxScreen = LocalContext.current
+    // #15 直接分享「這個版本」— 系統分享選單已含 Nearby Share / 藍牙 / 訊息(AirDrop 式直傳)
+    val onShare: () -> Unit = {
+        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(android.content.Intent.EXTRA_TEXT, "這是我用 CareerSandbox 製作的履歷")
+        }
+        ctxScreen.startActivity(android.content.Intent.createChooser(intent, "分享這個版本"))
+    }
     // 「關於我」可編輯(local state,套用後即時顯示)
     var bioText by remember { mutableStateOf(user.bio) }
     var editingBio by remember { mutableStateOf(false) }
@@ -70,15 +78,8 @@ fun ResumeProfileScreen(navController: NavHostController) {
                     }
                 },
                 actions = {
-                    val ctx = LocalContext.current
-                    IconButton(onClick = {
-                        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(android.content.Intent.EXTRA_TEXT, "這是我用 CareerSandbox 製作的履歷")
-                        }
-                        ctx.startActivity(android.content.Intent.createChooser(intent, "分享履歷"))
-                    }) {
-                        Icon(Icons.Outlined.Share, contentDescription = "分享", tint = InkBlack)
+                    IconButton(onClick = onShare) {
+                        Icon(Icons.Outlined.Share, contentDescription = "分享這個版本", tint = InkBlack)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = PaperWhite),
@@ -110,24 +111,46 @@ fun ResumeProfileScreen(navController: NavHostController) {
                         }
                     }
                     Spacer(Modifier.height(10.dp))
-                    // 次 CTA — 健檢
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(InkGray100)
-                            .pressScale { navController.navigate(Routes.FIT_ANALYSIS) },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Outlined.Tune, contentDescription = null,
-                                tint = InkBlack, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("健檢這份履歷",
-                                color = InkBlack,
-                                fontWeight = FontWeight.SemiBold,
-                                style = MaterialTheme.typography.titleSmall)
+                    // 次 CTA — 健檢 + 直接分享這個版本
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(52.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(InkGray100)
+                                .pressScale { navController.navigate(Routes.FIT_ANALYSIS) },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Outlined.Tune, contentDescription = null,
+                                    tint = InkBlack, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("健檢這份履歷",
+                                    color = InkBlack,
+                                    fontWeight = FontWeight.SemiBold,
+                                    style = MaterialTheme.typography.titleSmall)
+                            }
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(52.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(BrandPeach)
+                                .pressScale(onClick = onShare),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Outlined.Share, contentDescription = null,
+                                    tint = BrandDeepOrange, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("分享這個版本",
+                                    color = BrandDeepOrange,
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.titleSmall)
+                            }
                         }
                     }
                 }
