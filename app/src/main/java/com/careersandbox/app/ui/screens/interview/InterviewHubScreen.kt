@@ -61,7 +61,7 @@ fun InterviewHubScreen(navController: NavHostController) {
             Spacer(Modifier.height(24.dp))
 
             // === #7 multi-agent 面試官 panel(殼 / 預告)===
-            StaggeredAppear(delayMillis = 330) { MultiAgentTeaser() }
+            StaggeredAppear(delayMillis = 330) { MultiAgentTeaser(navController) }
 
             Spacer(Modifier.height(32.dp))
 
@@ -494,7 +494,7 @@ private fun QuickPracticeCard(navController: NavHostController) {
 /* ===================== #7 multi-agent 面試官 panel(殼)===================== */
 
 @Composable
-private fun MultiAgentTeaser() {
+private fun MultiAgentTeaser(navController: NavHostController) {
     val panel = listOf(
         Triple("HR 主管", "人格特質 · 團隊適配", "你遇過最棘手的團隊衝突,後來怎麼收的?"),
         Triple("技術主管", "專業深度", "剛剛那個專案,為什麼選這個架構而不是別的?"),
@@ -506,6 +506,7 @@ private fun MultiAgentTeaser() {
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(24.dp))
                 .background(Brush.linearGradient(listOf(Color(0xFF1F2937), Color(0xFF374151))))
+                .pressScale { navController.navigate(Routes.MULTI_AGENT_PREVIEW) }
                 .padding(20.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -566,7 +567,7 @@ private fun MultiAgentTeaser() {
             Box(
                 Modifier.clip(RoundedCornerShape(50)).background(BrandYellow.copy(alpha = 0.18f)).padding(horizontal = 12.dp, vertical = 6.dp),
             ) {
-                Text("開發中 — 這是團隊投入設計的差異化重點", color = BrandYellow, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                Text("開發中 · 點開看完整 panel 預覽 →", color = BrandYellow, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
             }
         }
     }
