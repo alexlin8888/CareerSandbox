@@ -1,6 +1,7 @@
 package com.careersandbox.app.ui.screens.resume
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,8 +14,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.careersandbox.app.R
 import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
 
@@ -54,6 +58,24 @@ fun ExperienceEditScreen(navController: NavHostController) {
         }
     ) { pad ->
         Column(Modifier.padding(pad).padding(horizontal = 20.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.beaver_writing),
+                    contentDescription = null,
+                    modifier = Modifier.size(56.dp),
+                )
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    "把這段經歷先完整寫下來,之後客製各版本履歷都會從這裡取材。",
+                    color = InkGray500,
+                    fontSize = 12.sp,
+                    lineHeight = 17.sp,
+                    modifier = Modifier.weight(1f),
+                )
+            }
             ModeSegmented(mode = mode, onChange = { mode = it })
             Spacer(Modifier.height(20.dp))
 
