@@ -204,11 +204,21 @@ private fun Step3(skillsHave: MutableList<String>, skillsWant: MutableList<Strin
 
 @Composable
 private fun Step4() {
-    Text("準備好了", style = MaterialTheme.typography.headlineLarge,
-        color = InkBlack, fontWeight = FontWeight.ExtraBold)
-    Spacer(Modifier.height(8.dp))
-    Text("根據你的選擇,以下幾件事可以先做",
-        color = InkGray500, style = MaterialTheme.typography.bodyMedium)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Image(
+            painter = painterResource(R.drawable.beaver_thumbsup),
+            contentDescription = null,
+            modifier = Modifier.size(72.dp),
+        )
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text("準備好了", style = MaterialTheme.typography.headlineLarge,
+                color = InkBlack, fontWeight = FontWeight.ExtraBold)
+            Spacer(Modifier.height(8.dp))
+            Text("根據你的選擇,以下幾件事可以先做",
+                color = InkGray500, style = MaterialTheme.typography.bodyMedium)
+        }
+    }
     Spacer(Modifier.height(24.dp))
 
     val items = listOf(
