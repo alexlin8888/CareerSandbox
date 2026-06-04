@@ -1,5 +1,6 @@
 package com.careersandbox.app.ui.screens.workplace
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.horizontalScroll
@@ -7,7 +8,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Apartment
 import androidx.compose.material.icons.outlined.Coffee
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Groups
@@ -19,10 +19,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.careersandbox.app.R
+import com.careersandbox.app.ui.components.StaggeredAppear
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 
@@ -53,40 +56,39 @@ fun WorkplaceSandboxScreen() {
                 .background(BrandPeach.copy(alpha = 0.5f))
                 .padding(24.dp),
         ) {
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Outlined.Apartment,
-                        contentDescription = null,
-                        tint = BrandDeepOrange,
-                        modifier = Modifier.size(28.dp),
-                    )
-                    Spacer(Modifier.width(10.dp))
+            Row(verticalAlignment = Alignment.Top) {
+                Image(
+                    painter = painterResource(R.drawable.beaver_point),
+                    contentDescription = null,
+                    modifier = Modifier.size(76.dp),
+                )
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         "提前打預防針",
                         color = BrandDeepOrange,
                         fontWeight = FontWeight.Black,
                         fontSize = 22.sp,
                     )
-                }
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    "不是教你成功的職場 — 是讓你在踏進去之前,先感覺真實上班的樣子。主管的壓力、同事的氛圍、處理不完的 email、開不完的會。",
-                    color = InkGray700,
-                    style = MaterialTheme.typography.bodyMedium,
-                    lineHeight = 24.sp,
-                )
-                Spacer(Modifier.height(12.dp))
-                Box(
-                    Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(BrandDeepOrange.copy(alpha = 0.12f))
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                ) {
+                    Spacer(Modifier.height(10.dp))
                     Text(
-                        "當成上工前的試玩關卡 — 在這裡踩雷,總比上班才踩好。",
-                        color = BrandDeepOrange, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                        "不是教你成功的職場 — 是讓你在踏進去之前,先感覺真實上班的樣子。主管的壓力、同事的氛圍、處理不完的 email、開不完的會。",
+                        color = InkGray700,
+                        style = MaterialTheme.typography.bodyMedium,
+                        lineHeight = 24.sp,
                     )
+                    Spacer(Modifier.height(12.dp))
+                    Box(
+                        Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(BrandDeepOrange.copy(alpha = 0.12f))
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                    ) {
+                        Text(
+                            "當成上工前的試玩關卡 — 在這裡踩雷,總比上班才踩好。",
+                            color = BrandDeepOrange, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                        )
+                    }
                 }
             }
         }
@@ -118,26 +120,34 @@ fun WorkplaceSandboxScreen() {
         )
         Spacer(Modifier.height(14.dp))
 
-        SandboxPreview(
-            icon = Icons.Outlined.SupervisorAccount,
-            title = "和主管 1on1",
-            description = "嚴厲、嘮叨、放手、微管理 — 不同個性主管的模擬對話",
-        )
-        SandboxPreview(
-            icon = Icons.Outlined.Groups,
-            title = "跨部門開會",
-            description = "PM、工程、設計、行銷各自有立場,你怎麼推動進度",
-        )
-        SandboxPreview(
-            icon = Icons.Outlined.Email,
-            title = "Email 風暴日",
-            description = "一天收 50 封信,有的緊急有的廢話,你決定先處理哪些",
-        )
-        SandboxPreview(
-            icon = Icons.Outlined.Coffee,
-            title = "同事午餐閒聊",
-            description = "聽起來是閒聊,實際在探消息 — 練習職場社交分寸",
-        )
+        StaggeredAppear(delayMillis = 0) {
+            SandboxPreview(
+                icon = Icons.Outlined.SupervisorAccount,
+                title = "和主管 1on1",
+                description = "嚴厲、嘮叨、放手、微管理 — 不同個性主管的模擬對話",
+            )
+        }
+        StaggeredAppear(delayMillis = 80) {
+            SandboxPreview(
+                icon = Icons.Outlined.Groups,
+                title = "跨部門開會",
+                description = "PM、工程、設計、行銷各自有立場,你怎麼推動進度",
+            )
+        }
+        StaggeredAppear(delayMillis = 160) {
+            SandboxPreview(
+                icon = Icons.Outlined.Email,
+                title = "Email 風暴日",
+                description = "一天收 50 封信,有的緊急有的廢話,你決定先處理哪些",
+            )
+        }
+        StaggeredAppear(delayMillis = 240) {
+            SandboxPreview(
+                icon = Icons.Outlined.Coffee,
+                title = "同事午餐閒聊",
+                description = "聽起來是閒聊,實際在探消息 — 練習職場社交分寸",
+            )
+        }
 
         Spacer(Modifier.height(40.dp))
     }
