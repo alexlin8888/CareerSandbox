@@ -1,10 +1,12 @@
 package com.careersandbox.app.ui.screens.interview
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
@@ -21,6 +23,8 @@ import com.careersandbox.app.data.model.ChatMessage
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,9 +32,19 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
     val messages = remember { mutableStateListOf<ChatMessage>().apply { addAll(MockData.individualInterviewScript) } }
     var input by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    var isTyping by remember { mutableStateOf(false) }
+    var followUpIdx by remember { mutableIntStateOf(0) }
+    val probes = listOf(
+        "嗯,了解。可以再給一個更具體的例子嗎?",
+        "那當時你怎麼衡量這個決定的影響?",
+        "如果重來一次,你會有什麼不同的做法?",
+        "這段經驗裡,你覺得自己最關鍵的貢獻是什麼?",
+    )
 
-    LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
+    LaunchedEffect(messages.size, isTyping) {
+        val target = if (isTyping) messages.size else messages.size - 1
+        if (target >= 0) listState.animateScrollToItem(target)
     }
 
     Scaffold(
@@ -76,9 +90,18 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
         },
         bottomBar = {
             BottomInputBar(input, { input = it }) {
-                if (input.isNotBlank()) {
+                if (input.isNotBlank() && !isTyping) {
                     messages.add(ChatMessage("u${messages.size}", "你", input, isUser = true))
                     input = ""
+                    isTyping = true
+                    scope.launch {
+                        delay(1300)
+                        messages.add(
+                            ChatMessage("ai${messages.size}", "面試官", probes[followUpIdx % probes.size], isUser = false)
+                        )
+                        followUpIdx++
+                        isTyping = false
+                    }
                 }
             }
         }
@@ -92,7 +115,10 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(messages, key = { it.id }) { m ->
-                    MessageBubble(m)
+                    Box(Modifier.animateItem()) { MessageBubble(m) }
+                }
+                if (isTyping) {
+                    item(key = "typing") { TypingBubble() }
                 }
                 item { Spacer(Modifier.height(8.dp)) }
             }
@@ -198,6 +224,43 @@ private fun BottomInputBar(input: String, onChange: (String) -> Unit, onSend: ()
             ) {
                 Icon(Icons.Outlined.Send, contentDescription = null,
                     tint = if (input.isBlank()) InkGray400 else PaperWhite)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TypingBubble() {
+    val t = rememberInfiniteTransition(label = "typing")
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
+        Row(
+            modifier = Modifier
+                .clip(
+                    RoundedCornerShape(
+                        topStart = 18.dp, topEnd = 18.dp, bottomStart = 4.dp, bottomEnd = 18.dp,
+                    )
+                )
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            repeat(3) { i ->
+                val a by t.animateFloat(
+                    initialValue = 0.3f,
+                    targetValue = 1f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(durationMillis = 500, delayMillis = i * 160),
+                        repeatMode = RepeatMode.Reverse,
+                    ),
+                    label = "dot",
+                )
+                Box(
+                    Modifier
+                        .padding(horizontal = 3.dp)
+                        .size(7.dp)
+                        .clip(CircleShape)
+                        .background(InkGray400.copy(alpha = a)),
+                )
             }
         }
     }
