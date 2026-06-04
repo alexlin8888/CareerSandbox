@@ -520,7 +520,7 @@ private fun EmptyRecState(hasExcluded: Boolean, onClearFilter: () -> Unit) {
     ) {
         Image(
             painter = painterResource(
-                if (hasExcluded) R.drawable.beaver_empty else R.drawable.beaver_search
+                if (hasExcluded) R.drawable.beaver_confused else R.drawable.beaver_search
             ),
             contentDescription = null,
             modifier = Modifier.size(120.dp),
@@ -533,7 +533,7 @@ private fun EmptyRecState(hasExcluded: Boolean, onClearFilter: () -> Unit) {
         )
         Spacer(Modifier.height(4.dp))
         Text(
-            "試試換個關鍵字或篩選",
+            if (hasExcluded) "下面可以把排除的職位拉回來" else "試試換個關鍵字或篩選",
             color = InkGray500, fontSize = 12.sp,
         )
         Spacer(Modifier.height(14.dp))
