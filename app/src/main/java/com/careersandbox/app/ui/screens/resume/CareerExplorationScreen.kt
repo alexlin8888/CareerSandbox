@@ -267,12 +267,21 @@ fun CareerExplorationScreen(navController: NavHostController) {
                                 .background(BrandPeach.copy(alpha = 0.45f))
                                 .padding(horizontal = 18.dp, vertical = 18.dp),
                         ) {
-                            Text(
-                                "給「${focusedRec.title}」的學習路徑",
-                                color = Color(0xFF7A3A00),
-                                fontWeight = FontWeight.Black,
-                                fontSize = 18.sp,
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Image(
+                                    painter = painterResource(R.drawable.beaver_climb),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(56.dp),
+                                )
+                                Spacer(Modifier.width(10.dp))
+                                Text(
+                                    "給「${focusedRec.title}」的學習路徑",
+                                    color = Color(0xFF7A3A00),
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 18.sp,
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
                             Spacer(Modifier.height(12.dp))
                             steps.forEach { step ->
                                 LearningStepCard(step)
