@@ -369,7 +369,7 @@ private fun AvatarGrowthCard() {
                 contentAlignment = Alignment.Center,
             ) {
                 Image(
-                    painter = painterResource(R.drawable.beaver_celebrate),
+                    painter = painterResource(R.drawable.beaver_flex),
                     contentDescription = null,
                     modifier = Modifier.size(60.dp),
                     contentScale = ContentScale.Fit,
