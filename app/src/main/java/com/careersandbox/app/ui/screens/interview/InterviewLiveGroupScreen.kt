@@ -1,6 +1,7 @@
 package com.careersandbox.app.ui.screens.interview
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,6 +24,8 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.data.model.ChatMessage
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
@@ -44,10 +47,22 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
     var input by remember { mutableStateOf("") }
     var showObservation by remember { mutableStateOf(true) }
     val listState = rememberLazyListState()
-    val currentSpeaker = messages.lastOrNull()?.speaker ?: "主考官"
+    val scope = rememberCoroutineScope()
+    var isTyping by remember { mutableStateOf(false) }
+    var typingSpeaker by remember { mutableStateOf("主考官") }
+    var followUpIdx by remember { mutableIntStateOf(0) }
+    val groupFollowUps = listOf(
+        "主考官" to "謝謝。換個角度,如果資源只夠做一件事,你會先砍掉哪個?",
+        "AI-強勢" to "我補一句 — 我的做法更直接:先搶下市場,細節之後再優化。",
+        "AI-邏輯" to "可是這沒有數據支撐吧?我會先做小規模驗證,再決定要不要放大。",
+        "AI-親切" to "我覺得你講得不錯耶,不過團隊怎麼分工那段可以再多說一點。",
+        "主考官" to "那你會怎麼回應剛剛其他人提出的質疑?",
+    )
+    val currentSpeaker = if (isTyping) typingSpeaker else (messages.lastOrNull()?.speaker ?: "主考官")
 
-    LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
+    LaunchedEffect(messages.size, isTyping) {
+        val target = if (isTyping) messages.size else messages.size - 1
+        if (target >= 0) listState.animateScrollToItem(target)
     }
 
     Scaffold(
@@ -93,9 +108,18 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
             )
         },
         bottomBar = { GroupBottomBar(input, { input = it }) {
-            if (input.isNotBlank()) {
+            if (input.isNotBlank() && !isTyping) {
                 messages.add(ChatMessage("u${messages.size}", "你", input, isUser = true))
                 input = ""
+                val (who, line) = groupFollowUps[followUpIdx % groupFollowUps.size]
+                typingSpeaker = who
+                isTyping = true
+                scope.launch {
+                    delay(1400)
+                    messages.add(ChatMessage("g${messages.size}", who, line, isUser = false))
+                    followUpIdx++
+                    isTyping = false
+                }
             }
         } }
     ) { pad ->
@@ -129,7 +153,12 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                items(messages, key = { it.id }) { m -> GroupMessageBubble(m) }
+                items(messages, key = { it.id }) { m ->
+                    Box(Modifier.animateItem()) { GroupMessageBubble(m) }
+                }
+                if (isTyping) {
+                    item(key = "typing") { GroupTypingBubble(typingSpeaker) }
+                }
                 item { Spacer(Modifier.height(8.dp)) }
             }
         }
@@ -324,6 +353,50 @@ private fun ActionButton(label: String, icon: ImageVector, modifier: Modifier, o
             Spacer(Modifier.width(6.dp))
             Text(label, style = MaterialTheme.typography.labelLarge,
                 color = InkBlack, fontWeight = FontWeight.SemiBold)
+        }
+    }
+}
+
+@Composable
+private fun GroupTypingBubble(speaker: String) {
+    val color = ParticipantColors[speaker] ?: InkGray500
+    val t = rememberInfiniteTransition(label = "gtyping")
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
+        Box(
+            Modifier.size(32.dp).clip(CircleShape).background(color),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                speaker.takeLast(1), color = PaperWhite,
+                style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold,
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 18.dp, bottomStart = 18.dp, bottomEnd = 18.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            repeat(3) { i ->
+                val a by t.animateFloat(
+                    initialValue = 0.3f,
+                    targetValue = 1f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(durationMillis = 500, delayMillis = i * 160),
+                        repeatMode = RepeatMode.Reverse,
+                    ),
+                    label = "dot",
+                )
+                Box(
+                    Modifier
+                        .padding(horizontal = 3.dp)
+                        .size(7.dp)
+                        .clip(CircleShape)
+                        .background(InkGray400.copy(alpha = a)),
+                )
+            }
         }
     }
 }
