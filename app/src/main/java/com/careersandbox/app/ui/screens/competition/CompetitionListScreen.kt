@@ -110,7 +110,7 @@ fun CompetitionListScreen(navController: NavHostController) {
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Image(
-                            painter = painterResource(R.drawable.beaver_empty),
+                            painter = painterResource(R.drawable.beaver_sleep),
                             contentDescription = null,
                             modifier = Modifier.size(120.dp),
                             contentScale = ContentScale.Fit,

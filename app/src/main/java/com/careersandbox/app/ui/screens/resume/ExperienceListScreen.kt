@@ -73,7 +73,7 @@ fun ExperienceListScreen(navController: NavHostController) {
                     Spacer(Modifier.height(40.dp))
                     androidx.compose.foundation.Image(
                         painter = androidx.compose.ui.res.painterResource(
-                            id = com.careersandbox.app.R.drawable.beaver_resume
+                            id = com.careersandbox.app.R.drawable.beaver_peek
                         ),
                         contentDescription = null,
                         modifier = Modifier.size(180.dp),
