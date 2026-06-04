@@ -28,8 +28,10 @@ import com.careersandbox.app.data.model.CompetitionTeam
 import com.careersandbox.app.data.model.TeamMate
 import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.navigation.Routes
+import com.careersandbox.app.ui.components.StaggeredAppear
 import com.careersandbox.app.ui.components.StickyNote
 import com.careersandbox.app.ui.components.pressScale
+import com.careersandbox.app.ui.components.rememberCountUp
 import com.careersandbox.app.ui.theme.*
 
 @Composable
@@ -130,8 +132,25 @@ fun CompetitionDetailScreen(navController: NavHostController, compId: String) {
                 Spacer(Modifier.height(12.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     teammates.forEachIndexed { idx, tm ->
-                        if (idx == 0) {
-                            Box {
+                        StaggeredAppear(delayMillis = idx * 80) {
+                            if (idx == 0) {
+                                Box {
+                                    TeammateCard(
+                                        tm = tm,
+                                        invited = tm.id in invitedIds,
+                                        onInvite = {
+                                            if (tm.id in invitedIds) invitedIds.remove(tm.id) else inviteTarget = tm
+                                        },
+                                    )
+                                    StickyNote(
+                                        text = "你缺的他剛好有",
+                                        rotation = -4f,
+                                        modifier = Modifier
+                                            .align(Alignment.TopStart)
+                                            .offset(x = 24.dp, y = (-12).dp),
+                                    )
+                                }
+                            } else {
                                 TeammateCard(
                                     tm = tm,
                                     invited = tm.id in invitedIds,
@@ -139,22 +158,7 @@ fun CompetitionDetailScreen(navController: NavHostController, compId: String) {
                                         if (tm.id in invitedIds) invitedIds.remove(tm.id) else inviteTarget = tm
                                     },
                                 )
-                                StickyNote(
-                                    text = "你缺的他剛好有",
-                                    rotation = -4f,
-                                    modifier = Modifier
-                                        .align(Alignment.TopStart)
-                                        .offset(x = 24.dp, y = (-12).dp),
-                                )
                             }
-                        } else {
-                            TeammateCard(
-                                tm = tm,
-                                invited = tm.id in invitedIds,
-                                onInvite = {
-                                    if (tm.id in invitedIds) invitedIds.remove(tm.id) else inviteTarget = tm
-                                },
-                            )
                         }
                     }
                 }
@@ -166,14 +170,16 @@ fun CompetitionDetailScreen(navController: NavHostController, compId: String) {
                 Text("這些隊伍正在找你這種背景", color = InkGray500, fontSize = 12.sp)
                 Spacer(Modifier.height(12.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                    teams.forEach { team ->
-                        TeamCard(
-                            team = team,
-                            joined = team.id in appliedTeamIds,
-                            onToggle = {
-                                if (team.id in appliedTeamIds) appliedTeamIds.remove(team.id) else applyTarget = team
-                            },
-                        )
+                    teams.forEachIndexed { idx, team ->
+                        StaggeredAppear(delayMillis = idx * 80) {
+                            TeamCard(
+                                team = team,
+                                joined = team.id in appliedTeamIds,
+                                onToggle = {
+                                    if (team.id in appliedTeamIds) appliedTeamIds.remove(team.id) else applyTarget = team
+                                },
+                            )
+                        }
                     }
                 }
                 Spacer(Modifier.height(28.dp))
@@ -433,7 +439,7 @@ private fun TeammateCard(tm: TeamMate, invited: Boolean, onInvite: () -> Unit) {
         }
         Spacer(Modifier.width(8.dp))
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("${tm.matchScore}%", color = BrandDeepOrange, fontWeight = FontWeight.Black, fontSize = 16.sp)
+            Text("${rememberCountUp(tm.matchScore)}%", color = BrandDeepOrange, fontWeight = FontWeight.Black, fontSize = 16.sp)
             Spacer(Modifier.height(4.dp))
             Box(
                 modifier = Modifier.clip(CircleShape)
