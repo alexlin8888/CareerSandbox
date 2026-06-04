@@ -83,12 +83,12 @@ fun LoginScreen(
                     )
                 }
                 Image(
-                    painter = painterResource(R.drawable.undraw_interview_yz52),
+                    painter = painterResource(R.drawable.beaver_wave),
                     contentDescription = null,
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .offset(x = 16.dp, y = 32.dp)
-                        .size(200.dp),
+                        .offset(x = 8.dp, y = 12.dp)
+                        .size(190.dp),
                     contentScale = ContentScale.Fit,
                 )
             }

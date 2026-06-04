@@ -150,13 +150,13 @@ fun SplashScreen(onDone: () -> Unit) {
             enter = fadeIn(tween(900)) + slideInVertically(tween(900)) { it / 3 },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .offset(x = 60.dp, y = floatY.dp + 80.dp)
-                .size(360.dp),
+                .offset(x = 24.dp, y = floatY.dp + 48.dp)
+                .size(320.dp),
         ) {
             Image(
-                painter = painterResource(R.drawable.undraw_online_information_hhp2),
+                painter = painterResource(R.drawable.beaver_wave),
                 contentDescription = null,
-                modifier = Modifier.fillMaxSize().alpha(0.92f),
+                modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Fit,
             )
         }
