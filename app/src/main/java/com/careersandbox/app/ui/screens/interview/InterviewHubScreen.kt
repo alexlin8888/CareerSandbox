@@ -496,9 +496,9 @@ private fun QuickPracticeCard(navController: NavHostController) {
 @Composable
 private fun MultiAgentTeaser() {
     val panel = listOf(
-        "HR 主管" to "看人格特質、團隊適配",
-        "技術主管" to "追問你的專業深度",
-        "用人主管" to "問實戰經驗與成果",
+        Triple("HR 主管", "人格特質 · 團隊適配", "你遇過最棘手的團隊衝突,後來怎麼收的?"),
+        Triple("技術主管", "專業深度", "剛剛那個專案,為什麼選這個架構而不是別的?"),
+        Triple("用人主管", "實戰與成果", "如果這塊交給你,前三個月你會先動哪裡?"),
     )
     Column(modifier = Modifier.padding(horizontal = 20.dp)) {
         Column(
@@ -521,22 +521,45 @@ private fun MultiAgentTeaser() {
             Text("多人面試官 panel", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 24.sp)
             Spacer(Modifier.height(6.dp))
             Text(
-                "多位 AI 面試官同時在場,輪流從不同角度提問 — 像真的關主面試一樣有壓力。",
+                "多位 AI 面試官同時在場,輪流從不同角度追問。實際會像這樣:",
                 color = PaperWhite.copy(alpha = 0.85f),
                 style = MaterialTheme.typography.bodySmall,
                 lineHeight = 19.sp,
             )
             Spacer(Modifier.height(16.dp))
-            panel.forEach { (role, angle) ->
+            panel.forEachIndexed { i, (role, angle, q) ->
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                    verticalAlignment = Alignment.Top,
                 ) {
-                    Box(Modifier.size(8.dp).clip(CircleShape).background(BrandYellow))
+                    Box(
+                        Modifier.size(28.dp).clip(CircleShape).background(BrandYellow),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text("${i + 1}", color = InkCharcoal, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                    }
                     Spacer(Modifier.width(12.dp))
-                    Text(role, color = PaperWhite, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Spacer(Modifier.width(8.dp))
-                    Text(angle, color = PaperWhite.copy(alpha = 0.6f), fontSize = 12.sp)
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(role, color = PaperWhite, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Spacer(Modifier.width(8.dp))
+                            Text(angle, color = PaperWhite.copy(alpha = 0.55f), fontSize = 11.sp)
+                        }
+                        Spacer(Modifier.height(5.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(PaperWhite.copy(alpha = 0.08f))
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                        ) {
+                            Text(
+                                "「$q」",
+                                color = PaperWhite.copy(alpha = 0.92f),
+                                fontSize = 13.sp,
+                                lineHeight = 18.sp,
+                            )
+                        }
+                    }
                 }
             }
             Spacer(Modifier.height(14.dp))
