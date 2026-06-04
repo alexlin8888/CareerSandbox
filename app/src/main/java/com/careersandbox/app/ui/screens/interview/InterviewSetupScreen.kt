@@ -185,6 +185,39 @@ fun InterviewSetupScreen(navController: NavHostController) {
                 ResumeVersionPicker(selected = resumeVersion, onSelect = { resumeVersion = it })
             }
 
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(BrandPeach.copy(alpha = 0.3f))
+                    .padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.beaver_calm),
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.size(60.dp),
+                )
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "深呼吸,這只是練習",
+                        color = BrandDeepOrange,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 15.sp,
+                    )
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        "答錯、卡住都沒關係 — 在這裡多踩幾次雷,正式上場才穩。準備好就按下面開始。",
+                        color = InkGray700,
+                        fontSize = 12.sp,
+                        lineHeight = 17.sp,
+                    )
+                }
+            }
+
             Spacer(Modifier.height(20.dp))
         }
     }
