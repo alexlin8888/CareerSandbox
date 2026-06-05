@@ -396,6 +396,15 @@ private fun IntroBeaverCard(
 
 @Composable
 private fun IntroTierCard() {
+    Image(
+        painter = painterResource(R.drawable.beaver_present),
+        contentDescription = null,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(180.dp),
+        contentScale = ContentScale.Fit,
+    )
+    Spacer(Modifier.height(16.dp))
     Text(
         "再依職缺客製版本",
         color = InkBlack,

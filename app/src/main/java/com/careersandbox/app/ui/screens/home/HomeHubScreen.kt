@@ -226,7 +226,7 @@ private fun HeroSection(navController: NavHostController) {
 
         // 4. 插畫破框(右下,但縮小避免擠到文字)
         Image(
-            painter = painterResource(R.drawable.undraw_online_information_hhp2),
+            painter = painterResource(R.drawable.beaver_comfort),
             contentDescription = null,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
