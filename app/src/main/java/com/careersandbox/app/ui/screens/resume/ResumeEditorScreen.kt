@@ -5,6 +5,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
@@ -72,10 +77,16 @@ fun ResumeEditorScreen(navController: NavHostController) {
                         unselectedContentColor = InkGray400)
                 }
             }
-            when (tabIndex) {
-                0 -> SectionsTab()
-                1 -> ContentEditTab()
-                2 -> PreviewTab()
+            AnimatedContent(
+                targetState = tabIndex,
+                transitionSpec = { fadeIn(tween(200)).togetherWith(fadeOut(tween(150))) },
+                label = "editorTab",
+            ) { idx ->
+                when (idx) {
+                    0 -> SectionsTab()
+                    1 -> ContentEditTab()
+                    2 -> PreviewTab()
+                }
             }
         }
     }
