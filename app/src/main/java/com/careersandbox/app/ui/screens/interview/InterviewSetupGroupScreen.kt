@@ -105,7 +105,7 @@ fun InterviewSetupGroupScreen(navController: NavHostController) {
                     ),
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.undraw_online_meetings_zutp),
+                    painter = painterResource(id = R.drawable.beaver_wave),
                     contentDescription = null,
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
@@ -265,6 +265,39 @@ fun InterviewSetupGroupScreen(navController: NavHostController) {
                         color = AccentGreen,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            }
+
+            // 團體面試小提醒(與一對一的安撫卡一致)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(BrandPeach.copy(alpha = 0.3f))
+                    .padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.beaver_calm),
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.size(60.dp),
+                )
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "別急著搶話",
+                        color = BrandDeepOrange,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 15.sp,
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        "團體面試看的是協作:先接住別人的觀點、再補上你的想法,比輾壓全場更加分。",
+                        color = InkGray500,
+                        fontSize = 12.sp,
+                        lineHeight = 18.sp,
                     )
                 }
             }
