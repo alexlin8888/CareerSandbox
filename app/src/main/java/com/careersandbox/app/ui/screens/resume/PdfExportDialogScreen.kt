@@ -1,5 +1,11 @@
 package com.careersandbox.app.ui.screens.resume
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -9,7 +15,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -18,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.careersandbox.app.R
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 import kotlinx.coroutines.delay
@@ -57,21 +66,27 @@ fun PdfExportDialogScreen(
             )
         },
     ) { pad ->
-        when (phase) {
-            ExportPhase.SELECT_TEMPLATE -> SelectTemplatePhase(
-                selectedTemplate = selectedTemplate,
-                onSelect = { selectedTemplate = it },
-                onExport = { phase = ExportPhase.EXPORTING },
-                contentPadding = pad,
-            )
-            ExportPhase.EXPORTING -> ExportingPhase(
-                onDone = { phase = ExportPhase.DONE },
-                contentPadding = pad,
-            )
-            ExportPhase.DONE -> DonePhase(
-                onClose = { navController.popBackStack() },
-                contentPadding = pad,
-            )
+        AnimatedContent(
+            targetState = phase,
+            transitionSpec = { fadeIn(tween(220)).togetherWith(fadeOut(tween(160))) },
+            label = "exportPhase",
+        ) { p ->
+            when (p) {
+                ExportPhase.SELECT_TEMPLATE -> SelectTemplatePhase(
+                    selectedTemplate = selectedTemplate,
+                    onSelect = { selectedTemplate = it },
+                    onExport = { phase = ExportPhase.EXPORTING },
+                    contentPadding = pad,
+                )
+                ExportPhase.EXPORTING -> ExportingPhase(
+                    onDone = { phase = ExportPhase.DONE },
+                    contentPadding = pad,
+                )
+                ExportPhase.DONE -> DonePhase(
+                    onClose = { navController.popBackStack() },
+                    contentPadding = pad,
+                )
+            }
         }
     }
 }
@@ -244,7 +259,15 @@ private fun ExportingPhase(onDone: () -> Unit, contentPadding: PaddingValues) {
             .padding(horizontal = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Spacer(Modifier.height(80.dp))
+        Spacer(Modifier.height(40.dp))
+
+        Image(
+            painter = painterResource(R.drawable.beaver_resume),
+            contentDescription = null,
+            modifier = Modifier.size(96.dp),
+            contentScale = ContentScale.Fit,
+        )
+        Spacer(Modifier.height(20.dp))
 
         CircularProgressIndicator(
             modifier = Modifier.size(60.dp),
@@ -278,22 +301,14 @@ private fun DonePhase(onClose: () -> Unit, contentPadding: PaddingValues) {
             .padding(horizontal = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Spacer(Modifier.height(80.dp))
+        Spacer(Modifier.height(48.dp))
 
-        Box(
-            Modifier
-                .size(80.dp)
-                .clip(RoundedCornerShape(40.dp))
-                .background(AccentGreen.copy(alpha = 0.15f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                Icons.Outlined.Check,
-                contentDescription = null,
-                tint = AccentGreen,
-                modifier = Modifier.size(44.dp),
-            )
-        }
+        Image(
+            painter = painterResource(R.drawable.beaver_celebrate),
+            contentDescription = null,
+            modifier = Modifier.size(120.dp),
+            contentScale = ContentScale.Fit,
+        )
 
         Spacer(Modifier.height(20.dp))
 
