@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -52,40 +53,56 @@ fun InterviewHistoryScreen(navController: NavHostController) {
         ) {
             // 統計 hero
             item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(BrandOrange.copy(alpha = 0.1f))
-                        .padding(20.dp),
-                ) {
-                    StatBox("4", "完成", Modifier.weight(1f))
-                    StatBox("71", "平均分", Modifier.weight(1f))
-                    StatBox("78", "最高分", Modifier.weight(1f))
+                StaggeredAppear(delayMillis = 0) {
+                    Column {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(BrandOrange.copy(alpha = 0.1f))
+                                .padding(20.dp),
+                        ) {
+                            StatBox("4", "完成", Modifier.weight(1f))
+                            StatBox("71", "平均分", Modifier.weight(1f))
+                            StatBox("78", "最高分", Modifier.weight(1f))
+                        }
+                        Spacer(Modifier.height(20.dp))
+                    }
                 }
-                Spacer(Modifier.height(20.dp))
             }
             // === #8 進步趨勢 dashboard ===
             item {
-                TrendDashboard()
-                Spacer(Modifier.height(24.dp))
+                StaggeredAppear(delayMillis = 90) {
+                    Column {
+                        TrendDashboard()
+                        Spacer(Modifier.height(24.dp))
+                    }
+                }
             }
             // 標題
             item {
-                Text(
-                    "全部紀錄",
-                    color = InkBlack,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 20.sp,
-                )
-                Spacer(Modifier.height(12.dp))
+                StaggeredAppear(delayMillis = 180) {
+                    Column {
+                        Text(
+                            "全部紀錄",
+                            color = InkBlack,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 20.sp,
+                        )
+                        Spacer(Modifier.height(12.dp))
+                    }
+                }
             }
             // 紀錄列
-            items(MockData.interviewHistory) { record ->
-                HistoryRowFull(record) {
-                    navController.navigate(Routes.INTERVIEW_REPORT)
+            itemsIndexed(MockData.interviewHistory) { idx, record ->
+                StaggeredAppear(delayMillis = 260 + idx * 70) {
+                    Column {
+                        HistoryRowFull(record) {
+                            navController.navigate(Routes.INTERVIEW_REPORT)
+                        }
+                        SectionDivider(modifier = Modifier.padding(vertical = 12.dp))
+                    }
                 }
-                SectionDivider(modifier = Modifier.padding(vertical = 12.dp))
             }
             item { Spacer(Modifier.height(60.dp)) }
         }
