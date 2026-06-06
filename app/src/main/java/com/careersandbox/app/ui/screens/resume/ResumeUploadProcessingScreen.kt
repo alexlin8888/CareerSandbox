@@ -80,7 +80,9 @@ private fun UploadProcessing(navController: NavHostController, sourceLabel: Stri
 
             // 上方插畫
             Image(
-                painter = painterResource(R.drawable.undraw_feedback_ebmx),
+                painter = painterResource(
+                    if (done) R.drawable.beaver_celebrate else R.drawable.beaver_resume
+                ),
                 contentDescription = null,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier.size(200.dp),
