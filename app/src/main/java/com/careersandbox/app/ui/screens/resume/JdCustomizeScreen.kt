@@ -21,7 +21,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import android.graphics.SurfaceTexture
+import android.media.MediaPlayer
+import android.net.Uri
+import android.view.Surface
+import android.view.TextureView
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -399,11 +406,11 @@ private fun ResultPhase(onBack: () -> Unit, onExport: () -> Unit, contentPadding
                 Spacer(Modifier.height(4.dp))
                 Text("已根據 JD 調整好這份履歷", color = InkGray500, fontSize = 13.sp)
             }
-            Image(
-                painter = painterResource(R.drawable.beaver_celebrate),
-                contentDescription = null,
-                modifier = Modifier.size(120.dp),
-                contentScale = ContentScale.Fit,
+            MascotVideo(
+                rawResId = R.raw.beaver_celebrate_anim,
+                modifier = Modifier
+                    .size(132.dp)
+                    .clip(RoundedCornerShape(20.dp)),
             )
         }
         Spacer(Modifier.height(16.dp))
@@ -729,5 +736,44 @@ private fun MissingChips(keywords: List<String>) {
                     fontWeight = FontWeight.Bold)
             }
         }
+    }
+}
+
+@Composable
+private fun MascotVideo(rawResId: Int, modifier: Modifier = Modifier, loop: Boolean = true) {
+    val context = LocalContext.current
+    val uri = remember(rawResId) { Uri.parse("android.resource://${context.packageName}/$rawResId") }
+    val playerRef = remember { mutableStateOf<MediaPlayer?>(null) }
+    AndroidView(
+        modifier = modifier,
+        factory = { ctx ->
+            TextureView(ctx).apply {
+                isOpaque = false
+                surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+                    override fun onSurfaceTextureAvailable(st: SurfaceTexture, w: Int, h: Int) {
+                        try {
+                            val mp = MediaPlayer()
+                            mp.setDataSource(ctx, uri)
+                            mp.setSurface(Surface(st))
+                            mp.isLooping = loop
+                            mp.setVolume(0f, 0f)
+                            mp.setOnPreparedListener { it.start() }
+                            mp.prepareAsync()
+                            playerRef.value = mp
+                        } catch (e: Exception) {
+                            playerRef.value?.release(); playerRef.value = null
+                        }
+                    }
+                    override fun onSurfaceTextureSizeChanged(st: SurfaceTexture, w: Int, h: Int) {}
+                    override fun onSurfaceTextureDestroyed(st: SurfaceTexture): Boolean {
+                        playerRef.value?.release(); playerRef.value = null; return true
+                    }
+                    override fun onSurfaceTextureUpdated(st: SurfaceTexture) {}
+                }
+            }
+        },
+    )
+    DisposableEffect(Unit) {
+        onDispose { playerRef.value?.release(); playerRef.value = null }
     }
 }
