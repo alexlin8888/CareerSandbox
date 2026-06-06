@@ -626,15 +626,17 @@ private fun MetricMini(label: String, value: String, accent: Color, modifier: Mo
 
 @Composable
 private fun SectionTitle(title: String, subtitle: String) {
-    Text(title,
-        color = InkBlack,
-        fontWeight = FontWeight.Black,
-        fontSize = 18.sp)
-    Spacer(Modifier.height(2.dp))
-    Text(subtitle,
-        color = InkGray500,
-        style = MaterialTheme.typography.bodySmall)
-    Spacer(Modifier.height(12.dp))
+    Column {
+        Text(title,
+            color = InkBlack,
+            fontWeight = FontWeight.Black,
+            fontSize = 18.sp)
+        Spacer(Modifier.height(2.dp))
+        Text(subtitle,
+            color = InkGray500,
+            style = MaterialTheme.typography.bodySmall)
+        Spacer(Modifier.height(12.dp))
+    }
 }
 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
