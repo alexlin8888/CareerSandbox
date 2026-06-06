@@ -746,55 +746,88 @@ private fun GapGroup(dot: Color, title: String, chips: List<String>, emphasized:
 
 @Composable
 private fun SkillGapVenn(gapCount: Int, matchCount: Int) {
-    Box(
-        modifier = Modifier.fillMaxWidth().height(150.dp),
-        contentAlignment = Alignment.Center,
+    var appear by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { appear = true }
+    val grow by animateFloatAsState(targetValue = if (appear) 1f else 0f, label = "vennGrow")
+    val animGap by animateIntAsState(targetValue = if (appear) gapCount else 0, label = "vennGap")
+    val animMatch by animateIntAsState(targetValue = if (appear) matchCount else 0, label = "vennMatch")
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Canvas(modifier = Modifier.fillMaxWidth().height(150.dp)) {
-            val r = size.height * 0.40f
-            val cy = size.height / 2f
-            val cxL = size.width / 2f - r * 0.55f
-            val cxR = size.width / 2f + r * 0.55f
-            val leftPath = Path().apply { addOval(Rect(Offset(cxL, cy), r)) }
-            val rightPath = Path().apply { addOval(Rect(Offset(cxR, cy), r)) }
-            val diff = Path().apply { op(leftPath, rightPath, PathOperation.Difference) }
-            val inter = Path().apply { op(leftPath, rightPath, PathOperation.Intersect) }
-            // 右圈(你有的)— 低調
-            drawPath(rightPath, color = InkGray200.copy(alpha = 0.55f))
-            // 交集 — 暖色淺
-            drawPath(inter, color = BrandPeach.copy(alpha = 0.6f))
-            // 差集(還缺)— 暖色強調
-            drawPath(diff, color = BrandDeepOrange.copy(alpha = 0.85f))
-            // 外框
-            drawPath(leftPath, color = BrandDeepOrange, style = Stroke(width = 2.5.dp.toPx()))
-            drawPath(rightPath, color = InkGray400, style = Stroke(width = 2.dp.toPx()))
-        }
-        // 標籤疊層
-        Text(
-            "職位要求",
-            color = BrandDeepOrange, fontSize = 10.sp, fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(Alignment.TopStart).padding(start = 24.dp, top = 6.dp),
-        )
-        Text(
-            "你有的",
-            color = InkGray500, fontSize = 10.sp, fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(Alignment.TopEnd).padding(end = 36.dp, top = 6.dp),
-        )
-        // 差集數字(白字,在左側新月)
-        Column(
-            modifier = Modifier.align(Alignment.CenterStart).padding(start = 26.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+        Box(
+            modifier = Modifier.fillMaxWidth().height(170.dp),
+            contentAlignment = Alignment.Center,
         ) {
-            Text("還缺", color = PaperWhite, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-            Text("$gapCount", color = PaperWhite, fontSize = 20.sp, fontWeight = FontWeight.Black)
+            Canvas(modifier = Modifier.fillMaxWidth().height(170.dp)) {
+                val h = size.height
+                val rLfull = h * 0.42f   // 職位要求 — 較大(這份工作要求的多)
+                val rRfull = h * 0.34f   // 你有的 — 較小
+                val rL = rLfull * grow
+                val rR = rRfull * grow
+                if (rL <= 0.5f || rR <= 0.5f) return@Canvas
+                val cy = h / 2f
+                val cx = size.width / 2f
+                val d = (rLfull + rRfull) * 0.58f
+                val cxL = cx - d / 2f
+                val cxR = cx + d / 2f
+                val leftPath = Path().apply { addOval(Rect(Offset(cxL, cy), rL)) }
+                val rightPath = Path().apply { addOval(Rect(Offset(cxR, cy), rR)) }
+                val diff = Path().apply { op(leftPath, rightPath, PathOperation.Difference) }
+                val inter = Path().apply { op(leftPath, rightPath, PathOperation.Intersect) }
+                // 你有的(右圈)— 低調灰
+                drawPath(rightPath, color = InkGray200.copy(alpha = 0.5f * grow))
+                // 交集(符合)— 暖色淺
+                drawPath(inter, color = BrandPeach.copy(alpha = 0.85f * grow))
+                // 差集(還缺)— 暖色實心強調(這才是焦點)
+                drawPath(diff, color = BrandDeepOrange.copy(alpha = 0.92f * grow))
+                // 外框
+                drawPath(leftPath, color = BrandDeepOrange.copy(alpha = grow), style = Stroke(width = 2.5.dp.toPx()))
+                drawPath(rightPath, color = InkGray400.copy(alpha = grow), style = Stroke(width = 2.dp.toPx()))
+            }
+            // 圈標籤
+            Text(
+                "職位要求",
+                color = BrandDeepOrange, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.TopStart).padding(start = 22.dp, top = 8.dp),
+            )
+            Text(
+                "你有的",
+                color = InkGray500, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.TopEnd).padding(end = 42.dp, top = 22.dp),
+            )
+            // 還缺(左新月,焦點:大白字)
+            Column(
+                modifier = Modifier.align(Alignment.Center).offset(x = (-68).dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text("還缺", color = PaperWhite, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text("$animGap", color = PaperWhite, fontSize = 28.sp, fontWeight = FontWeight.Black)
+            }
+            // 符合(交集)
+            Column(
+                modifier = Modifier.align(Alignment.Center).offset(x = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text("符合", color = BrandDeepOrange, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Text("$animMatch", color = BrandDeepOrange, fontSize = 15.sp, fontWeight = FontWeight.Black)
+            }
         }
-        // 交集數字
-        Column(
-            modifier = Modifier.align(Alignment.Center),
-            horizontalAlignment = Alignment.CenterHorizontally,
+        Spacer(Modifier.height(12.dp))
+        // 一句話總結
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .clip(RoundedCornerShape(50))
+                .background(BrandPeach.copy(alpha = 0.25f))
+                .padding(horizontal = 14.dp, vertical = 7.dp),
         ) {
-            Text("符合", color = BrandDeepOrange, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-            Text("$matchCount", color = BrandDeepOrange, fontSize = 16.sp, fontWeight = FontWeight.Black)
+            Text("這份 JD 你已符合 ", color = InkGray500, fontSize = 12.sp)
+            Text("$matchCount", color = AccentGreen, fontSize = 14.sp, fontWeight = FontWeight.Black)
+            Text(" 項,還差 ", color = InkGray500, fontSize = 12.sp)
+            Text("$gapCount", color = BrandDeepOrange, fontSize = 14.sp, fontWeight = FontWeight.Black)
+            Text(" 項就到位", color = InkGray500, fontSize = 12.sp)
         }
     }
 }
