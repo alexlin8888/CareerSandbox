@@ -1,5 +1,6 @@
 package com.careersandbox.app.ui.screens.interview
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -12,7 +13,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
@@ -25,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.careersandbox.app.R
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
@@ -264,6 +268,44 @@ fun InterviewReportScreen(navController: NavHostController) {
 
                 Spacer(Modifier.height(32.dp))
             }
+
+            // 收尾鼓勵(誠實語氣,呼應 74 分「有基礎但還能更好」)
+            StaggeredAppear {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color(0x14FFFFFF))
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.beaver_thumbsup),
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.size(84.dp),
+                    )
+                    Spacer(Modifier.width(14.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "有基礎了,別停在這",
+                            color = PaperWhite,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 16.sp,
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "把語速放慢一點、再來一次時把漏掉的經歷補上,分數會更穩。",
+                            color = InkGray300,
+                            fontSize = 13.sp,
+                            lineHeight = 19.sp,
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
 
             // 底部按鈕
             Row(
