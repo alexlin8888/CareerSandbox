@@ -60,7 +60,7 @@ fun InterviewHubScreen(navController: NavHostController) {
 
             Spacer(Modifier.height(24.dp))
 
-            // === #7 multi-agent 面試官 panel(殼 / 預告)===
+            // === 三對一 panel 入口(已上線)===
             StaggeredAppear(delayMillis = 330) { MultiAgentTeaser(navController) }
 
             Spacer(Modifier.height(32.dp))
@@ -506,23 +506,27 @@ private fun MultiAgentTeaser(navController: NavHostController) {
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(24.dp))
                 .background(Brush.linearGradient(listOf(Color(0xFF1F2937), Color(0xFF374151))))
-                .pressScale { navController.navigate(Routes.MULTI_AGENT_PREVIEW) }
+                .pressScale {
+                    navController.navigate(Routes.INTERVIEW_LIVE_PANEL) {
+                        popUpTo(Routes.INTERVIEW_HUB)
+                    }
+                }
                 .padding(20.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    Modifier.clip(RoundedCornerShape(50)).background(BrandYellow).padding(horizontal = 8.dp, vertical = 3.dp),
+                    Modifier.clip(RoundedCornerShape(50)).background(AccentGreen).padding(horizontal = 8.dp, vertical = 3.dp),
                 ) {
-                    Text("即將推出", color = InkCharcoal, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    Text("可以開始", color = PaperWhite, fontSize = 10.sp, fontWeight = FontWeight.Black)
                 }
                 Spacer(Modifier.width(8.dp))
-                Text("最貼近真實 panel 面試", color = PaperWhite.copy(alpha = 0.7f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Text("最貼近真實的三對一面試", color = PaperWhite.copy(alpha = 0.7f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             }
             Spacer(Modifier.height(12.dp))
             Text("多人面試官 panel", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 24.sp)
             Spacer(Modifier.height(6.dp))
             Text(
-                "多位 AI 面試官同時在場,輪流從不同角度追問。實際會像這樣:",
+                "三位主管同時在場,從不同角度輪流追問。像這樣:",
                 color = PaperWhite.copy(alpha = 0.85f),
                 style = MaterialTheme.typography.bodySmall,
                 lineHeight = 19.sp,
@@ -567,7 +571,7 @@ private fun MultiAgentTeaser(navController: NavHostController) {
             Box(
                 Modifier.clip(RoundedCornerShape(50)).background(BrandYellow.copy(alpha = 0.18f)).padding(horizontal = 12.dp, vertical = 6.dp),
             ) {
-                Text("開發中 · 點開看完整 panel 預覽 →", color = BrandYellow, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                Text("點開直接開始三對一面試 →", color = BrandYellow, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
             }
         }
     }
