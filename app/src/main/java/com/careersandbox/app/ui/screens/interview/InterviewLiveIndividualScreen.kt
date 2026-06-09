@@ -1,6 +1,7 @@
 package com.careersandbox.app.ui.screens.interview
 
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,9 +16,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.data.model.ChatMessage
 import com.careersandbox.app.navigation.Routes
@@ -134,10 +138,15 @@ private fun InterviewerHeader() {
             .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Avatar(name = "林", size = 36.dp, background = InkBlack)
+        Image(
+            painter = painterResource(R.drawable.interviewer_lead),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.size(46.dp),
+        )
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
-            Text("林經理 (HR 主管)", style = MaterialTheme.typography.titleSmall,
+            Text("陳經理 ・ 用人主管", style = MaterialTheme.typography.titleSmall,
                 color = InkBlack, fontWeight = FontWeight.SemiBold)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(6.dp).clip(androidx.compose.foundation.shape.CircleShape).background(AccentGreen))
