@@ -21,6 +21,7 @@ object Routes {
     const val INTERVIEW_SETUP_GROUP = "interview_setup_group"
     const val INTERVIEW_LIVE_INDIVIDUAL = "interview_live_individual"
     const val INTERVIEW_LIVE_GROUP = "interview_live_group"
+    const val INTERVIEW_LIVE_PANEL = "interview_live_panel"
     const val INTERVIEW_REPORT = "interview_report"
     const val INTERVIEW_HISTORY = "interview_history"
     const val MULTI_AGENT_PREVIEW = "multi_agent_preview"

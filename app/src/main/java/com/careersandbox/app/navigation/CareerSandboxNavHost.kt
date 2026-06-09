@@ -134,6 +134,7 @@ fun CareerSandboxNavHost(
         composable(Routes.INTERVIEW_SETUP_GROUP) { InterviewSetupGroupScreen(navController) }
         composable(Routes.INTERVIEW_LIVE_INDIVIDUAL) { InterviewLiveIndividualScreen(navController) }
         composable(Routes.INTERVIEW_LIVE_GROUP) { InterviewLiveGroupScreen(navController) }
+        composable(Routes.INTERVIEW_LIVE_PANEL) { InterviewLivePanelScreen(navController) }
         composable(Routes.INTERVIEW_REPORT) { InterviewReportScreen(navController) }
         composable(Routes.INTERVIEW_HISTORY) { InterviewHistoryScreen(navController) }
         composable(Routes.MULTI_AGENT_PREVIEW) { MultiAgentPreviewScreen(navController) }

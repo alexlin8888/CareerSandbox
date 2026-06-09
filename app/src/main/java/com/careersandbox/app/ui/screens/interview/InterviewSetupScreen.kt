@@ -71,7 +71,10 @@ fun InterviewSetupScreen(navController: NavHostController) {
                         .clip(RoundedCornerShape(16.dp))
                         .background(InkBlack)
                         .pressScale {
-                            navController.navigate(Routes.INTERVIEW_LIVE_INDIVIDUAL) {
+                            navController.navigate(
+                                if (format == "panel") Routes.INTERVIEW_LIVE_PANEL
+                                else Routes.INTERVIEW_LIVE_INDIVIDUAL
+                            ) {
                                 popUpTo(Routes.INTERVIEW_HUB)
                             }
                         },
