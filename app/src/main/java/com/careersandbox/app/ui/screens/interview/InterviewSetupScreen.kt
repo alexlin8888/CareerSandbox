@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -15,7 +16,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,18 +23,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.data.model.JobApplication
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
 
-private data class Interviewer(val name: String, val angle: String, val accent: Color)
+private data class Interviewer(val name: String, val angle: String, val drawable: Int)
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
@@ -262,12 +265,12 @@ private fun SegmentButton(text: String, selected: Boolean, modifier: Modifier = 
 @Composable
 private fun RoomPreview(format: String) {
     val panel = listOf(
-        Interviewer("HR 主管", "人格特質 · 文化適配", BrandAmber),
-        Interviewer("技術主管", "專業深度", BrandOrange),
-        Interviewer("用人主管", "即戰力 · 整體評估", BrandDeepOrange),
+        Interviewer("HR 主管", "人格特質 · 文化適配", R.drawable.interviewer_hr),
+        Interviewer("技術主管", "專業深度", R.drawable.interviewer_tech),
+        Interviewer("用人主管", "即戰力 · 整體評估", R.drawable.interviewer_lead),
     )
     val single = listOf(
-        Interviewer("面試官", "從履歷與 JD 出題", BrandOrange),
+        Interviewer("面試官", "從履歷與 JD 出題", R.drawable.interviewer_lead),
     )
     Column(
         modifier = Modifier
@@ -334,16 +337,13 @@ private fun InterviewerTile(p: Interviewer, big: Boolean, modifier: Modifier = M
             .padding(vertical = 16.dp, horizontal = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // 頭像佔位(之後換成河狸:interviewer_hr / _tech / _lead)
-        Box(
-            Modifier.size(if (big) 72.dp else 56.dp).clip(CircleShape)
-                .background(p.accent.copy(alpha = 0.9f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(Icons.Outlined.Person, contentDescription = null,
-                tint = PaperWhite, modifier = Modifier.size(if (big) 38.dp else 30.dp))
-        }
-        Spacer(Modifier.height(8.dp))
+        Image(
+            painter = painterResource(p.drawable),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.size(if (big) 116.dp else 78.dp),
+        )
+        Spacer(Modifier.height(6.dp))
         Text(p.name, color = PaperWhite, fontWeight = FontWeight.Bold,
             fontSize = if (big) 15.sp else 13.sp)
         Spacer(Modifier.height(2.dp))
