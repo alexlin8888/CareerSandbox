@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -65,6 +66,7 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
     var isTyping by remember { mutableStateOf(false) }
     var typingSpeaker by remember { mutableStateOf("HR 主管") }
     var followUpIdx by remember { mutableIntStateOf(0) }
+    var entered by remember { mutableStateOf(false) }
     val currentAsker = if (isTyping) typingSpeaker
         else (messages.lastOrNull { it.isInterviewer }?.speaker ?: "HR 主管")
 
@@ -133,6 +135,9 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
             }
         }
     ) { pad ->
+        if (!entered) {
+            PanelIntroOverlay(Modifier.padding(pad), panelInterviewers) { entered = true }
+        } else {
         Column(Modifier.padding(pad)) {
             PanelRow(panelInterviewers, currentAsker)
             Row(
@@ -161,6 +166,7 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
                 }
                 item { Spacer(Modifier.height(8.dp)) }
             }
+        }
         }
     }
 }
@@ -349,6 +355,66 @@ private fun PanelTypingBubble(speaker: String, drawable: Int?) {
                         .clip(CircleShape)
                         .background(BrandDeepOrange.copy(alpha = a)),
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PanelIntroOverlay(
+    modifier: Modifier = Modifier,
+    interviewers: List<PanelInterviewer>,
+    onDone: () -> Unit,
+) {
+    LaunchedEffect(Unit) {
+        delay(1900)
+        onDone()
+    }
+    val t = rememberInfiniteTransition(label = "breathe")
+    val scale by t.animateFloat(
+        initialValue = 0.94f,
+        targetValue = 1.06f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1400),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "s",
+    )
+    Box(
+        modifier = modifier.fillMaxSize().background(PaperOff),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                interviewers.forEach { iv ->
+                    Image(
+                        painter = painterResource(iv.drawable),
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.size(82.dp).scale(scale),
+                    )
+                }
+            }
+            Spacer(Modifier.height(22.dp))
+            Text("三位主管已就座",
+                color = InkBlack,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Black)
+            Spacer(Modifier.height(6.dp))
+            Text("深呼吸,準備好了就開始。",
+                color = InkGray500,
+                style = MaterialTheme.typography.bodyMedium)
+            Spacer(Modifier.height(28.dp))
+            Box(
+                Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(BrandPeach.copy(alpha = 0.5f))
+                    .padding(horizontal = 14.dp, vertical = 6.dp),
+            ) {
+                Text("即將開始⋯",
+                    color = BrandDeepOrange,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold)
             }
         }
     }
