@@ -122,7 +122,7 @@ private fun HeroSection() {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(6.dp).clip(CircleShape).background(BrandYellow))
                 Spacer(Modifier.width(6.dp))
-                Text("已完成 4 次 · 平均 71 分",
+                Text("已完成 4 次 · 平均 74 分",
                     color = PaperWhite.copy(alpha = 0.9f),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold)

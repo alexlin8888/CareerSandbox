@@ -42,7 +42,7 @@ private val panelInterviewers = listOf(
 
 private val panelScript = listOf(
     ChatMessage("p1", "HR 主管", "我們先從你開始。可以用一分鐘介紹一下自己,以及為什麼想加入我們嗎?", isInterviewer = true),
-    ChatMessage("p2", "你", "你好,我是政大資管系大三的 Alex,做過社團行銷和資料分析實習,想往產品經理發展。", isUser = true),
+    ChatMessage("p2", "你", "你好,我是中山資管系大三的 Alex,做過社團行銷和資料分析實習,想往產品經理發展。", isUser = true),
     ChatMessage("p3", "技術主管", "你提到資料分析。實務上你最常用哪些工具?舉一個你用數據改變決策的例子。", isInterviewer = true),
     ChatMessage("p4", "你", "我主要用 SQL 和 Excel。實習時把每週手動報表自動化,產出時間從兩小時縮到半小時。", isUser = true),
     ChatMessage("p5", "用人主管", "不錯。如果讓你接一個你不熟的產品領域,你會怎麼在兩週內快速上手?", isInterviewer = true),

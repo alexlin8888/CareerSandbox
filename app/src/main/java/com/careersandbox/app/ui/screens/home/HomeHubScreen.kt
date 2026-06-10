@@ -78,7 +78,7 @@ fun HomeHubScreen(navController: NavHostController) {
                         contentScale = ContentScale.Fit,
                     )
                     Text(
-                        "今天也一起加油!",
+                        "今天也一起加油",
                         color = InkGray500,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -95,6 +95,15 @@ fun HomeHubScreen(navController: NavHostController) {
 private fun HeroSection(navController: NavHostController) {
     val stat = MockData.homeStat
     val pct = rememberCountUp(stat.resumeCompletion)
+    val greeting = remember {
+        val h = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+        when {
+            h < 5 -> "夜深了"
+            h < 11 -> "早安"
+            h < 18 -> "午安"
+            else -> "晚安"
+        }
+    }
     Box(modifier = Modifier.fillMaxWidth().height(360.dp)) {
         // 1. wave 漸層背景(最底層)
         WaveHeroBackground(
@@ -119,7 +128,7 @@ private fun HeroSection(navController: NavHostController) {
         ) {
             // 頂部問候
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("下午好,", color = PaperWhite.copy(alpha = 0.85f),
+                Text("$greeting,", color = PaperWhite.copy(alpha = 0.85f),
                     style = MaterialTheme.typography.bodyLarge)
                 Spacer(Modifier.weight(1f))
                 AnimatedBell(
@@ -506,10 +515,6 @@ private fun ArticleSection(navController: NavHostController) {
                 fontSize = 22.sp,
                 modifier = Modifier.weight(1f),
             )
-            Text("查看全部",
-                color = BrandDeepOrange,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.labelMedium)
         }
         Spacer(Modifier.height(4.dp))
         Text(

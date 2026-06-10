@@ -236,9 +236,9 @@ fun InterviewReportScreen(navController: NavHostController) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     QuestionReview(
                         q = "請你做一個簡短的自我介紹。",
-                        a = "你好,我是政大資管系大三的 Alex,過去主要做過社團行銷和資料分析實習,想往產品經理發展。",
+                        a = "你好,我是中山資管系大三的 Alex,過去主要做過社團行銷和資料分析實習,想往產品經理發展。",
                         comment = "有清楚交代背景,但缺乏亮點。可以加 1-2 個具體成就。",
-                        better = "我是政大資管大三的 Alex,把社團 IG 從 0 經營到 1200 追蹤,實習用 SQL 把週報效率提升 4 倍,接下來想把這些經驗帶到產品端。",
+                        better = "我是中山資管大三的 Alex,把社團 IG 從 0 經營到 1200 追蹤,實習用 SQL 把週報效率提升 4 倍,接下來想把這些經驗帶到產品端。",
                     )
                     QuestionReview(
                         q = "可以講一個你覺得做得不太好的決定嗎?",

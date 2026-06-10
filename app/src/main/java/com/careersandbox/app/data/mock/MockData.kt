@@ -7,7 +7,7 @@ object MockData {
     val currentUser = User(
         id = "u1",
         name = "Alex",
-        school = "國立政治大學",
+        school = "國立中山大學",
         department = "資訊管理學系",
         year = "大三",
         email = "alex.lin@example.com",
@@ -26,7 +26,7 @@ object MockData {
         ),
         activities = listOf(
             ActivityRecord(
-                title = "政大資管之夜",
+                title = "中山資管之夜",
                 role = "行銷組組長",
                 period = "2024.09 - 2025.03",
                 highlight = "IG 從 0 經營到 1200 追蹤,觸及破社團新高",
@@ -133,7 +133,7 @@ object MockData {
 
     val individualInterviewScript = listOf(
         ChatMessage("m1", "面試官", "先請你做一個簡短的自我介紹,大約一分鐘。", isInterviewer = true),
-        ChatMessage("m2", "你", "你好,我是政大資管系大三的 Alex,過去主要做過社團行銷和資料分析實習,想往產品經理發展。", isUser = true),
+        ChatMessage("m2", "你", "你好,我是中山資管系大三的 Alex,過去主要做過社團行銷和資料分析實習,想往產品經理發展。", isUser = true),
         ChatMessage("m3", "面試官", "你提到做過社團行銷,可以講一個你覺得做得不太好的決定嗎?", isInterviewer = true),
         ChatMessage("m4", "你", "我們曾經辦過一場聯名活動,前期沒有先測試小規模就直接全推,結果觸及只有預期的三成。", isUser = true),
         ChatMessage("m5", "面試官", "你從這件事學到什麼?具體下次會怎麼做?", isInterviewer = true),
