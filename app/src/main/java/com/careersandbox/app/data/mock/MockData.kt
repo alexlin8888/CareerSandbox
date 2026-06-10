@@ -245,7 +245,7 @@ object MockData {
                 ArticleBlock.BulletList(listOf(
                     "S - Situation 情境:發生什麼事?背景是什麼?",
                     "T - Task 任務:你當時的目標是什麼?越具體越好。",
-                    "A - Action 行動:你做了哪些事?重點來了,要具體!",
+                    "A - Action 行動:你做了哪些事?重點來了,要具體。",
                     "R - Result 結果:成果如何?最好有數字。",
                 )),
                 ArticleBlock.Heading("實際範例"),

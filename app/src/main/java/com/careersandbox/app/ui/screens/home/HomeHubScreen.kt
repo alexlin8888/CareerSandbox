@@ -220,13 +220,13 @@ private fun HeroSection(navController: NavHostController) {
                     StreakChip(
                         leadingIcon = Icons.Outlined.LocalFireDepartment,
                         text = "連續",
-                        value = "5",
+                        value = "4",
                         suffix = "天",
                     )
                     StreakChip(
                         leadingIcon = Icons.Outlined.TrendingUp,
                         text = "比上週",
-                        value = "+12",
+                        value = "+9",
                         suffix = "%",
                     )
                 }

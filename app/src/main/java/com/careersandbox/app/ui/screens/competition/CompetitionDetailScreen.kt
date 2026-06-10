@@ -282,7 +282,7 @@ fun CompetitionDetailScreen(navController: NavHostController, compId: String) {
 
         // === 邀請隊友對話框 ===
         inviteTarget?.let { target ->
-            var msg by remember(target.id) { mutableStateOf("嗨 ${target.name},看到你的背景跟我們競賽很搭,想邀你一起組隊!") }
+            var msg by remember(target.id) { mutableStateOf("嗨 ${target.name},看到你的背景跟我們競賽很搭,想邀你一起組隊。") }
             AlertDialog(
                 onDismissRequest = { inviteTarget = null },
                 title = { Text("邀請 ${target.name}", fontWeight = FontWeight.Black) },
@@ -317,7 +317,7 @@ fun CompetitionDetailScreen(navController: NavHostController, compId: String) {
 
         // === 申請加入隊伍對話框 ===
         applyTarget?.let { target ->
-            var msg by remember(target.id) { mutableStateOf("你好,我想加入「${target.name}」,我的背景應該能補上你們需要的部分!") }
+            var msg by remember(target.id) { mutableStateOf("你好,我想加入「${target.name}」,我的背景應該能補上你們需要的部分。") }
             AlertDialog(
                 onDismissRequest = { applyTarget = null },
                 title = { Text("申請加入 ${target.name}", fontWeight = FontWeight.Black) },

@@ -91,7 +91,7 @@ private fun UploadProcessing(navController: NavHostController, sourceLabel: Stri
             Spacer(Modifier.height(40.dp))
 
             Text(
-                if (done) "完成!" else "AI 解析中",
+                if (done) "完成" else "AI 解析中",
                 color = InkBlack,
                 fontWeight = FontWeight.Black,
                 fontSize = 28.sp,

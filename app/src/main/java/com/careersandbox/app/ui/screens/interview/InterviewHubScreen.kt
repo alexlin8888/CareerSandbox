@@ -18,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
@@ -158,7 +159,7 @@ private fun PlanCards(navController: NavHostController) {
             tagText = "入門推薦",
             tagBg = BrandYellow,
             tagFg = InkCharcoal,
-            cardBg = Brush.linearGradient(listOf(BrandDeepOrange, BrandOrange)),
+            cardBg = SolidColor(BrandDeepOrange),
             illustrationRes = R.drawable.interviewer_lead,
             onClick = { navController.navigate(Routes.INTERVIEW_SETUP_INDIVIDUAL) },
         )
@@ -172,7 +173,7 @@ private fun PlanCards(navController: NavHostController) {
             tagText = "市面少見 · MVP",
             tagBg = BrandYellow,
             tagFg = InkCharcoal,
-            cardBg = Brush.linearGradient(listOf(Color(0xFF1F2937), Color(0xFF374151))),
+            cardBg = SolidColor(InkCharcoal),
             illustrationRes = R.drawable.peer_assertive,
             onClick = { navController.navigate(Routes.INTERVIEW_SETUP_GROUP) },
         )
@@ -360,7 +361,7 @@ private fun AvatarGrowthCard() {
             .padding(horizontal = 20.dp)
             .fillMaxWidth()
             .clip(RoundedCornerShape(24.dp))
-            .background(Brush.linearGradient(listOf(BrandPeach.copy(alpha = 0.55f), PaperWhite)))
+            .background(BrandPeach.copy(alpha = 0.4f))
             .padding(18.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -454,7 +455,7 @@ private fun QuickPracticeCard(navController: NavHostController) {
             .padding(horizontal = 20.dp)
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(Brush.linearGradient(listOf(BrandYellow.copy(alpha = 0.4f), BrandPeach.copy(alpha = 0.5f))))
+            .background(BrandPeach.copy(alpha = 0.5f))
             .pressScale {
                 navController.navigate(Routes.INTERVIEW_LIVE_INDIVIDUAL) {
                     popUpTo(Routes.INTERVIEW_HUB)
@@ -505,7 +506,7 @@ private fun MultiAgentTeaser(navController: NavHostController) {
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(24.dp))
-                .background(Brush.linearGradient(listOf(Color(0xFF1F2937), Color(0xFF374151))))
+                .background(InkCharcoal)
                 .pressScale {
                     navController.navigate(Routes.INTERVIEW_LIVE_PANEL) {
                         popUpTo(Routes.INTERVIEW_HUB)
