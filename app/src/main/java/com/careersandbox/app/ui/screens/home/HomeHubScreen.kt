@@ -55,6 +55,8 @@ fun HomeHubScreen(navController: NavHostController) {
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         ) {
             StaggeredAppear(delayMillis = 0) { HeroSection(navController) }
+            Spacer(Modifier.height(16.dp))
+            StaggeredAppear(delayMillis = 60) { ContinueJobCard(navController) }
             Spacer(Modifier.height(20.dp))
             StaggeredAppear(delayMillis = 90) { ArticleSection(navController) }
             Spacer(Modifier.height(24.dp))
@@ -86,6 +88,99 @@ fun HomeHubScreen(navController: NavHostController) {
                 }
             }
             Spacer(Modifier.height(16.dp))
+        }
+    }
+}
+
+/** 接著做 — 首頁直接接上脊椎:職缺 → 練面試 / 還缺什麼 */
+@Composable
+private fun ContinueJobCard(navController: NavHostController) {
+    val job = MockData.jobApplications.firstOrNull() ?: return
+    Column(
+        modifier = Modifier
+            .padding(horizontal = 20.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(BrandPeach.copy(alpha = 0.4f))
+            .pressScale { navController.navigate(Routes.jobApplicationDetail(job.id)) }
+            .padding(16.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(6.dp).clip(CircleShape).background(BrandDeepOrange))
+            Spacer(Modifier.width(6.dp))
+            Text("接著做",
+                color = BrandDeepOrange,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 2.sp)
+            Spacer(Modifier.weight(1f))
+            Text("你最近在準備的職缺",
+                color = InkGray500,
+                fontSize = 11.sp)
+        }
+        Spacer(Modifier.height(10.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(job.position,
+                    color = InkBlack,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 18.sp)
+                Spacer(Modifier.height(2.dp))
+                Text(job.company,
+                    color = InkGray500,
+                    style = MaterialTheme.typography.bodySmall)
+            }
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text("${job.matchScore}",
+                    color = BrandDeepOrange,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 30.sp,
+                    lineHeight = 30.sp)
+                Text("%",
+                    color = BrandDeepOrange,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(bottom = 4.dp))
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(InkBlack)
+                    .pressScale { navController.navigate(Routes.INTERVIEW_SETUP_INDIVIDUAL) }
+                    .padding(vertical = 10.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Outlined.Mic, contentDescription = null,
+                    tint = PaperWhite, modifier = Modifier.size(15.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("練面試",
+                    color = PaperWhite,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.labelLarge)
+            }
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(PaperWhite)
+                    .pressScale { navController.navigate(Routes.FIT_ANALYSIS) }
+                    .padding(vertical = 10.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Outlined.Analytics, contentDescription = null,
+                    tint = BrandDeepOrange, modifier = Modifier.size(15.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("還缺什麼",
+                    color = BrandDeepOrange,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.labelLarge)
+            }
         }
     }
 }
