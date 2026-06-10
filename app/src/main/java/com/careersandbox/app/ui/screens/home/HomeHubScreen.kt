@@ -55,7 +55,7 @@ fun HomeHubScreen(navController: NavHostController) {
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         ) {
             StaggeredAppear(delayMillis = 0) { HeroSection(navController) }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(32.dp))
             StaggeredAppear(delayMillis = 60) { ContinueJobCard(navController) }
             Spacer(Modifier.height(20.dp))
             StaggeredAppear(delayMillis = 90) { ArticleSection(navController) }
@@ -80,7 +80,7 @@ fun HomeHubScreen(navController: NavHostController) {
                         contentScale = ContentScale.Fit,
                     )
                     Text(
-                        "今天也一起加油",
+                        "今天也一起加油!",
                         color = InkGray500,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,

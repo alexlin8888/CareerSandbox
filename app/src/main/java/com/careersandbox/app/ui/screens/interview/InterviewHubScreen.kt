@@ -62,7 +62,6 @@ fun InterviewHubScreen(navController: NavHostController) {
             Spacer(Modifier.height(24.dp))
 
             // === 三對一 panel 入口(已上線)===
-            StaggeredAppear(delayMillis = 330) { MultiAgentTeaser(navController) }
 
             Spacer(Modifier.height(32.dp))
 
@@ -160,7 +159,7 @@ private fun PlanCards(navController: NavHostController) {
             tagBg = BrandYellow,
             tagFg = InkCharcoal,
             cardBg = SolidColor(BrandDeepOrange),
-            illustrationRes = R.drawable.interviewer_lead,
+            illustrationRes = R.drawable.undraw_video_call_i5de,
             onClick = { navController.navigate(Routes.INTERVIEW_SETUP_INDIVIDUAL) },
         )
 
@@ -174,7 +173,7 @@ private fun PlanCards(navController: NavHostController) {
             tagBg = BrandYellow,
             tagFg = InkCharcoal,
             cardBg = SolidColor(InkCharcoal),
-            illustrationRes = R.drawable.peer_assertive,
+            illustrationRes = R.drawable.undraw_group_video_k4jx,
             onClick = { navController.navigate(Routes.INTERVIEW_SETUP_GROUP) },
         )
     }
@@ -492,88 +491,3 @@ private fun QuickPracticeCard(navController: NavHostController) {
     }
 }
 
-/* ===================== #7 multi-agent 面試官 panel(殼)===================== */
-
-@Composable
-private fun MultiAgentTeaser(navController: NavHostController) {
-    val panel = listOf(
-        Triple("HR 主管", "人格特質 · 團隊適配", "你遇過最棘手的團隊衝突,後來怎麼收的?"),
-        Triple("技術主管", "專業深度", "剛剛那個專案,為什麼選這個架構而不是別的?"),
-        Triple("用人主管", "實戰與成果", "如果這塊交給你,前三個月你會先動哪裡?"),
-    )
-    Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(24.dp))
-                .background(InkCharcoal)
-                .pressScale {
-                    navController.navigate(Routes.INTERVIEW_LIVE_PANEL) {
-                        popUpTo(Routes.INTERVIEW_HUB)
-                    }
-                }
-                .padding(20.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier.clip(RoundedCornerShape(50)).background(AccentGreen).padding(horizontal = 8.dp, vertical = 3.dp),
-                ) {
-                    Text("可以開始", color = PaperWhite, fontSize = 10.sp, fontWeight = FontWeight.Black)
-                }
-                Spacer(Modifier.width(8.dp))
-                Text("最貼近真實的三對一面試", color = PaperWhite.copy(alpha = 0.7f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-            }
-            Spacer(Modifier.height(12.dp))
-            Text("多人面試官 panel", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 24.sp)
-            Spacer(Modifier.height(6.dp))
-            Text(
-                "三位主管同時在場,從不同角度輪流追問。像這樣:",
-                color = PaperWhite.copy(alpha = 0.85f),
-                style = MaterialTheme.typography.bodySmall,
-                lineHeight = 19.sp,
-            )
-            Spacer(Modifier.height(16.dp))
-            panel.forEachIndexed { i, (role, angle, q) ->
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                    verticalAlignment = Alignment.Top,
-                ) {
-                    Box(
-                        Modifier.size(28.dp).clip(CircleShape).background(BrandYellow),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text("${i + 1}", color = InkCharcoal, fontWeight = FontWeight.Black, fontSize = 13.sp)
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(role, color = PaperWhite, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            Spacer(Modifier.width(8.dp))
-                            Text(angle, color = PaperWhite.copy(alpha = 0.55f), fontSize = 11.sp)
-                        }
-                        Spacer(Modifier.height(5.dp))
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(PaperWhite.copy(alpha = 0.08f))
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                        ) {
-                            Text(
-                                "「$q」",
-                                color = PaperWhite.copy(alpha = 0.92f),
-                                fontSize = 13.sp,
-                                lineHeight = 18.sp,
-                            )
-                        }
-                    }
-                }
-            }
-            Spacer(Modifier.height(14.dp))
-            Box(
-                Modifier.clip(RoundedCornerShape(50)).background(BrandYellow.copy(alpha = 0.18f)).padding(horizontal = 12.dp, vertical = 6.dp),
-            ) {
-                Text("點開直接開始三對一面試 →", color = BrandYellow, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-            }
-        }
-    }
-}

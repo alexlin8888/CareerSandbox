@@ -116,32 +116,22 @@ fun SplashScreen(onDone: () -> Unit) {
                 visible = stage >= 3,
                 enter = fadeIn(tween(600)),
             ) {
-                Text(
-                    "AI 陪你找方向 / 練面試 / 寫履歷",
-                    color = InkGray400,
-                    style = MaterialTheme.typography.bodyLarge,
-                )
+                Column {
+                    Text(
+                        "AI 陪你找方向 / 練面試 / 寫履歷",
+                        color = InkGray400,
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Text("CAREER SANDBOX",
+                        color = PaperWhite.copy(alpha = 0.6f),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 4.sp)
+                }
             }
 
             Spacer(Modifier.weight(1f))
-
-            // 底部 loading 指示
-            AnimatedVisibility(
-                visible = stage >= 3,
-                enter = fadeIn(tween(800)),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                ) {
-                    Text("Career Sandbox",
-                        color = PaperWhite.copy(alpha = 0.7f),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 3.sp)
-                }
-            }
         }
 
         // 插畫破框 — 從右下進入,半個身體在畫面外
