@@ -32,6 +32,40 @@ import com.careersandbox.app.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+private fun String.containsAny(vararg keys: String) = keys.any { this.contains(it) }
+
+// 關鍵字感知追問池(之後由 LangGraph evaluate_node 取代,介面不變)
+private val probesData = listOf(
+    "這個數字是怎麼算出來的?基準是什麼?",
+    "如果數據跟你的直覺打架,你信哪個?為什麼?",
+)
+private val probesTeam = listOf(
+    "團隊裡誰跟你意見最不合?那次最後怎麼收?",
+    "如果有人擺爛,你的第一步是什麼?",
+)
+private val probesFail = listOf(
+    "這件事裡,你自己要負的是哪一塊?",
+    "同樣的錯,後來有再犯嗎?你改了什麼?",
+)
+private val probesHonest = listOf(
+    "沒關係,當場想。你會從哪裡開始?",
+    "可以。那換個你熟的——講一個你最有把握的決定。",
+)
+private val probesTime = listOf(
+    "時間砍一半,你先丟掉哪一塊?",
+    "你怎麼判斷一件事該做快的版本,還是好的版本?",
+)
+private val microReactions = listOf("嗯。", "(他停了一下)", "(低頭記了些什麼)", "(點了點頭)")
+
+private fun pickProbe(said: String, idx: Int, fallback: List<String>): String = when {
+    said.containsAny("不知道", "不確定", "沒想過", "沒有經驗") -> probesHonest.random()
+    said.containsAny("數據", "資料", "數字", "分析", "%", "成長") -> probesData.random()
+    said.containsAny("團隊", "合作", "夥伴", "組員", "溝通", "衝突") -> probesTeam.random()
+    said.containsAny("失敗", "錯", "搞砸", "延期", "沒做好") -> probesFail.random()
+    said.containsAny("時間", "趕", "deadline", "來不及", "期限") -> probesTime.random()
+    else -> fallback[idx % fallback.size]
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InterviewLiveIndividualScreen(navController: NavHostController) {
@@ -41,6 +75,10 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
     val scope = rememberCoroutineScope()
     var isTyping by remember { mutableStateOf(false) }
     var followUpIdx by remember { mutableIntStateOf(0) }
+    var reaction by remember { mutableStateOf<String?>(null) }
+    var elapsedSec by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) { while (true) { delay(1000); elapsedSec++ } }
+    val timerText = "${(elapsedSec / 60).toString().padStart(2, '0')}:${(elapsedSec % 60).toString().padStart(2, '0')}"
     val probes = listOf(
         "嗯,了解。可以再給一個更具體的例子嗎?",
         "那當時你怎麼衡量這個決定的影響?",
@@ -48,8 +86,8 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
         "這段經驗裡,你覺得自己最關鍵的貢獻是什麼?",
     )
 
-    LaunchedEffect(messages.size, isTyping) {
-        val target = if (isTyping) messages.size else messages.size - 1
+    LaunchedEffect(messages.size, isTyping, reaction) {
+        val target = if (isTyping || reaction != null) messages.size else messages.size - 1
         if (target >= 0) listState.animateScrollToItem(target)
     }
 
@@ -82,7 +120,7 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
                             Icon(Icons.Outlined.Timer, contentDescription = null,
                                 tint = PaperWhite, modifier = Modifier.size(14.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text("12:34", style = MaterialTheme.typography.labelMedium,
+                            Text(timerText, style = MaterialTheme.typography.labelMedium,
                                 color = PaperWhite, fontWeight = FontWeight.SemiBold)
                         }
                     }
@@ -96,14 +134,18 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
         },
         bottomBar = {
             BottomInputBar(input, { input = it }) {
-                if (input.isNotBlank() && !isTyping) {
-                    messages.add(ChatMessage("u${messages.size}", "你", input, isUser = true))
+                if (input.isNotBlank() && !isTyping && reaction == null) {
+                    val said = input
+                    messages.add(ChatMessage("u${messages.size}", "你", said, isUser = true))
                     input = ""
-                    isTyping = true
+                    reaction = microReactions.random()
                     scope.launch {
+                        delay(800)
+                        reaction = null
+                        isTyping = true
                         delay(1300)
                         messages.add(
-                            ChatMessage("ai${messages.size}", "面試官", probes[followUpIdx % probes.size], isUser = false)
+                            ChatMessage("ai${messages.size}", "面試官", pickProbe(said, followUpIdx, probes), isUser = false)
                         )
                         followUpIdx++
                         isTyping = false
@@ -114,7 +156,7 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
     ) { pad ->
         Column(Modifier.padding(pad)) {
             InterviewerHeader(onThinkTime = {
-                if (!isTyping) {
+                if (!isTyping && reaction == null) {
                     isTyping = true
                     scope.launch {
                         delay(900)
@@ -132,6 +174,9 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
             ) {
                 items(messages, key = { it.id }) { m ->
                     Box(Modifier.animateItem()) { MessageBubble(m) }
+                }
+                reaction?.let { r ->
+                    item(key = "reaction") { ReactionBubble(r) }
                 }
                 if (isTyping) {
                     item(key = "typing") { TypingBubble() }
@@ -286,6 +331,27 @@ private fun TypingBubble() {
                         .background(InkGray400.copy(alpha = a)),
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun ReactionBubble(text: String) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
+        Image(
+            painter = painterResource(R.drawable.interviewer_lead),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.size(34.dp),
+        )
+        Spacer(Modifier.width(8.dp))
+        Box(
+            Modifier
+                .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 18.dp, bottomStart = 18.dp, bottomEnd = 18.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(horizontal = 14.dp, vertical = 8.dp),
+        ) {
+            Text(text, style = MaterialTheme.typography.bodySmall, color = InkGray500)
         }
     }
 }

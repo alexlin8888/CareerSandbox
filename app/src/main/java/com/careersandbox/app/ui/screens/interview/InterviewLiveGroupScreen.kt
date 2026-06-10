@@ -54,6 +54,33 @@ private val ParticipantColors = mapOf(
     "AI-沉默" to InkGray400,
 )
 
+private fun String.containsAny(vararg keys: String) = keys.any { this.contains(it) }
+
+// 關鍵字感知:對的 AI 應徵者跳出來接你的話
+private val gLogicPool = listOf(
+    "等等,這個數字的母數是多少?沒有對照組我不敢下結論。",
+    "你這段推論跳了一步——中間的假設是什麼?",
+)
+private val gAssertivePool = listOf(
+    "我打斷一下——結論先講,我們時間不多。",
+    "這樣太慢了。我的版本:先上線再修,你要不要跟?",
+)
+private val gFriendlyPool = listOf(
+    "我接你這段,方向我同意,分工那邊可以再具體一點嗎?",
+    "你剛剛那個例子不錯,可以再展開一點。",
+)
+private val gExaminerHonestPool = listOf(
+    "沒關係,不確定就說不確定。那你目前確定的部分是什麼?",
+)
+
+private fun pickGroupFollowUp(said: String, idx: Int, fallback: List<Pair<String, String>>): Pair<String, String> = when {
+    said.containsAny("不知道", "不確定", "沒想過") -> "主考官" to gExaminerHonestPool.random()
+    said.containsAny("數據", "資料", "數字", "驗證", "分析") -> "AI-邏輯" to gLogicPool.random()
+    said.containsAny("結論", "直接", "先做", "搶", "快") -> "AI-強勢" to gAssertivePool.random()
+    said.containsAny("大家", "同意", "補充", "一起", "團隊") -> "AI-親切" to gFriendlyPool.random()
+    else -> fallback[idx % fallback.size]
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InterviewLiveGroupScreen(navController: NavHostController) {
@@ -65,6 +92,9 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
     var isTyping by remember { mutableStateOf(false) }
     var typingSpeaker by remember { mutableStateOf("主考官") }
     var followUpIdx by remember { mutableIntStateOf(0) }
+    var elapsedSec by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) { while (true) { delay(1000); elapsedSec++ } }
+    val timerText = "${(elapsedSec / 60).toString().padStart(2, '0')}:${(elapsedSec % 60).toString().padStart(2, '0')}"
     val groupFollowUps = listOf(
         "主考官" to "謝謝。換個角度,如果資源只夠做一件事,你會先砍掉哪個?",
         "AI-強勢" to "我補一句 — 我的做法更直接:先搶下市場,細節之後再優化。",
@@ -109,7 +139,7 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
                             Icon(Icons.Outlined.Timer, contentDescription = null,
                                 tint = PaperWhite, modifier = Modifier.size(14.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text("09:42", style = MaterialTheme.typography.labelMedium,
+                            Text(timerText, style = MaterialTheme.typography.labelMedium,
                                 color = PaperWhite, fontWeight = FontWeight.SemiBold)
                         }
                     }
@@ -123,9 +153,10 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
         },
         bottomBar = { GroupBottomBar(input, { input = it }) {
             if (input.isNotBlank() && !isTyping) {
-                messages.add(ChatMessage("u${messages.size}", "你", input, isUser = true))
+                val said = input
+                messages.add(ChatMessage("u${messages.size}", "你", said, isUser = true))
                 input = ""
-                val (who, line) = groupFollowUps[followUpIdx % groupFollowUps.size]
+                val (who, line) = pickGroupFollowUp(said, followUpIdx, groupFollowUps)
                 typingSpeaker = who
                 isTyping = true
                 scope.launch {

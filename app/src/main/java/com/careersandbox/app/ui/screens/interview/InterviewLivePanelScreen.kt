@@ -57,6 +57,35 @@ private val panelFollowUps = listOf(
     "HR 主管" to "最後一題:你覺得自己現在最需要補強的地方是什麼?",
 )
 
+private fun String.containsAny(vararg keys: String) = keys.any { this.contains(it) }
+
+// 關鍵字感知:由對的主管問對的問題(之後換 LangGraph dispatcher,介面不變)
+private val panelTechPool = listOf(
+    "工具是手段。講一次你用數據推翻原本決定的經驗。",
+    "這個分析如果重做,你會多補哪個維度?",
+)
+private val panelHrPool = listOf(
+    "衝突那段多講一點——你當下實際說了什麼?",
+    "你怎麼確定對方是被說服,而不是不想吵了?",
+)
+private val panelHonestPool = listOf(
+    "誠實很好。那你打算怎麼補這一塊?",
+    "沒關係。換你最有把握的那段經驗,講給我們聽。",
+)
+private val panelLeadPool = listOf(
+    "如果履歷只能留一個成果,你留哪個?為什麼?",
+    "這個決定如果錯了,代價是什麼?你當時想過嗎?",
+)
+private val panelReactions = listOf("嗯。", "(他記了一筆)", "(三位交換了眼神)", "(點頭)")
+
+private fun pickPanelFollowUp(said: String, idx: Int): Pair<String, String> = when {
+    said.containsAny("不知道", "不確定", "沒想過") -> "HR 主管" to panelHonestPool.random()
+    said.containsAny("數據", "資料", "數字", "分析", "%") -> "技術主管" to panelTechPool.random()
+    said.containsAny("團隊", "合作", "衝突", "溝通", "夥伴") -> "HR 主管" to panelHrPool.random()
+    said.containsAny("成果", "負責", "決定", "優先", "取捨") -> "用人主管" to panelLeadPool.random()
+    else -> panelFollowUps[idx % panelFollowUps.size]
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InterviewLivePanelScreen(navController: NavHostController) {
@@ -69,11 +98,15 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
     var typingSpeaker by remember { mutableStateOf("HR 主管") }
     var followUpIdx by remember { mutableIntStateOf(0) }
     var entered by remember { mutableStateOf(false) }
-    val currentAsker = if (isTyping) typingSpeaker
+    var reaction by remember { mutableStateOf<String?>(null) }
+    var elapsedSec by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) { while (true) { delay(1000); elapsedSec++ } }
+    val timerText = "${(elapsedSec / 60).toString().padStart(2, '0')}:${(elapsedSec % 60).toString().padStart(2, '0')}"
+    val currentAsker = if (isTyping || reaction != null) typingSpeaker
         else (messages.lastOrNull { it.isInterviewer }?.speaker ?: "HR 主管")
 
-    LaunchedEffect(messages.size, isTyping) {
-        val target = if (isTyping) messages.size else messages.size - 1
+    LaunchedEffect(messages.size, isTyping, reaction) {
+        val target = if (isTyping || reaction != null) messages.size else messages.size - 1
         if (target >= 0) listState.animateScrollToItem(target)
     }
 
@@ -107,7 +140,7 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
                             Icon(Icons.Outlined.Timer, contentDescription = null,
                                 tint = PaperWhite, modifier = Modifier.size(14.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text("14:50", style = MaterialTheme.typography.labelMedium,
+                            Text(timerText, style = MaterialTheme.typography.labelMedium,
                                 color = PaperWhite, fontWeight = FontWeight.SemiBold)
                         }
                     }
@@ -121,14 +154,18 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
         },
         bottomBar = {
             PanelBottomBar(input, { input = it }) {
-                if (input.isNotBlank() && !isTyping) {
-                    messages.add(ChatMessage("u${messages.size}", "你", input, isUser = true))
+                if (input.isNotBlank() && !isTyping && reaction == null) {
+                    val said = input
+                    messages.add(ChatMessage("u${messages.size}", "你", said, isUser = true))
                     input = ""
-                    val (who, line) = panelFollowUps[followUpIdx % panelFollowUps.size]
+                    val (who, line) = pickPanelFollowUp(said, followUpIdx)
                     typingSpeaker = who
-                    isTyping = true
+                    reaction = panelReactions.random()
                     scope.launch {
-                        delay(1400)
+                        delay(800)
+                        reaction = null
+                        isTyping = true
+                        delay(1300)
                         messages.add(ChatMessage("p${messages.size}", who, line, isInterviewer = true))
                         followUpIdx++
                         isTyping = false
@@ -162,6 +199,9 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
             ) {
                 items(messages, key = { it.id }) { m ->
                     Box(Modifier.animateItem()) { PanelMessageBubble(m) { avatarMap[it] } }
+                }
+                reaction?.let { r ->
+                    item(key = "reaction") { PanelReactionBubble(r, avatarMap[typingSpeaker]) }
                 }
                 if (isTyping) {
                     item(key = "typing") { PanelTypingBubble(typingSpeaker, avatarMap[typingSpeaker]) }
@@ -421,6 +461,29 @@ private fun PanelIntroOverlay(
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold)
             }
+        }
+    }
+}
+
+@Composable
+private fun PanelReactionBubble(text: String, drawable: Int?) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
+        if (drawable != null) {
+            Image(
+                painter = painterResource(drawable),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.size(34.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+        }
+        Box(
+            Modifier
+                .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 18.dp, bottomStart = 18.dp, bottomEnd = 18.dp))
+                .background(BrandPeach.copy(alpha = 0.5f))
+                .padding(horizontal = 14.dp, vertical = 8.dp),
+        ) {
+            Text(text, style = MaterialTheme.typography.bodySmall, color = BrandDeepOrange)
         }
     }
 }
