@@ -1,5 +1,14 @@
 package com.careersandbox.app.ui.screens.interview
 
+import kotlin.math.cos
+import kotlin.math.sin
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.foundation.Canvas
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -10,7 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -352,7 +361,7 @@ private fun AvatarGrowthCard() {
         Triple("邏輯清晰", 82, 2),
         Triple("表達流暢", 71, 6),
         Triple("互動", 68, 3),
-        Triple("應變", 64, 1),
+        Triple("應變", 64, -1),
         Triple("自信", 80, 5),
     )
     Column(
@@ -364,83 +373,123 @@ private fun AvatarGrowthCard() {
             .padding(18.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier.size(72.dp).clip(CircleShape).background(PaperWhite),
-                contentAlignment = Alignment.Center,
-            ) {
-                Image(
-                    painter = painterResource(R.drawable.beaver_flex),
-                    contentDescription = null,
-                    modifier = Modifier.size(60.dp),
-                    contentScale = ContentScale.Fit,
-                )
-            }
-            Spacer(Modifier.width(14.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        Modifier.clip(RoundedCornerShape(50)).background(BrandDeepOrange).padding(horizontal = 8.dp, vertical = 2.dp),
-                    ) {
-                        Text("Lv.4", color = PaperWhite, fontSize = 11.sp, fontWeight = FontWeight.Black)
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    Text("面試新星", color = BrandDeepOrange, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                }
-                Spacer(Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Text(
-                        "面試力 ",
-                        color = InkGray700, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(bottom = 4.dp),
-                    )
-                    Text("${rememberCountUp(74)}", color = InkBlack, fontSize = 30.sp, fontWeight = FontWeight.Black)
-                }
-                Spacer(Modifier.height(6.dp))
-                Box(
-                    Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(50)).background(Color(0x33D84315)),
-                ) {
-                    Box(Modifier.fillMaxHeight().fillMaxWidth(rememberProgressFill(0.74f)).clip(RoundedCornerShape(50)).background(BrandDeepOrange))
-                }
-                Spacer(Modifier.height(3.dp))
-                Text("距 Lv.5 還差 26 XP", color = InkGray500, fontSize = 10.sp)
+            ShieldBadge("面試新星 IV")
+            Spacer(Modifier.weight(1f))
+            Column(horizontalAlignment = Alignment.End) {
+                Text("面試力", color = InkGray700, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text("${rememberCountUp(74)}", color = InkBlack, fontSize = 34.sp, fontWeight = FontWeight.Black, lineHeight = 36.sp)
             }
         }
-        Spacer(Modifier.height(14.dp))
-        Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0x22D84315)))
-        Spacer(Modifier.height(12.dp))
-        Text("六項能力(每練一次會成長)", color = InkGray700, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(6.dp))
+        Box(Modifier.fillMaxWidth().height(168.dp)) {
+            HexRadar(
+                values = abilities.map { it.second },
+                modifier = Modifier.align(Alignment.CenterStart).padding(start = 14.dp).size(156.dp),
+            )
+            // 河狸去框,破框站在卡緣
+            Image(
+                painter = painterResource(R.drawable.beaver_flex),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.align(Alignment.BottomEnd).size(104.dp).offset(x = 10.dp, y = 8.dp),
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            abilities.take(3).forEach { (l, v, d) -> StatCell(l, v, d) }
+        }
         Spacer(Modifier.height(8.dp))
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            abilities.forEach { (label, value, delta) ->
-                AbilityChip(label, value, delta)
-            }
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            abilities.drop(3).forEach { (l, v, d) -> StatCell(l, v, d) }
         }
         Spacer(Modifier.height(12.dp))
         Text(
-            "上次練習後 +6 分 — 再練一場會更高。",
+            "上次練習 +6 ・ 距下一段位還差 26",
             color = BrandDeepOrange, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
         )
     }
 }
 
 @Composable
-private fun AbilityChip(label: String, value: Int, delta: Int) {
-    Row(
+private fun ShieldBadge(text: String) {
+    Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(50))
-            .background(PaperWhite)
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .clip(CutCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp))
+            .background(BrandAmber)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
     ) {
-        Text(label, color = InkGray700, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-        Spacer(Modifier.width(5.dp))
-        Text("${rememberCountUp(value)}", color = InkBlack, fontSize = 12.sp, fontWeight = FontWeight.Black)
-        if (delta > 0) {
-            Spacer(Modifier.width(4.dp))
-            Text("↑$delta", color = AccentGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        Text(text, color = InkCharcoal, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+    }
+}
+
+@Composable
+private fun StatCell(label: String, value: Int, delta: Int) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, color = InkGray500, fontSize = 10.sp)
+        Spacer(Modifier.height(2.dp))
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text("${rememberCountUp(value)}", color = InkBlack, fontSize = 16.sp, fontWeight = FontWeight.Black)
+            Spacer(Modifier.width(3.dp))
+            Text(
+                if (delta >= 0) "+$delta" else "$delta",
+                color = if (delta >= 0) AccentGreen else AccentRed,
+                fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 2.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun HexRadar(values: List<Int>, modifier: Modifier = Modifier) {
+    var appear by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { appear = true }
+    val progress by animateFloatAsState(
+        targetValue = if (appear) 1f else 0f,
+        animationSpec = tween(900),
+        label = "radarGrow",
+    )
+    Canvas(modifier = modifier) {
+        val n = values.size
+        if (n < 3) return@Canvas
+        val cx = size.width / 2f
+        val cy = size.height / 2f
+        val rMax = size.minDimension / 2f * 0.92f
+        fun point(i: Int, r: Float): Offset {
+            val ang = Math.toRadians(-90.0 + i * 360.0 / n)
+            return Offset(cx + (r * cos(ang)).toFloat(), cy + (r * sin(ang)).toFloat())
+        }
+        // 網格(兩圈)+ 軸線
+        listOf(0.5f, 1f).forEach { ring ->
+            val grid = Path()
+            for (i in 0 until n) {
+                val pt = point(i, rMax * ring)
+                if (i == 0) grid.moveTo(pt.x, pt.y) else grid.lineTo(pt.x, pt.y)
+            }
+            grid.close()
+            drawPath(grid, color = PaperWhite.copy(alpha = 0.9f), style = Stroke(width = 1.2.dp.toPx()))
+        }
+        for (i in 0 until n) {
+            drawLine(
+                color = PaperWhite.copy(alpha = 0.7f),
+                start = Offset(cx, cy),
+                end = point(i, rMax),
+                strokeWidth = 1.dp.toPx(),
+            )
+        }
+        // 能力形狀
+        val shape = Path()
+        for (i in 0 until n) {
+            val r = rMax * (values[i] / 100f) * progress
+            val pt = point(i, r)
+            if (i == 0) shape.moveTo(pt.x, pt.y) else shape.lineTo(pt.x, pt.y)
+        }
+        shape.close()
+        drawPath(shape, color = BrandDeepOrange.copy(alpha = 0.30f))
+        drawPath(shape, color = BrandDeepOrange, style = Stroke(width = 2.dp.toPx()))
+        for (i in 0 until n) {
+            val r = rMax * (values[i] / 100f) * progress
+            drawCircle(color = BrandDeepOrange, radius = 3.dp.toPx(), center = point(i, r))
         }
     }
 }
