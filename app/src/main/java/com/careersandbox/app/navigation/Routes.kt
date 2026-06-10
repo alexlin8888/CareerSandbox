@@ -11,6 +11,7 @@ object Routes {
     const val WORKPLACE_SANDBOX = "workplace_sandbox"
     const val WORKPLACE_CHAT = "workplace_chat"
     const val WORKPLACE_EMAIL = "workplace_email"
+    const val WORKPLACE_REVIEW = "workplace_review"
     const val PROFILE = "profile"
 
     const val EXPERIENCE_LIST = "experience_list"

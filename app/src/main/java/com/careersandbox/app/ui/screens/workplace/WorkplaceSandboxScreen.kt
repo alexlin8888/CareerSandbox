@@ -57,7 +57,7 @@ fun WorkplaceSandboxScreen(navController: NavHostController) {
         WeekDay(2, "Email 風暴日", "90 秒,12 封未讀 — 拆不完,只能選", Icons.Outlined.Email, Routes.WORKPLACE_EMAIL),
         WeekDay(3, "跨部門會議", "各部門各有立場,你要推的是進度", Icons.Outlined.Groups, null),
         WeekDay(4, "同事午餐", "聽起來是閒聊,其實在探消息", Icons.Outlined.Coffee, null),
-        WeekDay(5, "週五回顧", "這一週的隱形分數,週五才揭曉", Icons.Outlined.Insights, null),
+        WeekDay(5, "週五回顧", "這一週的隱形分數,在這裡揭曉", Icons.Outlined.Insights, Routes.WORKPLACE_REVIEW),
     )
 
     Column(
