@@ -111,7 +111,17 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
         }
     ) { pad ->
         Column(Modifier.padding(pad)) {
-            InterviewerHeader()
+            InterviewerHeader(onThinkTime = {
+                if (!isTyping) {
+                    isTyping = true
+                    scope.launch {
+                        delay(900)
+                        messages.add(ChatMessage("ai${messages.size}", "面試官",
+                            "沒問題,慢慢想。整理好再回答,我等你。", isUser = false))
+                        isTyping = false
+                    }
+                }
+            })
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
@@ -131,7 +141,7 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
 }
 
 @Composable
-private fun InterviewerHeader() {
+private fun InterviewerHeader(onThinkTime: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -155,7 +165,7 @@ private fun InterviewerHeader() {
                     color = InkGray500)
             }
         }
-        TextButton(onClick = {}) {
+        TextButton(onClick = onThinkTime) {
             Icon(Icons.Outlined.Pause, contentDescription = null,
                 tint = InkGray500, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(4.dp))

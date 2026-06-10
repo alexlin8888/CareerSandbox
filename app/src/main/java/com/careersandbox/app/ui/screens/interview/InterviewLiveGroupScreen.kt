@@ -2,6 +2,7 @@ package com.careersandbox.app.ui.screens.interview
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,12 +17,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.data.model.ChatMessage
 import kotlinx.coroutines.delay
@@ -29,6 +34,15 @@ import kotlinx.coroutines.launch
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
+
+// 各角色河狸頭像(「你」維持色圈)
+private val ParticipantAvatars = mapOf(
+    "主考官" to R.drawable.interviewer_hr,
+    "AI-強勢" to R.drawable.peer_assertive,
+    "AI-邏輯" to R.drawable.peer_logical,
+    "AI-親切" to R.drawable.peer_friendly,
+    "AI-沉默" to R.drawable.peer_quiet,
+)
 
 // 各角色色票
 private val ParticipantColors = mapOf(
@@ -71,10 +85,10 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
             TopAppBar(
                 title = {
                     Column {
-                        Text("團體面試 ・ 管理顧問",
+                        Text("團體面試 ・ Junior PM",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold, color = InkBlack)
-                        Text("個案討論 ・ 6 人組",
+                        Text("小組討論 ・ AI 應徵者同場",
                             style = MaterialTheme.typography.labelSmall,
                             color = InkGray500)
                     }
@@ -174,21 +188,27 @@ private fun ParticipantsRow(currentSpeaker: String) {
     ) {
         items(ParticipantColors.entries.toList()) { (name, color) ->
             val isCurrent = name == currentSpeaker
+            val avatar = ParticipantAvatars[name]
+            val tileAlpha by animateFloatAsState(
+                targetValue = if (isCurrent) 1f else 0.5f, label = "pa-$name")
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(
-                    Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(color)
-                        .then(
-                            if (isCurrent) Modifier.padding(0.dp)
-                            else Modifier.padding(0.dp)
-                        ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(name.takeLast(1), color = PaperWhite,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold)
+                if (avatar != null) {
+                    Image(
+                        painter = painterResource(avatar),
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.size(48.dp).alpha(tileAlpha),
+                    )
+                } else {
+                    Box(
+                        Modifier.size(48.dp).clip(CircleShape)
+                            .background(color).alpha(tileAlpha),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(name.takeLast(1), color = PaperWhite,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold)
+                    }
                 }
                 Spacer(Modifier.height(4.dp))
                 Text(name,
@@ -257,12 +277,22 @@ private fun GroupMessageBubble(m: ChatMessage) {
         horizontalArrangement = if (m.isUser) Arrangement.End else Arrangement.Start,
     ) {
         if (!m.isUser) {
-            Box(
-                Modifier.size(32.dp).clip(CircleShape).background(speakerColor),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(m.speaker.takeLast(1), color = PaperWhite,
-                    style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+            val avatar = ParticipantAvatars[m.speaker]
+            if (avatar != null) {
+                Image(
+                    painter = painterResource(avatar),
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.size(34.dp),
+                )
+            } else {
+                Box(
+                    Modifier.size(32.dp).clip(CircleShape).background(speakerColor),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(m.speaker.takeLast(1), color = PaperWhite,
+                        style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                }
             }
             Spacer(Modifier.width(8.dp))
         }
@@ -304,8 +334,12 @@ private fun GroupMessageBubble(m: ChatMessage) {
 private fun GroupBottomBar(input: String, onChange: (String) -> Unit, onSend: () -> Unit) {
     Column(Modifier.fillMaxWidth().background(PaperOff).padding(12.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ActionButton("搶答", Icons.Outlined.Mic, Modifier.weight(1f)) {}
-            ActionButton("舉手補充", Icons.Outlined.PanTool, Modifier.weight(1f)) {}
+            ActionButton("搶答", Icons.Outlined.Mic, Modifier.weight(1f)) {
+                onChange("我直接說結論:")
+            }
+            ActionButton("舉手補充", Icons.Outlined.PanTool, Modifier.weight(1f)) {
+                onChange("補充剛剛的觀點:")
+            }
         }
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -362,14 +396,24 @@ private fun GroupTypingBubble(speaker: String) {
     val color = ParticipantColors[speaker] ?: InkGray500
     val t = rememberInfiniteTransition(label = "gtyping")
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
-        Box(
-            Modifier.size(32.dp).clip(CircleShape).background(color),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                speaker.takeLast(1), color = PaperWhite,
-                style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold,
+        val avatar = ParticipantAvatars[speaker]
+        if (avatar != null) {
+            Image(
+                painter = painterResource(avatar),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.size(34.dp),
             )
+        } else {
+            Box(
+                Modifier.size(32.dp).clip(CircleShape).background(color),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    speaker.takeLast(1), color = PaperWhite,
+                    style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold,
+                )
+            }
         }
         Spacer(Modifier.width(8.dp))
         Row(
