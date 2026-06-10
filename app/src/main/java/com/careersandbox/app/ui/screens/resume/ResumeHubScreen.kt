@@ -166,8 +166,8 @@ private fun HeroSection() {
 }
 
 /**
- * ===== v12 投遞統計卡(白底大圓角,line 80-104)=====
- * Label「本月已投遞」+ 44sp 數字 + 件 + 已回覆/審核中 點點 + 80dp ring 標「回覆率」
+ * ===== v12 投遞統計卡(白底大圓角)=====
+ * Label「已投遞」+ 44sp 數字 + 件 + 編輯中/草稿 點點 + 80dp ring 標「投遞率」(誠實統計)
  */
 @Composable
 private fun SubmissionStatsCard() {
@@ -175,11 +175,11 @@ private fun SubmissionStatsCard() {
         .count { it.status == VersionStatus.SUBMITTED }
     val totalEditing = MockData.jobApplications.flatMap { it.versions }
         .count { it.status == VersionStatus.EDITING }
-    // 把 SUBMITTED 視為「已回覆」、EDITING 視為「審核中」 — 等真實 reply 欄位再改
-    val repliedCount = totalSubmitted
-    val reviewCount = totalEditing
-    val totalActive = repliedCount + reviewCount
-    val replyRate = if (totalActive > 0) repliedCount.toFloat() / totalActive else 0f
+    // 誠實統計:投遞率 = 已投遞版本 / 全部版本(還沒有回覆資料,就不假裝有)
+    val totalDraft = MockData.jobApplications.flatMap { it.versions }
+        .count { it.status == VersionStatus.DRAFT }
+    val totalVersionsAll = MockData.jobApplications.sumOf { it.versions.size }
+    val replyRate = if (totalVersionsAll > 0) totalSubmitted.toFloat() / totalVersionsAll else 0f
     val replyPct = (replyRate * 100).toInt()
 
     val animSubmitted by animateIntAsState(
@@ -213,7 +213,7 @@ private fun SubmissionStatsCard() {
         ) {
             Column {
                 Text(
-                    "本月已投遞",
+                    "已投遞",
                     color = InkGray400,
                     fontSize = 10.sp,
                     letterSpacing = 1.5.sp,
@@ -233,8 +233,8 @@ private fun SubmissionStatsCard() {
                 }
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    DotLabel(color = AccentGreen, text = "已回覆 $repliedCount")
-                    DotLabel(color = BrandAmber, text = "審核中 $reviewCount")
+                    DotLabel(color = BrandAmber, text = "編輯中 $totalEditing")
+                    DotLabel(color = InkGray400, text = "草稿 $totalDraft")
                 }
             }
 
@@ -268,7 +268,7 @@ private fun SubmissionStatsCard() {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("$animPct%", color = BrandDeepOrange, fontWeight = FontWeight.Black, fontSize = 24.sp, lineHeight = 24.sp)
                     Spacer(Modifier.height(3.dp))
-                    Text("回覆率", color = InkGray400, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                    Text("投遞率", color = InkGray400, fontSize = 11.sp, fontWeight = FontWeight.Medium)
                 }
             }
         }
