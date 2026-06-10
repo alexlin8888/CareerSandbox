@@ -348,9 +348,9 @@ private fun CareerHeroSection(onBack: () -> Unit) {
             Icon(Icons.Outlined.ArrowBack, contentDescription = null, tint = PaperWhite, modifier = Modifier.size(20.dp))
         }
 
-        // === undraw exploring illustration ===
+        // === 河狸插畫(探索)===
         Image(
-            painter = painterResource(R.drawable.undraw_exploring_fzmr),
+            painter = painterResource(R.drawable.beaver_search),
             contentDescription = null,
             modifier = Modifier
                 .align(Alignment.BottomEnd)

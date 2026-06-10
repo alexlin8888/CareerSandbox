@@ -283,9 +283,9 @@ private fun FitHeroSection(onBack: () -> Unit) {
             Icon(Icons.Outlined.ArrowBack, contentDescription = null, tint = PaperWhite, modifier = Modifier.size(20.dp))
         }
 
-        // === undraw personal data illustration ===
+        // === 河狸插畫(還缺什麼)===
         Image(
-            painter = painterResource(R.drawable.undraw_personal_data_a1n8),
+            painter = painterResource(R.drawable.beaver_confused),
             contentDescription = null,
             modifier = Modifier
                 .align(Alignment.BottomEnd)

@@ -70,7 +70,7 @@ fun NotificationsAllScreen(navController: NavHostController) {
                 ) {
                     androidx.compose.foundation.Image(
                         painter = androidx.compose.ui.res.painterResource(
-                            id = com.careersandbox.app.R.drawable.undraw_time_management_4ss6
+                            id = com.careersandbox.app.R.drawable.beaver_mailbox
                         ),
                         contentDescription = null,
                         contentScale = androidx.compose.ui.layout.ContentScale.Fit,

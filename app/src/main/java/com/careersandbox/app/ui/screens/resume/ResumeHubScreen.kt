@@ -153,7 +153,7 @@ private fun HeroSection() {
         }
 
         Image(
-            painter = painterResource(R.drawable.undraw_feedback_ebmx),
+            painter = painterResource(R.drawable.beaver_resume),
             contentDescription = null,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
@@ -359,7 +359,7 @@ private fun BentoMaster(onClick: () -> Unit) {
                 .background(PaperWhite.copy(alpha = 0.08f)),
         )
         Image(
-            painter = painterResource(R.drawable.undraw_reading_a_book_4cap),
+            painter = painterResource(R.drawable.beaver_writing),
             contentDescription = null,
             modifier = Modifier
                 .align(Alignment.BottomEnd)

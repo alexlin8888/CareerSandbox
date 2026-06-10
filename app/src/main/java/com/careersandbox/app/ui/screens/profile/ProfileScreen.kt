@@ -99,7 +99,7 @@ private fun HeroSection(userName: String, school: String, dept: String, year: St
 
         // 插畫破框(右下)
         Image(
-            painter = painterResource(R.drawable.undraw_profile_image_2hi8),
+            painter = painterResource(R.drawable.beaver_thumbsup),
             contentDescription = null,
             modifier = Modifier
                 .align(Alignment.BottomEnd)

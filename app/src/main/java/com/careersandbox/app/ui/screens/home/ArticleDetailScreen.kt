@@ -252,10 +252,10 @@ fun ArticleDetailScreen(navController: NavHostController, articleId: String) {
 @Composable
 private fun CoverBanner(article: Article, accent: Color) {
     val illustRes = when (article.category) {
-        ArticleCategory.RESUME -> com.careersandbox.app.R.drawable.undraw_reading_a_book_4cap
-        ArticleCategory.INTERVIEW -> com.careersandbox.app.R.drawable.undraw_presenting_pjjk
-        ArticleCategory.CAREER_EXPLORATION -> com.careersandbox.app.R.drawable.undraw_thinking_mode_7czd
-        ArticleCategory.WORKPLACE -> com.careersandbox.app.R.drawable.undraw_work_time_1ogn
+        ArticleCategory.RESUME -> com.careersandbox.app.R.drawable.beaver_resume
+        ArticleCategory.INTERVIEW -> com.careersandbox.app.R.drawable.beaver_present
+        ArticleCategory.CAREER_EXPLORATION -> com.careersandbox.app.R.drawable.beaver_search
+        ArticleCategory.WORKPLACE -> com.careersandbox.app.R.drawable.beaver_point
     }
 
     // 圖片封面 — 真實照片 + 漸層遮罩,文字浮在上面
