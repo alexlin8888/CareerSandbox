@@ -142,7 +142,9 @@ fun WorkplaceSandboxScreen(navController: NavHostController) {
             SandboxPreview(
                 icon = Icons.Outlined.Email,
                 title = "Email 風暴日",
-                description = "一天收 50 封信,有的緊急有的廢話,你決定先處理哪些",
+                description = "90 秒,12 封未讀 — 有的看起來很急,有的安靜地致命",
+                ready = true,
+                onClick = { navController.navigate(Routes.WORKPLACE_EMAIL) },
             )
         }
         StaggeredAppear(delayMillis = 240) {
