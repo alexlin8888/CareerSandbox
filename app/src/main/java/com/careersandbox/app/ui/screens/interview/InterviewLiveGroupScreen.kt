@@ -81,6 +81,12 @@ private fun pickGroupFollowUp(said: String, idx: Int, fallback: List<Pair<String
     else -> fallback[idx % fallback.size]
 }
 
+// 搶話事件:你打字停頓太久,AI-強勢會先講(上限 2 次,草稿不清空)
+private val interruptLines = listOf(
+    "我先說——這題我有現成的案子,等大家想完時間就沒了。",
+    "(舉手)我插一個快的,你慢慢想,不衝突。",
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InterviewLiveGroupScreen(navController: NavHostController) {
@@ -95,6 +101,7 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
     var elapsedSec by remember { mutableIntStateOf(0) }
     LaunchedEffect(Unit) { while (true) { delay(1000); elapsedSec++ } }
     val timerText = "${(elapsedSec / 60).toString().padStart(2, '0')}:${(elapsedSec % 60).toString().padStart(2, '0')}"
+    var interruptCount by remember { mutableIntStateOf(0) }
     val groupFollowUps = listOf(
         "主考官" to "謝謝。換個角度,如果資源只夠做一件事,你會先砍掉哪個?",
         "AI-強勢" to "我補一句 — 我的做法更直接:先搶下市場,細節之後再優化。",
@@ -107,6 +114,22 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
     LaunchedEffect(messages.size, isTyping) {
         val target = if (isTyping) messages.size else messages.size - 1
         if (target >= 0) listState.animateScrollToItem(target)
+    }
+
+    // 你打到一半停下來,AI-強勢不會等你
+    LaunchedEffect(input) {
+        if (input.length >= 14 && !isTyping && interruptCount < interruptLines.size) {
+            delay(2600)
+            if (!isTyping && input.length >= 14) {
+                val line = interruptLines[interruptCount]
+                interruptCount++
+                typingSpeaker = "AI-強勢"
+                isTyping = true
+                delay(700)
+                messages.add(ChatMessage("int${messages.size}", "AI-強勢", line, isUser = false))
+                isTyping = false
+            }
+        }
     }
 
     Scaffold(
@@ -173,7 +196,18 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
 
             // 觀察面板
             AnimatedVisibility(visible = showObservation) {
-                ObservationPanel(onClose = { showObservation = false })
+                val userMsgs = messages.filter { it.isUser }
+                val citedCount = userMsgs.count { m ->
+                    listOf("剛剛", "同意", "補充", "你說", "接").any { m.content.contains(it) }
+                }
+                val avgLen = if (userMsgs.isEmpty()) 0 else userMsgs.sumOf { it.content.length } / userMsgs.size
+                ObservationPanel(
+                    speakCount = userMsgs.size,
+                    interruptedCount = interruptCount,
+                    citedCount = citedCount,
+                    avgLen = avgLen,
+                    onClose = { showObservation = false },
+                )
             }
             if (!showObservation) {
                 Row(
@@ -256,7 +290,13 @@ private fun ParticipantsRow(currentSpeaker: String) {
 }
 
 @Composable
-private fun ObservationPanel(onClose: () -> Unit) {
+private fun ObservationPanel(
+    speakCount: Int,
+    interruptedCount: Int,
+    citedCount: Int,
+    avgLen: Int,
+    onClose: () -> Unit,
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -279,10 +319,10 @@ private fun ObservationPanel(onClose: () -> Unit) {
                     modifier = Modifier.size(20.dp).pressScale(onClick = onClose))
             }
             Spacer(Modifier.height(8.dp))
-            ObservationRow("你的發言次數", "2 次")
-            ObservationRow("被打斷次數", "0 次")
-            ObservationRow("引用他人觀點", "1 次")
-            ObservationRow("平均發言長度", "32 秒")
+            ObservationRow("你的發言次數", "$speakCount 次")
+            ObservationRow("被打斷次數", "$interruptedCount 次")
+            ObservationRow("引用他人觀點", "$citedCount 次")
+            ObservationRow("平均發言長度", "$avgLen 字")
         }
     }
 }
