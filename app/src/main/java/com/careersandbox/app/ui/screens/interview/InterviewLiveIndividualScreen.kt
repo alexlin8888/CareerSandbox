@@ -15,8 +15,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import android.widget.Toast
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -207,6 +209,7 @@ fun MessageBubble(m: ChatMessage) {
 
 @Composable
 private fun BottomInputBar(input: String, onChange: (String) -> Unit, onSend: () -> Unit) {
+    val ctx = LocalContext.current
     Box(Modifier.fillMaxWidth().background(PaperOff).padding(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -214,7 +217,9 @@ private fun BottomInputBar(input: String, onChange: (String) -> Unit, onSend: ()
                     .size(48.dp)
                     .clip(androidx.compose.foundation.shape.CircleShape)
                     .background(BrandPeach)
-                    .pressScale {},
+                    .pressScale {
+                        Toast.makeText(ctx, "語音輸入規劃中,先用文字回答", Toast.LENGTH_SHORT).show()
+                    },
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(Icons.Outlined.Mic, contentDescription = null, tint = BrandDeepOrange)
