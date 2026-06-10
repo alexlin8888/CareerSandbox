@@ -9,6 +9,7 @@ object Routes {
     const val RESUME_HUB = "resume_hub"
     const val INTERVIEW_HUB = "interview_hub"
     const val WORKPLACE_SANDBOX = "workplace_sandbox"
+    const val WORKPLACE_CHAT = "workplace_chat"
     const val PROFILE = "profile"
 
     const val EXPERIENCE_LIST = "experience_list"

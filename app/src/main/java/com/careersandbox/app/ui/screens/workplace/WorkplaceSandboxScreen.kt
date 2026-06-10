@@ -24,13 +24,15 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
 import com.careersandbox.app.R
+import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.StaggeredAppear
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 
 @Composable
-fun WorkplaceSandboxScreen() {
+fun WorkplaceSandboxScreen(navController: NavHostController) {
     var industry by remember { mutableStateOf("科技 / 網路") }
     Column(
         modifier = Modifier
@@ -72,7 +74,7 @@ fun WorkplaceSandboxScreen() {
                     )
                     Spacer(Modifier.height(10.dp))
                     Text(
-                        "不是教你成功的職場 — 是讓你在踏進去之前,先感覺真實上班的樣子。主管的壓力、同事的氛圍、處理不完的 email、開不完的會。",
+                        "不是教你成功的職場 — 是讓你在踏進去之前,先感覺真實上班的樣子。",
                         color = InkGray700,
                         style = MaterialTheme.typography.bodyMedium,
                         lineHeight = 24.sp,
@@ -102,7 +104,7 @@ fun WorkplaceSandboxScreen() {
 
         // 未來會推出的場景列表
         Text(
-            "即將推出的場景",
+            "場景",
             color = InkGray500,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Black,
@@ -111,8 +113,8 @@ fun WorkplaceSandboxScreen() {
         )
         Spacer(Modifier.height(6.dp))
         Text(
-            if (industry == "科技 / 網路") "目前以「科技 / 網路」的職場日常為主。"
-            else "「$industry」的場景規劃中 — 先用通用範例,上線後會換成這個產業的日常。",
+            if (industry == "科技 / 網路") "第一個場景可以玩了,其餘規劃中。"
+            else "「$industry」規劃中 — 先玩通用場景。",
             color = InkGray400,
             style = MaterialTheme.typography.bodySmall,
             lineHeight = 18.sp,
@@ -124,7 +126,9 @@ fun WorkplaceSandboxScreen() {
             SandboxPreview(
                 icon = Icons.Outlined.SupervisorAccount,
                 title = "和主管 1on1",
-                description = "嚴厲、嘮叨、放手、微管理 — 不同個性主管的模擬對話",
+                description = "功能延期了,主管把你約進會議室 — 你會怎麼接?",
+                ready = true,
+                onClick = { navController.navigate(Routes.WORKPLACE_CHAT) },
             )
         }
         StaggeredAppear(delayMillis = 80) {
@@ -158,6 +162,8 @@ private fun SandboxPreview(
     icon: ImageVector,
     title: String,
     description: String,
+    ready: Boolean = false,
+    onClick: (() -> Unit)? = null,
 ) {
     Row(
         modifier = Modifier
@@ -165,6 +171,10 @@ private fun SandboxPreview(
             .padding(horizontal = 20.dp, vertical = 8.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.surface)
+            .then(
+                if (onClick != null) Modifier.pressScale(onClick = onClick)
+                else Modifier
+            )
             .padding(20.dp),
         verticalAlignment = Alignment.Top,
     ) {
@@ -184,12 +194,28 @@ private fun SandboxPreview(
         }
         Spacer(Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                title,
-                color = InkBlack,
-                fontWeight = FontWeight.Bold,
-                fontSize = 17.sp,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    title,
+                    color = InkBlack,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp,
+                )
+                Spacer(Modifier.width(8.dp))
+                Box(
+                    Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(if (ready) AccentGreen else InkGray200)
+                        .padding(horizontal = 8.dp, vertical = 2.dp),
+                ) {
+                    Text(
+                        if (ready) "可以玩了" else "規劃中",
+                        color = if (ready) PaperWhite else InkGray500,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Black,
+                    )
+                }
+            }
             Spacer(Modifier.height(4.dp))
             Text(
                 description,

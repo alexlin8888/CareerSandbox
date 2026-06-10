@@ -28,6 +28,7 @@ import com.careersandbox.app.ui.screens.profile.SettingsNotificationsScreen
 import com.careersandbox.app.ui.screens.profile.SettingsPrivacyScreen
 import com.careersandbox.app.ui.screens.profile.SettingsProfileScreen
 import com.careersandbox.app.ui.screens.resume.*
+import com.careersandbox.app.ui.screens.workplace.WorkplaceChatScreen
 import com.careersandbox.app.ui.screens.workplace.WorkplaceSandboxScreen
 
 @OptIn(ExperimentalAnimationApi::class)
@@ -91,7 +92,8 @@ fun CareerSandboxNavHost(
         composable(Routes.HOME) { HomeHubScreen(navController) }
         composable(Routes.RESUME_HUB) { ResumeHubScreen(navController) }
         composable(Routes.INTERVIEW_HUB) { InterviewHubScreen(navController) }
-        composable(Routes.WORKPLACE_SANDBOX) { WorkplaceSandboxScreen() }
+        composable(Routes.WORKPLACE_SANDBOX) { WorkplaceSandboxScreen(navController) }
+        composable(Routes.WORKPLACE_CHAT) { WorkplaceChatScreen(navController) }
         composable(Routes.PROFILE) { ProfileScreen(navController) }
 
         composable(Routes.EXPERIENCE_LIST) { ExperienceListScreen(navController) }
