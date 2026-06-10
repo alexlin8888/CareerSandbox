@@ -324,7 +324,7 @@ private fun FitHeroSection(onBack: () -> Unit) {
 @Composable
 private fun FitHeroJobCard() {
     val animScore by animateIntAsState(
-        targetValue = 78,
+        targetValue = 82,
         animationSpec = tween(1200, easing = FastOutSlowInEasing),
         label = "hero_score",
     )
