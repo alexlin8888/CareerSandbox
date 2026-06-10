@@ -61,7 +61,9 @@ fun JobApplicationDetailScreen(
         ) {
             HeroSection(job, navController)
             Spacer(Modifier.height(24.dp))
-            StatsSection(job)
+            StatsSection(job) { navController.navigate(Routes.FIT_ANALYSIS) }
+            Spacer(Modifier.height(20.dp))
+            NextActionsSection(navController)
             Spacer(Modifier.height(28.dp))
             JdSnippetSection(job)
             Spacer(Modifier.height(32.dp))
@@ -136,7 +138,7 @@ private fun HeroSection(job: JobApplication, navController: NavHostController) {
 
 /** 4 個數字 stat */
 @Composable
-private fun StatsSection(job: JobApplication) {
+private fun StatsSection(job: JobApplication, onFitClick: () -> Unit) {
     val submitted = job.versions.count { it.status == VersionStatus.SUBMITTED }
     val editing = job.versions.count { it.status == VersionStatus.EDITING }
     val draft = job.versions.count { it.status == VersionStatus.DRAFT }
@@ -145,12 +147,14 @@ private fun StatsSection(job: JobApplication) {
         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        StatBlock(job.matchScore.toString(), "適配度",
-            valueColor = when {
-                job.matchScore >= 75 -> AccentGreen
-                job.matchScore >= 50 -> BrandOrange
-                else -> InkGray400
-            })
+        Box(Modifier.pressScale(onClick = onFitClick)) {
+            StatBlock(job.matchScore.toString(), "適配度",
+                valueColor = when {
+                    job.matchScore >= 75 -> AccentGreen
+                    job.matchScore >= 50 -> BrandOrange
+                    else -> InkGray400
+                })
+        }
         StatDivider()
         StatBlock(submitted.toString(), "已投遞")
         StatDivider()
@@ -172,6 +176,64 @@ private fun StatBlock(value: String, label: String, valueColor: Color = BrandOra
 @Composable
 private fun StatDivider() {
     Box(Modifier.height(36.dp).width(0.5.dp).background(InkGray200))
+}
+
+/** 下一步 — 把職缺接回面試與適配分析(履歷 → 職缺 → 面試 一條線) */
+@Composable
+private fun NextActionsSection(navController: NavHostController) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        // 主行動:練這個職缺的面試
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(16.dp))
+                .background(InkBlack)
+                .pressScale { navController.navigate(Routes.INTERVIEW_SETUP_INDIVIDUAL) }
+                .padding(horizontal = 14.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Outlined.Mic, contentDescription = null,
+                tint = PaperWhite, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Column {
+                Text("練這個職缺的面試",
+                    color = PaperWhite,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp)
+                Text("帶著 JD 進面試房",
+                    color = PaperWhite.copy(alpha = 0.6f),
+                    fontSize = 10.sp)
+            }
+        }
+        // 次行動:還缺什麼
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(16.dp))
+                .background(BrandPeach.copy(alpha = 0.55f))
+                .pressScale { navController.navigate(Routes.FIT_ANALYSIS) }
+                .padding(horizontal = 14.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Outlined.Analytics, contentDescription = null,
+                tint = BrandDeepOrange, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Column {
+                Text("還缺什麼",
+                    color = BrandDeepOrange,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp)
+                Text("看你和 JD 的差距",
+                    color = BrandDeepOrange.copy(alpha = 0.65f),
+                    fontSize = 10.sp)
+            }
+        }
+    }
 }
 
 /** JD 摘要 */
