@@ -1,22 +1,34 @@
 package com.careersandbox.app.ui.screens.workplace
 
-import androidx.compose.animation.core.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.Send
-import androidx.compose.material3.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -24,278 +36,439 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
-import com.careersandbox.app.data.model.ChatMessage
-import com.careersandbox.app.ui.components.*
+import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private val openingScript = listOf(
-    ChatMessage("w1", "主管 Ken", "坐。先說結論:上週的匯出功能延了兩天,我想知道是估錯,還是中間出了事。", isInterviewer = true),
-    ChatMessage("w2", "你", "主要是第三方 API 的文件跟實際行為不一致,debug 花掉比預期多的時間。", isUser = true),
-    ChatMessage("w3", "主管 Ken", "嗯。那你是哪一天發現的?發現的當下,為什麼我是最後一個知道的?", isInterviewer = true),
+/* ===================== 資料模型與劇本 ===================== */
+
+private enum class SceneMotion { NONE, SHAKE, TILT }
+private enum class ScenePhase { TALKING, CHOOSING, ENDING }
+
+private data class StanceChoice(
+    val label: String,        // 選項全文
+    val stance: String,       // 立場小標
+    val playerLine: String,   // 你說出口的話
+    val kenReact: String,     // Ken 的反應
+    val moodAfter: String,    // 心情膠囊變化
+    val motion: SceneMotion,  // 立繪微動
 )
 
-private val managerFollowUps = listOf(
-    "我不是在追究。我要的是你卡住的第一時間,我就知道。具體一點,下次你會怎麼做?",
-    "如果週四 demo 前還是修不完,你的 plan B 是什麼?",
-    "手上三件事:匯出收尾、新需求評估、客訴回報。你自己排,先做哪個,為什麼?",
-    "好,這件事到這裡。最後——有什麼需要我幫你擋的?",
+private data class Beat(
+    val kenPrompt: String,
+    val choices: List<StanceChoice>,
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
+// 場景素材插槽:Lovart 圖到了之後,換這兩個函式即可
+private val sceneBackdrop: Int? = null  // 之後換 R.drawable.bg_meeting_room
+private fun kenSprite(mood: String): Int = R.drawable.interviewer_tech
+// 之後:依 mood 換 ken_stern(不耐/更不耐)/ ken_soft(平靜/緩和)
+
+private val beats = listOf(
+    Beat(
+        "坐。先說結論:上週的匯出功能延了兩天。我想知道,是估錯,還是中間出了事。",
+        listOf(
+            StanceChoice(
+                "直說原因,不繞", "誠實扛",
+                "是我低估了第三方 API 的坑。debug 花掉的時間,我沒有及早講。",
+                "(他點了點頭)好,知道問題在哪就好。",
+                "平靜", SceneMotion.TILT,
+            ),
+            StanceChoice(
+                "先道歉,再解釋", "緩衝",
+                "抱歉,讓你最後才知道。原因是 API 文件跟實際行為不一致。",
+                "道歉收下。但我更想要的是——你卡住的當下,我就知道。",
+                "平靜", SceneMotion.NONE,
+            ),
+            StanceChoice(
+                "反問優先順序", "轉守為攻",
+                "在講延期之前,我想先確認:匯出跟新需求,哪個優先?",
+                "(他停了兩秒)問得好。但別用問題接問題,先回答我的。",
+                "更不耐", SceneMotion.SHAKE,
+            ),
+        ),
+    ),
+    Beat(
+        "嗯。那你是哪一天發現的?發現的當下——為什麼我是最後一個知道的?",
+        listOf(
+            StanceChoice(
+                "承認該早點說", "認溝通失誤",
+                "週三就發現了。當下想先自己解,是我判斷錯,應該先說。",
+                "(他在筆記上寫了一行)對。卡住不丟臉,悶著才會出事。",
+                "平靜", SceneMotion.TILT,
+            ),
+            StanceChoice(
+                "說明當時的判斷", "說理",
+                "我評估那時還追得回來,不想太早拉警報。",
+                "我懂。但要不要拉警報,讓我跟你一起判斷,不是你一個人扛。",
+                "平靜", SceneMotion.NONE,
+            ),
+            StanceChoice(
+                "說自己太忙忘了", "迴避",
+                "就……事情比較多,一忙就忘了同步。",
+                "(他盯著你兩秒)忙不是理由,是現象。再來一次。",
+                "更不耐", SceneMotion.SHAKE,
+            ),
+        ),
+    ),
+    Beat(
+        "好。週四 demo 之前,你的 plan 是什麼?具體一點,我要日期跟人。",
+        listOf(
+            StanceChoice(
+                "給一個敢簽名的日期", "給死線",
+                "週三中午前修完核心路徑,當天下午我自己先跑一輪回歸。",
+                "可以。週三中午,我會記得。",
+                "平靜", SceneMotion.TILT,
+            ),
+            StanceChoice(
+                "開口要支援", "要資源",
+                "如果阿哲能借我半天,週二就能收掉,風險低很多。",
+                "(他想了一下)我去跟他主管說。這種話早講,半天就能省兩天。",
+                "緩和", SceneMotion.TILT,
+            ),
+            StanceChoice(
+                "說盡量趕", "保守承諾",
+                "我盡量趕,應該……來得及。",
+                "「應該」進不了我的報告。給我一個你敢簽名的日期。",
+                "不耐", SceneMotion.SHAKE,
+            ),
+        ),
+    ),
+    Beat(
+        "這件事到這裡。最後——有什麼是需要我幫你擋的?",
+        listOf(
+            StanceChoice(
+                "提一個真需求", "開口",
+                "新需求的評估能不能延到 demo 後?我想先把眼前的收乾淨。",
+                "成交,我去擋。專注是用換的,不是用撐的。",
+                "緩和", SceneMotion.TILT,
+            ),
+            StanceChoice(
+                "說目前沒有", "硬扛",
+                "目前沒有,我自己可以。",
+                "(他看了你一眼)行。但這扇門一直開著,別等淹到脖子才敲。",
+                "平靜", SceneMotion.NONE,
+            ),
+            StanceChoice(
+                "反過來關心他", "反客為主",
+                "倒是你——這週往上報的壓力,還好嗎?",
+                "(他愣了一下,笑出來)輪不到你操心。滾回去工作。",
+                "緩和", SceneMotion.TILT,
+            ),
+        ),
+    ),
+)
+
+/* ===================== 主畫面 ===================== */
+
 @Composable
 fun WorkplaceChatScreen(navController: NavHostController) {
-    val messages = remember { mutableStateListOf<ChatMessage>().apply { addAll(openingScript) } }
-    var input by remember { mutableStateOf("") }
-    val listState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
-    var isTyping by remember { mutableStateOf(false) }
-    var followUpIdx by remember { mutableIntStateOf(0) }
+    var phase by remember { mutableStateOf(ScenePhase.TALKING) }
+    var beatIdx by remember { mutableIntStateOf(0) }
+    var speaker by remember { mutableStateOf("Ken") }
+    var fullText by remember { mutableStateOf(beats[0].kenPrompt) }
+    var typed by remember { mutableStateOf("") }
+    var mood by remember { mutableStateOf("不耐") }
+    val pendingLines = remember { mutableStateListOf<Pair<String, String>>() }
+    var awaitingChoice by remember { mutableStateOf(true) }
+    var queuedMotion by remember { mutableStateOf(SceneMotion.NONE) }
+    var queuedMood by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(messages.size, isTyping) {
-        val target = if (isTyping) messages.size else messages.size - 1
-        if (target >= 0) listState.animateScrollToItem(target)
+    val scope = rememberCoroutineScope()
+    val shakeX = remember { Animatable(0f) }
+    val tiltZ = remember { Animatable(0f) }
+
+    // 打字機
+    LaunchedEffect(fullText) {
+        typed = ""
+        for (i in fullText.indices) {
+            if (typed.length >= fullText.length) break
+            typed = fullText.substring(0, i + 1)
+            delay(26)
+        }
     }
 
-    Scaffold(
-        containerColor = PaperOff,
-        topBar = {
-            TopAppBar(
-                title = {
+    fun playMotion(m: SceneMotion) {
+        scope.launch {
+            when (m) {
+                SceneMotion.SHAKE -> shakeX.animateTo(0f, keyframes {
+                    durationMillis = 360
+                    -5f at 60; 5f at 140; -3f at 230; 0f at 360
+                })
+                SceneMotion.TILT -> {
+                    tiltZ.animateTo(-3f, tween(160))
+                    tiltZ.animateTo(0f, tween(260))
+                }
+                SceneMotion.NONE -> Unit
+            }
+        }
+    }
+
+    fun advance() {
+        if (typed.length < fullText.length) { typed = fullText; return }
+        if (phase != ScenePhase.TALKING) return
+        if (pendingLines.isNotEmpty()) {
+            val (s, t) = pendingLines.removeAt(0)
+            speaker = s; fullText = t
+            if (s == "Ken") {
+                playMotion(queuedMotion); queuedMotion = SceneMotion.NONE
+                queuedMood?.let { m -> mood = m }; queuedMood = null
+            }
+        } else if (awaitingChoice) {
+            phase = ScenePhase.CHOOSING
+        } else if (beatIdx < beats.lastIndex) {
+            beatIdx++
+            awaitingChoice = true
+            speaker = "Ken"; fullText = beats[beatIdx].kenPrompt
+        } else {
+            phase = ScenePhase.ENDING
+        }
+    }
+
+    fun choose(c: StanceChoice) {
+        awaitingChoice = false
+        queuedMood = c.moodAfter
+        queuedMotion = c.motion
+        pendingLines.clear()
+        pendingLines.add("你" to c.playerLine)
+        pendingLines.add("Ken" to c.kenReact)
+        phase = ScenePhase.TALKING
+        val (s, t) = pendingLines.removeAt(0)
+        speaker = s; fullText = t
+    }
+
+    Box(Modifier.fillMaxSize().background(InkCharcoal)) {
+        Column(Modifier.fillMaxSize()) {
+            // ===== 舞台 =====
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+            ) {
+                if (sceneBackdrop != null) {
+                    Image(
+                        painter = painterResource(sceneBackdrop),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    Box(Modifier.fillMaxSize().background(InkCharcoal.copy(alpha = 0.35f)))
+                } else {
+                    // Compose 畫的暫代舞台:深色漸層 + 百葉窗光帶
+                    Box(
+                        Modifier.fillMaxSize().background(
+                            Brush.verticalGradient(listOf(InkBlack, InkCharcoal))
+                        )
+                    )
+                    Column(
+                        Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(top = 48.dp, end = 28.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                    ) {
+                        repeat(4) {
+                            Box(
+                                Modifier
+                                    .width(120.dp)
+                                    .height(10.dp)
+                                    .graphicsLayer { rotationZ = -12f }
+                                    .clip(RoundedCornerShape(50))
+                                    .background(BrandAmber.copy(alpha = 0.10f)),
+                            )
+                        }
+                    }
+                }
+
+                // 頂欄(疊在舞台上)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.Outlined.Close, contentDescription = null, tint = PaperWhite)
+                    }
                     Column {
                         Text("和主管 1on1",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold, color = InkBlack)
-                        Text("職場沙盒 ・ 模擬場景",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = InkGray500)
+                            color = PaperWhite, fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleSmall)
+                        Text("週一 09:30 ・ 會議室 B",
+                            color = PaperWhite.copy(alpha = 0.55f),
+                            style = MaterialTheme.typography.labelSmall)
                     }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Outlined.Close, contentDescription = null, tint = InkBlack)
+                    Spacer(Modifier.weight(1f))
+                    Box(
+                        Modifier
+                            .padding(end = 8.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(PaperWhite.copy(alpha = 0.12f))
+                            .padding(horizontal = 10.dp, vertical = 4.dp),
+                    ) {
+                        Text("心情 ・ $mood",
+                            color = PaperWhite.copy(alpha = 0.85f),
+                            fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
-                },
-                actions = {
-                    TextButton(onClick = { navController.popBackStack() }) {
-                        Text("結束", color = BrandOrange, fontWeight = FontWeight.SemiBold)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = PaperOff),
-            )
-        },
-        bottomBar = {
-            WorkplaceBottomBar(input, { input = it }) {
-                if (input.isNotBlank() && !isTyping) {
-                    messages.add(ChatMessage("wu${messages.size}", "你", input, isUser = true))
-                    input = ""
-                    isTyping = true
-                    scope.launch {
-                        delay(1300)
-                        messages.add(ChatMessage("wm${messages.size}", "主管 Ken",
-                            managerFollowUps[followUpIdx % managerFollowUps.size],
-                            isInterviewer = true))
-                        followUpIdx++
-                        isTyping = false
-                    }
+                }
+
+                // Ken 立繪 + 地板陰影
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 6.dp)
+                        .graphicsLayer {
+                            translationX = shakeX.value
+                            rotationZ = tiltZ.value
+                        },
+                ) {
+                    Image(
+                        painter = painterResource(kenSprite(mood)),
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.size(176.dp),
+                    )
+                    Box(
+                        Modifier
+                            .width(120.dp)
+                            .height(14.dp)
+                            .clip(CircleShape)
+                            .background(InkBlack.copy(alpha = 0.5f)),
+                    )
                 }
             }
-        }
-    ) { pad ->
-        Column(Modifier.padding(pad)) {
-            ManagerHeader()
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                item(key = "scene") { SceneCard() }
-                items(messages, key = { it.id }) { m ->
-                    Box(Modifier.animateItem()) { WpBubble(m) }
-                }
-                if (isTyping) {
-                    item(key = "typing") { WpTypingBubble() }
-                }
-                item { Spacer(Modifier.height(8.dp)) }
-            }
-        }
-    }
-}
 
-@Composable
-private fun ManagerHeader() {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Image(
-            painter = painterResource(R.drawable.interviewer_tech),
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.size(46.dp),
-        )
-        Spacer(Modifier.width(10.dp))
-        Column(Modifier.weight(1f)) {
-            Text("Ken ・ 你的直屬主管",
-                style = MaterialTheme.typography.titleSmall,
-                color = InkBlack, fontWeight = FontWeight.SemiBold)
-            Text("嚴厲,但講理",
-                style = MaterialTheme.typography.labelSmall,
-                color = InkGray500)
-        }
-        Box(
-            Modifier
-                .clip(RoundedCornerShape(50))
-                .background(BrandPeach.copy(alpha = 0.55f))
-                .padding(horizontal = 10.dp, vertical = 4.dp),
-        ) {
-            Text("情境演練",
-                color = BrandDeepOrange,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.SemiBold)
-        }
-    }
-}
-
-@Composable
-private fun SceneCard() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(InkCharcoal)
-            .padding(16.dp),
-    ) {
-        Text("場景",
-            color = PaperWhite.copy(alpha = 0.55f),
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 2.sp)
-        Spacer(Modifier.height(6.dp))
-        Text("週一 09:30 ・ 會議室 B",
-            color = PaperWhite,
-            fontWeight = FontWeight.Black,
-            fontSize = 16.sp)
-        Spacer(Modifier.height(4.dp))
-        Text("你上週負責的匯出功能延期了兩天。主管把你約進來,門關上了。",
-            color = PaperWhite.copy(alpha = 0.8f),
-            fontSize = 12.sp,
-            lineHeight = 18.sp)
-    }
-}
-
-@Composable
-private fun WpBubble(m: ChatMessage) {
-    Row(
-        Modifier.fillMaxWidth(),
-        horizontalArrangement = if (m.isUser) Arrangement.End else Arrangement.Start,
-    ) {
-        if (!m.isUser) {
-            Image(
-                painter = painterResource(R.drawable.interviewer_tech),
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.size(34.dp),
-            )
-            Spacer(Modifier.width(8.dp))
-        }
-        Box(
-            Modifier
-                .widthIn(max = 280.dp)
-                .clip(RoundedCornerShape(
-                    topStart = 18.dp, topEnd = 18.dp,
-                    bottomStart = if (m.isUser) 18.dp else 4.dp,
-                    bottomEnd = if (m.isUser) 4.dp else 18.dp,
-                ))
-                .background(if (m.isUser) InkBlack else MaterialTheme.colorScheme.surface)
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-        ) {
-            Column {
-                if (!m.isUser) {
-                    Text(m.speaker,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = BrandDeepOrange, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.height(2.dp))
-                }
-                Text(m.content,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (m.isUser) PaperWhite else InkBlack)
-            }
-        }
-    }
-}
-
-@Composable
-private fun WorkplaceBottomBar(input: String, onChange: (String) -> Unit, onSend: () -> Unit) {
-    Box(Modifier.fillMaxWidth().background(PaperOff).padding(12.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                value = input, onValueChange = onChange,
-                placeholder = { Text("你會怎麼回?", color = InkGray400) },
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(24.dp),
-                maxLines = 4,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = InkBlack, unfocusedBorderColor = InkGray200,
-                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                ),
-            )
-            Spacer(Modifier.width(8.dp))
-            Box(
+            // ===== 對話面板(ADV)=====
+            Column(
                 Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(if (input.isBlank()) InkGray200 else InkBlack)
-                    .pressScale(enabled = input.isNotBlank()) { onSend() },
-                contentAlignment = Alignment.Center,
+                    .fillMaxWidth()
+                    .background(PaperOff)
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
             ) {
-                Icon(Icons.Outlined.Send, contentDescription = null,
-                    tint = if (input.isBlank()) InkGray400 else PaperWhite)
+                // 對話框:名牌 + 打字機 + 點擊推進
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(PaperWhite)
+                        .clickable { advance() }
+                        .padding(16.dp)
+                        .heightIn(min = 96.dp),
+                ) {
+                    Text(
+                        speaker,
+                        color = if (speaker == "Ken") BrandDeepOrange else InkCharcoal,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 13.sp,
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        typed,
+                        color = InkBlack,
+                        fontSize = 15.sp,
+                        lineHeight = 24.sp,
+                    )
+                    if (typed.length >= fullText.length && phase == ScenePhase.TALKING) {
+                        Spacer(Modifier.height(4.dp))
+                        val blink = rememberInfiniteTransition(label = "adv")
+                        val a by blink.animateFloat(
+                            initialValue = 0.25f, targetValue = 1f,
+                            animationSpec = infiniteRepeatable(tween(550), RepeatMode.Reverse),
+                            label = "blink",
+                        )
+                        Text("▼",
+                            color = BrandOrange,
+                            fontSize = 12.sp,
+                            modifier = Modifier.align(Alignment.End).alpha(a))
+                    }
+                }
+
+                // 選項卡
+                AnimatedVisibility(
+                    visible = phase == ScenePhase.CHOOSING,
+                    enter = fadeIn(tween(220)) + slideInVertically(tween(260)) { it / 3 },
+                ) {
+                    Column {
+                        Spacer(Modifier.height(12.dp))
+                        Text("你會怎麼接",
+                            color = InkGray500,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 2.sp)
+                        Spacer(Modifier.height(8.dp))
+                        beats[beatIdx].choices.forEach { c ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(PaperWhite)
+                                    .pressScale { choose(c) }
+                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    c.label,
+                                    color = InkBlack,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 14.sp,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Box(
+                                    Modifier
+                                        .clip(RoundedCornerShape(50))
+                                        .background(BrandPeach.copy(alpha = 0.55f))
+                                        .padding(horizontal = 9.dp, vertical = 3.dp),
+                                ) {
+                                    Text(c.stance,
+                                        color = BrandDeepOrange,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Black)
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
             }
         }
-    }
-}
 
-@Composable
-private fun WpTypingBubble() {
-    val t = rememberInfiniteTransition(label = "wtyping")
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
-        Image(
-            painter = painterResource(R.drawable.interviewer_tech),
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.size(34.dp),
-        )
-        Spacer(Modifier.width(8.dp))
-        Row(
-            modifier = Modifier
-                .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 18.dp, bottomStart = 18.dp, bottomEnd = 18.dp))
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        // ===== 收尾:燈光收暗 =====
+        AnimatedVisibility(
+            visible = phase == ScenePhase.ENDING,
+            enter = fadeIn(tween(700)),
         ) {
-            repeat(3) { i ->
-                val a by t.animateFloat(
-                    initialValue = 0.3f,
-                    targetValue = 1f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(durationMillis = 500, delayMillis = i * 160),
-                        repeatMode = RepeatMode.Reverse,
-                    ),
-                    label = "dot",
-                )
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(InkCharcoal.copy(alpha = 0.97f))
+                    .padding(horizontal = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Text("1on1 結束",
+                    color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 24.sp)
+                Spacer(Modifier.height(10.dp))
+                Text("你今天的選擇,Ken 都記著。",
+                    color = PaperWhite.copy(alpha = 0.75f), fontSize = 13.sp)
+                Spacer(Modifier.height(4.dp))
+                Text("痕跡,週五揭曉。",
+                    color = BrandOrange, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(28.dp))
                 Box(
-                    Modifier
-                        .padding(horizontal = 3.dp)
-                        .size(7.dp)
-                        .clip(CircleShape)
-                        .background(InkGray400.copy(alpha = a)),
-                )
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(BrandOrange)
+                        .pressScale { navController.popBackStack() },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("回到路徑",
+                        color = PaperWhite, fontWeight = FontWeight.Black)
+                }
             }
         }
     }
