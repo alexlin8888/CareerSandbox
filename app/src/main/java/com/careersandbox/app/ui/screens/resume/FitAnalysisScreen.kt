@@ -1,5 +1,6 @@
 package com.careersandbox.app.ui.screens.resume
 
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.animation.core.rememberInfiniteTransition
