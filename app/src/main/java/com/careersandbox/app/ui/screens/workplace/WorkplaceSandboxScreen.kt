@@ -134,7 +134,7 @@ fun WorkplaceSandboxScreen(navController: NavHostController) {
         Spacer(Modifier.height(6.dp))
         Text(
             if (industry == "科技 / 網路") "目前的一週以「科技 / 網路」的日常為底。"
-            else "「$industry」的一週規劃中 — 先走通用版。",
+            else "這週先走通用版,「$industry」的一週之後會有。",
             color = InkGray400,
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.padding(horizontal = 24.dp),
@@ -335,7 +335,7 @@ private fun IndustrySelector(selected: String, onSelect: (String) -> Unit) {
                     if (!ready) {
                         Spacer(Modifier.width(5.dp))
                         Text(
-                            "規劃中",
+                            "未解鎖",
                             color = if (isSel) PaperWhite.copy(alpha = 0.8f) else InkGray400,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,

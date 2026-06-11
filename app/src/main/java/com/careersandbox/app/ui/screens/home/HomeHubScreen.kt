@@ -471,7 +471,7 @@ private fun ModuleSection(navController: NavHostController) {
             number = "01",
             title = "AI 面試模擬",
             subtitle = "個人 / 團體,真實情境演練",
-            tag = "MVP",
+            tag = "主打",
             tagColor = BrandYellow,
             accent = BrandOrange,
             icon = Icons.Outlined.Mic,

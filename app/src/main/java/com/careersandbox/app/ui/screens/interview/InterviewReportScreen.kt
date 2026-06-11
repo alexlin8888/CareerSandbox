@@ -595,12 +595,6 @@ private fun FaceCard(
                         Icon(Icons.Outlined.Mic, contentDescription = null, tint = BrandYellow, modifier = Modifier.size(13.dp))
                         Spacer(Modifier.width(6.dp))
                         Text("語音語調分析", color = BrandYellow, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.width(6.dp))
-                        Box(
-                            Modifier.clip(RoundedCornerShape(50)).background(Color(0x33FFFFFF)).padding(horizontal = 6.dp, vertical = 1.dp),
-                        ) {
-                            Text("beta", color = InkGray400, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                        }
                     }
                     Spacer(Modifier.height(8.dp))
                     prosody.forEach { (k, v) ->

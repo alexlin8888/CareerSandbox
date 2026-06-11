@@ -172,13 +172,13 @@ private fun PlanCards(navController: NavHostController) {
             onClick = { navController.navigate(Routes.INTERVIEW_SETUP_INDIVIDUAL) },
         )
 
-        // 團體面試卡(MVP 差異化)
+        // 團體面試卡
         PlanCard(
             number = "02",
             title = "團體面試",
             eyebrow = "3-5 人小組",
             description = "AI 扮演其他應徵者,\n真實小組討論演練",
-            tagText = "市面少見 · MVP",
+            tagText = "AI 同儕同場",
             tagBg = BrandYellow,
             tagFg = InkCharcoal,
             cardBg = SolidColor(InkCharcoal),
@@ -372,26 +372,28 @@ private fun AvatarGrowthCard() {
             .background(BrandPeach.copy(alpha = 0.4f))
             .padding(18.dp),
     ) {
+        val power = 74
+        val rank = rankOf(power)
         Row(verticalAlignment = Alignment.CenterVertically) {
-            ShieldBadge("面試新星 IV")
+            ShieldBadge(rank.title)
             Spacer(Modifier.weight(1f))
             Column(horizontalAlignment = Alignment.End) {
-                Text("面試力", color = InkGray700, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                Text("${rememberCountUp(74)}", color = InkBlack, fontSize = 34.sp, fontWeight = FontWeight.Black, lineHeight = 36.sp)
+                Text("面試力", color = InkGray700, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("${rememberCountUp(power)}", color = InkBlack, fontSize = 44.sp, fontWeight = FontWeight.Black, lineHeight = 46.sp)
             }
         }
         Spacer(Modifier.height(6.dp))
-        Box(Modifier.fillMaxWidth().height(168.dp)) {
+        Box(Modifier.fillMaxWidth().height(176.dp)) {
             HexRadar(
                 values = abilities.map { it.second },
                 modifier = Modifier.align(Alignment.CenterStart).padding(start = 14.dp).size(156.dp),
             )
             // 河狸去框,破框站在卡緣
             Image(
-                painter = painterResource(R.drawable.beaver_flex),
+                painter = painterResource(rank.beaver),
                 contentDescription = null,
                 contentScale = ContentScale.Fit,
-                modifier = Modifier.align(Alignment.BottomEnd).size(104.dp).offset(x = 10.dp, y = 8.dp),
+                modifier = Modifier.align(Alignment.BottomEnd).size(132.dp).offset(x = 10.dp, y = 10.dp),
             )
         }
         Spacer(Modifier.height(10.dp))
@@ -410,6 +412,15 @@ private fun AvatarGrowthCard() {
     }
 }
 
+private data class InterviewRank(val title: String, val beaver: Int)
+
+private fun rankOf(score: Int): InterviewRank = when {
+    score >= 85 -> InterviewRank("面試大師 I", R.drawable.beaver_trophy)
+    score >= 75 -> InterviewRank("面試好手 II", R.drawable.beaver_celebrate)
+    score >= 60 -> InterviewRank("面試新星 IV", R.drawable.beaver_flex)
+    else -> InterviewRank("面試新手 V", R.drawable.beaver_climb)
+}
+
 @Composable
 private fun ShieldBadge(text: String) {
     Box(
@@ -418,22 +429,22 @@ private fun ShieldBadge(text: String) {
             .background(BrandAmber)
             .padding(horizontal = 14.dp, vertical = 8.dp),
     ) {
-        Text(text, color = InkCharcoal, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+        Text(text, color = InkCharcoal, fontSize = 13.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
     }
 }
 
 @Composable
 private fun StatCell(label: String, value: Int, delta: Int) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, color = InkGray500, fontSize = 10.sp)
-        Spacer(Modifier.height(2.dp))
+        Text(label, color = InkGray700, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(3.dp))
         Row(verticalAlignment = Alignment.Bottom) {
-            Text("${rememberCountUp(value)}", color = InkBlack, fontSize = 16.sp, fontWeight = FontWeight.Black)
+            Text("${rememberCountUp(value)}", color = InkBlack, fontSize = 22.sp, fontWeight = FontWeight.Black)
             Spacer(Modifier.width(3.dp))
             Text(
                 if (delta >= 0) "+$delta" else "$delta",
                 color = if (delta >= 0) AccentGreen else AccentRed,
-                fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                fontSize = 11.sp, fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 2.dp),
             )
         }
