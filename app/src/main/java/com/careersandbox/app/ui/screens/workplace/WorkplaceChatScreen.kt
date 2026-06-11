@@ -60,10 +60,13 @@ private data class Beat(
     val choices: List<StanceChoice>,
 )
 
-// 場景素材插槽:Lovart 圖到了之後,換這兩個函式即可
-private val sceneBackdrop: Int? = null  // 之後換 R.drawable.bg_meeting_room
-private fun kenSprite(mood: String): Int = R.drawable.interviewer_tech
-// 之後:依 mood 換 ken_stern(不耐/更不耐)/ ken_soft(平靜/緩和)
+// 場景素材(Lovart):會議室背景 + Ken 依心情換臉
+// 緩和表情(ken_soft)待重抽(現版多了工程帽,與 AI 應徵者識別衝突)— 暫以中性版頂替
+private val sceneBackdrop: Int? = R.drawable.bg_meeting_room
+private fun kenSprite(mood: String): Int = when (mood) {
+    "平靜", "緩和" -> R.drawable.interviewer_tech
+    else -> R.drawable.ken_stern
+}
 
 private val beats = listOf(
     Beat(
