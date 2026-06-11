@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
+import com.careersandbox.app.data.mock.InterviewConfig
 import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.data.model.ChatMessage
 import kotlinx.coroutines.delay
@@ -38,6 +39,9 @@ import com.careersandbox.app.ui.theme.*
 // 各角色河狸頭像(「你」維持色圈)
 private val ParticipantAvatars = mapOf(
     "主考官" to R.drawable.interviewer_hr,
+    "HR 主管" to R.drawable.interviewer_hr,
+    "技術主管" to R.drawable.interviewer_tech,
+    "用人主管" to R.drawable.interviewer_lead,
     "AI-強勢" to R.drawable.peer_assertive,
     "AI-邏輯" to R.drawable.peer_logical,
     "AI-親切" to R.drawable.peer_friendly,
@@ -47,12 +51,19 @@ private val ParticipantAvatars = mapOf(
 // 各角色色票
 private val ParticipantColors = mapOf(
     "主考官" to BrandOrange,
+    "HR 主管" to BrandOrange,
+    "技術主管" to InkCharcoal,
+    "用人主管" to BrandDeepOrange,
     "你" to BrandDeepOrange,
     "AI-強勢" to Color(0xFF7A8C5A),
     "AI-邏輯" to InkGray700,
     "AI-親切" to Color(0xFFD4A574),
     "AI-沉默" to InkGray400,
 )
+
+private val baseRoster = listOf("主考官", "你", "AI-強勢", "AI-邏輯", "AI-親切", "AI-沉默")
+private val panelRoster = listOf("HR 主管", "技術主管", "用人主管", "你", "AI-強勢", "AI-邏輯", "AI-親切", "AI-沉默")
+private val panelNames = listOf("用人主管", "技術主管", "HR 主管")
 
 private fun String.containsAny(vararg keys: String) = keys.any { this.contains(it) }
 
@@ -90,13 +101,28 @@ private val interruptLines = listOf(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InterviewLiveGroupScreen(navController: NavHostController) {
-    val messages = remember { mutableStateListOf<ChatMessage>().apply { addAll(MockData.groupInterviewScript) } }
+    val panel = InterviewConfig.groupInterviewers == 3
+    var panelIdx by remember { mutableIntStateOf(0) }
+    fun nextInterviewer(): String {
+        val n = panelNames[panelIdx % panelNames.size]
+        panelIdx++
+        return n
+    }
+    val messages = remember {
+        mutableStateListOf<ChatMessage>().apply {
+            addAll(
+                MockData.groupInterviewScript.map {
+                    if (panel && it.speaker == "主考官") it.copy(speaker = "用人主管") else it
+                }
+            )
+        }
+    }
     var input by remember { mutableStateOf("") }
     var showObservation by remember { mutableStateOf(true) }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     var isTyping by remember { mutableStateOf(false) }
-    var typingSpeaker by remember { mutableStateOf("主考官") }
+    var typingSpeaker by remember { mutableStateOf(if (panel) "用人主管" else "主考官") }
     var followUpIdx by remember { mutableIntStateOf(0) }
     var elapsedSec by remember { mutableIntStateOf(0) }
     LaunchedEffect(Unit) { while (true) { delay(1000); elapsedSec++ } }
@@ -109,7 +135,8 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
         "AI-親切" to "我覺得你講得不錯耶,不過團隊怎麼分工那段可以再多說一點。",
         "主考官" to "那你會怎麼回應剛剛其他人提出的質疑?",
     )
-    val currentSpeaker = if (isTyping) typingSpeaker else (messages.lastOrNull()?.speaker ?: "主考官")
+    val currentSpeaker = if (isTyping) typingSpeaker
+        else (messages.lastOrNull()?.speaker ?: if (panel) "用人主管" else "主考官")
 
     LaunchedEffect(messages.size, isTyping) {
         val target = if (isTyping) messages.size else messages.size - 1
@@ -141,7 +168,9 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
                         Text("團體面試 ・ Junior PM",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold, color = InkBlack)
-                        Text("小組討論 ・ AI 應徵者同場",
+                        Text(
+                            if (InterviewConfig.groupInterviewers == 3) "三位面試官 panel ・ AI 應徵者同場"
+                            else "小組討論 ・ AI 應徵者同場",
                             style = MaterialTheme.typography.labelSmall,
                             color = InkGray500)
                     }
@@ -179,7 +208,8 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
                 val said = input
                 messages.add(ChatMessage("u${messages.size}", "你", said, isUser = true))
                 input = ""
-                val (who, line) = pickGroupFollowUp(said, followUpIdx, groupFollowUps)
+                val (rawWho, line) = pickGroupFollowUp(said, followUpIdx, groupFollowUps)
+                val who = if (panel && rawWho == "主考官") nextInterviewer() else rawWho
                 typingSpeaker = who
                 isTyping = true
                 scope.launch {
@@ -192,7 +222,7 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
         } }
     ) { pad ->
         Column(Modifier.padding(pad)) {
-            ParticipantsRow(currentSpeaker)
+            ParticipantsRow(currentSpeaker, panel)
 
             // 觀察面板
             AnimatedVisibility(visible = showObservation) {
@@ -245,13 +275,14 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
 }
 
 @Composable
-private fun ParticipantsRow(currentSpeaker: String) {
+private fun ParticipantsRow(currentSpeaker: String, panel: Boolean) {
     LazyRow(
         modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
         contentPadding = PaddingValues(horizontal = 20.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        items(ParticipantColors.entries.toList()) { (name, color) ->
+        items(if (panel) panelRoster else baseRoster) { name ->
+            val color = ParticipantColors[name] ?: BrandOrange
             val isCurrent = name == currentSpeaker
             val avatar = ParticipantAvatars[name]
             val tileAlpha by animateFloatAsState(

@@ -7,4 +7,5 @@ object InterviewConfig {
     var language: String = "中文"     // 中文 / English
     var type: String = "行為"         // 行為 / 技術 / 情境
     var difficulty: String = "中等"   // 新手 / 中等 / 困難
+    var groupInterviewers: Int = 1    // 團體面試:1 位主持 / 3 位 panel
 }

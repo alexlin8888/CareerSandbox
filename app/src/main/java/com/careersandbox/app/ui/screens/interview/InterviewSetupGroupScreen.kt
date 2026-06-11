@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
+import com.careersandbox.app.data.mock.InterviewConfig
 import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.data.model.JobApplication
 import com.careersandbox.app.navigation.Routes
@@ -56,6 +57,7 @@ fun InterviewSetupGroupScreen(navController: NavHostController) {
     var customSelected by remember { mutableStateOf(false) }
     var customJob by remember { mutableStateOf("") }
     var groupSize by remember { mutableIntStateOf(4) } // 含你
+    var interviewers by remember { mutableIntStateOf(InterviewConfig.groupInterviewers) }
     var role by remember { mutableStateOf(roleOptions[0]) }
 
     Scaffold(
@@ -80,6 +82,7 @@ fun InterviewSetupGroupScreen(navController: NavHostController) {
                         .clip(RoundedCornerShape(16.dp))
                         .background(InkBlack)
                         .pressScale {
+                            InterviewConfig.groupInterviewers = interviewers
                             navController.navigate(Routes.INTERVIEW_LIVE_GROUP) {
                                 popUpTo(Routes.INTERVIEW_HUB)
                             }
@@ -150,6 +153,36 @@ fun InterviewSetupGroupScreen(navController: NavHostController) {
             Spacer(Modifier.height(28.dp))
 
             // 3. 你的角色設定
+            SectionLabelGroup("面試官")
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(1 to "1 位主持", 3 to "3 位 panel").forEach { (n, label) ->
+                    val sel = interviewers == n
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(if (sel) InkBlack else MaterialTheme.colorScheme.surface)
+                            .pressScale { interviewers = n }
+                            .padding(horizontal = 16.dp, vertical = 9.dp),
+                    ) {
+                        Text(label,
+                            color = if (sel) PaperWhite else InkGray700,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.labelLarge)
+                    }
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            Text(
+                if (interviewers == 3)
+                    "HR、技術、用人主管同場輪流提問,壓力更接近真實終面。"
+                else
+                    "一位主考官主持討論,專注在你跟其他應徵者的互動。",
+                color = InkGray500, style = MaterialTheme.typography.bodySmall, lineHeight = 18.sp,
+            )
+
+            Spacer(Modifier.height(28.dp))
+
             SectionLabelGroup("你的角色")
             Spacer(Modifier.height(10.dp))
             roleOptions.forEach { option ->
