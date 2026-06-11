@@ -17,6 +17,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.shape.CircleShape
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
 import com.careersandbox.app.ui.components.*
@@ -34,8 +38,12 @@ fun ExperienceEditScreen(navController: NavHostController) {
     var result by remember { mutableStateOf("") }
     var learning by remember { mutableStateOf("") }
     var chatInput by remember { mutableStateOf("") }
+    var step by remember { mutableIntStateOf(0) }
+    var aiTyping by remember { mutableStateOf(false) }
+    val answers = remember { mutableStateListOf<String>() }
+    val scope = rememberCoroutineScope()
     val chatHistory = remember {
-        mutableStateListOf("AI" to "最近做過什麼讓你印象深刻的事?可以是課程、社團、實習都好。")
+        mutableStateListOf("AI" to chatQuestions[0])
     }
 
     Scaffold(
@@ -80,11 +88,32 @@ fun ExperienceEditScreen(navController: NavHostController) {
             Spacer(Modifier.height(20.dp))
 
             when (mode) {
-                EditMode.CHAT -> ChatEdit(chatHistory, chatInput, { chatInput = it }) {
-                    if (chatInput.isNotBlank()) {
-                        chatHistory.add("你" to chatInput)
+                EditMode.CHAT -> ChatEdit(
+                    history = chatHistory,
+                    input = chatInput,
+                    onInputChange = { chatInput = it },
+                    step = step,
+                    aiTyping = aiTyping,
+                    answers = answers,
+                    onChipTap = { chatInput = it },
+                ) {
+                    if (chatInput.isNotBlank() && !aiTyping && step < 3) {
+                        val said = chatInput
                         chatInput = ""
-                        chatHistory.add("AI" to "了解。可以再多說一點時間和規模嗎?例如做了多久、有多少人參與?")
+                        chatHistory.add("你" to said)
+                        answers.add(said)
+                        step++
+                        aiTyping = true
+                        scope.launch {
+                            if (step < 3) {
+                                delay(900)
+                                chatHistory.add("AI" to chatQuestions[step])
+                            } else {
+                                delay(1500)
+                                chatHistory.add("AI" to "整理好了——確認下面這張經驗卡沒問題,就按「儲存」存入母版。")
+                            }
+                            aiTyping = false
+                        }
                     }
                 }
                 EditMode.FORM -> FormEdit(
@@ -102,6 +131,19 @@ fun ExperienceEditScreen(navController: NavHostController) {
 }
 
 private enum class EditMode { CHAT, FORM }
+
+private val chatQuestions = listOf(
+    "最近做過什麼讓你印象深刻的事?可以是課程、社團、實習都好。",
+    "你在裡面具體負責什麼?一句話就好。",
+    "有沒有可以量化的成果?人數、金額、百分比,什麼都好。",
+)
+
+private val starterChips = listOf(
+    "課程專題" to "我在課程專題做了",
+    "社團活動" to "我在社團辦了",
+    "實習打工" to "我在實習的時候",
+    "競賽得獎" to "我參加了一場比賽,",
+)
 
 @Composable
 private fun ModeSegmented(mode: EditMode, onChange: (EditMode) -> Unit) {
@@ -139,11 +181,36 @@ private fun RowScope.SegItem(label: String, sel: Boolean, onClick: () -> Unit) {
 
 @Composable
 private fun ChatEdit(
-    history: List<Pair<String, String>>, input: String,
-    onInputChange: (String) -> Unit, onSend: () -> Unit,
+    history: List<Pair<String, String>>,
+    input: String,
+    onInputChange: (String) -> Unit,
+    step: Int,
+    aiTyping: Boolean,
+    answers: List<String>,
+    onChipTap: (String) -> Unit,
+    onSend: () -> Unit,
 ) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            repeat(3) { i ->
+                Box(
+                    Modifier
+                        .width(if (i == step.coerceAtMost(2)) 18.dp else 7.dp)
+                        .height(7.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(if (i <= step.coerceAtMost(2)) BrandOrange else InkGray200),
+                )
+            }
+        }
+        Spacer(Modifier.width(10.dp))
+        Text(
+            if (step < 3) "第 ${step + 1} / 3 題" else "整理完成",
+            color = InkGray500, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+        )
+    }
+    Spacer(Modifier.height(10.dp))
     Column(
-        Modifier.fillMaxWidth().heightIn(max = 460.dp)
+        Modifier.fillMaxWidth().heightIn(max = 430.dp)
             .verticalScroll(rememberScrollState()),
     ) {
         history.forEach { (speaker, msg) ->
@@ -168,6 +235,34 @@ private fun ChatEdit(
                         color = if (isUser) PaperWhite else InkBlack)
                 }
             }
+        }
+        if (aiTyping) ChatTypingDots()
+        if (step == 0 && history.size == 1 && !aiTyping) {
+            Spacer(Modifier.height(6.dp))
+            Text("不知道從哪開始?點一個起手:", color = InkGray400, fontSize = 11.sp)
+            Spacer(Modifier.height(8.dp))
+            starterChips.chunked(2).forEach { rowChips ->
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    rowChips.forEach { (label, starter) ->
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .background(BrandPeach.copy(alpha = 0.5f))
+                                .pressScale { onChipTap(starter) }
+                                .padding(horizontal = 14.dp, vertical = 8.dp),
+                        ) {
+                            Text(label, color = BrandDeepOrange,
+                                fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+        }
+        if (step >= 3 && !aiTyping) {
+            Spacer(Modifier.height(8.dp))
+            ExperienceDraftCard(answers)
+            Spacer(Modifier.height(8.dp))
         }
     }
     Spacer(Modifier.height(12.dp))
@@ -228,5 +323,76 @@ private fun ExpField(label: String, value: String, onChange: (String) -> Unit, m
                 unfocusedContainerColor = MaterialTheme.colorScheme.surface,
             )
         )
+    }
+}
+
+@Composable
+private fun ChatTypingDots() {
+    val t = rememberInfiniteTransition(label = "expTyping")
+    val a by t.animateFloat(
+        initialValue = 0.25f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(500), RepeatMode.Reverse),
+        label = "expTypingA",
+    )
+    Row(Modifier.padding(vertical = 5.dp)) {
+        Box(
+            Modifier
+                .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 4.dp, bottomEnd = 16.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                repeat(3) { i ->
+                    Box(
+                        Modifier.size(6.dp).clip(CircleShape)
+                            .background(InkGray400.copy(alpha = if (i == 1) a else a * 0.6f)),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExperienceDraftCard(answers: List<String>) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(16.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.clip(RoundedCornerShape(50)).background(BrandPeach.copy(alpha = 0.6f))
+                    .padding(horizontal = 8.dp, vertical = 3.dp),
+            ) {
+                Text("經驗卡 ・ 已整理", color = BrandDeepOrange,
+                    fontSize = 10.sp, fontWeight = FontWeight.Black)
+            }
+            Spacer(Modifier.weight(1f))
+            Image(
+                painter = painterResource(R.drawable.beaver_thumbsup),
+                contentDescription = null,
+                modifier = Modifier.size(34.dp),
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+        DraftRow("經歷", answers.getOrElse(0) { "" })
+        DraftRow("你的角色", answers.getOrElse(1) { "" })
+        DraftRow("量化成果", answers.getOrElse(2) { "" })
+        Spacer(Modifier.height(8.dp))
+        Text("之後每個職缺的客製版本,都會從這張卡取材。",
+            color = InkGray400, fontSize = 10.sp, lineHeight = 14.sp)
+    }
+}
+
+@Composable
+private fun DraftRow(label: String, value: String) {
+    Column(Modifier.padding(vertical = 4.dp)) {
+        Text(label, color = InkGray500, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(2.dp))
+        Text(value.ifBlank { "—" }, color = InkBlack, fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold, lineHeight = 18.sp)
     }
 }
