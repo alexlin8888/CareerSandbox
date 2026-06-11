@@ -1,5 +1,7 @@
 package com.careersandbox.app.ui.screens.resume
 
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.draw.scale
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.clipPath
@@ -706,6 +708,7 @@ private fun SkillGapSection() {
         SkillGapVenn(
             gapSkills = gap,
             matchedSkills = matched,
+            otherSkills = other,
             onGapTap = { showGap = !showGap },
             onMatchedTap = { showMatched = !showMatched },
         )
@@ -864,6 +867,7 @@ private fun GapDetailCard(skill: String) {
 private fun SkillGapVenn(
     gapSkills: List<String>,
     matchedSkills: List<String>,
+    otherSkills: List<String>,
     onGapTap: () -> Unit,
     onMatchedTap: () -> Unit,
 ) {
@@ -890,6 +894,11 @@ private fun SkillGapVenn(
         initialValue = 0f, targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(2800, easing = LinearEasing)),
         label = "phase",
+    )
+    val gapPulse by stripeAnim.animateFloat(
+        initialValue = 1f, targetValue = 1.06f,
+        animationSpec = infiniteRepeatable(tween(1500), RepeatMode.Reverse),
+        label = "gapPulse",
     )
     val animGap by animateIntAsState(targetValue = if (appear) gapSkills.size else 0, label = "vennGap")
     val animMatch by animateIntAsState(targetValue = if (appear) matchedSkills.size else 0, label = "vennMatch")
@@ -921,16 +930,16 @@ private fun SkillGapVenn(
                 // 交集(符合)— 暖色淺
                 drawPath(inter, color = BrandPeach.copy(alpha = 0.9f))
                 // 差集(還缺)— 底色 + 飄動斜紋:還沒填滿的那塊
-                drawPath(diff, color = BrandDeepOrange.copy(alpha = 0.22f * grow))
+                drawPath(diff, color = BrandDeepOrange.copy(alpha = 0.30f * grow))
                 clipPath(diff) {
-                    val stripeW = 7.dp.toPx()
-                    val gapW = 11.dp.toPx()
+                    val stripeW = 5.dp.toPx()
+                    val gapW = 15.dp.toPx()
                     val step = stripeW + gapW
                     rotate(degrees = -24f, pivot = Offset(cxL, cy)) {
                         var x = -size.width + phase * step
                         while (x < size.width * 2f) {
                             drawRect(
-                                color = BrandDeepOrange.copy(alpha = 0.8f),
+                                color = BrandDeepOrange.copy(alpha = 0.35f),
                                 topLeft = Offset(x, cy - size.height * 1.5f),
                                 size = Size(stripeW, size.height * 3f),
                             )
@@ -939,8 +948,15 @@ private fun SkillGapVenn(
                     }
                 }
                 // 外框
-                drawPath(leftPath, color = BrandDeepOrange.copy(alpha = grow), style = Stroke(width = 2.5.dp.toPx()))
-                drawPath(rightPath, color = InkGray400.copy(alpha = grow), style = Stroke(width = 2.dp.toPx()))
+                drawPath(leftPath, color = BrandDeepOrange.copy(alpha = grow), style = Stroke(width = 3.dp.toPx()))
+                drawPath(
+                    rightPath,
+                    color = InkGray400.copy(alpha = grow),
+                    style = Stroke(
+                        width = 2.dp.toPx(),
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f)),
+                    ),
+                )
             }
             // 圈標籤
             Text(
@@ -960,7 +976,9 @@ private fun SkillGapVenn(
             ) {
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text("還缺 ", color = PaperWhite, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 3.dp))
-                    Text("$animGap", color = PaperWhite, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                    Text("$animGap", color = PaperWhite, fontSize = 28.sp,
+                        fontWeight = FontWeight.Black,
+                        modifier = Modifier.scale(gapPulse))
                 }
                 Spacer(Modifier.height(6.dp))
                 gapSkills.take(3).forEach { skill ->
@@ -994,6 +1012,26 @@ private fun SkillGapVenn(
                     }
                 }
             }
+            // 你多出來的(右圓專屬區,低調)
+            Column(
+                modifier = Modifier.align(Alignment.Center).offset(x = 88.dp).alpha(chipAlpha),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text("你多出來的", color = InkGray400, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(4.dp))
+                otherSkills.take(3).forEach { skill ->
+                    Box(
+                        modifier = Modifier
+                            .padding(vertical = 1.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(PaperWhite.copy(alpha = 0.7f))
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                    ) {
+                        Text(skill, color = InkGray500, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
             // 可點區域:差集 → 缺項卡;交集 → 已符合清單
             Box(
                 modifier = Modifier
