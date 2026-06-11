@@ -210,6 +210,7 @@ fun InterviewReportScreen(navController: NavHostController) {
                             "停頓" to "偏少 · 句子間幾乎不停",
                             "語調" to "起伏不足 · 偏平",
                             "填充詞" to "「嗯 / 那個」8 次",
+                            "開口前思考" to "平均 4.2 秒 · 最長 11 秒",
                         ),
                     )
                 }

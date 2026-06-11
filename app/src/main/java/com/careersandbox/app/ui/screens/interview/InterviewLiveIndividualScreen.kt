@@ -1,5 +1,9 @@
 package com.careersandbox.app.ui.screens.interview
 
+import kotlin.math.sin
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -77,7 +81,39 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
     var followUpIdx by remember { mutableIntStateOf(0) }
     var reaction by remember { mutableStateOf<String?>(null) }
     var elapsedSec by remember { mutableIntStateOf(0) }
-    LaunchedEffect(Unit) { while (true) { delay(1000); elapsedSec++ } }
+    var phase by remember { mutableStateOf("MAIN") }            // MAIN / REVERSE / CLOSING / DONE
+    var voiceMode by remember { mutableStateOf(false) }
+    var repeatFired by remember { mutableStateOf(false) }
+    var silenceFired by remember { mutableStateOf(false) }
+    var timeGlanced by remember { mutableStateOf(false) }
+    var lastProbe by remember { mutableStateOf("") }
+    var questionShownAt by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var recording by remember { mutableStateOf(false) }
+    var recordSec by remember { mutableIntStateOf(0) }
+    var holdStartAt by remember { mutableLongStateOf(0L) }
+    val curInput by rememberUpdatedState(input)
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(1000); elapsedSec++
+            if (elapsedSec == 360 && !timeGlanced && phase == "MAIN") {
+                timeGlanced = true
+                messages.add(ChatMessage("ai${messages.size}", "面試官", "(他看了一眼時間)", isUser = false))
+            }
+        }
+    }
+    // 沉默壓力:面試官問完 20 秒沒動靜 — 每場只提醒一次
+    LaunchedEffect(messages.size, phase) {
+        if (phase != "MAIN" || silenceFired) return@LaunchedEffect
+        if (messages.lastOrNull()?.isUser != false) return@LaunchedEffect
+        delay(20000)
+        if (curInput.isBlank() && !recording && !silenceFired) {
+            silenceFired = true
+            messages.add(ChatMessage("ai${messages.size}", "面試官", "不急,想清楚再說。", isUser = false))
+        }
+    }
+    LaunchedEffect(recording) {
+        if (recording) { var sct = 0; recordSec = 0; while (true) { delay(1000); sct++; recordSec = sct } }
+    }
     val timerText = "${(elapsedSec / 60).toString().padStart(2, '0')}:${(elapsedSec % 60).toString().padStart(2, '0')}"
     val probes = listOf(
         "嗯,了解。可以再給一個更具體的例子嗎?",
@@ -85,6 +121,46 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
         "如果重來一次,你會有什麼不同的做法?",
         "這段經驗裡,你覺得自己最關鍵的貢獻是什麼?",
     )
+
+    fun submitAnswer(visible: String, analyzed: String) {
+        if (isTyping || reaction != null || phase != "MAIN") return
+        messages.add(ChatMessage("u${messages.size}", "你", visible, isUser = true))
+        reaction = microReactions.random()
+        scope.launch {
+            delay(800); reaction = null
+            isTyping = true; delay(1300)
+            val reply = when {
+                followUpIdx == 2 && !repeatFired -> {
+                    repeatFired = true
+                    "(他翻了下筆記)剛剛那題,我再問一次——$lastProbe"
+                }
+                followUpIdx >= 4 -> {
+                    phase = "REVERSE"
+                    "好,主要的問題就到這裡。最後——你有什麼想問我們的?"
+                }
+                else -> pickProbe(analyzed, followUpIdx, probes).also { lastProbe = it }
+            }
+            messages.add(ChatMessage("ai${messages.size}", "面試官", reply, isUser = false))
+            questionShownAt = System.currentTimeMillis()
+            followUpIdx++
+            isTyping = false
+        }
+    }
+
+    fun pickReverse(opt: ReverseOption) {
+        if (phase != "REVERSE") return
+        phase = "CLOSING"
+        messages.add(ChatMessage("u${messages.size}", "你", opt.ask, isUser = true))
+        scope.launch {
+            delay(700); isTyping = true; delay(1300)
+            messages.add(ChatMessage("ai${messages.size}", "面試官", opt.answer, isUser = false))
+            isTyping = false; delay(900)
+            isTyping = true; delay(1100)
+            messages.add(ChatMessage("ai${messages.size}", "面試官", opt.closing, isUser = false))
+            isTyping = false
+            phase = "DONE"
+        }
+    }
 
     LaunchedEffect(messages.size, isTyping, reaction) {
         val target = if (isTyping || reaction != null) messages.size else messages.size - 1
@@ -133,22 +209,35 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
             )
         },
         bottomBar = {
-            BottomInputBar(input, { input = it }) {
-                if (input.isNotBlank() && !isTyping && reaction == null) {
-                    val said = input
-                    messages.add(ChatMessage("u${messages.size}", "你", said, isUser = true))
-                    input = ""
-                    reaction = microReactions.random()
-                    scope.launch {
-                        delay(800)
-                        reaction = null
-                        isTyping = true
-                        delay(1300)
-                        messages.add(
-                            ChatMessage("ai${messages.size}", "面試官", pickProbe(said, followUpIdx, probes), isUser = false)
-                        )
-                        followUpIdx++
-                        isTyping = false
+            when {
+                phase == "DONE" -> DoneBar { navController.navigate(Routes.INTERVIEW_REPORT) }
+                phase == "REVERSE" || phase == "CLOSING" ->
+                    ReverseBar(enabled = phase == "REVERSE") { pickReverse(it) }
+                voiceMode -> VoiceBar(
+                    recording = recording,
+                    recordSec = recordSec,
+                    onKeyboard = { if (!recording) voiceMode = false },
+                    onPressStart = {
+                        if (!isTyping && reaction == null && phase == "MAIN") {
+                            holdStartAt = System.currentTimeMillis(); recording = true
+                        }
+                    },
+                    onPressEnd = {
+                        if (recording) {
+                            recording = false
+                            val dur = ((System.currentTimeMillis() - holdStartAt) / 1000).toInt()
+                            if (dur >= 1) {
+                                val think = ((holdStartAt - questionShownAt) / 1000).toInt().coerceAtLeast(0)
+                                submitAnswer("語音回答 ・ $dur 秒\n(開口前思考 $think 秒)", "")
+                            }
+                        }
+                    },
+                )
+                else -> BottomInputBar(input, { input = it }, onVoice = { voiceMode = true }) {
+                    if (input.isNotBlank() && !isTyping && reaction == null) {
+                        val said = input
+                        input = ""
+                        submitAnswer(said, said)
                     }
                 }
             }
@@ -253,8 +342,7 @@ fun MessageBubble(m: ChatMessage) {
 }
 
 @Composable
-private fun BottomInputBar(input: String, onChange: (String) -> Unit, onSend: () -> Unit) {
-    val ctx = LocalContext.current
+private fun BottomInputBar(input: String, onChange: (String) -> Unit, onVoice: () -> Unit, onSend: () -> Unit) {
     Box(Modifier.fillMaxWidth().background(PaperOff).padding(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -262,9 +350,7 @@ private fun BottomInputBar(input: String, onChange: (String) -> Unit, onSend: ()
                     .size(48.dp)
                     .clip(androidx.compose.foundation.shape.CircleShape)
                     .background(BrandPeach)
-                    .pressScale {
-                        Toast.makeText(ctx, "語音輸入規劃中,先用文字回答", Toast.LENGTH_SHORT).show()
-                    },
+                    .pressScale { onVoice() },
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(Icons.Outlined.Mic, contentDescription = null, tint = BrandDeepOrange)
@@ -352,6 +438,136 @@ private fun ReactionBubble(text: String) {
                 .padding(horizontal = 14.dp, vertical = 8.dp),
         ) {
             Text(text, style = MaterialTheme.typography.bodySmall, color = InkGray500)
+        }
+    }
+}
+
+/* ===================== 反問環節 / 語音作答 / 收尾 ===================== */
+
+private data class ReverseOption(val ask: String, val tag: String, val answer: String, val closing: String)
+
+private val reverseOptions = listOf(
+    ReverseOption(
+        ask = "團隊接下來半年,最大的挑戰是什麼?", tag = "問挑戰",
+        answer = "(他想了想)好問題。最大的挑戰是新產品線的節奏——資源沒變,目標翻倍。進來的人會直接碰到這一塊。",
+        closing = "今天就到這裡。你最後這個問題,我喜歡。等通知。",
+    ),
+    ReverseOption(
+        ask = "這個職位做得好的人,一年後通常長成什麼樣子?", tag = "問成長",
+        answer = "一年後做得好的人,通常已經能自己扛一條小產品線,開始帶實習生。我們希望你長得比職缺快。",
+        closing = "問得很實際。今天先到這裡,後續人資會跟你聯繫。",
+    ),
+    ReverseOption(
+        ask = "想先確認一下,這個職位的薪資範圍和獎金結構?", tag = "直球",
+        answer = "(他頓了一下)……這個階段我先不談數字,人資後續會說明。還有別的想問的嗎?",
+        closing = "好,那今天先到這裡。",
+    ),
+    ReverseOption(
+        ask = "目前沒有問題了,謝謝。", tag = "沒有問題",
+        answer = "(他點點頭)行。",
+        closing = "今天就到這裡,等通知。",
+    ),
+)
+
+@Composable
+private fun ReverseBar(enabled: Boolean, onPick: (ReverseOption) -> Unit) {
+    Column(Modifier.fillMaxWidth().background(PaperOff).padding(horizontal = 12.dp, vertical = 10.dp)) {
+        Text("你的反問", color = InkGray500, style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+        Spacer(Modifier.height(8.dp))
+        reverseOptions.forEach { opt ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 3.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surface)
+                    .pressScale(enabled = enabled) { onPick(opt) }
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(opt.ask, color = if (enabled) InkBlack else InkGray400,
+                    fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                Spacer(Modifier.width(8.dp))
+                Box(
+                    Modifier.clip(RoundedCornerShape(50)).background(BrandPeach.copy(alpha = 0.5f))
+                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                ) {
+                    Text(opt.tag, color = BrandDeepOrange, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DoneBar(onReport: () -> Unit) {
+    Box(Modifier.fillMaxWidth().background(PaperOff).padding(12.dp)) {
+        Box(
+            Modifier.fillMaxWidth().height(50.dp).clip(RoundedCornerShape(14.dp))
+                .background(InkBlack).pressScale(onClick = onReport),
+            contentAlignment = Alignment.Center,
+        ) { Text("面試結束 ・ 看完整報告", color = PaperWhite, fontWeight = FontWeight.Black) }
+    }
+}
+
+@Composable
+private fun VoiceBar(
+    recording: Boolean,
+    recordSec: Int,
+    onKeyboard: () -> Unit,
+    onPressStart: () -> Unit,
+    onPressEnd: () -> Unit,
+) {
+    Box(Modifier.fillMaxWidth().background(PaperOff).padding(12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(48.dp).clip(CircleShape).background(InkGray100)
+                    .pressScale { onKeyboard() },
+                contentAlignment = Alignment.Center,
+            ) { Icon(Icons.Outlined.Keyboard, contentDescription = null, tint = InkGray700) }
+            Spacer(Modifier.width(8.dp))
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(if (recording) BrandDeepOrange else InkBlack)
+                    .pointerInput(Unit) {
+                        detectTapGestures(onPress = {
+                            onPressStart()
+                            tryAwaitRelease()
+                            onPressEnd()
+                        })
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                if (recording) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        WaveBars()
+                        Spacer(Modifier.width(10.dp))
+                        Text("鬆開送出 ・ $recordSec 秒", color = PaperWhite, fontWeight = FontWeight.Black)
+                    }
+                } else {
+                    Text("按住 說話", color = PaperWhite, fontWeight = FontWeight.Black)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WaveBars() {
+    val t = rememberInfiniteTransition(label = "wave")
+    val ph by t.animateFloat(
+        initialValue = 0f, targetValue = (2 * Math.PI).toFloat(),
+        animationSpec = infiniteRepeatable(tween(900, easing = LinearEasing)),
+        label = "ph",
+    )
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+        repeat(7) { i ->
+            val h = 8 + (7 * (1 + sin(ph + i * 0.9f))).toInt()
+            Box(Modifier.width(3.dp).height(h.dp).clip(RoundedCornerShape(50)).background(PaperWhite))
         }
     }
 }
