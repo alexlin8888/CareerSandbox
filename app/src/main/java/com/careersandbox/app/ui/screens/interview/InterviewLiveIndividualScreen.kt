@@ -528,66 +528,7 @@ private fun DoneBar(onReport: () -> Unit) {
     }
 }
 
-@Composable
-private fun VoiceBar(
-    recording: Boolean,
-    recordSec: Int,
-    onKeyboard: () -> Unit,
-    onPressStart: () -> Unit,
-    onPressEnd: () -> Unit,
-) {
-    Box(Modifier.fillMaxWidth().background(PaperOff).padding(12.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier.size(48.dp).clip(CircleShape).background(InkGray100)
-                    .pressScale { onKeyboard() },
-                contentAlignment = Alignment.Center,
-            ) { Icon(Icons.Outlined.Keyboard, contentDescription = null, tint = InkGray700) }
-            Spacer(Modifier.width(8.dp))
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(if (recording) BrandDeepOrange else InkBlack)
-                    .pointerInput(Unit) {
-                        detectTapGestures(onPress = {
-                            onPressStart()
-                            tryAwaitRelease()
-                            onPressEnd()
-                        })
-                    },
-                contentAlignment = Alignment.Center,
-            ) {
-                if (recording) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        WaveBars()
-                        Spacer(Modifier.width(10.dp))
-                        Text("鬆開送出 ・ $recordSec 秒", color = PaperWhite, fontWeight = FontWeight.Black)
-                    }
-                } else {
-                    Text("按住 說話", color = PaperWhite, fontWeight = FontWeight.Black)
-                }
-            }
-        }
-    }
-}
 
-@Composable
-private fun WaveBars() {
-    val t = rememberInfiniteTransition(label = "wave")
-    val ph by t.animateFloat(
-        initialValue = 0f, targetValue = (2 * Math.PI).toFloat(),
-        animationSpec = infiniteRepeatable(tween(900, easing = LinearEasing)),
-        label = "ph",
-    )
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-        repeat(7) { i ->
-            val h = 8 + (7 * (1 + sin(ph + i * 0.9f))).toInt()
-            Box(Modifier.width(3.dp).height(h.dp).clip(RoundedCornerShape(50)).background(PaperWhite))
-        }
-    }
-}
 
 /* ===================== 語言與類型分流(之後由 LangGraph 題庫取代)===================== */
 

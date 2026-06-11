@@ -102,6 +102,32 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
     var elapsedSec by remember { mutableIntStateOf(0) }
     LaunchedEffect(Unit) { while (true) { delay(1000); elapsedSec++ } }
     val timerText = "${(elapsedSec / 60).toString().padStart(2, '0')}:${(elapsedSec % 60).toString().padStart(2, '0')}"
+    var voiceMode by remember { mutableStateOf(false) }
+    var recording by remember { mutableStateOf(false) }
+    var recordSec by remember { mutableIntStateOf(0) }
+    var holdStartAt by remember { mutableLongStateOf(0L) }
+    var questionShownAt by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(recording) {
+        if (recording) { var sct = 0; recordSec = 0; while (true) { delay(1000); sct++; recordSec = sct } }
+    }
+
+    fun submitPanel(visible: String, analyzed: String) {
+        if (isTyping || reaction != null) return
+        messages.add(ChatMessage("u${messages.size}", "你", visible, isUser = true))
+        val (who, line) = pickPanelFollowUp(analyzed, followUpIdx)
+        typingSpeaker = who
+        reaction = panelReactions.random()
+        scope.launch {
+            delay(800)
+            reaction = null
+            isTyping = true
+            delay(1300)
+            messages.add(ChatMessage("p${messages.size}", who, line, isInterviewer = true))
+            questionShownAt = System.currentTimeMillis()
+            followUpIdx++
+            isTyping = false
+        }
+    }
     val currentAsker = if (isTyping || reaction != null) typingSpeaker
         else (messages.lastOrNull { it.isInterviewer }?.speaker ?: "HR 主管")
 
@@ -153,22 +179,31 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
             )
         },
         bottomBar = {
-            PanelBottomBar(input, { input = it }) {
-                if (input.isNotBlank() && !isTyping && reaction == null) {
-                    val said = input
-                    messages.add(ChatMessage("u${messages.size}", "你", said, isUser = true))
-                    input = ""
-                    val (who, line) = pickPanelFollowUp(said, followUpIdx)
-                    typingSpeaker = who
-                    reaction = panelReactions.random()
-                    scope.launch {
-                        delay(800)
-                        reaction = null
-                        isTyping = true
-                        delay(1300)
-                        messages.add(ChatMessage("p${messages.size}", who, line, isInterviewer = true))
-                        followUpIdx++
-                        isTyping = false
+            if (voiceMode) {
+                VoiceBar(
+                    recording = recording,
+                    recordSec = recordSec,
+                    onKeyboard = { if (!recording) voiceMode = false },
+                    onPressStart = {
+                        if (!isTyping && reaction == null) { holdStartAt = System.currentTimeMillis(); recording = true }
+                    },
+                    onPressEnd = {
+                        if (recording) {
+                            recording = false
+                            val dur = ((System.currentTimeMillis() - holdStartAt) / 1000).toInt()
+                            if (dur >= 1) {
+                                val think = ((holdStartAt - questionShownAt) / 1000).toInt().coerceAtLeast(0)
+                                submitPanel("語音回答 ・ $dur 秒\n(開口前思考 $think 秒)", "")
+                            }
+                        }
+                    },
+                )
+            } else {
+                PanelBottomBar(input, { input = it }, onVoice = { voiceMode = true }) {
+                    if (input.isNotBlank() && !isTyping && reaction == null) {
+                        val said = input
+                        input = ""
+                        submitPanel(said, said)
                     }
                 }
             }
@@ -310,8 +345,7 @@ private fun PanelMessageBubble(m: ChatMessage, avatarOf: (String) -> Int?) {
 }
 
 @Composable
-private fun PanelBottomBar(input: String, onChange: (String) -> Unit, onSend: () -> Unit) {
-    val ctx = LocalContext.current
+private fun PanelBottomBar(input: String, onChange: (String) -> Unit, onVoice: () -> Unit, onSend: () -> Unit) {
     Box(Modifier.fillMaxWidth().background(PaperOff).padding(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -319,9 +353,7 @@ private fun PanelBottomBar(input: String, onChange: (String) -> Unit, onSend: ()
                     .size(48.dp)
                     .clip(CircleShape)
                     .background(BrandPeach)
-                    .pressScale {
-                        Toast.makeText(ctx, "語音輸入規劃中,先用文字回答", Toast.LENGTH_SHORT).show()
-                    },
+                    .pressScale { onVoice() },
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(Icons.Outlined.Mic, contentDescription = null, tint = BrandDeepOrange)

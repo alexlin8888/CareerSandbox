@@ -128,6 +128,13 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
     LaunchedEffect(Unit) { while (true) { delay(1000); elapsedSec++ } }
     val timerText = "${(elapsedSec / 60).toString().padStart(2, '0')}:${(elapsedSec % 60).toString().padStart(2, '0')}"
     var interruptCount by remember { mutableIntStateOf(0) }
+    var voiceMode by remember { mutableStateOf(false) }
+    var recording by remember { mutableStateOf(false) }
+    var recordSec by remember { mutableIntStateOf(0) }
+    var holdStartAt by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(recording) {
+        if (recording) { var sct = 0; recordSec = 0; while (true) { delay(1000); sct++; recordSec = sct } }
+    }
     val groupFollowUps = listOf(
         "主考官" to "謝謝。換個角度,如果資源只夠做一件事,你會先砍掉哪個?",
         "AI-強勢" to "我補一句 — 我的做法更直接:先搶下市場,細節之後再優化。",
@@ -137,6 +144,21 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
     )
     val currentSpeaker = if (isTyping) typingSpeaker
         else (messages.lastOrNull()?.speaker ?: if (panel) "用人主管" else "主考官")
+
+    fun submitGroup(visible: String, analyzed: String) {
+        if (isTyping) return
+        messages.add(ChatMessage("u${messages.size}", "你", visible, isUser = true))
+        val (rawWho, line) = pickGroupFollowUp(analyzed, followUpIdx, groupFollowUps)
+        val who = if (panel && rawWho == "主考官") nextInterviewer() else rawWho
+        typingSpeaker = who
+        isTyping = true
+        scope.launch {
+            delay(1400)
+            messages.add(ChatMessage("g${messages.size}", who, line, isUser = false))
+            followUpIdx++
+            isTyping = false
+        }
+    }
 
     LaunchedEffect(messages.size, isTyping) {
         val target = if (isTyping) messages.size else messages.size - 1
@@ -203,23 +225,33 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = PaperOff),
             )
         },
-        bottomBar = { GroupBottomBar(input, { input = it }) {
-            if (input.isNotBlank() && !isTyping) {
-                val said = input
-                messages.add(ChatMessage("u${messages.size}", "你", said, isUser = true))
-                input = ""
-                val (rawWho, line) = pickGroupFollowUp(said, followUpIdx, groupFollowUps)
-                val who = if (panel && rawWho == "主考官") nextInterviewer() else rawWho
-                typingSpeaker = who
-                isTyping = true
-                scope.launch {
-                    delay(1400)
-                    messages.add(ChatMessage("g${messages.size}", who, line, isUser = false))
-                    followUpIdx++
-                    isTyping = false
+        bottomBar = {
+            if (voiceMode) {
+                VoiceBar(
+                    recording = recording,
+                    recordSec = recordSec,
+                    onKeyboard = { if (!recording) voiceMode = false },
+                    onPressStart = {
+                        if (!isTyping) { holdStartAt = System.currentTimeMillis(); recording = true }
+                    },
+                    onPressEnd = {
+                        if (recording) {
+                            recording = false
+                            val dur = ((System.currentTimeMillis() - holdStartAt) / 1000).toInt()
+                            if (dur >= 1) submitGroup("語音發言 ・ $dur 秒", "")
+                        }
+                    },
+                )
+            } else {
+                GroupBottomBar(input, { input = it }, onVoice = { voiceMode = true }) {
+                    if (input.isNotBlank() && !isTyping) {
+                        val said = input
+                        input = ""
+                        submitGroup(said, said)
+                    }
                 }
             }
-        } }
+        }
     ) { pad ->
         Column(Modifier.padding(pad)) {
             ParticipantsRow(currentSpeaker, panel)
@@ -433,7 +465,7 @@ private fun GroupMessageBubble(m: ChatMessage) {
 }
 
 @Composable
-private fun GroupBottomBar(input: String, onChange: (String) -> Unit, onSend: () -> Unit) {
+private fun GroupBottomBar(input: String, onChange: (String) -> Unit, onVoice: () -> Unit, onSend: () -> Unit) {
     Column(Modifier.fillMaxWidth().background(PaperOff).padding(12.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ActionButton("搶答", Icons.Outlined.Mic, Modifier.weight(1f)) {
@@ -445,6 +477,17 @@ private fun GroupBottomBar(input: String, onChange: (String) -> Unit, onSend: ()
         }
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(BrandPeach)
+                    .pressScale { onVoice() },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Outlined.Mic, contentDescription = null, tint = BrandDeepOrange)
+            }
+            Spacer(Modifier.width(8.dp))
             OutlinedTextField(
                 value = input, onValueChange = onChange,
                 placeholder = { Text("輸入你的觀點⋯", color = InkGray400) },
