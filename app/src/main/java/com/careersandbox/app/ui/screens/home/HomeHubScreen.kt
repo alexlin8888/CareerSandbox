@@ -50,6 +50,7 @@ import com.careersandbox.app.ui.theme.*
 
 @Composable
 fun HomeHubScreen(navController: NavHostController) {
+    var showTour by remember { mutableStateOf(!TourState.seenThisSession) }
     Box(modifier = Modifier.fillMaxSize().background(PaperWhite)) {
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
@@ -88,6 +89,11 @@ fun HomeHubScreen(navController: NavHostController) {
                 }
             }
             Spacer(Modifier.height(16.dp))
+        }
+    
+        FeatureTourOverlay(visible = showTour) {
+            showTour = false
+            TourState.seenThisSession = true
         }
     }
 }

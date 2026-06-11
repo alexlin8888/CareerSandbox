@@ -36,6 +36,7 @@ import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.SectionDivider
 import com.careersandbox.app.ui.components.pressScale
+import com.careersandbox.app.ui.components.FeatureTourOverlay
 import com.careersandbox.app.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -549,6 +550,8 @@ private fun ActionRow(
 // ============= 04 幫助與支援 =============
 @Composable
 fun SettingsHelpScreen(navController: NavHostController) {
+    var showTour by remember { mutableStateOf(false) }
+    Box {
     SettingsScaffold("幫助與支援", { navController.popBackStack() }) { pad ->
         Column(
             modifier = Modifier
@@ -557,6 +560,10 @@ fun SettingsHelpScreen(navController: NavHostController) {
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp, vertical = 16.dp),
         ) {
+            SettingsGroupTitle("功能導覽")
+            ActionRow("重看功能導覽", Icons.Filled.Info, BrandOrange) { showTour = true }
+
+            Spacer(Modifier.height(28.dp))
             SettingsGroupTitle("常見問題")
             FaqItem(
                 "AI 面試評分準確嗎?",
@@ -589,6 +596,8 @@ fun SettingsHelpScreen(navController: NavHostController) {
 
             Spacer(Modifier.height(40.dp))
         }
+    }
+        FeatureTourOverlay(visible = showTour) { showTour = false }
     }
 }
 
