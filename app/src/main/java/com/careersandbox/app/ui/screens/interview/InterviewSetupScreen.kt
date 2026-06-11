@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
+import com.careersandbox.app.data.mock.InterviewConfig
 import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.data.model.JobApplication
 import com.careersandbox.app.navigation.Routes
@@ -46,7 +47,10 @@ fun InterviewSetupScreen(navController: NavHostController) {
     var selectedJobId by remember { mutableStateOf(jobs.firstOrNull()?.id ?: "custom") }
     var customJob by remember { mutableStateOf("") }
     var format by remember { mutableStateOf("single") }   // single | panel
-    var difficulty by remember { mutableStateOf("中等") }
+    var difficulty by remember { mutableStateOf(InterviewConfig.difficulty) }
+    var round by remember { mutableStateOf(InterviewConfig.round) }
+    var language by remember { mutableStateOf(InterviewConfig.language) }
+    var type by remember { mutableStateOf(InterviewConfig.type) }
     val isCustom = selectedJobId == "custom"
 
     Scaffold(
@@ -71,6 +75,10 @@ fun InterviewSetupScreen(navController: NavHostController) {
                         .clip(RoundedCornerShape(16.dp))
                         .background(InkBlack)
                         .pressScale {
+                            InterviewConfig.round = round
+                            InterviewConfig.language = language
+                            InterviewConfig.type = type
+                            InterviewConfig.difficulty = difficulty
                             navController.navigate(
                                 if (format == "panel") Routes.INTERVIEW_LIVE_PANEL
                                 else Routes.INTERVIEW_LIVE_INDIVIDUAL
@@ -147,6 +155,59 @@ fun InterviewSetupScreen(navController: NavHostController) {
                 listOf("新手", "中等", "困難").forEach {
                     PillChip(it, selected = it == difficulty) { difficulty = it }
                 }
+            }
+
+            Spacer(Modifier.height(28.dp))
+
+            SectionLabel("輪次")
+            Spacer(Modifier.height(10.dp))
+            androidx.compose.foundation.layout.FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                listOf("初試", "複試", "主管面").forEach {
+                    PillChip(it, selected = it == round) { round = it }
+                }
+            }
+
+            Spacer(Modifier.height(28.dp))
+
+            SectionLabel("面試類型")
+            Spacer(Modifier.height(10.dp))
+            androidx.compose.foundation.layout.FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                listOf("行為", "技術", "情境").forEach {
+                    PillChip(it, selected = it == type) { type = it }
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            Text(
+                when (type) {
+                    "技術" -> "追問會偏向工具、查錯與驗證——講得出細節才算會。"
+                    "情境" -> "丟突發狀況給你:衝突指令、資源砍半、上線前爆雷。"
+                    else -> "從你的經歷出題,追 STAR 的細節與反思。"
+                },
+                color = InkGray500, style = MaterialTheme.typography.bodySmall, lineHeight = 18.sp,
+            )
+
+            Spacer(Modifier.height(28.dp))
+
+            SectionLabel("語言")
+            Spacer(Modifier.height(10.dp))
+            androidx.compose.foundation.layout.FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                listOf("中文", "English").forEach {
+                    PillChip(it, selected = it == language) { language = it }
+                }
+            }
+            if (language == "English") {
+                Spacer(Modifier.height(10.dp))
+                Text("面試官全程用英文提問,你的回答也請用英文。",
+                    color = InkGray500, style = MaterialTheme.typography.bodySmall)
             }
 
             Spacer(Modifier.height(32.dp))

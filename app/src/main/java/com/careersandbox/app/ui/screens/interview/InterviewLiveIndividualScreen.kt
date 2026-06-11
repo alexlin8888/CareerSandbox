@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
+import com.careersandbox.app.data.mock.InterviewConfig
 import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.data.model.ChatMessage
 import com.careersandbox.app.navigation.Routes
@@ -73,7 +74,13 @@ private fun pickProbe(said: String, idx: Int, fallback: List<String>): String = 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InterviewLiveIndividualScreen(navController: NavHostController) {
-    val messages = remember { mutableStateListOf<ChatMessage>().apply { addAll(MockData.individualInterviewScript) } }
+    val lang = InterviewConfig.language
+    fun t(zh: String, en: String) = if (lang == "English") en else zh
+    val messages = remember {
+        mutableStateListOf<ChatMessage>().apply {
+            addAll(if (lang == "English") englishOpeningScript else MockData.individualInterviewScript)
+        }
+    }
     var input by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -97,7 +104,7 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
             delay(1000); elapsedSec++
             if (elapsedSec == 360 && !timeGlanced && phase == "MAIN") {
                 timeGlanced = true
-                messages.add(ChatMessage("ai${messages.size}", "面試官", "(他看了一眼時間)", isUser = false))
+                messages.add(ChatMessage("ai${messages.size}", "面試官", t("(他看了一眼時間)", "(He glances at the clock.)"), isUser = false))
             }
         }
     }
@@ -108,19 +115,24 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
         delay(20000)
         if (curInput.isBlank() && !recording && !silenceFired) {
             silenceFired = true
-            messages.add(ChatMessage("ai${messages.size}", "面試官", "不急,想清楚再說。", isUser = false))
+            messages.add(ChatMessage("ai${messages.size}", "面試官", t("不急,想清楚再說。", "Take your time. Think it through."), isUser = false))
         }
     }
     LaunchedEffect(recording) {
         if (recording) { var sct = 0; recordSec = 0; while (true) { delay(1000); sct++; recordSec = sct } }
     }
     val timerText = "${(elapsedSec / 60).toString().padStart(2, '0')}:${(elapsedSec % 60).toString().padStart(2, '0')}"
-    val probes = listOf(
-        "嗯,了解。可以再給一個更具體的例子嗎?",
-        "那當時你怎麼衡量這個決定的影響?",
-        "如果重來一次,你會有什麼不同的做法?",
-        "這段經驗裡,你覺得自己最關鍵的貢獻是什麼?",
-    )
+    val probes = when {
+        lang == "English" -> englishProbes
+        InterviewConfig.type == "技術" -> probesTechType
+        InterviewConfig.type == "情境" -> probesCaseType
+        else -> listOf(
+            "嗯,了解。可以再給一個更具體的例子嗎?",
+            "那當時你怎麼衡量這個決定的影響?",
+            "如果重來一次,你會有什麼不同的做法?",
+            "這段經驗裡,你覺得自己最關鍵的貢獻是什麼?",
+        )
+    }
 
     fun submitAnswer(visible: String, analyzed: String) {
         if (isTyping || reaction != null || phase != "MAIN") return
@@ -132,11 +144,11 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
             val reply = when {
                 followUpIdx == 2 && !repeatFired -> {
                     repeatFired = true
-                    "(他翻了下筆記)剛剛那題,我再問一次——$lastProbe"
+                    t("(他翻了下筆記)剛剛那題,我再問一次——$lastProbe", "(He flips back a page.) Let me ask that one again — $lastProbe")
                 }
                 followUpIdx >= 4 -> {
                     phase = "REVERSE"
-                    "好,主要的問題就到這裡。最後——你有什麼想問我們的?"
+                    t("好,主要的問題就到這裡。最後——你有什麼想問我們的?", "Alright, that covers the main questions. Last — what would you like to ask us?")
                 }
                 else -> pickProbe(analyzed, followUpIdx, probes).also { lastProbe = it }
             }
@@ -175,8 +187,10 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
                     Column {
                         Text("個人面試 ・ Junior PM", style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold, color = InkBlack)
-                        Text("行為面試 ・ 中等難度", style = MaterialTheme.typography.labelSmall,
-                            color = InkGray500)
+                        Text(
+                            "${InterviewConfig.type}面試 ・ ${InterviewConfig.round} ・ ${InterviewConfig.difficulty}",
+                            style = MaterialTheme.typography.labelSmall, color = InkGray500,
+                        )
                     }
                 },
                 navigationIcon = {
@@ -212,7 +226,10 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
             when {
                 phase == "DONE" -> DoneBar { navController.navigate(Routes.INTERVIEW_REPORT) }
                 phase == "REVERSE" || phase == "CLOSING" ->
-                    ReverseBar(enabled = phase == "REVERSE") { pickReverse(it) }
+                    ReverseBar(
+                        enabled = phase == "REVERSE",
+                        options = if (lang == "English") reverseOptionsEn else reverseOptions,
+                    ) { pickReverse(it) }
                 voiceMode -> VoiceBar(
                     recording = recording,
                     recordSec = recordSec,
@@ -470,12 +487,12 @@ private val reverseOptions = listOf(
 )
 
 @Composable
-private fun ReverseBar(enabled: Boolean, onPick: (ReverseOption) -> Unit) {
+private fun ReverseBar(enabled: Boolean, options: List<ReverseOption>, onPick: (ReverseOption) -> Unit) {
     Column(Modifier.fillMaxWidth().background(PaperOff).padding(horizontal = 12.dp, vertical = 10.dp)) {
         Text("你的反問", color = InkGray500, style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Black, letterSpacing = 2.sp)
         Spacer(Modifier.height(8.dp))
-        reverseOptions.forEach { opt ->
+        options.forEach { opt ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -571,3 +588,55 @@ private fun WaveBars() {
         }
     }
 }
+
+/* ===================== 語言與類型分流(之後由 LangGraph 題庫取代)===================== */
+
+private val englishOpeningScript = listOf(
+    ChatMessage("m1", "面試官",
+        "Let's start. Give me a one-minute introduction — who you are, and why this role.",
+        isInterviewer = true),
+)
+
+private val englishProbes = listOf(
+    "I see. Can you give me a more concrete example?",
+    "How did you measure the impact of that decision?",
+    "If you could do it again, what would you do differently?",
+    "What was your single most critical contribution there?",
+)
+
+private val probesTechType = listOf(
+    "講一個你寫過最複雜的查詢或程式邏輯,它解決什麼問題?",
+    "如果報表突然變慢十倍,你會從哪裡開始查?",
+    "你怎麼驗證自己的分析結果沒有錯?",
+    "最近自學了什麼工具或技術?怎麼學的?",
+)
+
+private val probesCaseType = listOf(
+    "上線前一天發現重大 bug,修好要兩天——你怎麼辦?",
+    "兩位主管同時給你衝突的指令,你怎麼處理?",
+    "資源被砍一半,目標不變,你先丟掉哪一塊?",
+    "使用者在社群罵爆你負責的功能,你的第一步是什麼?",
+)
+
+private val reverseOptionsEn = listOf(
+    ReverseOption(
+        ask = "What's the biggest challenge for the team in the next six months?", tag = "問挑戰",
+        answer = "(He thinks for a moment.) Good question. Pacing the new product line — same resources, double the targets. You'd be right in the middle of it.",
+        closing = "That's it for today. I liked that last question. We'll be in touch.",
+    ),
+    ReverseOption(
+        ask = "What does someone great in this role look like after one year?", tag = "問成長",
+        answer = "After a year, the good ones own a small product line and start mentoring interns. We want you to outgrow the job description.",
+        closing = "Very practical question. That's all for today — HR will follow up.",
+    ),
+    ReverseOption(
+        ask = "Could we confirm the salary range and bonus structure?", tag = "直球",
+        answer = "(He pauses.) ...Let's not get into numbers at this stage. HR will walk you through it. Anything else?",
+        closing = "Alright, that's all for today.",
+    ),
+    ReverseOption(
+        ask = "No questions for now. Thank you.", tag = "沒有問題",
+        answer = "(He nods.) Alright.",
+        closing = "That's it for today. We'll be in touch.",
+    ),
+)
