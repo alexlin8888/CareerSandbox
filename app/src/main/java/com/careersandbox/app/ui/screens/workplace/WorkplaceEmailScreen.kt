@@ -458,7 +458,7 @@ private fun WarDesk(
         }
         // 判定條 / 升急橫幅
         Box(Modifier.fillMaxWidth().height(44.dp), contentAlignment = Alignment.Center) {
-            AnimatedVisibility(
+            androidx.compose.animation.AnimatedVisibility(
                 visible = verdictShown,
                 enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
                 exit = fadeOut(tween(250)),
