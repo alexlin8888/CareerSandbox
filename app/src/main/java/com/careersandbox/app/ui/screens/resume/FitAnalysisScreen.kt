@@ -1103,7 +1103,7 @@ private fun ScoreExplainerCard() {
         if (open) {
             Spacer(Modifier.height(10.dp))
             Text(
-                "這些是「軟實力」分數,不是考試成績 — 它們是從你的經歷敘述、修課、社團活動推估出來的。",
+                "這些是「軟實力」分數,不是考試成績,是從你的經歷敘述、修課、社團活動推估出來的。",
                 color = InkGray700, fontSize = 12.sp, lineHeight = 19.sp,
             )
             Spacer(Modifier.height(8.dp))

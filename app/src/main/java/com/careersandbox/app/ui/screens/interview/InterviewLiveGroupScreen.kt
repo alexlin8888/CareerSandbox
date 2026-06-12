@@ -70,10 +70,10 @@ private fun String.containsAny(vararg keys: String) = keys.any { this.contains(i
 // 關鍵字感知:對的 AI 應徵者跳出來接你的話
 private val gLogicPool = listOf(
     "等等,這個數字的母數是多少?沒有對照組我不敢下結論。",
-    "你這段推論跳了一步——中間的假設是什麼?",
+    "你這段推論跳了一步,中間的假設是什麼?",
 )
 private val gAssertivePool = listOf(
-    "我打斷一下——結論先講,我們時間不多。",
+    "我打斷一下,結論先講,我們時間不多。",
     "這樣太慢了。我的版本:先上線再修,你要不要跟?",
 )
 private val gFriendlyPool = listOf(
@@ -94,7 +94,7 @@ private fun pickGroupFollowUp(said: String, idx: Int, fallback: List<Pair<String
 
 // 搶話事件:你打字停頓太久,AI-強勢會先講(上限 2 次,草稿不清空)
 private val interruptLines = listOf(
-    "我先說——這題我有現成的案子,等大家想完時間就沒了。",
+    "我先說,這題我有現成的案子,等大家想完時間就沒了。",
     "(舉手)我插一個快的,你慢慢想,不衝突。",
 )
 
@@ -137,7 +137,7 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
     }
     val groupFollowUps = listOf(
         "主考官" to "謝謝。換個角度,如果資源只夠做一件事,你會先砍掉哪個?",
-        "AI-強勢" to "我補一句 — 我的做法更直接:先搶下市場,細節之後再優化。",
+        "AI-強勢" to "我補一句,我的做法更直接:先搶下市場,細節之後再優化。",
         "AI-邏輯" to "可是這沒有數據支撐吧?我會先做小規模驗證,再決定要不要放大。",
         "AI-親切" to "我覺得你講得不錯耶,不過團隊怎麼分工那段可以再多說一點。",
         "主考官" to "那你會怎麼回應剛剛其他人提出的質疑?",

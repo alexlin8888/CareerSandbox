@@ -54,7 +54,7 @@ private val probesFail = listOf(
 )
 private val probesHonest = listOf(
     "沒關係,當場想。你會從哪裡開始?",
-    "可以。那換個你熟的——講一個你最有把握的決定。",
+    "可以。那換個你熟的,講一個你最有把握的決定。",
 )
 private val probesTime = listOf(
     "時間砍一半,你先丟掉哪一塊?",
@@ -144,11 +144,11 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
             val reply = when {
                 followUpIdx == 2 && !repeatFired -> {
                     repeatFired = true
-                    t("(他翻了下筆記)剛剛那題,我再問一次——$lastProbe", "(He flips back a page.) Let me ask that one again — $lastProbe")
+                    t("(他翻了下筆記)剛剛那題,我再問一次:$lastProbe", "(He flips back a page.) Let me ask that one again: $lastProbe")
                 }
                 followUpIdx >= 4 -> {
                     phase = "REVERSE"
-                    t("好,主要的問題就到這裡。最後——你有什麼想問我們的?", "Alright, that covers the main questions. Last — what would you like to ask us?")
+                    t("好,主要的問題就到這裡。最後,你有什麼想問我們的?", "Alright, that covers the main questions. One last thing: what would you like to ask us?")
                 }
                 else -> pickProbe(analyzed, followUpIdx, probes).also { lastProbe = it }
             }
@@ -466,7 +466,7 @@ private data class ReverseOption(val ask: String, val tag: String, val answer: S
 private val reverseOptions = listOf(
     ReverseOption(
         ask = "團隊接下來半年,最大的挑戰是什麼?", tag = "問挑戰",
-        answer = "(他想了想)好問題。最大的挑戰是新產品線的節奏——資源沒變,目標翻倍。進來的人會直接碰到這一塊。",
+        answer = "(他想了想)好問題。最大的挑戰是新產品線的節奏:資源沒變,目標翻倍。進來的人會直接碰到這一塊。",
         closing = "今天就到這裡。你最後這個問題,我喜歡。等通知。",
     ),
     ReverseOption(
@@ -553,7 +553,7 @@ private val probesTechType = listOf(
 )
 
 private val probesCaseType = listOf(
-    "上線前一天發現重大 bug,修好要兩天——你怎麼辦?",
+    "上線前一天發現重大 bug,修好要兩天。你怎麼辦?",
     "兩位主管同時給你衝突的指令,你怎麼處理?",
     "資源被砍一半,目標不變,你先丟掉哪一塊?",
     "使用者在社群罵爆你負責的功能,你的第一步是什麼?",

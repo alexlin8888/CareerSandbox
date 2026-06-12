@@ -90,8 +90,8 @@ private val stormDeck = listOf(
         "兩點前補上最新數據",
         listOf("截止今天", "主管在等"),
         "NOW",
-        "對——主管兩點要用,這件事只有你能補。",
-        "這封是今天兩點的死線,而且只有你能做——正解:現在處理。"),
+        "主管兩點要用,只有你能補,這封不等。",
+        "兩點的死線,而且只有你補得了。這封要現在處理。"),
     StormMail(4, "陳小姐", "客戶", BrandAmber,
         "結帳頁面一直轉圈",
         "刷了三次都卡在付款,急著下單。",
@@ -99,8 +99,8 @@ private val stormDeck = listOf(
         "每次都卡在付款轉圈",
         listOf("系統問題", "不在你權限"),
         "ENG",
-        "對——系統故障要給工程,你拖著只會更慢。",
-        "付款卡住是系統問題,你修不了——正解:轉給工程阿凱。"),
+        "系統故障給工程,你拖著只會更慢。",
+        "付款卡住是系統問題,你修不了。給工程阿凱。"),
     StormMail(10, "福委會", "全公司", InkGray400,
         "週五下午茶問卷",
         "選珍奶或咖啡,週四前填即可。",
@@ -108,8 +108,8 @@ private val stormDeck = listOf(
         "週四下班前填完即可",
         listOf("只是 FYI"),
         "HOLD",
-        "對——這封能等,別讓它吃掉你的 90 秒。",
-        "下午茶問卷沒有今天的死線——正解:暫存,先救火。"),
+        "這封能等。別讓它吃掉你的 90 秒。",
+        "下午茶問卷沒有今天的死線。先放暫存,去救火。"),
     StormMail(7, "張先生", "新客戶", BrandAmber,
         "想了解企業方案報價",
         "50 人團隊,希望本週內談一次。",
@@ -117,8 +117,8 @@ private val stormDeck = listOf(
         "想了解企業方案的報價",
         listOf("商務需求"),
         "SALES",
-        "對——報價是業務的戰場,轉給小芳最快。",
-        "報價與導入談判是業務的事——正解:轉給業務小芳。"),
+        "報價是業務的場子,小芳接最快。",
+        "報價和導入要談判,這是業務的事。給小芳。"),
     StormMail(11, "產業週報", "電子報", InkGray400,
         "本週產業動態 #214",
         "AI 工具市場整理與五則新聞。",
@@ -126,8 +126,8 @@ private val stormDeck = listOf(
         "本週重點",
         listOf("只是 FYI"),
         "HOLD",
-        "對——電子報永遠可以晚點看。",
-        "週報沒有任何人在等你——正解:暫存。"),
+        "電子報永遠可以晚點看。",
+        "週報沒有人在等你。放暫存。"),
     StormMail(3, "林經理", "客戶", BrandAmber,
         "API 文件連結還有嗎",
         "之前那份找不到了,方便再給一次嗎。",
@@ -135,8 +135,8 @@ private val stormDeck = listOf(
         "方便再傳一次連結嗎",
         listOf("客戶在等", "30 秒能回"),
         "NOW",
-        "對——30 秒能回的就現在回,別讓客戶等一天。",
-        "你手上就有連結,30 秒的事——正解:現在處理。"),
+        "30 秒能回的就現在回,別讓客戶等一天。",
+        "你手上就有連結,30 秒的事。現在回。"),
     StormMail(5, "業務小芳", "同事", InkCharcoal,
         "客戶問資料匯出的 API 規格",
         "這我看不懂,幫忙看該找誰。",
@@ -144,8 +144,8 @@ private val stormDeck = listOf(
         "API 規格與頻率限制",
         listOf("技術問題"),
         "ENG",
-        "對——規格問題給工程,answers 才是對的。",
-        "API 規格是工程的領域——正解:轉給工程阿凱。"),
+        "規格問題給工程,答案才會是對的。",
+        "API 規格是工程的領域。給阿凱。"),
     StormMail(12, "人資部", "全公司", InkGray400,
         "年度健檢時段開放預約",
         "本月內完成預約即可。",
@@ -153,8 +153,8 @@ private val stormDeck = listOf(
         "本月內完成即可",
         listOf("能等"),
         "HOLD",
-        "對——本月內的事,不屬於這 90 秒。",
-        "健檢預約是本月內的事——正解:暫存。"),
+        "本月內的事,不屬於這 90 秒。",
+        "健檢是本月內辦就好。放暫存。"),
     StormMail(8, "王協理", "老客戶", BrandAmber,
         "合約展延的條款想談",
         "下一季續約,有兩條想調整。",
@@ -162,8 +162,8 @@ private val stormDeck = listOf(
         "有兩條條款想調整",
         listOf("商務談判"),
         "SALES",
-        "對——條款談判是業務的活,轉給小芳。",
-        "續約談判不是你的桌子——正解:轉給業務小芳。"),
+        "條款談判是業務的活,給小芳。",
+        "續約要談條款,不在你桌上。給小芳。"),
     StormMail(6, "客服值班", "同事", InkCharcoal,
         "後台帳號被鎖了",
         "三次密碼錯誤,客戶資料調不出來。",
@@ -171,8 +171,8 @@ private val stormDeck = listOf(
         "現在客戶資料調不出來",
         listOf("擋住別人", "權限問題"),
         "ENG", 
-        "對——解鎖權限在工程手上,而且前線正卡著。",
-        "帳號解鎖只有工程能做,客服正被擋著——正解:轉給工程阿凱。",
+        "解鎖權限在工程手上,而且前線正卡著。",
+        "帳號只有工程能解,客服正被擋著。給阿凱。",
         urgentAt = 55),
     StormMail(2, "財務部", "財務", InkGray700,
         "請款單據今天 17:00 截止",
@@ -181,8 +181,8 @@ private val stormDeck = listOf(
         "今天 17:00 截止",
         listOf("截止今天", "看起來無聊"),
         "NOW",
-        "對——最無聊的信,往往掛著最硬的死線。",
-        "這封看起來無聊,但 17:00 一過你的報帳就消失一個月——正解:現在處理。",
+        "最無聊的信,往往掛著最硬的死線。",
+        "這封看起來無聊,但 17:00 一過,你的報帳就消失一個月。要現在處理。",
         urgentAt = 40),
     StormMail(9, "展會主辦", "廠商", InkGray400,
         "年度展會贊助方案",
@@ -191,8 +191,8 @@ private val stormDeck = listOf(
         "本季內回覆即可",
         listOf("商務合作", "能等"),
         "SALES",
-        "對——合作案給業務評估,不用你拍板。",
-        "贊助合作是業務的判斷——正解:轉給業務小芳。"),
+        "合作案給業務評估,不用你拍板。",
+        "贊助合作讓業務去評。給小芳。"),
 )
 
 private data class Judgment(val mail: StormMail, val pick: String, val right: Boolean)
@@ -307,7 +307,7 @@ private fun BriefCard(onStart: () -> Unit, onExit: () -> Unit) {
         ) {
             RuleRow(InkBlack, "現在處理", "只有你能做,而且不能等")
             RuleRow(InkGray400, "暫存格", "能等的,先放著")
-            RuleRow(BrandDeepOrange, "轉交", "別人做更對——而且要轉給對的人")
+            RuleRow(BrandDeepOrange, "轉交", "別人做更對,而且要轉給對的人")
         }
         Spacer(Modifier.height(14.dp))
         Text("判斷力比手速重要。", color = InkGray500, fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -343,13 +343,13 @@ private val practiceMails = listOf(
         "右下角那個黑色的盤子。",
         "這是暖身信。按住卡片,拖到右下角的「現在處理」盤,鬆手。",
         "拖到右下角", listOf("暖身 1 / 2"), "NOW",
-        "手感對了。", "差一點——這封要去右下角的黑盤。"),
+        "手感對了。", "差一點。這封要去右下角的黑盤。"),
     StormMail(102, "教練", "暖身", BrandOrange,
         "這封是技術問題,給工程",
         "拖到上面工程阿凱的頭上。",
-        "客戶說系統壞了——這種信給工程。把卡片拖到上面「工程・阿凱」的席位。",
+        "客戶說系統壞了,這種信給工程。把卡片拖到上面工程・阿凱的席位。",
         "拖到工程席", listOf("暖身 2 / 2"), "ENG",
-        "對,轉交就是拖到人頭上。", "技術問題要給工程——拖到阿凱頭上。"),
+        "對,轉交就是拖到人頭上。", "技術問題要給工程,拖到阿凱頭上。"),
 )
 
 @Composable
@@ -782,7 +782,7 @@ private fun StormReview(
                     fontWeight = FontWeight.Black, letterSpacing = 2.sp)
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "財務的請款信被你晾著——下週你的報帳會消失一個月。看起來最無聊的信,有時掛著最硬的死線。",
+                    "財務的請款信被你晾著,下週你的報帳會消失一個月。看起來最無聊的信,有時掛著最硬的死線。",
                     color = PaperWhite, fontSize = 13.sp, lineHeight = 19.sp, fontWeight = FontWeight.Bold,
                 )
             }
@@ -821,7 +821,7 @@ private fun StormReview(
         val skipped = stormDeck.size - judged.size
         if (skipped > 0) {
             Spacer(Modifier.height(6.dp))
-            Text("還有 $skipped 封沒處理——沒做決定,也是一種決定。",
+            Text("還有 $skipped 封沒處理。沒做決定,也是一種決定。",
                 color = InkGray500, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         }
         Spacer(Modifier.height(20.dp))

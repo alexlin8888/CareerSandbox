@@ -293,7 +293,7 @@ private fun OnboardingIntro(onStart: () -> Unit) {
                         beaver = R.drawable.beaver_wave,
                         title = "歡迎來到 CareerSandbox",
                         highlight = null,
-                        body = "履歷、模擬面試、職涯探索、職場體驗 — 在同一個地方,把求職一次準備好。",
+                        body = "履歷、模擬面試、職涯探索、職場體驗,在同一個地方把求職一次準備好。",
                     )
                     1 -> IntroBeaverCard(
                         beaver = R.drawable.beaver_resume,

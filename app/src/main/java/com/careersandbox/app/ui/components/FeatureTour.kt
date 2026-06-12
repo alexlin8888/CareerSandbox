@@ -47,7 +47,7 @@ private data class TourStop(
 private val tourStops = listOf(
     TourStop(
         Icons.Outlined.TrendingUp, "從職缺出發",
-        "首頁的「接著做」幫你盯住目標職缺——練面試、看還缺什麼,一條線走完。",
+        "首頁的「接著做」幫你盯住目標職缺:練面試、看還缺什麼,一條線走完。",
     ),
     TourStop(
         Icons.Outlined.Mic, "AI 面試,真的會追問",
@@ -63,7 +63,7 @@ private val tourStops = listOf(
     ),
     TourStop(
         Icons.Outlined.EmojiEvents, "痕跡,週五揭曉",
-        "你做的每個選擇都被記著——回顧頁用形狀告訴你,長到哪了。",
+        "你做的每個選擇都被記著。回顧頁用形狀告訴你,長到哪了。",
     ),
 )
 

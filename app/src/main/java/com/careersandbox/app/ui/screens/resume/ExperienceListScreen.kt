@@ -88,7 +88,7 @@ fun ExperienceListScreen(navController: NavHostController) {
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "用右上角的 + 新增第一筆,它們會組成你的母版履歷",
+                        "用右上角的 + 新增第一筆,它們會組成你的母版",
                         color = InkGray500,
                         style = MaterialTheme.typography.bodyMedium,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,

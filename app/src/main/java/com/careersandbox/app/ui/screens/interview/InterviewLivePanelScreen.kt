@@ -65,7 +65,7 @@ private val panelTechPool = listOf(
     "這個分析如果重做,你會多補哪個維度?",
 )
 private val panelHrPool = listOf(
-    "衝突那段多講一點——你當下實際說了什麼?",
+    "衝突那段多講一點:你當下實際說了什麼?",
     "你怎麼確定對方是被說服,而不是不想吵了?",
 )
 private val panelHonestPool = listOf(

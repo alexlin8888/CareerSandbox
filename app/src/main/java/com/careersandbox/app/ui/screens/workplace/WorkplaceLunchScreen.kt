@@ -68,11 +68,11 @@ private val lunchOpening = listOf(
 
 private val lunchBeats = listOf(
     LunchBeat(
-        "小芳", "聽說新主管是空降的,連 Ken 都還沒見過人。你覺得——咱們部門會不會也動?",
+        "小芳", "聽說新主管是空降的,連 Ken 都還沒見過人。你覺得,咱們部門會不會也動?",
         listOf(
             LunchChoice(
                 "聽,但不接力", "界線",
-                "消息我收到了。不過改組這種事,等正式信吧——猜來猜去傷感情。",
+                "消息我收到了。不過改組這種事,等正式信吧,猜來猜去傷感情。",
                 "小芳" to "(她聳聳肩)行吧,你這人真穩。",
                 closing = "阿凱" to "(阿凱難得開口)……同意。",
                 moodAfter = "鬆",
@@ -80,7 +80,7 @@ private val lunchBeats = listOf(
             LunchChoice(
                 "加入猜測", "下注",
                 "我猜會動。Ken 最近開會的樣子,像在準備什麼。",
-                "小芳" to "(她眼睛亮了)對吧對吧——欸,這話我能往外說嗎?",
+                "小芳" to "(她眼睛亮了)對吧對吧。欸,這話我能往外說嗎?",
                 closing = "阿凱" to "(他抬眼看了你一下,又低下去)",
                 moodAfter = "尬",
             ),
@@ -98,7 +98,7 @@ private val lunchBeats = listOf(
         listOf(
             LunchChoice(
                 "真心好奇", "靠近",
-                "等等,自動整理測試報告?那不就是我們上週哀號的那個——demo 給我看?",
+                "等等,自動整理測試報告?那不就是我們上週哀號的那個?demo 給我看。",
                 "阿凱" to "(他耳朵有點紅)……午休後,到我位子。",
                 closing = "小芳" to "哇,他從來沒給我看過。",
                 moodAfter = "暖",
@@ -120,7 +120,7 @@ private val lunchBeats = listOf(
         ),
     ),
     LunchBeat(
-        "小芳", "(她湊近)欸,說真的——你覺得 Ken 這個人怎麼樣?昨天會議,他釘你釘得不輕。",
+        "小芳", "(她湊近)欸,說真的,你覺得 Ken 這個人怎麼樣?昨天會議,他釘你釘得不輕。",
         listOf(
             LunchChoice(
                 "就事論事", "穩",
@@ -132,7 +132,7 @@ private val lunchBeats = listOf(
             LunchChoice(
                 "跟著抱怨", "洩壓",
                 "真的,有時候覺得他標準高到不講理。",
-                "小芳" to "對吧——放心,這話我幫你保密啦。",
+                "小芳" to "對吧。放心,這話我幫你保密啦。",
                 closing = "阿凱" to "(他安靜地看著你們兩個)",
                 moodAfter = "尬",
             ),
@@ -413,7 +413,7 @@ fun WorkplaceLunchScreen(navController: NavHostController) {
                 Text("午休結束",
                     color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 24.sp)
                 Spacer(Modifier.height(10.dp))
-                Text("十五分鐘的閒聊——有人記住了你的界線,有人記住了你的溫度。",
+                Text("十五分鐘的閒聊。有人記住了你的界線,有人記住了你的溫度。",
                     color = PaperWhite.copy(alpha = 0.75f), fontSize = 13.sp,
                     lineHeight = 19.sp)
                 Spacer(Modifier.height(4.dp))

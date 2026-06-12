@@ -382,7 +382,7 @@ private fun WhyRecommendCard(accent: Color) {
         }
         Spacer(Modifier.height(10.dp))
         Text(
-            "你的資料分析與使用者研究背景,正好對上這個競賽的核心需求。把這些技能放進隊伍,能負責洞察與決策的部分。",
+            "你的資料分析和使用者研究背景,剛好是這個競賽要的。進了隊,可以扛數據和定方向的活。",
             color = InkCharcoal, fontSize = 13.sp, lineHeight = 19.sp,
         )
         Spacer(Modifier.height(12.dp))

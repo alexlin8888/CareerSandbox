@@ -537,9 +537,9 @@ private fun MatchScoreCard(score: Int) {
         else -> AccentRed
     }
     val verdict = when {
-        score >= 75 -> "高度適配 — 強烈建議投遞"
-        score >= 50 -> "中度適配 — 補強關鍵字後再投"
-        else -> "低度適配 — 建議找更相符的職缺"
+        score >= 75 -> "高度適配,建議投遞"
+        score >= 50 -> "中度適配,補強關鍵字再投"
+        else -> "低度適配,先找更相符的職缺"
     }
 
     Column(

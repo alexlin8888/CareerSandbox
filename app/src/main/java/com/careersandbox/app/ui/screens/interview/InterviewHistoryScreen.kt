@@ -182,7 +182,7 @@ private fun TrendDashboard() {
         Text("進步趨勢", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 20.sp)
         Spacer(Modifier.height(4.dp))
         Text(
-            "每場面試的整體分數變化 — 練越多次,看得到自己在成長。",
+            "每場面試的整體分數變化。練越多次,看得到自己在成長。",
             color = InkGray500, fontSize = 13.sp, lineHeight = 19.sp,
         )
         Spacer(Modifier.height(14.dp))
@@ -226,7 +226,7 @@ private fun TrendDashboard() {
                 .padding(12.dp),
         ) {
             Text(
-                "這些數字也會反映在面試 Hub 的 Avatar 成長卡上 — 練習就是在養角色。",
+                "這些數字也會反映在面試 Hub 的 Avatar 成長卡上。練習就是在養角色。",
                 color = BrandDeepOrange, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, lineHeight = 16.sp,
             )
         }

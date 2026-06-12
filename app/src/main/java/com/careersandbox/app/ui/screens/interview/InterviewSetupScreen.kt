@@ -185,7 +185,7 @@ fun InterviewSetupScreen(navController: NavHostController) {
             Spacer(Modifier.height(10.dp))
             Text(
                 when (type) {
-                    "技術" -> "追問會偏向工具、查錯與驗證——講得出細節才算會。"
+                    "技術" -> "追問會偏向工具、查錯與驗證,講得出細節才算會。"
                     "情境" -> "丟突發狀況給你:衝突指令、資源砍半、上線前爆雷。"
                     else -> "從你的經歷出題,追 STAR 的細節與反思。"
                 },

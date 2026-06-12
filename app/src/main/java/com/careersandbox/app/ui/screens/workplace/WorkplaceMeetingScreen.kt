@@ -68,7 +68,7 @@ private data class MeetBeat(
 )
 
 private val meetingOpening = listOf(
-    "小芳" to "先說好消息——客戶那邊,我已經答應月底前上線。單子簽了。",
+    "小芳" to "先說好消息,客戶那邊我已經答應月底前上線。單子簽了。",
     "阿凱" to "(他沒抬頭)迴歸測試跑了六成。剩下的四成,全是付款流程。",
 )
 
@@ -78,7 +78,7 @@ private val meetBeats = listOf(
         listOf(
             MeetChoice(
                 "先要數據,再表態", "穩",
-                "我先確認一件事——剩下四成的測試,全力跑最快幾天?",
+                "我先確認一件事:剩下四成的測試,全力跑最快幾天?",
                 "阿凱" to "五個工作天。一個都壓不掉。",
                 "(他記了一筆)好,有數字了。繼續。",
                 "緊", MeetMotion.TILT,
@@ -100,7 +100,7 @@ private val meetBeats = listOf(
         ),
     ),
     MeetBeat(
-        "Ken", "兩邊都有理。問題是——約簽了,測試跑不完。你打算怎麼拆?",
+        "Ken", "兩邊都有理。問題是約簽了,測試跑不完。你打算怎麼拆?",
         listOf(
             MeetChoice(
                 "分階段上線", "拆解",
@@ -113,7 +113,7 @@ private val meetBeats = listOf(
                 "加班硬趕", "燃燒",
                 "工程這週加班趕測試,我陪著跑。月底全量上。",
                 "阿凱" to "(他看了你兩秒)加班可以。品質,我不保證。",
-                "用人的肝去填排程的洞——記住這個選擇的成本。",
+                "用人的肝去填排程的洞。記住這個選擇的成本。",
                 "緊", MeetMotion.NONE,
             ),
             MeetChoice(
@@ -130,7 +130,7 @@ private val meetBeats = listOf(
         listOf(
             MeetChoice(
                 "給她武器", "補位",
-                "跟客戶說:核心功能如期、付款模組多兩週是為了金流安全——這個說法,他們法務聽得進去。",
+                "跟客戶說:核心功能如期,付款模組多兩週是為了金流安全。這個說法,他們法務聽得進去。",
                 "小芳" to "(她快速記下)可以,這個說法能用。",
                 "跨部門,就是這樣補位的。",
                 "鬆", MeetMotion.TILT,
@@ -144,7 +144,7 @@ private val meetBeats = listOf(
             ),
             MeetChoice(
                 "拉主管背書", "借力",
-                "請 Ken 發一封信給客戶窗口——分階段方案有主管背書,小芳比較好談。",
+                "請 Ken 發一封信給客戶窗口,分階段方案有主管背書,小芳比較好談。",
                 null,
                 "信我可以發。但下次,先想自己能不能扛,再來借我的名字。",
                 "緩", MeetMotion.NONE,
@@ -152,7 +152,7 @@ private val meetBeats = listOf(
         ),
     ),
     MeetBeat(
-        "Ken", "好,就這麼定。散會前——今天這場,你給自己打幾分?",
+        "Ken", "好,就這麼定。散會前,今天這場,你給自己打幾分?",
         listOf(
             MeetChoice(
                 "點自己的盲點", "自省",

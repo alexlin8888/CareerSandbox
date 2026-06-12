@@ -111,7 +111,7 @@ fun ExperienceEditScreen(navController: NavHostController) {
                                 chatHistory.add("AI" to chatQuestions[step])
                             } else {
                                 delay(1500)
-                                chatHistory.add("AI" to "整理好了——確認下面這張經驗卡沒問題,就按「儲存」存入母版。")
+                                chatHistory.add("AI" to "整理好了。確認下面這張經驗卡沒問題,就按「儲存」存入母版。")
                             }
                             aiTyping = false
                         }

@@ -216,7 +216,7 @@ private fun UploadSourcePicker(
             Text("從哪裡匯入?", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 26.sp)
             Spacer(Modifier.height(8.dp))
             Text(
-                "支援多種格式,選一個來源開始 — 系統會幫你解析成完整的母版。",
+                "支援多種格式,選一個來源開始,系統會幫你解析成完整的母版。",
                 color = InkGray500,
                 style = MaterialTheme.typography.bodyMedium,
                 lineHeight = 20.sp,
@@ -263,7 +263,7 @@ private fun UploadSourcePicker(
                 Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = BrandOrange, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(10.dp))
                 Text(
-                    "不論哪種來源,解析後都會整理成同一份母版 — 之後再依不同職缺客製成各種版本。",
+                    "不論哪種來源,解析後都會整理成同一份母版,之後再依不同職缺客製成各種版本。",
                     color = InkGray700,
                     style = MaterialTheme.typography.bodySmall,
                     lineHeight = 18.sp,

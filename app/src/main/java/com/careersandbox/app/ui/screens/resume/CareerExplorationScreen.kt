@@ -819,7 +819,7 @@ private fun LearningStepCard(step: LearningStep) {
             .clip(RoundedCornerShape(12.dp))
             .background(PaperWhite.copy(alpha = 0.6f))
             .pressScale {
-                Toast.makeText(ctxStep, "「${step.title}」課程詳情開發中", Toast.LENGTH_SHORT).show()
+                Toast.makeText(ctxStep, "「${step.title}」詳情之後會接到學習路徑", Toast.LENGTH_SHORT).show()
             }
             .padding(horizontal = 12.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically,

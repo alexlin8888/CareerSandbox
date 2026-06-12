@@ -113,7 +113,7 @@ fun SettingsProfileScreen(navController: NavHostController) {
                     fontWeight = FontWeight.SemiBold,
                     style = MaterialTheme.typography.labelLarge,
                     modifier = Modifier.pressScale {
-                        Toast.makeText(ctxAvatar, "相片上傳功能開發中", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(ctxAvatar, "相片上傳之後開放", Toast.LENGTH_SHORT).show()
                     },
                 )
             }
@@ -312,7 +312,7 @@ private fun ChipDisplaySection(label: String, items: List<String>, accent: Color
                     .clip(CircleShape)
                     .background(InkGray100)
                     .pressScale {
-                        Toast.makeText(ctxAdd, "新增功能開發中", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(ctxAdd, "這裡之後會開放新增", Toast.LENGTH_SHORT).show()
                     }
                     .padding(horizontal = 14.dp, vertical = 6.dp),
             ) {

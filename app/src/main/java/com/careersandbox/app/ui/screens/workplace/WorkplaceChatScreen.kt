@@ -81,7 +81,7 @@ private val beats = listOf(
             StanceChoice(
                 "先道歉,再解釋", "緩衝",
                 "抱歉,讓你最後才知道。原因是 API 文件跟實際行為不一致。",
-                "道歉收下。但我更想要的是——你卡住的當下,我就知道。",
+                "道歉收下。但我更想要的是:你卡住的當下,我就知道。",
                 "平靜", SceneMotion.NONE,
             ),
             StanceChoice(
@@ -93,7 +93,7 @@ private val beats = listOf(
         ),
     ),
     Beat(
-        "嗯。那你是哪一天發現的?發現的當下——為什麼我是最後一個知道的?",
+        "嗯。那你是哪一天發現的?發現的當下,為什麼我是最後一個知道的?",
         listOf(
             StanceChoice(
                 "承認該早點說", "認溝通失誤",
@@ -139,7 +139,7 @@ private val beats = listOf(
         ),
     ),
     Beat(
-        "這件事到這裡。最後——有什麼是需要我幫你擋的?",
+        "這件事到這裡。最後,有什麼是需要我幫你擋的?",
         listOf(
             StanceChoice(
                 "提一個真需求", "開口",
@@ -155,7 +155,7 @@ private val beats = listOf(
             ),
             StanceChoice(
                 "反過來關心他", "反客為主",
-                "倒是你——這週往上報的壓力,還好嗎?",
+                "倒是你,這週往上報的壓力,還好嗎?",
                 "(他愣了一下,笑出來)輪不到你操心。滾回去工作。",
                 "緩和", SceneMotion.TILT,
             ),

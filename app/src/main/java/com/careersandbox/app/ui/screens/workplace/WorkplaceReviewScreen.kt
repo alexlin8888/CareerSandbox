@@ -52,7 +52,7 @@ fun WorkplaceReviewScreen(navController: NavHostController) {
     val moments = listOf(
         MomentCard(
             "沒找藉口的那次",
-            "週一的 1on1,Ken 問你為什麼他最後一個知道。你沒有繞。他在筆記上寫了一行字——主管信任的 +8,是這樣來的。",
+            "週一的 1on1,Ken 問你為什麼他最後一個知道。你沒有繞。他在筆記上寫了一行字。主管信任 +8,是這樣來的。",
             good = true,
         ),
         MomentCard(
@@ -145,7 +145,7 @@ fun WorkplaceReviewScreen(navController: NavHostController) {
             // === 雙輸誠實收尾 ===
             StaggeredAppear(delayMillis = 1400) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("有些題沒有好答案。你選了比較不爛的那個——這就是上班。",
+                    Text("有些題沒有好答案。你選了比較不爛的那個。這就是上班。",
                         color = PaperWhite.copy(alpha = 0.6f),
                         fontSize = 12.sp,
                         lineHeight = 19.sp)

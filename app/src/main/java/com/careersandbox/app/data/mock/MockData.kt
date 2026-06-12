@@ -194,7 +194,7 @@ object MockData {
                 ArticleBlock.Heading("六、作品集"),
                 ArticleBlock.Paragraph("如果有 GitHub / Behance / Medium / 個人網站,放最後。3-5 個代表作就夠了,精挑而非求多。"),
                 ArticleBlock.Heading("七、量身打造"),
-                ArticleBlock.Paragraph("每投一個職缺,履歷至少要調整 30% — 把跟這份工作相關的經驗往前排,關鍵字對應到 JD。一份履歷打天下的時代已經過了。"),
+                ArticleBlock.Paragraph("每投一個職缺,履歷至少要調整 30%。把跟這份工作相關的經驗往前排,關鍵字對應到 JD。一份履歷打天下的時代已經過了。"),
             ),
         ),
         Article(
@@ -240,7 +240,7 @@ object MockData {
             url = "https://www.yourator.co/articles/177",
             coverImageUrl = "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&q=80",
             bodyContent = listOf(
-                ArticleBlock.Paragraph("被問「請分享一次解決問題的經驗」,然後就在那裡支吾其詞 — STAR 原則就是為了避免這種尷尬發明的萬用框架。"),
+                ArticleBlock.Paragraph("被問「請分享一次解決問題的經驗」,然後就在那裡支吾其詞。STAR 原則就是為了避免這種尷尬發明的萬用框架。"),
                 ArticleBlock.Heading("STAR 四步驟"),
                 ArticleBlock.BulletList(listOf(
                     "S - Situation 情境:發生什麼事?背景是什麼?",
@@ -270,7 +270,7 @@ object MockData {
             url = "https://www.yourator.co/articles/260",
             coverImageUrl = "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80",
             bodyContent = listOf(
-                ArticleBlock.Paragraph("大四了,朋友都在拿 offer,只有自己還不知道要做什麼 — 這是大多數人都會經歷的階段,不丟臉,也不用慌。"),
+                ArticleBlock.Paragraph("大四了,朋友都在拿 offer,只有自己還不知道要做什麼。這是大多數人都會經歷的階段,不丟臉,也不用慌。"),
                 ArticleBlock.Heading("Step 1:認識自己"),
                 ArticleBlock.BulletList(listOf(
                     "心理測驗:MBTI、Holland、Strong Interest 都可參考",
@@ -283,7 +283,7 @@ object MockData {
                 ArticleBlock.Paragraph("找 3-5 個該領域的學長姊或前輩做生涯訪談,一杯咖啡的時間,問他們:每天工作內容、最痛苦/最有成就的點、入行建議。"),
                 ArticleBlock.Heading("Step 4:配對下手"),
                 ArticleBlock.Paragraph("把「自己擅長 + 喜歡」跟「市場需要 + 待遇合理」交集,選 2-3 個方向,各投 5-10 個職缺試水溫。面試本身就是最快的市場驗證。"),
-                ArticleBlock.Quote("天無絕人之路 — 沒有人在 22 歲就確定一輩子要做什麼。先動起來再說。"),
+                ArticleBlock.Quote("天無絕人之路。沒有人在 22 歲就確定一輩子要做什麼。先動起來再說。"),
             ),
         ),
         Article(
@@ -297,16 +297,16 @@ object MockData {
             url = "https://vocus.cc/article/628cb426fd8978000158de4b",
             coverImageUrl = "https://images.unsplash.com/photo-1521791136064-7986c2920216?w=800&q=80",
             bodyContent = listOf(
-                ArticleBlock.Paragraph("「找到你的熱情就會成功」這句話害了很多人 — 因為大多數人根本沒有清晰的熱情,於是陷入無止盡的迷茫。"),
+                ArticleBlock.Paragraph("「找到你的熱情就會成功」這句話害了很多人,因為大多數人根本沒有清晰的熱情,於是陷入無止盡的迷茫。"),
                 ArticleBlock.Heading("熱情 ≠ 興趣"),
                 ArticleBlock.Paragraph("興趣是你閒下來會做的事,熱情是「為了它你願意承受痛苦」。打電動是興趣,職業電競選手是熱情(因為他願意每天練到肩膀職業傷害)。"),
                 ArticleBlock.Heading("反過來:從能力找熱情"),
-                ArticleBlock.Paragraph("與其問「我熱愛什麼」,不如問「我擅長什麼,而且做的時候會有成就感」。一個餐飲系實習生在飯店推銷月餅做到同期第一名,結果發現自己不討厭跟人接觸 — 後來轉行做業務,做得比同期同事都好。"),
+                ArticleBlock.Paragraph("與其問「我熱愛什麼」,不如問「我擅長什麼,而且做的時候會有成就感」。一個餐飲系實習生在飯店推銷月餅做到同期第一名,結果發現自己不討厭跟人接觸,後來轉行做業務,做得比同期同事都好。"),
                 ArticleBlock.Heading("找小成就感"),
                 ArticleBlock.BulletList(listOf(
                     "下班後還願意回想的事,通常是你樂在其中的能力",
                     "別人覺得難但你做起來輕鬆,就是你的天賦",
-                    "可以從現有工作裡找 — 你不需要立刻換工作才能找到熱情",
+                    "可以從現有工作裡找,你不需要立刻換工作才能找到熱情",
                 )),
                 ArticleBlock.Quote("工作不會完完全全是自己喜歡的樣子,打開天線,在現有工作中觀察你的小小樂趣。"),
             ),
@@ -322,7 +322,7 @@ object MockData {
             url = "https://www.cake.me/resources/resume/fresh-grad-resume",
             coverImageUrl = "https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=800&q=80",
             bodyContent = listOf(
-                ArticleBlock.Paragraph("新鮮人沒工作經驗,履歷上最容易犯的錯就是「懇求學習機會」 — 但企業要的是能帶來價值的人,不是免費培訓學員。"),
+                ArticleBlock.Paragraph("新鮮人沒工作經驗,履歷上最容易犯的錯就是「懇求學習機會」。但企業要的是能帶來價值的人,不是免費培訓學員。"),
                 ArticleBlock.Heading("換位思考:企業在意什麼?"),
                 ArticleBlock.BulletList(listOf(
                     "你能解決什麼問題、提升什麼產值",
@@ -355,17 +355,17 @@ object MockData {
             url = "https://www.cake.me/resources/resume-samples-startup-internship-resume-tutorial",
             coverImageUrl = "https://images.unsplash.com/photo-1556761175-b413da4baf72?w=800&q=80",
             bodyContent = listOf(
-                ArticleBlock.Paragraph("新創公司收到的履歷少、人資也少,一封寫得好的求職信(cover letter)幾乎能直接拿到面試 — 但寫得糟,則是直接 ban。"),
+                ArticleBlock.Paragraph("新創公司收到的履歷少、人資也少,一封寫得好的求職信(cover letter)幾乎能直接拿到面試。寫得糟,則是直接出局。"),
                 ArticleBlock.Heading("一、精簡有力"),
                 ArticleBlock.Paragraph("200 字內。新創 founder 自己看履歷,沒人有時間讀小說。把重點壓縮在 3-5 句:你是誰、為何適合、能帶來什麼、什麼時候可以開始。"),
                 ArticleBlock.Heading("二、一句話原則"),
-                ArticleBlock.Paragraph("用一句話講「為什麼是這家新創」。不要寫「貴公司產業前景看好」 — 這是廢話。"),
+                ArticleBlock.Paragraph("用一句話講「為什麼是這家新創」。不要寫「貴公司產業前景看好」,這是廢話。"),
                 ArticleBlock.Paragraph("好的版本:「我用過貴公司的 X 產品,在 Y 場景遇到 Z 痛點,看到 JD 上提到要解決這個方向,所以想加入。」"),
                 ArticleBlock.Heading("三、開始時間"),
                 ArticleBlock.Paragraph("最後一定要寫:你最快什麼時候可以開始、每週能 commit 幾天。新創缺人缺到燒眉毛,能立刻入手的候選人優先級立刻往上。"),
                 ArticleBlock.Heading("最重要的:不能有錯字"),
                 ArticleBlock.Paragraph("一個錯字 = 不細心 = 不適合。寫完一定要冷靜 5 分鐘再回來看一遍。"),
-                ArticleBlock.Quote("精簡有力,200 字內讓人資對你留下印象 — 求職信是你的行銷文案,自己是商品。"),
+                ArticleBlock.Quote("精簡有力,200 字內讓人資對你留下印象。求職信是你的行銷文案,自己是商品。"),
             ),
         ),
         Article(
@@ -379,7 +379,7 @@ object MockData {
             url = "https://www.yourator.co/articles/323",
             coverImageUrl = "https://images.unsplash.com/photo-1517842645767-c639042777db?w=800&q=80",
             bodyContent = listOf(
-                ArticleBlock.Paragraph("「興趣:看電影、聽音樂、運動」 — 這是 90% 新鮮人履歷的興趣欄,等於沒寫。"),
+                ArticleBlock.Paragraph("「興趣:看電影、聽音樂、運動」,這是 90% 新鮮人履歷的興趣欄,等於沒寫。"),
                 ArticleBlock.Heading("為什麼要寫興趣?"),
                 ArticleBlock.BulletList(listOf(
                     "破冰:面試官的小話題,讓對話自然",
@@ -387,7 +387,7 @@ object MockData {
                     "潛在 match:也許跟團隊文化或某個同事的興趣呼應",
                 )),
                 ArticleBlock.Heading("興趣不必很厲害"),
-                ArticleBlock.Paragraph("不一定要會樂器或極限運動。能替生活充電的事就算。例如:每週末做不同國家料理、收集各大甜點店並評比與朋友分享、追某個 podcast 累積筆記 200+ 篇 — 這些都比「看電影」有記憶點。"),
+                ArticleBlock.Paragraph("不一定要會樂器或極限運動。能替生活充電的事就算。例如:每週末做不同國家料理、收集各大甜點店並評比與朋友分享、追某個 podcast 累積筆記 200+ 篇,這些都比「看電影」有記憶點。"),
                 ArticleBlock.Heading("挑跟職位有關的"),
                 ArticleBlock.Paragraph("應徵行銷 → 寫「分析喜歡的品牌廣告做過 50+ 篇心得」。應徵 PM → 寫「自己用 Notion 管理生活待辦,設計過 X 個工作流」。應徵設計 → 寫「臨摹 X 設計師作品累積 100+ 張」。"),
                 ArticleBlock.Heading("專長怎麼寫?"),
