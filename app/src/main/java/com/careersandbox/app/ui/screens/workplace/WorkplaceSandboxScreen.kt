@@ -69,7 +69,7 @@ fun WorkplaceSandboxScreen(navController: NavHostController) {
     val week = listOf(
         PathDay(1, "和主管 1on1", Icons.Outlined.SupervisorAccount, Routes.WORKPLACE_CHAT, -36, NodeKind.PLAY),
         PathDay(2, "Email 風暴日", Icons.Outlined.Email, Routes.WORKPLACE_EMAIL, 52, NodeKind.PLAY),
-        PathDay(3, "跨部門會議", Icons.Outlined.Groups, null, 80, NodeKind.PLANNED),
+        PathDay(3, "跨部門會議", Icons.Outlined.Groups, Routes.WORKPLACE_MEETING, 80, NodeKind.PLAY),
         PathDay(4, "同事午餐", Icons.Outlined.Coffee, null, 16, NodeKind.PLANNED),
         PathDay(5, "週五回顧", Icons.Outlined.EmojiEvents, Routes.WORKPLACE_REVIEW, -56, NodeKind.CHEST),
     )

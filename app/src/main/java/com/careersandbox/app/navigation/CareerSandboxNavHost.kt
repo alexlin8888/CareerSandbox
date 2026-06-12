@@ -29,6 +29,7 @@ import com.careersandbox.app.ui.screens.profile.SettingsPrivacyScreen
 import com.careersandbox.app.ui.screens.profile.SettingsProfileScreen
 import com.careersandbox.app.ui.screens.resume.*
 import com.careersandbox.app.ui.screens.workplace.WorkplaceChatScreen
+import com.careersandbox.app.ui.screens.workplace.WorkplaceMeetingScreen
 import com.careersandbox.app.ui.screens.workplace.WorkplaceEmailScreen
 import com.careersandbox.app.ui.screens.workplace.WorkplaceReviewScreen
 import com.careersandbox.app.ui.screens.workplace.WorkplaceSandboxScreen
@@ -96,6 +97,7 @@ fun CareerSandboxNavHost(
         composable(Routes.INTERVIEW_HUB) { InterviewHubScreen(navController) }
         composable(Routes.WORKPLACE_SANDBOX) { WorkplaceSandboxScreen(navController) }
         composable(Routes.WORKPLACE_CHAT) { WorkplaceChatScreen(navController) }
+        composable(Routes.WORKPLACE_MEETING) { WorkplaceMeetingScreen(navController) }
         composable(Routes.WORKPLACE_EMAIL) { WorkplaceEmailScreen(navController) }
         composable(Routes.WORKPLACE_REVIEW) { WorkplaceReviewScreen(navController) }
         composable(Routes.PROFILE) { ProfileScreen(navController) }
