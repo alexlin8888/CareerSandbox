@@ -323,30 +323,111 @@ private fun FormEdit(
     result: String, onResult: (String) -> Unit,
     learning: String, onLearning: (String) -> Unit,
 ) {
+    val filled = listOf(title, category, timeRange, role, action, result, learning)
+        .count { it.isNotBlank() }
+    val prog by animateFloatAsState(
+        targetValue = filled / 7f,
+        animationSpec = tween(420, easing = FastOutSlowInEasing),
+        label = "formProg",
+    )
     Column(Modifier.verticalScroll(rememberScrollState())) {
-        ExpField("標題", title, onTitle)
-        ExpField("類別 (學業/工作/社團/競賽/其他)", category, onCategory)
-        ExpField("時間範圍", timeRange, onTime)
-        ExpField("角色", role, onRole)
-        ExpField("做了什麼", action, onAction, multi = true)
-        ExpField("結果", result, onResult, multi = true)
-        ExpField("學到什麼", learning, onLearning, multi = true)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.weight(1f).height(6.dp).clip(RoundedCornerShape(50))
+                    .background(InkGray200),
+            ) {
+                Box(
+                    Modifier.fillMaxWidth(prog.coerceAtLeast(0.02f)).fillMaxHeight()
+                        .clip(RoundedCornerShape(50)).background(BrandOrange),
+                )
+            }
+            Spacer(Modifier.width(10.dp))
+            Text("$filled / 7", color = InkGray500, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        }
+        Spacer(Modifier.height(14.dp))
+
+        FormGroup("基本") {
+            ExpField("標題", title, onTitle)
+            Text("類別", style = MaterialTheme.typography.labelLarge,
+                color = InkGray700, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("學業", "工作", "社團", "競賽", "其他").forEach { c ->
+                    val on = category == c
+                    Box(
+                        Modifier.clip(RoundedCornerShape(50))
+                            .background(if (on) InkBlack else InkGray100)
+                            .pressScale { onCategory(c) }
+                            .padding(horizontal = 13.dp, vertical = 7.dp),
+                    ) {
+                        Text(c, color = if (on) PaperWhite else InkGray700,
+                            fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            ExpField("時間範圍", timeRange, onTime)
+        }
+        FormGroup("過程") {
+            ExpField("角色", role, onRole)
+            ExpField("做了什麼", action, onAction, multi = true)
+        }
+        FormGroup("成果") {
+            ExpField("結果", result, onResult, multi = true)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("補個數字", color = InkGray400, fontSize = 11.sp)
+                Spacer(Modifier.width(8.dp))
+                listOf("人數" to ",共 __ 人", "金額" to ",金額 __ 元", "百分比" to ",提升 __%").forEach { (lab, tpl) ->
+                    Box(
+                        Modifier.padding(end = 6.dp).clip(RoundedCornerShape(50))
+                            .background(BrandPeach.copy(alpha = 0.5f))
+                            .pressScale { onResult(result + tpl) }
+                            .padding(horizontal = 10.dp, vertical = 5.dp),
+                    ) {
+                        Text(lab, color = BrandDeepOrange, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            ExpField("學到什麼", learning, onLearning, multi = true)
+        }
+    }
+}
+
+@Composable
+private fun FormGroup(eyebrow: String, content: @Composable () -> Unit) {
+    Column(
+        Modifier.fillMaxWidth().padding(bottom = 12.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(16.dp),
+    ) {
+        Text(eyebrow, color = InkGray400, fontSize = 10.sp,
+            fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+        Spacer(Modifier.height(10.dp))
+        content()
     }
 }
 
 @Composable
 private fun ExpField(label: String, value: String, onChange: (String) -> Unit, multi: Boolean = false) {
     Column(Modifier.padding(bottom = 12.dp)) {
-        Text(label, style = MaterialTheme.typography.labelLarge,
-            color = InkGray700, fontWeight = FontWeight.SemiBold)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(label, style = MaterialTheme.typography.labelLarge,
+                color = InkGray700, fontWeight = FontWeight.SemiBold)
+            if (value.isNotBlank()) {
+                Spacer(Modifier.width(6.dp))
+                Box(Modifier.size(6.dp).clip(CircleShape).background(AccentGreen))
+            }
+        }
         Spacer(Modifier.height(6.dp))
         OutlinedTextField(
             value = value, onValueChange = onChange,
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(14.dp),
             singleLine = !multi, minLines = if (multi) 3 else 1,
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = InkBlack, unfocusedBorderColor = InkGray200,
+                focusedBorderColor = BrandOrange, unfocusedBorderColor = InkGray200,
                 focusedContainerColor = MaterialTheme.colorScheme.surface,
                 unfocusedContainerColor = MaterialTheme.colorScheme.surface,
             )

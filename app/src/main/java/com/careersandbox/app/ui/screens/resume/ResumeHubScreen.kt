@@ -70,10 +70,6 @@ fun ResumeHubScreen(navController: NavHostController) {
             AnimatedSection(visible = visible, delayMs = 0) {
                 SubmissionStatsCard()
             }
-            Spacer(Modifier.height(10.dp))
-            AnimatedSection(visible = visible, delayMs = 60) {
-                MiniStatsRow()
-            }
             Spacer(Modifier.height(14.dp))
             AnimatedSection(visible = visible, delayMs = 140) {
                 BentoActions(navController)
@@ -167,163 +163,117 @@ private fun HeroSection() {
 
 /**
  * ===== v12 投遞統計卡(白底大圓角)=====
- * Label「已投遞」+ 44sp 數字 + 件 + 編輯中/草稿 點點 + 80dp ring 標「投遞率」(誠實統計)
+ * 管線面板:深色單卡 = 已投遞大數 + 草稿→編輯→投遞管線 + 職缺/版本/技能 strip
  */
 @Composable
 private fun SubmissionStatsCard() {
-    val totalSubmitted = MockData.jobApplications.flatMap { it.versions }
-        .count { it.status == VersionStatus.SUBMITTED }
-    val totalEditing = MockData.jobApplications.flatMap { it.versions }
-        .count { it.status == VersionStatus.EDITING }
-    // 誠實統計:投遞率 = 已投遞版本 / 全部版本(還沒有回覆資料,就不假裝有)
-    val totalDraft = MockData.jobApplications.flatMap { it.versions }
-        .count { it.status == VersionStatus.DRAFT }
-    val totalVersionsAll = MockData.jobApplications.sumOf { it.versions.size }
-    val replyRate = if (totalVersionsAll > 0) totalSubmitted.toFloat() / totalVersionsAll else 0f
-    val replyPct = (replyRate * 100).toInt()
+    val apps = MockData.jobApplications
+    val totalSubmitted = apps.flatMap { it.versions }.count { it.status == VersionStatus.SUBMITTED }
+    val totalEditing = apps.flatMap { it.versions }.count { it.status == VersionStatus.EDITING }
+    val totalDraft = apps.flatMap { it.versions }.count { it.status == VersionStatus.DRAFT }
+    val totalJobs = apps.size
+    val totalVersions = apps.sumOf { it.versions.size }
+    val totalSkills = MockData.masterResume.totalSkills
 
+    var shown by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { shown = true }
     val animSubmitted by animateIntAsState(
         targetValue = totalSubmitted,
-        animationSpec = tween(1200, easing = FastOutSlowInEasing),
+        animationSpec = tween(1100, easing = FastOutSlowInEasing),
         label = "submitted",
     )
-    val animPct by animateIntAsState(
-        targetValue = replyPct,
-        animationSpec = tween(1200, easing = FastOutSlowInEasing),
-        label = "pct",
-    )
-    val animRing by animateFloatAsState(
-        targetValue = replyRate,
-        animationSpec = tween(1300, easing = FastOutSlowInEasing),
-        label = "ring",
-    )
 
-    Box(
+    Column(
         modifier = Modifier
             .padding(horizontal = 14.dp)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(PaperWhite)
+            .clip(RoundedCornerShape(22.dp))
+            .background(InkBlack)
             .padding(horizontal = 18.dp, vertical = 16.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Column {
-                Text(
-                    "已投遞",
-                    color = InkGray400,
-                    fontSize = 10.sp,
-                    letterSpacing = 1.5.sp,
-                    fontWeight = FontWeight.Medium,
-                )
-                Spacer(Modifier.height(6.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("已投遞",
+                    color = PaperWhite.copy(alpha = 0.55f),
+                    fontSize = 10.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Medium)
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Text(
-                        "$animSubmitted",
-                        color = BrandDeepOrange,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 44.sp,
-                        lineHeight = 44.sp,
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text("件", color = InkGray500, fontSize = 14.sp, modifier = Modifier.padding(bottom = 6.dp))
-                }
-                Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    DotLabel(color = BrandAmber, text = "編輯中 $totalEditing")
-                    DotLabel(color = InkGray400, text = "草稿 $totalDraft")
+                    Text("$animSubmitted",
+                        color = BrandAmber, fontWeight = FontWeight.Black,
+                        fontSize = 42.sp, lineHeight = 42.sp)
+                    Spacer(Modifier.width(5.dp))
+                    Text("件", color = PaperWhite.copy(alpha = 0.5f), fontSize = 13.sp,
+                        modifier = Modifier.padding(bottom = 6.dp))
                 }
             }
-
-            Box(modifier = Modifier.size(110.dp), contentAlignment = Alignment.Center) {
-                Canvas(modifier = Modifier.size(110.dp)) {
-                    val strokeW = 9.dp.toPx()
-                    val diameter = size.minDimension - strokeW
-                    val topLeft = Offset((size.width - diameter) / 2f, (size.height - diameter) / 2f)
-                    val arcSize = Size(diameter, diameter)
-                    drawArc(
-                        color = InkGray100,
-                        startAngle = 0f,
-                        sweepAngle = 360f,
-                        useCenter = false,
-                        topLeft = topLeft,
-                        size = arcSize,
-                        style = Stroke(width = strokeW, cap = StrokeCap.Round),
-                    )
-                    if (animRing > 0f) {
-                        drawArc(
-                            color = BrandDeepOrange,
-                            startAngle = -90f,
-                            sweepAngle = 360f * animRing.coerceIn(0f, 1f),
-                            useCenter = false,
-                            topLeft = topLeft,
-                            size = arcSize,
-                            style = Stroke(width = strokeW, cap = StrokeCap.Round),
-                        )
-                    }
-                }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("$animPct%", color = BrandDeepOrange, fontWeight = FontWeight.Black, fontSize = 24.sp, lineHeight = 24.sp)
-                    Spacer(Modifier.height(3.dp))
-                    Text("投遞率", color = InkGray400, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                }
-            }
+            PipelineNode(0, shown, totalDraft, "草稿", InkGray400)
+            PipelineLink(1, shown)
+            PipelineNode(2, shown, totalEditing, "編輯中", BrandAmber)
+            PipelineLink(3, shown)
+            PipelineNode(4, shown, totalSubmitted, "已投遞", BrandOrange)
+        }
+        Spacer(Modifier.height(14.dp))
+        Row(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+                .background(PaperWhite.copy(alpha = 0.08f))
+                .padding(vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            StripStat("職缺", totalJobs, Modifier.weight(1f))
+            Box(Modifier.width(1.dp).height(22.dp).background(PaperWhite.copy(alpha = 0.12f)))
+            StripStat("版本", totalVersions, Modifier.weight(1f))
+            Box(Modifier.width(1.dp).height(22.dp).background(PaperWhite.copy(alpha = 0.12f)))
+            StripStat("技能", totalSkills, Modifier.weight(1f))
         }
     }
 }
 
 @Composable
-private fun DotLabel(color: Color, text: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .size(6.dp)
-                .clip(CircleShape)
-                .background(color),
-        )
-        Spacer(Modifier.width(4.dp))
-        Text(text, color = InkGray500, fontSize = 11.sp)
-    }
-}
-
-/**
- * ===== 3 個 mini stat cards(line 106-119)=====
- */
-@Composable
-private fun MiniStatsRow() {
-    val totalVersions = MockData.jobApplications.sumOf { it.versions.size }
-    val totalJobs = MockData.jobApplications.size
-    val totalSkills = MockData.masterResume.totalSkills
-
-    Row(
-        modifier = Modifier.padding(horizontal = 14.dp).fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        MiniStatCard(label = "職缺", value = totalJobs, modifier = Modifier.weight(1f))
-        MiniStatCard(label = "版本", value = totalVersions, modifier = Modifier.weight(1f))
-        MiniStatCard(label = "技能", value = totalSkills, modifier = Modifier.weight(1f))
-    }
-}
-
-@Composable
-private fun MiniStatCard(label: String, value: Int, modifier: Modifier = Modifier) {
-    val animated by animateIntAsState(
-        targetValue = value,
-        animationSpec = tween(1200, easing = FastOutSlowInEasing),
-        label = "$label-count",
+private fun PipelineNode(order: Int, shown: Boolean, value: Int, label: String, color: Color) {
+    val v by animateFloatAsState(
+        targetValue = if (shown) 1f else 0f,
+        animationSpec = tween(420, delayMillis = order * 110, easing = FastOutSlowInEasing),
+        label = "pn$label",
     )
     Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(PaperWhite)
-            .padding(horizontal = 12.dp, vertical = 11.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.alpha(v).offset(y = ((1f - v) * 8).dp),
     ) {
-        Text(label, color = InkGray400, fontSize = 10.sp, letterSpacing = 0.5.sp)
+        Box(
+            Modifier.size(34.dp).clip(CircleShape).background(color.copy(alpha = 0.22f)),
+            contentAlignment = Alignment.Center,
+        ) { Text("$value", color = color, fontWeight = FontWeight.Black, fontSize = 14.sp) }
         Spacer(Modifier.height(4.dp))
-        Text("$animated", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 22.sp, lineHeight = 22.sp)
+        Text(label, color = PaperWhite.copy(alpha = 0.55f), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun PipelineLink(order: Int, shown: Boolean) {
+    val v by animateFloatAsState(
+        targetValue = if (shown) 1f else 0f,
+        animationSpec = tween(420, delayMillis = order * 110, easing = FastOutSlowInEasing),
+        label = "pl$order",
+    )
+    Box(
+        Modifier.padding(horizontal = 4.dp).padding(bottom = 14.dp)
+            .width(14.dp).height(2.dp)
+            .clip(RoundedCornerShape(50))
+            .background(PaperWhite.copy(alpha = 0.04f + 0.18f * v)),
+    )
+}
+
+@Composable
+private fun StripStat(label: String, value: Int, modifier: Modifier = Modifier) {
+    val animated by animateIntAsState(
+        targetValue = value,
+        animationSpec = tween(1100, easing = FastOutSlowInEasing),
+        label = "ss$label",
+    )
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("$animated", color = PaperWhite, fontWeight = FontWeight.Black,
+            fontSize = 20.sp, lineHeight = 20.sp)
+        Spacer(Modifier.height(2.dp))
+        Text(label, color = PaperWhite.copy(alpha = 0.5f), fontSize = 10.sp)
     }
 }
 
