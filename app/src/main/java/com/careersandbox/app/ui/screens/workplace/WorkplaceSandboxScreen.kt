@@ -8,6 +8,9 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -71,12 +74,13 @@ fun WorkplaceSandboxScreen(navController: NavHostController) {
         PathDay(5, "週五回顧", Icons.Outlined.EmojiEvents, Routes.WORKPLACE_REVIEW, -56, NodeKind.CHEST),
     )
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(PaperOff)
-            .verticalScroll(rememberScrollState()),
-    ) {
+    Box(Modifier.fillMaxSize().background(PaperOff)) {
+        SandboxBackdrop()
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+        ) {
         Spacer(Modifier.height(24.dp))
         Text(
             "職場沙盒",
@@ -141,6 +145,7 @@ fun WorkplaceSandboxScreen(navController: NavHostController) {
         )
 
         Spacer(Modifier.height(40.dp))
+    }
     }
 }
 
@@ -343,6 +348,41 @@ private fun IndustrySelector(selected: String, onSelect: (String) -> Unit) {
                     }
                 }
             }
+        }
+    }
+}
+
+// 路徑頁背景:暖色天空 + 太陽 + 遠山 + 星塵(固定層,內容滾動時自帶微視差)
+@Composable
+private fun SandboxBackdrop() {
+    Canvas(Modifier.fillMaxSize()) {
+        val w = size.width
+        val h = size.height
+        drawRect(
+            brush = Brush.verticalGradient(
+                colors = listOf(BrandPeach.copy(alpha = 0.35f), PaperOff, BrandAmber.copy(alpha = 0.12f)),
+                startY = 0f, endY = h,
+            ),
+        )
+        // 太陽光暈(右上)
+        drawCircle(BrandAmber.copy(alpha = 0.20f), radius = w * 0.20f, center = Offset(w * 0.85f, h * 0.10f))
+        drawCircle(BrandAmber.copy(alpha = 0.12f), radius = w * 0.28f, center = Offset(w * 0.85f, h * 0.10f))
+        // 遠山(兩座大圓弧,只露山脊)
+        drawCircle(BrandPeach.copy(alpha = 0.30f), radius = w * 0.55f, center = Offset(w * 0.15f, h * 0.30f + w * 0.55f))
+        drawCircle(BrandOrange.copy(alpha = 0.10f), radius = w * 0.65f, center = Offset(w * 0.92f, h * 0.34f + w * 0.65f))
+        // 星塵點綴
+        val sparks = listOf(
+            Offset(w * 0.10f, h * 0.16f), Offset(w * 0.30f, h * 0.07f),
+            Offset(w * 0.62f, h * 0.20f), Offset(w * 0.20f, h * 0.42f),
+            Offset(w * 0.85f, h * 0.48f), Offset(w * 0.12f, h * 0.66f),
+            Offset(w * 0.88f, h * 0.72f), Offset(w * 0.45f, h * 0.88f),
+        )
+        sparks.forEachIndexed { i, o ->
+            drawCircle(
+                color = if (i % 2 == 0) BrandOrange.copy(alpha = 0.18f) else BrandAmber.copy(alpha = 0.22f),
+                radius = if (i % 3 == 0) 7f else 4.5f,
+                center = o,
+            )
         }
     }
 }
