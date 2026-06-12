@@ -1,19 +1,34 @@
 package com.careersandbox.app.ui.screens.workplace
 
-import androidx.compose.animation.core.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Timer
-import androidx.compose.material3.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -21,712 +36,806 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
-import com.careersandbox.app.ui.components.*
+import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
-private enum class MailAction { HANDLE, DEFER, DELEGATE }
-private enum class StormPhase { INTRO, PLAYING, DEBRIEF }
-private enum class SenderKind { BOSS, INTERNAL, EXTERNAL }
+/* =====================================================================
+   Email 風暴 v3 ——「收件匣作戰桌」
+   拖放到語意目標:現在處理盤 / 暫存格 / 工程席 / 業務席
+   Papers, Please 的檢查時刻 + Overcooked 的升急劑量 + 即時判定
+   ===================================================================== */
 
-private data class MailCard(
-    val id: String,
+private data class StormMail(
+    val id: Int,
     val sender: String,
-    val senderRole: String,
+    val senderTag: String,
+    val band: Color,
     val subject: String,
     val preview: String,
-    val urgentTag: String?,
-    val kind: SenderKind,
-    val time: String,
+    val body: String,
+    val clueQuote: String,
+    val clues: List<String>,
+    val correct: String,           // NOW / HOLD / ENG / SALES
+    val verdictRight: String,
+    val verdictWrong: String,
+    val urgentAt: Int? = null,     // 開賽第 N 秒升急
 )
 
-// 第 0 封:練習卡(垃圾信)— 不計分、不計時
-private val practiceCard = MailCard(
-    "m_practice", "週末特賣報", "廣告信", "【限時】全館 3 折起",
-    "錯過再等一年,點此領取你的專屬優惠。", "最後機會",
-    SenderKind.EXTERNAL, "05:58",
+private val zoneNames = mapOf(
+    "NOW" to "現在處理", "HOLD" to "暫存格", "ENG" to "工程・阿凱", "SALES" to "業務・小芳",
 )
 
-// 牌序經過設計:致命的那封(財務)夾在兩封花俏的中間
-private val mailDeck = listOf(
-    MailCard("m_boss", "Ken", "你的主管", "15:00 前給我:匯出功能的新時程",
-        "延期之後的排程今天要對齊,我下午要往上報。", "急", SenderKind.BOSS, "09:01"),
-    MailCard("m_fridge", "總務處", "全員公告", "【急】茶水間冰箱大掃除",
-        "週五前未標名的食物將一律丟棄,請同仁盡速處理。", "急", SenderKind.INTERNAL, "08:47"),
-    MailCard("m_finance", "王小姐", "財務部", "報帳憑證補件通知",
-        "您 5 月份報帳缺兩張憑證,今日 17:00 截止,逾期本季不再受理。", null, SenderKind.INTERNAL, "08:30"),
-    MailCard("m_vendor", "DataPipe", "廠商", "方案優惠倒數,僅此一檔",
-        "升級年約現省 30%,名額有限,點此預約專人介紹。", "最後機會", SenderKind.EXTERNAL, "08:55"),
-    MailCard("m_meeting", "婷婷", "PM", "站立會議改 10:30",
-        "會議室換到 B,請回覆收到。", null, SenderKind.INTERNAL, "09:05"),
-    MailCard("m_api", "林經理", "客戶", "API 文件連結還有嗎",
-        "之前那份串接文件找不到了,方便再給一次嗎。", null, SenderKind.EXTERNAL, "08:58"),
-    MailCard("m_lunch", "阿哲", "同事", "中午要不要一起訂便當",
-        "11:30 截單,今天有新的那家滷肉飯。", null, SenderKind.INTERNAL, "09:10"),
-    MailCard("m_report", "數據組", "內部", "上週漏斗報表",
-        "轉換率掉了 2 個百分點,細節見附件。", null, SenderKind.INTERNAL, "08:20"),
-    MailCard("m_hr", "人資處", "HR", "年度教育訓練問卷",
-        "約 5 分鐘,本月底前完成即可。", null, SenderKind.INTERNAL, "昨天 17:40"),
-    MailCard("m_pwd", "資安部", "系統通知", "密碼到期預告",
-        "您的密碼將於下週三到期,屆時請更新。", null, SenderKind.INTERNAL, "08:05"),
-    MailCard("m_ref", "怡君", "前同事", "推薦信再麻煩你了",
-        "不急,月底前都可以,先謝謝你。", null, SenderKind.EXTERNAL, "昨天 21:13"),
-    MailCard("m_news", "產品週報", "訂閱", "本週產品圈動態",
-        "12 則精選,3 分鐘看完。", null, SenderKind.EXTERNAL, "06:00"),
+private val stormDeck = listOf(
+    StormMail(1, "周副理", "主管", BrandOrange,
+        "下午簡報第 7 頁的數據",
+        "兩點前補上最新轉換率,直接改在共用簡報。",
+        "下午跟客戶的簡報,第 7 頁的轉換率還是上季的。兩點前補上最新數據,直接改在共用簡報裡。",
+        "兩點前補上最新數據",
+        listOf("截止今天", "主管在等"),
+        "NOW",
+        "對——主管兩點要用,這件事只有你能補。",
+        "這封是今天兩點的死線,而且只有你能做——正解:現在處理。"),
+    StormMail(4, "陳小姐", "客戶", BrandAmber,
+        "結帳頁面一直轉圈",
+        "刷了三次都卡在付款,急著下單。",
+        "你好,我在結帳頁面刷了三次,每次都卡在付款轉圈。我今天就想下單,麻煩看一下。",
+        "每次都卡在付款轉圈",
+        listOf("系統問題", "不在你權限"),
+        "ENG",
+        "對——系統故障要給工程,你拖著只會更慢。",
+        "付款卡住是系統問題,你修不了——正解:轉給工程阿凱。"),
+    StormMail(10, "福委會", "全公司", InkGray400,
+        "週五下午茶問卷",
+        "選珍奶或咖啡,週四前填即可。",
+        "週五下午茶開放投票:珍珠奶茶 vs 手沖咖啡。週四下班前填完問卷即可。",
+        "週四下班前填完即可",
+        listOf("只是 FYI"),
+        "HOLD",
+        "對——這封能等,別讓它吃掉你的 90 秒。",
+        "下午茶問卷沒有今天的死線——正解:暫存,先救火。"),
+    StormMail(7, "張先生", "新客戶", BrandAmber,
+        "想了解企業方案報價",
+        "50 人團隊,希望本週內談一次。",
+        "我們是 50 人的團隊,想了解企業方案的報價與導入時程,希望本週內能談一次。",
+        "想了解企業方案的報價",
+        listOf("商務需求"),
+        "SALES",
+        "對——報價是業務的戰場,轉給小芳最快。",
+        "報價與導入談判是業務的事——正解:轉給業務小芳。"),
+    StormMail(11, "產業週報", "電子報", InkGray400,
+        "本週產業動態 #214",
+        "AI 工具市場整理與五則新聞。",
+        "本週重點:AI 工具市場規模整理、五則產業新聞、三場線上講座資訊。",
+        "本週重點",
+        listOf("只是 FYI"),
+        "HOLD",
+        "對——電子報永遠可以晚點看。",
+        "週報沒有任何人在等你——正解:暫存。"),
+    StormMail(3, "林經理", "客戶", BrandAmber,
+        "API 文件連結還有嗎",
+        "之前那份找不到了,方便再給一次嗎。",
+        "之前那份 API 串接文件找不到了,方便再傳一次連結嗎?我們工程師在等。",
+        "方便再傳一次連結嗎",
+        listOf("客戶在等", "30 秒能回"),
+        "NOW",
+        "對——30 秒能回的就現在回,別讓客戶等一天。",
+        "你手上就有連結,30 秒的事——正解:現在處理。"),
+    StormMail(5, "業務小芳", "同事", InkCharcoal,
+        "客戶問資料匯出的 API 規格",
+        "這我看不懂,幫忙看該找誰。",
+        "客戶問資料匯出的 API 規格與頻率限制,這部分我看不懂,幫忙看該找誰?",
+        "API 規格與頻率限制",
+        listOf("技術問題"),
+        "ENG",
+        "對——規格問題給工程,answers 才是對的。",
+        "API 規格是工程的領域——正解:轉給工程阿凱。"),
+    StormMail(12, "人資部", "全公司", InkGray400,
+        "年度健檢時段開放預約",
+        "本月內完成預約即可。",
+        "年度健檢時段開放預約,本月內完成即可,額滿會再加開。",
+        "本月內完成即可",
+        listOf("能等"),
+        "HOLD",
+        "對——本月內的事,不屬於這 90 秒。",
+        "健檢預約是本月內的事——正解:暫存。"),
+    StormMail(8, "王協理", "老客戶", BrandAmber,
+        "合約展延的條款想談",
+        "下一季續約,有兩條想調整。",
+        "我們下一季想續約,但有兩條條款想調整,找個時間談?",
+        "有兩條條款想調整",
+        listOf("商務談判"),
+        "SALES",
+        "對——條款談判是業務的活,轉給小芳。",
+        "續約談判不是你的桌子——正解:轉給業務小芳。"),
+    StormMail(6, "客服值班", "同事", InkCharcoal,
+        "後台帳號被鎖了",
+        "三次密碼錯誤,客戶資料調不出來。",
+        "後台帳號被鎖了,三次密碼錯誤。現在客戶資料調不出來,前線卡住。",
+        "現在客戶資料調不出來",
+        listOf("擋住別人", "權限問題"),
+        "ENG", 
+        "對——解鎖權限在工程手上,而且前線正卡著。",
+        "帳號解鎖只有工程能做,客服正被擋著——正解:轉給工程阿凱。",
+        urgentAt = 55),
+    StormMail(2, "財務部", "財務", InkGray700,
+        "請款單據今天 17:00 截止",
+        "本月報帳收件最後一天。",
+        "提醒:本月請款單據收件今天 17:00 截止,逾期併入下月,差旅與廠商款項都會延一個月。",
+        "今天 17:00 截止",
+        listOf("截止今天", "看起來無聊"),
+        "NOW",
+        "對——最無聊的信,往往掛著最硬的死線。",
+        "這封看起來無聊,但 17:00 一過你的報帳就消失一個月——正解:現在處理。",
+        urgentAt = 40),
+    StormMail(9, "展會主辦", "廠商", InkGray400,
+        "年度展會贊助方案",
+        "三種級距,本季截止。",
+        "年度產業展贊助方案:三種級距與曝光內容,本季內回覆即可。",
+        "本季內回覆即可",
+        listOf("商務合作", "能等"),
+        "SALES",
+        "對——合作案給業務評估,不用你拍板。",
+        "贊助合作是業務的判斷——正解:轉給業務小芳。"),
 )
 
-private fun stripColor(kind: SenderKind): Color = when (kind) {
-    SenderKind.BOSS -> BrandDeepOrange
-    SenderKind.INTERNAL -> InkGray300
-    SenderKind.EXTERNAL -> BrandYellow
-}
+private data class Judgment(val mail: StormMail, val pick: String, val right: Boolean)
 
-private fun actionColor(a: MailAction): Color = when (a) {
-    MailAction.HANDLE -> AccentGreen
-    MailAction.DEFER -> InkGray500
-    MailAction.DELEGATE -> AccentBlue
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkplaceEmailScreen(navController: NavHostController) {
-    var phase by remember { mutableStateOf(StormPhase.INTRO) }
-    var practiceDone by remember { mutableStateOf(false) }
-    var index by remember { mutableIntStateOf(0) }
-    val decisions = remember { mutableStateMapOf<String, MailAction>() }
-    var remaining by remember { mutableIntStateOf(90) }
+    var phase by remember { mutableStateOf("BRIEF") }      // BRIEF / PRACTICE / LIVE / REVIEW
+    val deck = remember { mutableStateListOf<StormMail>().apply { addAll(stormDeck) } }
+    val judged = remember { mutableStateListOf<Judgment>() }
+    var elapsed by remember { mutableIntStateOf(0) }
+    var urgentBanner by remember { mutableStateOf<String?>(null) }
+    val urgentIds = remember { mutableStateListOf<Int>() }
 
-    // 計時只在練習完成後開始
-    LaunchedEffect(phase, practiceDone) {
-        if (phase == StormPhase.PLAYING && practiceDone) {
-            while (remaining > 0 && phase == StormPhase.PLAYING) {
-                delay(1000)
-                remaining--
-            }
-            if (phase == StormPhase.PLAYING) phase = StormPhase.DEBRIEF
-        }
+    // 判定條
+    var verdictGood by remember { mutableStateOf(true) }
+    var verdictText by remember { mutableStateOf("") }
+    var verdictKey by remember { mutableIntStateOf(0) }
+    var verdictShown by remember { mutableStateOf(false) }
+    LaunchedEffect(verdictKey) {
+        if (verdictKey > 0) { verdictShown = true; delay(1700); verdictShown = false }
     }
 
-    Scaffold(
-        containerColor = PaperWarm,
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("Email 風暴日",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold, color = InkBlack)
-                        Text("職場沙盒 ・ 模擬場景",
-                            style = MaterialTheme.typography.labelSmall, color = InkGray500)
+    // 計時:LIVE 開始跑;升急腳本
+    LaunchedEffect(phase) {
+        if (phase == "LIVE") {
+            elapsed = 0
+            while (elapsed < 90) {
+                delay(1000); elapsed++
+                stormDeck.forEach { m ->
+                    if (m.urgentAt == elapsed && deck.any { it.id == m.id }) {
+                        urgentIds.add(m.id)
+                        // 升急的信插到牌堆最上面
+                        deck.removeAll { it.id == m.id }
+                        deck.add(0, m)
+                        urgentBanner = "有一封信變急了"
                     }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Outlined.Close, contentDescription = null, tint = InkBlack)
-                    }
-                },
-                actions = {
-                    if (phase == StormPhase.PLAYING && practiceDone) {
-                        val low = remaining <= 15
-                        Box(
-                            Modifier
-                                .clip(RoundedCornerShape(50))
-                                .background(if (low) AccentRed else InkBlack)
-                                .padding(horizontal = 12.dp, vertical = 6.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Outlined.Timer, contentDescription = null,
-                                    tint = PaperWhite, modifier = Modifier.size(14.dp))
-                                Spacer(Modifier.width(4.dp))
-                                Text("${(remaining / 60)}:${(remaining % 60).toString().padStart(2, '0')}",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = PaperWhite, fontWeight = FontWeight.SemiBold)
-                            }
-                        }
-                        Spacer(Modifier.width(12.dp))
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = PaperWarm),
-            )
-        },
-    ) { pad ->
-        Box(Modifier.padding(pad).fillMaxSize()) {
-            when (phase) {
-                StormPhase.INTRO -> StormIntro { phase = StormPhase.PLAYING }
-                StormPhase.PLAYING -> StormPlaying(
-                    index = index,
-                    practiceDone = practiceDone,
-                    onPracticeDone = { practiceDone = true },
-                    onDecide = { action ->
-                        decisions[mailDeck[index].id] = action
-                        index++
-                        if (index >= mailDeck.size) phase = StormPhase.DEBRIEF
-                    },
-                )
-                StormPhase.DEBRIEF -> StormDebrief(
-                    decisions = decisions,
-                    secondsUsed = 90 - remaining,
-                    onRetry = {
-                        decisions.clear(); index = 0; remaining = 90
-                        practiceDone = false
-                        phase = StormPhase.INTRO
-                    },
-                    onExit = { navController.popBackStack() },
-                )
+                }
+                if (urgentBanner != null && elapsed % 3 == 0) urgentBanner = null
             }
+            if (phase == "LIVE") phase = "REVIEW"
+        }
+    }
+    LaunchedEffect(deck.size, phase) {
+        if (phase == "LIVE" && deck.isEmpty()) { delay(600); phase = "REVIEW" }
+    }
+
+    fun drop(mail: StormMail, zone: String) {
+        val right = mail.correct == zone
+        judged.add(Judgment(mail, zone, right))
+        deck.removeAll { it.id == mail.id }
+        verdictGood = right
+        verdictText = if (right) mail.verdictRight else mail.verdictWrong
+        verdictKey++
+    }
+
+    Box(Modifier.fillMaxSize().background(PaperWarm)) {
+        when (phase) {
+            "BRIEF" -> BriefCard(
+                onStart = { phase = "PRACTICE" },
+                onExit = { navController.popBackStack() },
+            )
+            "PRACTICE" -> PracticePhase(onDone = { phase = "LIVE" })
+            "LIVE" -> WarDesk(
+                deck = deck,
+                judgedCount = judged.size,
+                elapsed = elapsed,
+                urgentIds = urgentIds,
+                urgentBanner = urgentBanner,
+                verdictShown = verdictShown,
+                verdictGood = verdictGood,
+                verdictText = verdictText,
+                onDrop = { m, z -> drop(m, z) },
+                onExit = { navController.popBackStack() },
+            )
+            "REVIEW" -> StormReview(
+                judged = judged,
+                elapsed = elapsed,
+                onAgain = {
+                    deck.clear(); deck.addAll(stormDeck)
+                    judged.clear(); urgentIds.clear()
+                    phase = "BRIEF"
+                },
+                onBack = { navController.popBackStack() },
+            )
         }
     }
 }
 
-/* ===================== 階段一:場景說明 ===================== */
+/* ───────────────────────── 任務簡報 ───────────────────────── */
 
 @Composable
-private fun StormIntro(onStart: () -> Unit) {
+private fun BriefCard(onStart: () -> Unit, onExit: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
+        Modifier.fillMaxSize().padding(horizontal = 28.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Image(
-            painter = painterResource(R.drawable.beaver_writing),
+            painter = painterResource(R.drawable.beaver_point),
             contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.size(130.dp),
+            modifier = Modifier.size(110.dp),
         )
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(16.dp))
+        Text("主管出差,你代管收件匣", color = InkBlack, fontSize = 22.sp, fontWeight = FontWeight.Black)
+        Spacer(Modifier.height(8.dp))
+        Text("12 封信、90 秒。每封信拖到對的地方。",
+            color = InkGray700, fontSize = 14.sp)
+        Spacer(Modifier.height(24.dp))
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .background(InkCharcoal)
-                .padding(20.dp),
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
+                .background(MaterialTheme.colorScheme.surface).padding(18.dp),
         ) {
-            Text("場景",
-                color = PaperWhite.copy(alpha = 0.55f),
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-            Spacer(Modifier.height(6.dp))
-            Text("週三 09:00 ・ 你的信箱",
-                color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 18.sp)
-            Spacer(Modifier.height(6.dp))
-            Text("12 封未讀。90 秒後要進站立會議。有的信看起來很急,有的信安靜地致命。",
-                color = PaperWhite.copy(alpha = 0.8f), fontSize = 13.sp, lineHeight = 20.sp)
-            Spacer(Modifier.height(12.dp))
-            Text("第一封是練習,跟著它滑就會了。",
-                color = BrandAmber, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            RuleRow(InkBlack, "現在處理", "只有你能做,而且不能等")
+            RuleRow(InkGray400, "暫存格", "能等的,先放著")
+            RuleRow(BrandDeepOrange, "轉交", "別人做更對——而且要轉給對的人")
         }
-        Spacer(Modifier.height(24.dp))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(54.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(InkBlack)
-                .pressScale(onClick = onStart),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text("開信箱", color = PaperWhite, fontWeight = FontWeight.Black,
-                style = MaterialTheme.typography.titleMedium)
-        }
-    }
-}
-
-/* ===================== 階段二:滑卡 ===================== */
-
-@Composable
-private fun StormPlaying(
-    index: Int,
-    practiceDone: Boolean,
-    onPracticeDone: () -> Unit,
-    onDecide: (MailAction) -> Unit,
-) {
-    val scope = rememberCoroutineScope()
-    val offsetX = remember { Animatable(0f) }
-    val offsetY = remember { Animatable(0f) }
-    val ghostX = remember { Animatable(0f) }
-    var animating by remember { mutableStateOf(false) }
-    var dragging by remember { mutableStateOf(false) }
-    var flashAction by remember { mutableStateOf<MailAction?>(null) }
-    var flashKey by remember { mutableIntStateOf(0) }
-    val flashAlpha = remember { Animatable(0f) }
-
-    val card = if (!practiceDone) practiceCard else mailDeck.getOrNull(index)
-    val behind1 = if (!practiceDone) mailDeck.getOrNull(0) else mailDeck.getOrNull(index + 1)
-    val behind2 = if (!practiceDone) mailDeck.getOrNull(1) else mailDeck.getOrNull(index + 2)
-
-    // 練習卡幽靈預演:往左輕滑又彈回(拖曳中不疊加)
-    LaunchedEffect(practiceDone) {
-        if (practiceDone) return@LaunchedEffect
-        while (isActive) {
-            ghostX.animateTo(-26f, tween(520, easing = FastOutSlowInEasing))
-            ghostX.animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
-            delay(650)
-        }
-    }
-
-    // 邊緣閃光
-    LaunchedEffect(flashKey) {
-        if (flashKey > 0) {
-            flashAlpha.snapTo(0.5f)
-            flashAlpha.animateTo(0f, tween(420))
-        }
-    }
-
-    fun fling(action: MailAction) {
-        if (animating || card == null) return
-        animating = true
-        dragging = false
-        flashAction = action
-        flashKey++
-        scope.launch {
-            val tx = when (action) {
-                MailAction.HANDLE -> 1600f
-                MailAction.DEFER -> -1600f
-                MailAction.DELEGATE -> offsetX.value
-            }
-            val ty = if (action == MailAction.DELEGATE) -2000f else offsetY.value
-            launch { offsetX.animateTo(tx, tween(220)) }
-            launch { offsetY.animateTo(ty, tween(220)) }
-            delay(240)
-            if (!practiceDone) onPracticeDone() else onDecide(action)
-            offsetX.snapTo(0f)
-            offsetY.snapTo(0f)
-            animating = false
-        }
-    }
-
-    val liftScale by animateFloatAsState(
-        targetValue = if (dragging) 1.02f else 1f, label = "lift")
-    val liftElev by animateDpAsState(
-        targetValue = if (dragging) 14.dp else 6.dp, label = "elev")
-    val cueAlpha by animateFloatAsState(
-        targetValue = if (dragging) 0.9f else 0f, label = "cue")
-
-    Column(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Spacer(Modifier.height(8.dp))
-        // 進度:練習中顯示標籤,正式後顯示細條
-        if (!practiceDone) {
-            Box(
-                Modifier
-                    .clip(RoundedCornerShape(50))
-                    .background(BrandPeach.copy(alpha = 0.55f))
-                    .padding(horizontal = 12.dp, vertical = 4.dp),
-            ) {
-                Text("練習", color = BrandDeepOrange,
-                    fontSize = 11.sp, fontWeight = FontWeight.Black)
-            }
-        } else {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier
-                        .width(160.dp)
-                        .height(5.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(InkGray200),
-                ) {
-                    Box(
-                        Modifier
-                            .fillMaxHeight()
-                            .fillMaxWidth(rememberProgressFill(index / mailDeck.size.toFloat()))
-                            .clip(RoundedCornerShape(50))
-                            .background(BrandDeepOrange),
-                    )
-                }
-                Spacer(Modifier.width(8.dp))
-                Text("$index/${mailDeck.size}",
-                    color = InkGray400, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-            }
-        }
-        Spacer(Modifier.height(10.dp))
-
-        Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-            // 牌堆:第三張、第二張(頂部微露)
-            if (behind2 != null) {
-                Box(Modifier.offset(y = (-16).dp).scale(0.89f).alpha(0.35f)) {
-                    MailCardView(behind2)
-                }
-            }
-            if (behind1 != null) {
-                Box(Modifier.offset(y = (-8).dp).scale(0.94f).alpha(0.7f)) {
-                    MailCardView(behind1)
-                }
-            }
-
-            // 邊緣目的地標(拖曳時浮現)
-            EdgeCue("← 擱置", InkGray500, cueAlpha,
-                Modifier.align(Alignment.CenterStart).padding(start = 2.dp))
-            EdgeCue("處理 →", AccentGreen, cueAlpha,
-                Modifier.align(Alignment.CenterEnd).padding(end = 2.dp))
-            EdgeCue("↑ 轉交", AccentBlue, cueAlpha,
-                Modifier.align(Alignment.TopCenter).padding(top = 2.dp))
-
-            // 當前這張(可拖)
-            if (card != null) {
-                val rotation = (offsetX.value / 60f).coerceIn(-12f, 12f)
-                Box(
-                    modifier = Modifier
-                        .graphicsLayer {
-                            translationX = offsetX.value +
-                                (if (!practiceDone && !dragging) ghostX.value else 0f)
-                            translationY = offsetY.value
-                            rotationZ = rotation
-                        }
-                        .pointerInput(practiceDone, index) {
-                            detectDragGestures(
-                                onDragStart = { dragging = true },
-                                onDragCancel = {
-                                    dragging = false
-                                    scope.launch {
-                                        launch { offsetX.animateTo(0f, spring()) }
-                                        launch { offsetY.animateTo(0f, spring()) }
-                                    }
-                                },
-                                onDrag = { change, drag ->
-                                    change.consume()
-                                    scope.launch {
-                                        offsetX.snapTo(offsetX.value + drag.x)
-                                        offsetY.snapTo(offsetY.value + drag.y)
-                                    }
-                                },
-                                onDragEnd = {
-                                    dragging = false
-                                    val x = offsetX.value
-                                    val y = offsetY.value
-                                    when {
-                                        y < -260f -> fling(MailAction.DELEGATE)
-                                        x > 260f -> fling(MailAction.HANDLE)
-                                        x < -260f -> fling(MailAction.DEFER)
-                                        else -> scope.launch {
-                                            launch { offsetX.animateTo(0f, spring()) }
-                                            launch { offsetY.animateTo(0f, spring()) }
-                                        }
-                                    }
-                                },
-                            )
-                        }
-                        .shadow(liftElev, RoundedCornerShape(24.dp))
-                        .scale(liftScale),
-                ) {
-                    MailCardView(card)
-                    // 橡皮章(描邊空心、斜蓋)
-                    val handleA = ((offsetX.value - 60f) / 180f).coerceIn(0f, 1f)
-                    val deferA = ((-offsetX.value - 60f) / 180f).coerceIn(0f, 1f)
-                    val delegateA = ((-offsetY.value - 60f) / 180f).coerceIn(0f, 1f)
-                    RubberStamp("處理", AccentGreen, handleA,
-                        Modifier.align(Alignment.TopStart).padding(18.dp))
-                    RubberStamp("擱置", InkGray500, deferA,
-                        Modifier.align(Alignment.TopEnd).padding(18.dp))
-                    RubberStamp("轉交", AccentBlue, delegateA,
-                        Modifier.align(Alignment.BottomCenter).padding(18.dp))
-                }
-            }
-
-            // 邊緣閃光(飛出方向)
-            val fa = flashAction
-            if (fa != null && flashAlpha.value > 0f) {
-                val c = actionColor(fa).copy(alpha = flashAlpha.value)
-                when (fa) {
-                    MailAction.DEFER -> Box(
-                        Modifier.align(Alignment.CenterStart).fillMaxHeight().width(30.dp)
-                            .background(Brush.horizontalGradient(listOf(c, Color.Transparent))))
-                    MailAction.HANDLE -> Box(
-                        Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(30.dp)
-                            .background(Brush.horizontalGradient(listOf(Color.Transparent, c))))
-                    MailAction.DELEGATE -> Box(
-                        Modifier.align(Alignment.TopCenter).fillMaxWidth().height(30.dp)
-                            .background(Brush.verticalGradient(listOf(c, Color.Transparent))))
-                }
-            }
-        }
-
-        // 練習提示
-        if (!practiceDone) {
-            Spacer(Modifier.height(10.dp))
-            Text("練習:往左滑,把它擱置",
-                color = InkGray500, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-        }
-
-        Spacer(Modifier.height(12.dp))
-        // 按鈕保底(滑卡之外的等價操作)
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            ActionButtonPill("擱置", InkGray500, filled = false, Modifier.weight(1f)) { fling(MailAction.DEFER) }
-            ActionButtonPill("轉交", AccentBlue, filled = false, Modifier.weight(1f)) { fling(MailAction.DELEGATE) }
-            ActionButtonPill("處理", InkBlack, filled = true, Modifier.weight(1f)) { fling(MailAction.HANDLE) }
-        }
-        Spacer(Modifier.height(20.dp))
-    }
-}
-
-@Composable
-private fun EdgeCue(text: String, color: Color, a: Float, modifier: Modifier = Modifier) {
-    if (a > 0f) {
-        Box(
-            modifier = modifier
-                .alpha(a)
-                .clip(RoundedCornerShape(50))
-                .background(color.copy(alpha = 0.14f))
-                .padding(horizontal = 10.dp, vertical = 5.dp),
-        ) {
-            Text(text, color = color, fontSize = 11.sp, fontWeight = FontWeight.Black)
-        }
-    }
-}
-
-@Composable
-private fun MailCardView(mail: MailCard, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
-            .background(PaperWhite),
-    ) {
-        // 寄件人類型色帶
-        Box(
-            Modifier.fillMaxWidth().height(6.dp)
-                .background(stripColor(mail.kind)),
-        )
-        Column(Modifier.padding(20.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier.size(40.dp).clip(CircleShape).background(BrandPeach),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(mail.sender.take(1),
-                        color = BrandDeepOrange, fontWeight = FontWeight.Black, fontSize = 16.sp)
-                }
-                Spacer(Modifier.width(10.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(mail.sender, color = InkBlack,
-                        fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Text(mail.senderRole, color = InkGray400, fontSize = 11.sp)
-                }
-                if (mail.urgentTag != null) {
-                    Box(
-                        Modifier
-                            .clip(RoundedCornerShape(50))
-                            .background(AccentRed.copy(alpha = 0.12f))
-                            .padding(horizontal = 8.dp, vertical = 3.dp),
-                    ) {
-                        Text(mail.urgentTag, color = AccentRed,
-                            fontSize = 10.sp, fontWeight = FontWeight.Black)
-                    }
-                }
-            }
-            Spacer(Modifier.height(14.dp))
-            Text(mail.subject, color = InkBlack,
-                fontWeight = FontWeight.Black, fontSize = 19.sp, lineHeight = 25.sp)
-            Spacer(Modifier.height(8.dp))
-            Text(mail.preview, color = InkGray500,
-                fontSize = 13.sp, lineHeight = 20.sp,
-                maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Spacer(Modifier.height(16.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(6.dp).clip(CircleShape).background(BrandOrange))
-                Spacer(Modifier.width(5.dp))
-                Text("未讀", color = InkGray400, fontSize = 10.sp)
-                Spacer(Modifier.weight(1f))
-                Text(mail.time, color = InkGray400, fontSize = 11.sp)
-            }
-        }
-    }
-}
-
-@Composable
-private fun RubberStamp(text: String, color: Color, a: Float, modifier: Modifier = Modifier) {
-    if (a > 0f) {
-        Box(
-            modifier = modifier
-                .alpha(a)
-                .scale(0.8f + 0.2f * a)
-                .graphicsLayer { rotationZ = -8f }
-                .border(3.dp, color, RoundedCornerShape(8.dp))
-                .background(PaperWhite.copy(alpha = 0.55f), RoundedCornerShape(8.dp))
-                .padding(horizontal = 12.dp, vertical = 5.dp),
-        ) {
-            Text(text, color = color, fontWeight = FontWeight.Black,
-                fontSize = 17.sp, letterSpacing = 3.sp)
-        }
-    }
-}
-
-@Composable
-private fun ActionButtonPill(
-    text: String,
-    color: Color,
-    filled: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-) {
-    Box(
-        modifier = modifier
-            .height(46.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(if (filled) color else color.copy(alpha = 0.12f))
-            .pressScale(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(text,
-            color = if (filled) PaperWhite else color,
-            fontWeight = FontWeight.Black,
-            style = MaterialTheme.typography.labelLarge)
-    }
-}
-
-/* ===================== 階段三:誠實回顧 ===================== */
-
-@Composable
-private fun StormDebrief(
-    decisions: Map<String, MailAction>,
-    secondsUsed: Int,
-    onRetry: () -> Unit,
-    onExit: () -> Unit,
-) {
-    val handled = decisions.count { it.value == MailAction.HANDLE }
-    val deferred = decisions.count { it.value == MailAction.DEFER }
-    val delegated = decisions.count { it.value == MailAction.DELEGATE }
-    val missed = mailDeck.size - decisions.size
-
-    val financeAction = decisions["m_finance"]
-    val financeLine = when (financeAction) {
-        MailAction.HANDLE -> "最不起眼的那封——財務 17:00 截止——你接住了。它沒有掛「急」,但它才是今天的地雷。"
-        MailAction.DEFER -> "最不起眼的那封——財務 17:00 截止——你擱置了。今天 17:01,你會接到電話。"
-        MailAction.DELEGATE -> "財務補件那封你轉走了。憑證在你手上,別人補不了。17:01 電話還是會找你。"
-        null -> "財務 17:00 截止那封,你根本沒拆到。它安靜地躺在第三封。"
-    }
-    val fakeBites = listOf("m_fridge", "m_vendor").count { decisions[it] == MailAction.HANDLE }
-    val fakeLine = if (fakeBites > 0)
-        "$fakeBites 封掛著「急」的信騙到了你的時間。緊急和重要,是兩件事。"
-    else
-        "兩封假緊急都沒騙到你。掛紅標的不一定重要,你看穿了。"
-    val apiAction = decisions["m_api"]
-    val apiLine = when (apiAction) {
-        MailAction.DELEGATE -> "API 文件那封你轉給了更熟的人——對。不是每件事都該自己跳下去。"
-        MailAction.HANDLE -> "API 文件那封你自己回了。能,但你的 90 秒,本來可以花在財務那封上。"
-        else -> "API 文件那封被你放著。客戶在等,這種信轉交比擱置好。"
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(InkCharcoal)
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
+        Spacer(Modifier.height(14.dp))
+        Text("判斷力比手速重要。", color = InkGray500, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(28.dp))
-        Text("收信結束",
-            color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 26.sp)
-        Spacer(Modifier.height(6.dp))
-        Text("你用了 $secondsUsed 秒,拆了 ${decisions.size} / ${mailDeck.size} 封。",
-            color = PaperWhite.copy(alpha = 0.7f), fontSize = 13.sp)
-        Spacer(Modifier.height(20.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-        ) {
-            DebriefStat("$handled", "處理", AccentGreen)
-            DebriefStat("$deferred", "擱置", InkGray400)
-            DebriefStat("$delegated", "轉交", AccentBlue)
-            DebriefStat("$missed", "沒拆", AccentRed)
-        }
-
-        Spacer(Modifier.height(24.dp))
-        DebriefCard("那封安靜的地雷", financeLine,
-            good = financeAction == MailAction.HANDLE)
+        Box(
+            Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(16.dp))
+                .background(InkBlack).pressScale(onClick = onStart),
+            contentAlignment = Alignment.Center,
+        ) { Text("先暖身兩封", color = PaperWhite, fontWeight = FontWeight.Black) }
         Spacer(Modifier.height(10.dp))
-        DebriefCard("假緊急", fakeLine, good = fakeBites == 0)
-        Spacer(Modifier.height(10.dp))
-        DebriefCard("轉交的判斷", apiLine,
-            good = apiAction == MailAction.DELEGATE)
-
-        Spacer(Modifier.height(24.dp))
-        Image(
-            painter = painterResource(R.drawable.beaver_calm),
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.size(96.dp),
-        )
-        Spacer(Modifier.height(8.dp))
-        Text("真實的週三也是這樣:拆不完,只能選。",
-            color = PaperWhite.copy(alpha = 0.6f), fontSize = 12.sp)
-
-        Spacer(Modifier.height(24.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(50.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(PaperWhite.copy(alpha = 0.1f))
-                    .pressScale(onClick = onRetry),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text("再來一次", color = PaperWhite, fontWeight = FontWeight.Bold)
-            }
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(50.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(BrandOrange)
-                    .pressScale(onClick = onExit),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text("回沙盒", color = PaperWhite, fontWeight = FontWeight.Black)
-            }
+        Box(Modifier.clip(RoundedCornerShape(50)).pressScale(onClick = onExit).padding(12.dp)) {
+            Text("先離開", color = InkGray500, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         }
-        Spacer(Modifier.height(36.dp))
     }
 }
 
 @Composable
-private fun DebriefStat(value: String, label: String, color: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, color = color, fontWeight = FontWeight.Black, fontSize = 28.sp)
-        Spacer(Modifier.height(2.dp))
-        Text(label, color = PaperWhite.copy(alpha = 0.6f),
-            style = MaterialTheme.typography.labelSmall)
+private fun RuleRow(dot: Color, name: String, desc: String) {
+    Row(Modifier.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(10.dp).clip(CircleShape).background(dot))
+        Spacer(Modifier.width(10.dp))
+        Text(name, color = InkBlack, fontSize = 14.sp, fontWeight = FontWeight.Black)
+        Spacer(Modifier.width(10.dp))
+        Text(desc, color = InkGray500, fontSize = 12.sp)
     }
 }
 
+/* ───────────────────────── 暖身(兩封) ───────────────────────── */
+
+private val practiceMails = listOf(
+    StormMail(101, "教練", "暖身", BrandOrange,
+        "把我拖到「現在處理」盤",
+        "右下角那個黑色的盤子。",
+        "這是暖身信。按住卡片,拖到右下角的「現在處理」盤,鬆手。",
+        "拖到右下角", listOf("暖身 1 / 2"), "NOW",
+        "手感對了。", "差一點——這封要去右下角的黑盤。"),
+    StormMail(102, "教練", "暖身", BrandOrange,
+        "這封是技術問題,給工程",
+        "拖到上面工程阿凱的頭上。",
+        "客戶說系統壞了——這種信給工程。把卡片拖到上面「工程・阿凱」的席位。",
+        "拖到工程席", listOf("暖身 2 / 2"), "ENG",
+        "對,轉交就是拖到人頭上。", "技術問題要給工程——拖到阿凱頭上。"),
+)
+
 @Composable
-private fun DebriefCard(title: String, body: String, good: Boolean) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(PaperWhite.copy(alpha = 0.07f))
-            .padding(16.dp),
-    ) {
+private fun PracticePhase(onDone: () -> Unit) {
+    val deck = remember { mutableStateListOf<StormMail>().apply { addAll(practiceMails) } }
+    var verdictGood by remember { mutableStateOf(true) }
+    var verdictText by remember { mutableStateOf("") }
+    var verdictKey by remember { mutableIntStateOf(0) }
+    var verdictShown by remember { mutableStateOf(false) }
+    LaunchedEffect(verdictKey) {
+        if (verdictKey > 0) { verdictShown = true; delay(1300); verdictShown = false }
+    }
+    LaunchedEffect(deck.size) {
+        if (deck.isEmpty()) { delay(900); onDone() }
+    }
+    WarDesk(
+        deck = deck,
+        judgedCount = 2 - deck.size,
+        elapsed = -1,                 // -1 = 暖身,不顯示計時
+        urgentIds = emptyList(),
+        urgentBanner = null,
+        verdictShown = verdictShown,
+        verdictGood = verdictGood,
+        verdictText = verdictText,
+        onDrop = { m, z ->
+            val right = m.correct == z
+            verdictGood = right
+            verdictText = if (right) m.verdictRight else m.verdictWrong
+            verdictKey++
+            if (right) deck.removeAll { it.id == m.id }
+        },
+        onExit = { onDone() },
+        practice = true,
+    )
+}
+
+/* ───────────────────────── 作戰桌 ───────────────────────── */
+
+@Composable
+private fun WarDesk(
+    deck: List<StormMail>,
+    judgedCount: Int,
+    elapsed: Int,
+    urgentIds: List<Int>,
+    urgentBanner: String?,
+    verdictShown: Boolean,
+    verdictGood: Boolean,
+    verdictText: String,
+    onDrop: (StormMail, String) -> Unit,
+    onExit: () -> Unit,
+    practice: Boolean = false,
+) {
+    val zoneRects = remember { mutableStateMapOf<String, Rect>() }
+    var hovered by remember { mutableStateOf<String?>(null) }
+    val current = deck.firstOrNull()
+
+    Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+        Spacer(Modifier.height(14.dp))
+        // 標頭
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(8.dp).clip(CircleShape)
-                    .background(if (good) AccentGreen else BrandAmber),
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(title, color = PaperWhite,
-                fontWeight = FontWeight.Black, fontSize = 14.sp)
+                Modifier.size(38.dp).clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surface).pressScale(onClick = onExit),
+                contentAlignment = Alignment.Center,
+            ) { Icon(Icons.Outlined.Close, contentDescription = null, tint = InkGray700, modifier = Modifier.size(18.dp)) }
+            Spacer(Modifier.width(10.dp))
+            Column {
+                Text(if (practice) "暖身 ・ 拖拖看" else "Email 風暴", color = InkBlack,
+                    fontSize = 16.sp, fontWeight = FontWeight.Black)
+                Text("職場沙盒 ・ 模擬場景", color = InkGray400, fontSize = 10.sp)
+            }
+            Spacer(Modifier.weight(1f))
+            if (elapsed >= 0) {
+                val left = (90 - elapsed).coerceAtLeast(0)
+                val hot = left <= 15
+                val pulse = if (hot) {
+                    val t = rememberInfiniteTransition(label = "timerHot")
+                    val v by t.animateFloat(1f, 1.1f,
+                        infiniteRepeatable(tween(420), RepeatMode.Reverse), label = "tp")
+                    v
+                } else 1f
+                Row(
+                    Modifier.scale(pulse).clip(RoundedCornerShape(50))
+                        .background(if (hot) BrandDeepOrange else InkBlack)
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Outlined.Timer, contentDescription = null, tint = PaperWhite, modifier = Modifier.size(13.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("${left / 60}:${(left % 60).toString().padStart(2, '0')}",
+                        color = PaperWhite, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                }
+            }
         }
         Spacer(Modifier.height(8.dp))
-        Text(body, color = PaperWhite.copy(alpha = 0.85f),
-            fontSize = 13.sp, lineHeight = 20.sp)
+        // 進度刻度
+        if (!practice) {
+            Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                repeat(12) { i ->
+                    Box(
+                        Modifier.weight(1f).height(4.dp).clip(RoundedCornerShape(50))
+                            .background(if (i < judgedCount) BrandOrange else InkGray200),
+                    )
+                }
+            }
+        }
+        // 判定條 / 升急橫幅
+        Box(Modifier.fillMaxWidth().height(44.dp), contentAlignment = Alignment.Center) {
+            AnimatedVisibility(
+                visible = verdictShown,
+                enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
+                exit = fadeOut(tween(250)),
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                        .background(if (verdictGood) AccentGreen.copy(alpha = 0.16f) else BrandAmber.copy(alpha = 0.22f))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(Modifier.width(4.dp).height(22.dp).clip(RoundedCornerShape(50))
+                        .background(if (verdictGood) AccentGreen else BrandAmber))
+                    Spacer(Modifier.width(8.dp))
+                    Text(verdictText, color = InkBlack, fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold, lineHeight = 16.sp)
+                }
+            }
+            if (!verdictShown && urgentBanner != null) {
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                        .background(BrandAmber.copy(alpha = 0.25f))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(Modifier.size(8.dp).clip(CircleShape).background(BrandDeepOrange))
+                    Spacer(Modifier.width(8.dp))
+                    Text(urgentBanner, color = InkBlack, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                }
+            }
+        }
+
+        // 轉交席
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            PersonZone("ENG", "工程・阿凱", R.drawable.colleague_quiet, hovered == "ENG", zoneRects, Modifier.weight(1f))
+            PersonZone("SALES", "業務・小芳", R.drawable.colleague_gossip, hovered == "SALES", zoneRects, Modifier.weight(1f))
+        }
+
+        // 信卡舞台
+        Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+            // 牌堆露頂
+            if (deck.size > 1) {
+                Box(
+                    Modifier.fillMaxWidth(0.86f).height(120.dp)
+                        .graphicsLayer { translationY = 26.dp.toPx(); scaleX = 0.94f }
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.55f)),
+                )
+            }
+            Crossfade(targetState = current?.id, label = "mailCard") { id ->
+                val mail = deck.firstOrNull { it.id == id }
+                if (mail != null) {
+                    MailCard(
+                        mail = mail,
+                        urgent = urgentIds.contains(mail.id),
+                        zoneRects = zoneRects,
+                        onHover = { hovered = it },
+                        onDrop = { z -> hovered = null; onDrop(mail, z) },
+                    )
+                } else if (deck.isEmpty()) {
+                    Text(if (practice) "暖身完成" else "收件匣清空",
+                        color = InkGray400, fontSize = 14.sp, fontWeight = FontWeight.Black)
+                }
+            }
+        }
+
+        // 下方兩盤
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            TrayZone("HOLD", "暫存格", false, hovered == "HOLD", zoneRects, Modifier.weight(1f))
+            TrayZone("NOW", "現在處理", true, hovered == "NOW", zoneRects, Modifier.weight(1f))
+        }
+        Spacer(Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun PersonZone(
+    key: String, label: String, avatar: Int, hot: Boolean,
+    rects: MutableMap<String, Rect>, modifier: Modifier = Modifier,
+) {
+    val s by animateFloatAsState(if (hot) 1.06f else 1f, label = "pz$key")
+    Column(
+        modifier = modifier
+            .scale(s)
+            .onGloballyPositioned { rects[key] = it.boundsInRoot() }
+            .clip(RoundedCornerShape(16.dp))
+            .background(if (hot) BrandPeach.copy(alpha = 0.7f) else MaterialTheme.colorScheme.surface)
+            .border(
+                width = if (hot) 2.dp else 1.dp,
+                color = if (hot) BrandDeepOrange else InkGray200,
+                shape = RoundedCornerShape(16.dp),
+            )
+            .padding(vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Image(
+            painter = painterResource(avatar),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.size(46.dp),
+        )
+        Text(label, color = InkBlack, fontSize = 11.sp, fontWeight = FontWeight.Black)
+        Text("轉交", color = InkGray400, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun TrayZone(
+    key: String, label: String, dark: Boolean, hot: Boolean,
+    rects: MutableMap<String, Rect>, modifier: Modifier = Modifier,
+) {
+    val s by animateFloatAsState(if (hot) 1.06f else 1f, label = "tz$key")
+    Box(
+        modifier = modifier
+            .scale(s)
+            .height(58.dp)
+            .onGloballyPositioned { rects[key] = it.boundsInRoot() }
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                when {
+                    hot && dark -> InkCharcoal
+                    hot -> BrandPeach.copy(alpha = 0.7f)
+                    dark -> InkBlack
+                    else -> MaterialTheme.colorScheme.surface
+                }
+            )
+            .border(
+                width = if (hot) 2.dp else 1.dp,
+                color = if (hot) BrandDeepOrange else if (dark) InkBlack else InkGray200,
+                shape = RoundedCornerShape(16.dp),
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(label, color = if (dark) PaperWhite else InkGray700,
+            fontSize = 13.sp, fontWeight = FontWeight.Black)
+    }
+}
+
+@Composable
+private fun MailCard(
+    mail: StormMail,
+    urgent: Boolean,
+    zoneRects: Map<String, Rect>,
+    onHover: (String?) -> Unit,
+    onDrop: (String) -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    val ax = remember(mail.id) { Animatable(0f) }
+    val ay = remember(mail.id) { Animatable(0f) }
+    val enter = remember(mail.id) { Animatable(0.92f) }
+    var expanded by remember(mail.id) { mutableStateOf(false) }
+    var cardRect by remember(mail.id) { mutableStateOf<Rect?>(null) }
+    var dragging by remember(mail.id) { mutableStateOf(false) }
+    LaunchedEffect(mail.id) {
+        enter.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
+    }
+
+    fun hitZone(): String? {
+        val c = cardRect ?: return null
+        val center = Offset(c.center.x + ax.value, c.center.y + ay.value)
+        return zoneRects.entries.firstOrNull { it.value.contains(center) }?.key
+    }
+
+    val urgentPulse = if (urgent) {
+        val t = rememberInfiniteTransition(label = "urg")
+        val v by t.animateFloat(0.5f, 1f, infiniteRepeatable(tween(500), RepeatMode.Reverse), label = "uv")
+        v
+    } else 0f
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth(0.9f)
+            .onGloballyPositioned { cardRect = it.boundsInRoot() }
+            .graphicsLayer {
+                translationX = ax.value
+                translationY = ay.value
+                rotationZ = ax.value / 44f
+                scaleX = enter.value
+                scaleY = enter.value
+            }
+            .shadow(if (dragging) 20.dp else 8.dp, RoundedCornerShape(18.dp))
+            .clip(RoundedCornerShape(18.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(
+                width = if (urgent) 2.dp else 0.dp,
+                color = if (urgent) BrandDeepOrange.copy(alpha = urgentPulse) else Color.Transparent,
+                shape = RoundedCornerShape(18.dp),
+            )
+            .pointerInput(mail.id) {
+                detectDragGestures(
+                    onDragStart = { dragging = true },
+                    onDrag = { change, amt ->
+                        change.consume()
+                        scope.launch { ax.snapTo(ax.value + amt.x) }
+                        scope.launch { ay.snapTo(ay.value + amt.y) }
+                        onHover(hitZone())
+                    },
+                    onDragEnd = {
+                        dragging = false
+                        val z = hitZone()
+                        if (z != null) {
+                            onDrop(z)
+                        } else {
+                            onHover(null)
+                            scope.launch { ax.animateTo(0f, spring()) }
+                            scope.launch { ay.animateTo(0f, spring()) }
+                        }
+                    },
+                    onDragCancel = {
+                        dragging = false
+                        onHover(null)
+                        scope.launch { ax.animateTo(0f, spring()) }
+                        scope.launch { ay.animateTo(0f, spring()) }
+                    },
+                )
+            }
+            .pressScale { expanded = !expanded },
+    ) {
+        Box(Modifier.fillMaxWidth().height(6.dp).background(mail.band))
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier.size(34.dp).clip(CircleShape).background(mail.band.copy(alpha = 0.25f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(mail.sender.take(1), color = InkBlack, fontSize = 14.sp, fontWeight = FontWeight.Black)
+                }
+                Spacer(Modifier.width(8.dp))
+                Column {
+                    Text(mail.sender, color = InkBlack, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                    Text(mail.senderTag, color = InkGray400, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
+                Spacer(Modifier.weight(1f))
+                if (urgent) {
+                    Box(
+                        Modifier.clip(RoundedCornerShape(50)).background(BrandDeepOrange)
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                    ) { Text("變急了", color = PaperWhite, fontSize = 9.sp, fontWeight = FontWeight.Black) }
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            Text(mail.subject, color = InkBlack, fontSize = 16.sp,
+                fontWeight = FontWeight.Black, lineHeight = 21.sp)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                if (expanded) mail.body else mail.preview,
+                color = InkGray700, fontSize = 12.sp, lineHeight = 17.sp,
+            )
+            if (expanded) {
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
+                        .background(BrandPeach.copy(alpha = 0.45f))
+                        .padding(horizontal = 10.dp, vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(Modifier.width(3.dp).height(16.dp).clip(RoundedCornerShape(50)).background(BrandDeepOrange))
+                    Spacer(Modifier.width(8.dp))
+                    Text("關鍵句:「${mail.clueQuote}」", color = InkBlack,
+                        fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                mail.clues.forEach { c ->
+                    Box(
+                        Modifier.clip(RoundedCornerShape(50)).background(InkGray100)
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                    ) { Text(c, color = InkGray700, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+                }
+                Spacer(Modifier.weight(1f))
+                Text(if (expanded) "收合" else "點開全文", color = InkGray400, fontSize = 9.sp)
+            }
+        }
+    }
+}
+
+/* ───────────────────────── 結算 ───────────────────────── */
+
+@Composable
+private fun StormReview(
+    judged: List<Judgment>,
+    elapsed: Int,
+    onAgain: () -> Unit,
+    onBack: () -> Unit,
+) {
+    val right = judged.count { it.right }
+    val financeMiss = judged.firstOrNull { it.mail.id == 2 && !it.right } != null ||
+        judged.none { it.mail.id == 2 }
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp),
+    ) {
+        Spacer(Modifier.height(28.dp))
+        Text("風暴過後", color = InkGray400, fontSize = 12.sp,
+            fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+        Spacer(Modifier.height(6.dp))
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text("判斷力", color = InkBlack, fontSize = 18.sp, fontWeight = FontWeight.Black)
+            Spacer(Modifier.width(10.dp))
+            Text("$right", color = BrandDeepOrange, fontSize = 44.sp, fontWeight = FontWeight.Black)
+            Text(" / 12", color = InkGray400, fontSize = 18.sp, fontWeight = FontWeight.Black)
+            Spacer(Modifier.weight(1f))
+            Image(
+                painter = painterResource(if (right >= 9) R.drawable.beaver_celebrate else R.drawable.beaver_climb),
+                contentDescription = null,
+                modifier = Modifier.size(72.dp),
+            )
+        }
+        Text(
+            "用時 ${if (elapsed >= 90) "90 秒(時間到)" else "$elapsed 秒"} ・ 速度只是配角",
+            color = InkGray400, fontSize = 11.sp,
+        )
+        Spacer(Modifier.height(16.dp))
+
+        if (financeMiss) {
+            Column(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+                    .background(InkBlack).padding(16.dp),
+            ) {
+                Text("地雷", color = BrandAmber, fontSize = 10.sp,
+                    fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "財務的請款信被你晾著——下週你的報帳會消失一個月。看起來最無聊的信,有時掛著最硬的死線。",
+                    color = PaperWhite, fontSize = 13.sp, lineHeight = 19.sp, fontWeight = FontWeight.Bold,
+                )
+            }
+            Spacer(Modifier.height(14.dp))
+        }
+
+        Text("逐封覆盤", color = InkGray500, fontSize = 12.sp, fontWeight = FontWeight.Black)
+        Spacer(Modifier.height(8.dp))
+        judged.forEach { j ->
+            Column(
+                Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier.size(8.dp).clip(CircleShape)
+                            .background(if (j.right) AccentGreen else BrandAmber),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(j.mail.subject, color = InkBlack, fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                    Text(
+                        zoneNames[j.pick] ?: j.pick,
+                        color = if (j.right) AccentGreen else BrandDeepOrange,
+                        fontSize = 10.sp, fontWeight = FontWeight.Black,
+                    )
+                }
+                if (!j.right) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(j.mail.verdictWrong, color = InkGray500, fontSize = 11.sp, lineHeight = 15.sp)
+                }
+            }
+        }
+        val skipped = stormDeck.size - judged.size
+        if (skipped > 0) {
+            Spacer(Modifier.height(6.dp))
+            Text("還有 $skipped 封沒處理——沒做決定,也是一種決定。",
+                color = InkGray500, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        }
+        Spacer(Modifier.height(20.dp))
+        Box(
+            Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(16.dp))
+                .background(InkBlack).pressScale(onClick = onAgain),
+            contentAlignment = Alignment.Center,
+        ) { Text("再來一輪", color = PaperWhite, fontWeight = FontWeight.Black) }
+        Spacer(Modifier.height(10.dp))
+        Box(
+            Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surface).pressScale(onClick = onBack),
+            contentAlignment = Alignment.Center,
+        ) { Text("回沙盒", color = InkGray700, fontWeight = FontWeight.Black) }
+        Spacer(Modifier.height(24.dp))
     }
 }
