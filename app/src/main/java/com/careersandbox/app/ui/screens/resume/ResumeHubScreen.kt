@@ -363,8 +363,8 @@ private fun BentoMaster(onClick: () -> Unit) {
             contentDescription = null,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .offset(x = (-4).dp, y = 4.dp)
-                .size(140.dp)
+                .offset(x = (-10).dp, y = (-2).dp)
+                .size(112.dp)
                 .alpha(0.95f),
             contentScale = ContentScale.Fit,
         )

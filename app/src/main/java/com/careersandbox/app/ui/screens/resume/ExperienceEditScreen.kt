@@ -21,6 +21,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.shape.CircleShape
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.material.icons.outlined.Mic
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
 import com.careersandbox.app.ui.components.*
@@ -266,14 +267,41 @@ private fun ChatEdit(
         }
     }
     Spacer(Modifier.height(12.dp))
-    OutlinedTextField(
+    var voiceMode by remember { mutableStateOf(false) }
+    var recording by remember { mutableStateOf(false) }
+    var recordSec by remember { mutableIntStateOf(0) }
+    LaunchedEffect(recording) {
+        recordSec = 0
+        while (recording) { delay(1000); recordSec++ }
+    }
+    if (voiceMode) {
+        VoiceBar(
+            recording = recording,
+            recordSec = recordSec,
+            onKeyboard = { voiceMode = false; recording = false },
+            onPressStart = { recording = true },
+            onPressEnd = {
+                val sec = recordSec
+                recording = false
+                if (sec > 0) {
+                    onInputChange("(語音回答・$sec 秒)")
+                    onSend()
+                }
+            },
+        )
+    } else     OutlinedTextField(
         value = input, onValueChange = onInputChange,
         placeholder = { Text("用口語回答就好", color = InkGray400) },
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
         trailingIcon = {
-            IconButton(onClick = onSend) {
-                Icon(Icons.Outlined.Send, contentDescription = null, tint = BrandOrange)
+            Row {
+                IconButton(onClick = { voiceMode = true }) {
+                    Icon(Icons.Outlined.Mic, contentDescription = null, tint = InkGray500)
+                }
+                IconButton(onClick = onSend) {
+                    Icon(Icons.Outlined.Send, contentDescription = null, tint = BrandOrange)
+                }
             }
         },
         maxLines = 4,

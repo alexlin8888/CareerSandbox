@@ -28,7 +28,7 @@ fun NewJobApplicationScreen(navController: NavHostController) {
     var position by remember { mutableStateOf("") }
     var jdText by remember { mutableStateOf("") }
 
-    val canSubmit = company.isNotBlank() && position.isNotBlank() && jdText.length >= 20
+    val canSubmit = company.isNotBlank() && position.isNotBlank()
 
     Scaffold(
         containerColor = PaperWhite,
@@ -78,7 +78,7 @@ fun NewJobApplicationScreen(navController: NavHostController) {
                 }
                 Spacer(Modifier.height(10.dp))
                 Text(
-                    "輸入公司名跟職位,貼上 JD 後 AI 會比對你的母版,自動生成第一個版本。之後你還可以繼續調整、生 v2 v3。",
+                    "輸入公司名跟職位就能開始。JD 可以現在貼,也可以之後再補,AI 會比對你的母版生出更準的版本。",
                     color = InkGray700,
                     style = MaterialTheme.typography.bodyMedium,
                     lineHeight = 22.sp,
@@ -196,7 +196,10 @@ fun NewJobApplicationScreen(navController: NavHostController) {
             if (!canSubmit) {
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "請完整填寫公司、職位、JD(至少 20 字元)",
+                    "先填:" + buildList {
+                        if (company.isBlank()) add("公司名")
+                        if (position.isBlank()) add("職位")
+                    }.joinToString("、"),
                     color = InkGray500,
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.align(Alignment.CenterHorizontally),

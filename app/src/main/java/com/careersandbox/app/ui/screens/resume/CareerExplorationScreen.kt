@@ -1045,17 +1045,17 @@ private fun SemanticExplorePanel(
                     val xKey = resolved.priorities[0]
                     val yKey = resolved.priorities[1]
                     val front = paretoFront(xKey, yKey)
-                    Text("取捨前緣 (Pareto)", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 15.sp)
+                    Text("魚與熊掌圖", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 15.sp)
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "你在意的兩件事會互相牴觸。前緣上的選擇彼此「互不被輾壓」 — 取捨落在哪,由你決定。",
+                        "你在意的這兩件事,常常不能都要。線上這些選擇,各自守住了一邊的好。往哪邊靠,你決定。",
                         color = InkGray500, fontSize = 12.sp, lineHeight = 18.sp,
                     )
                     Spacer(Modifier.height(12.dp))
                     ParetoChart(xKey = xKey, yKey = yKey, front = front)
                     Spacer(Modifier.height(14.dp))
 
-                    Text("落在前緣的選擇", color = InkGray700, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text("兩邊都顧得不錯的選擇", color = InkGray700, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     Spacer(Modifier.height(8.dp))
                     exploreRoles.filter { it.id in front }
                         .sortedByDescending { axisVal(it, xKey) }
