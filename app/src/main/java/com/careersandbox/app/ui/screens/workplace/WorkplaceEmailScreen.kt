@@ -50,6 +50,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.careersandbox.app.data.mock.WorkplaceState
 import com.careersandbox.app.R
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
@@ -237,6 +238,20 @@ fun WorkplaceEmailScreen(navController: NavHostController) {
     }
     LaunchedEffect(deck.size, phase) {
         if (phase == "LIVE" && deck.isEmpty()) { delay(600); phase = "REVIEW" }
+    }
+    var repSettled by remember { mutableStateOf(false) }
+    LaunchedEffect(phase) {
+        if (phase == "REVIEW" && !repSettled) {
+            repSettled = true
+            val correct = judged.count { it.correct }
+            val wrong = judged.size - correct
+            // 收件匣處理的準度 → 專業形象(對 +,錯扣一點,淨值結算)
+            val delta = (correct - wrong).coerceIn(-3, 3)
+            if (delta != 0) {
+                WorkplaceState.apply("專業形象", delta,
+                    "收件匣處理:$correct 對 $wrong 錯", day = 2)
+            }
+        }
     }
 
     fun drop(mail: StormMail, zone: String) {

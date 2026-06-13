@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.careersandbox.app.data.mock.WorkplaceState
 import com.careersandbox.app.R
 import com.careersandbox.app.ui.components.StaggeredAppear
 import com.careersandbox.app.ui.components.pressScale
@@ -44,10 +45,13 @@ private data class MomentCard(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkplaceReviewScreen(navController: NavHostController) {
+    fun netFor(meter: String): Int = WorkplaceState.log.filter { it.meter == meter }.sumOf { it.delta }
+    fun reasonFor(meter: String): String =
+        WorkplaceState.log.lastOrNull { it.meter == meter }?.reason ?: "這週沒什麼波動"
     val stats = listOf(
-        HiddenStat("主管信任", 62, +8, "誠實回報那次加的", AccentGreen),
-        HiddenStat("同事關係", 55, +3, "回了林經理那封信", AccentBlue),
-        HiddenStat("你的電量", 41, -19, "第一週,正常", BrandAmber),
+        HiddenStat("主管信任", WorkplaceState.managerTrust.value * 10, netFor("主管信任"), reasonFor("主管信任"), AccentGreen),
+        HiddenStat("同事情誼", WorkplaceState.peerBond.value * 10, netFor("同事情誼"), reasonFor("同事情誼"), AccentBlue),
+        HiddenStat("專業形象", WorkplaceState.proImage.value * 10, netFor("專業形象"), reasonFor("專業形象"), BrandAmber),
     )
     val moments = listOf(
         MomentCard(
@@ -104,6 +108,15 @@ fun WorkplaceReviewScreen(navController: NavHostController) {
                     Text("你撐過來了。來看這週留下的痕跡。",
                         color = PaperWhite.copy(alpha = 0.7f),
                         fontSize = 13.sp)
+                    Spacer(Modifier.height(14.dp))
+                    Box(
+                        Modifier.clip(RoundedCornerShape(50))
+                            .background(BrandOrange.copy(alpha = 0.18f))
+                            .padding(horizontal = 14.dp, vertical = 6.dp),
+                    ) {
+                        Text("這週的你:" + WorkplaceState.persona(),
+                            color = BrandAmber, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                    }
                 }
             }
 
@@ -149,6 +162,17 @@ fun WorkplaceReviewScreen(navController: NavHostController) {
                         color = PaperWhite.copy(alpha = 0.6f),
                         fontSize = 12.sp,
                         lineHeight = 19.sp)
+                    Spacer(Modifier.height(14.dp))
+                    Text(
+                        "Ken:" + kenVerdict(
+                            WorkplaceState.managerTrust.value,
+                            WorkplaceState.peerBond.value,
+                            WorkplaceState.proImage.value,
+                        ),
+                        color = PaperWhite.copy(alpha = 0.8f),
+                        fontSize = 13.sp,
+                        lineHeight = 20.sp,
+                    )
                     Spacer(Modifier.height(18.dp))
                     Image(
                         painter = painterResource(R.drawable.beaver_sleep),
@@ -262,4 +286,12 @@ private fun ReviewMomentCard(m: MomentCard) {
             fontSize = 13.sp,
             lineHeight = 20.sp)
     }
+}
+
+private fun kenVerdict(trust: Int, bond: Int, pro: Int): String = when {
+    trust >= 6 && pro >= 6 -> "「這週你扛得住事,也敢做決定。下週給你帶個小東西試試。」"
+    trust >= 6 -> "「我開始信得過你。把這份穩,帶到下週。」"
+    bond >= 6 && trust <= 3 -> "「同事很挺你。但有些決定,還是得你自己拍板。」"
+    pro <= 2 || trust <= 2 -> "「第一週本來就難。記得,事情是人一起做的,別自己硬扛。」"
+    else -> "「穩穩的。下週,讓我看到你更主動一點。」"
 }

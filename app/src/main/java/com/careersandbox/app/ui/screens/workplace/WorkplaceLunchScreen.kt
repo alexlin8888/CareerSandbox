@@ -35,6 +35,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
+import com.careersandbox.app.data.mock.RepChange
+import com.careersandbox.app.data.mock.WorkplaceState
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 import kotlinx.coroutines.delay
@@ -53,6 +55,9 @@ private data class LunchChoice(
     val extraReact: Pair<String, String>? = null,
     val closing: Pair<String, String>,               // 收尾行(說話者可變)
     val moodAfter: String,                           // 氣氛:鬆 / 暖 / 尬
+    val repMeter: String = "同事情誼",
+    val repDelta: Int = 0,
+    val repReason: String = "",
 )
 
 private data class LunchBeat(
@@ -76,6 +81,7 @@ private val lunchBeats = listOf(
                 "小芳" to "(她聳聳肩)行吧,你這人真穩。",
                 closing = "阿凱" to "(阿凱難得開口)……同意。",
                 moodAfter = "鬆",
+                repMeter = "同事情誼", repDelta = 1, repReason = "守住界線,小芳反而覺得你穩",
             ),
             LunchChoice(
                 "加入猜測", "下注",
@@ -83,6 +89,7 @@ private val lunchBeats = listOf(
                 "小芳" to "(她眼睛亮了)對吧對吧。欸,這話我能往外說嗎?",
                 closing = "阿凱" to "(他抬眼看了你一下,又低下去)",
                 moodAfter = "尬",
+                repMeter = "同事情誼", repDelta = -1, repReason = "跟著傳話,話會傳回來",
             ),
             LunchChoice(
                 "打聽更多", "挖",
@@ -90,6 +97,7 @@ private val lunchBeats = listOf(
                 "小芳" to "嘿,人資的小美跟我好。再說下去,要請我喝飲料了。",
                 closing = "阿凱" to "(他把咖啡喝完,看了看你們)",
                 moodAfter = "鬆",
+                repMeter = "同事情誼", repDelta = 0, repReason = "打聽更多,小芳留了個尾巴",
             ),
         ),
     ),
@@ -102,6 +110,7 @@ private val lunchBeats = listOf(
                 "阿凱" to "(他耳朵有點紅)……午休後,到我位子。",
                 closing = "小芳" to "哇,他從來沒給我看過。",
                 moodAfter = "暖",
+                repMeter = "同事情誼", repDelta = 2, repReason = "真心好奇,阿凱第一次給你看東西",
             ),
             LunchChoice(
                 "客套帶過", "滑過",
@@ -109,6 +118,7 @@ private val lunchBeats = listOf(
                 "阿凱" to "(他點點頭,話題就死在這裡)",
                 closing = "小芳" to "(她翻了個白眼)你們兩個,乾。",
                 moodAfter = "尬",
+                repMeter = "同事情誼", repDelta = -1, repReason = "客套帶過,話題死在這裡",
             ),
             LunchChoice(
                 "順勢開玩笑", "玩",
@@ -116,6 +126,7 @@ private val lunchBeats = listOf(
                 "阿凱" to "(他想了想)……比開會好。",
                 closing = "小芳" to "(她笑出聲)這句我要記下來。",
                 moodAfter = "鬆",
+                repMeter = "同事情誼", repDelta = 1, repReason = "玩笑開得剛好,氣氛鬆了",
             ),
         ),
     ),
@@ -128,6 +139,7 @@ private val lunchBeats = listOf(
                 "小芳" to "(她想挖更多,沒挖到)嘖,無聊。",
                 closing = "阿凱" to "(他嘴角動了一下)",
                 moodAfter = "鬆",
+                repMeter = "專業形象", repDelta = 1, repReason = "就事論事,沒被帶進抱怨",
             ),
             LunchChoice(
                 "跟著抱怨", "洩壓",
@@ -135,6 +147,7 @@ private val lunchBeats = listOf(
                 "小芳" to "對吧。放心,這話我幫你保密啦。",
                 closing = "阿凱" to "(他安靜地看著你們兩個)",
                 moodAfter = "尬",
+                repMeter = "專業形象", repDelta = -1, repReason = "背後抱怨主管,在新公司是險棋",
             ),
             LunchChoice(
                 "反問她", "回拋",
@@ -142,6 +155,7 @@ private val lunchBeats = listOf(
                 "小芳" to "我?我覺得他可怕又可靠啊。好啦,不聊這個。",
                 closing = "阿凱" to "(他看了看牆上的鐘)",
                 moodAfter = "鬆",
+                repMeter = "同事情誼", repDelta = 0, repReason = "反問擋掉了,但也沒走近",
             ),
         ),
     ),
@@ -154,6 +168,7 @@ private val lunchBeats = listOf(
                 "阿凱" to "(他點頭,走兩步又回頭)……帶你的筆電。",
                 closing = "小芳" to "(她小聲)他這樣,是真的要教你欸。",
                 moodAfter = "暖",
+                repMeter = "同事情誼", repDelta = 2, repReason = "接住阿凱的善意,他要帶你了",
             ),
             LunchChoice(
                 "模糊帶過", "飄",
@@ -161,6 +176,7 @@ private val lunchBeats = listOf(
                 "阿凱" to "(他「嗯」了一聲,門關上)",
                 closing = "小芳" to "「有空」在他的字典裡,就是不會來的意思。",
                 moodAfter = "尬",
+                repMeter = "同事情誼", repDelta = -2, repReason = "「有空」在他字典裡=不會來",
             ),
             LunchChoice(
                 "順便揪小芳", "擴圈",
@@ -168,6 +184,7 @@ private val lunchBeats = listOf(
                 "小芳" to "咦,我嗎?……好啊。",
                 closing = "阿凱" to "(他停了一秒)……人多,也行。",
                 moodAfter = "暖",
+                repMeter = "同事情誼", repDelta = 2, repReason = "把圈子拉大,兩個同事都靠近",
             ),
         ),
     ),
@@ -195,6 +212,7 @@ fun WorkplaceLunchScreen(navController: NavHostController) {
     }
     var awaitingChoice by remember { mutableStateOf(true) }
     var queuedMood by remember { mutableStateOf<String?>(null) }
+    var repPop by remember { mutableStateOf<RepChange?>(null) }
 
     LaunchedEffect(fullText) {
         typed = ""
@@ -227,6 +245,10 @@ fun WorkplaceLunchScreen(navController: NavHostController) {
     }
 
     fun choose(c: LunchChoice) {
+        if (c.repDelta != 0) {
+            repPop = WorkplaceState.apply(c.repMeter, c.repDelta, c.repReason, day = 4)
+        }
+        if (c.stance == "接住" || c.stance == "擴圈") WorkplaceState.setFlag("lunch_bonded_akai")
         awaitingChoice = false
         queuedMood = c.moodAfter
         pendingLines.clear()
@@ -431,5 +453,29 @@ fun WorkplaceLunchScreen(navController: NavHostController) {
                 }
             }
         }
+
+        // 聲望變動彈窗
+        repPop?.let { rc ->
+            Box(
+                Modifier.fillMaxSize().padding(top = 80.dp),
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                Row(
+                    Modifier.clip(RoundedCornerShape(50))
+                        .background(if (rc.delta > 0) AccentGreen else AccentRed)
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        (if (rc.delta > 0) "\u25B2 " else "\u25BC ") + rc.meter + " " +
+                            (if (rc.delta > 0) "+" else "") + rc.delta,
+                        color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 13.sp,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(rc.reason, color = PaperWhite.copy(alpha = 0.9f), fontSize = 11.sp)
+                }
+            }
+        }
+
     }
 }

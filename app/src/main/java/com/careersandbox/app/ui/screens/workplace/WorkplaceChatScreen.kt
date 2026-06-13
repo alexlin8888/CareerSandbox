@@ -36,6 +36,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
+import com.careersandbox.app.data.mock.RepChange
+import com.careersandbox.app.data.mock.WorkplaceState
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 import kotlinx.coroutines.delay
@@ -53,6 +55,9 @@ private data class StanceChoice(
     val kenReact: String,     // Ken 的反應
     val moodAfter: String,    // 心情膠囊變化
     val motion: SceneMotion,  // 立繪微動
+    val repMeter: String = "主管信任",
+    val repDelta: Int = 0,
+    val repReason: String = "",
 )
 
 private data class Beat(
@@ -77,18 +82,21 @@ private val beats = listOf(
                 "是我低估了第三方 API 的坑。debug 花掉的時間,我沒有及早講。",
                 "(他點了點頭)好,知道問題在哪就好。",
                 "平靜", SceneMotion.TILT,
+                repMeter = "主管信任", repDelta = 2, repReason = "你沒繞,直接扛起延期",
             ),
             StanceChoice(
                 "先道歉,再解釋", "緩衝",
                 "抱歉,讓你最後才知道。原因是 API 文件跟實際行為不一致。",
                 "道歉收下。但我更想要的是:你卡住的當下,我就知道。",
                 "平靜", SceneMotion.NONE,
+                repMeter = "主管信任", repDelta = 1, repReason = "你道了歉,但他更在意即時同步",
             ),
             StanceChoice(
                 "反問優先順序", "轉守為攻",
                 "在講延期之前,我想先確認:匯出跟新需求,哪個優先?",
                 "(他停了兩秒)問得好。但別用問題接問題,先回答我的。",
                 "更不耐", SceneMotion.SHAKE,
+                repMeter = "主管信任", repDelta = -1, repReason = "用問題擋問題,他不買單",
             ),
         ),
     ),
@@ -100,18 +108,21 @@ private val beats = listOf(
                 "週三就發現了。當下想先自己解,是我判斷錯,應該先說。",
                 "(他在筆記上寫了一行)對。卡住不丟臉,悶著才會出事。",
                 "平靜", SceneMotion.TILT,
+                repMeter = "主管信任", repDelta = 2, repReason = "你承認該早點說,他記了一筆好的",
             ),
             StanceChoice(
                 "說明當時的判斷", "說理",
                 "我評估那時還追得回來,不想太早拉警報。",
                 "我懂。但要不要拉警報,讓我跟你一起判斷,不是你一個人扛。",
                 "平靜", SceneMotion.NONE,
+                repMeter = "專業形象", repDelta = 1, repReason = "你說明了判斷,但他要的是一起判斷",
             ),
             StanceChoice(
                 "說自己太忙忘了", "迴避",
                 "就……事情比較多,一忙就忘了同步。",
                 "(他盯著你兩秒)忙不是理由,是現象。再來一次。",
                 "更不耐", SceneMotion.SHAKE,
+                repMeter = "主管信任", repDelta = -2, repReason = "「太忙忘了」被他當成藉口",
             ),
         ),
     ),
@@ -123,18 +134,21 @@ private val beats = listOf(
                 "週三中午前修完核心路徑,當天下午我自己先跑一輪回歸。",
                 "可以。週三中午,我會記得。",
                 "平靜", SceneMotion.TILT,
+                repMeter = "專業形象", repDelta = 2, repReason = "你給了一個敢簽名的日期",
             ),
             StanceChoice(
                 "開口要支援", "要資源",
                 "如果阿哲能借我半天,週二就能收掉,風險低很多。",
                 "(他想了一下)我去跟他主管說。這種話早講,半天就能省兩天。",
                 "緩和", SceneMotion.TILT,
+                repMeter = "主管信任", repDelta = 1, repReason = "你早點開口要支援,省了兩天",
             ),
             StanceChoice(
                 "說盡量趕", "保守承諾",
                 "我盡量趕,應該……來得及。",
                 "「應該」進不了我的報告。給我一個你敢簽名的日期。",
                 "不耐", SceneMotion.SHAKE,
+                repMeter = "專業形象", repDelta = -2, repReason = "「應該」進不了他的報告",
             ),
         ),
     ),
@@ -146,18 +160,21 @@ private val beats = listOf(
                 "新需求的評估能不能延到 demo 後?我想先把眼前的收乾淨。",
                 "成交,我去擋。專注是用換的,不是用撐的。",
                 "緩和", SceneMotion.TILT,
+                repMeter = "主管信任", repDelta = 2, repReason = "你提了真需求,他答應幫你擋",
             ),
             StanceChoice(
                 "說目前沒有", "硬扛",
                 "目前沒有,我自己可以。",
                 "(他看了你一眼)行。但這扇門一直開著,別等淹到脖子才敲。",
                 "平靜", SceneMotion.NONE,
+                repMeter = "主管信任", repDelta = 1, repReason = "你說自己可以,他把門留著",
             ),
             StanceChoice(
                 "反過來關心他", "反客為主",
                 "倒是你,這週往上報的壓力,還好嗎?",
                 "(他愣了一下,笑出來)輪不到你操心。滾回去工作。",
                 "緩和", SceneMotion.TILT,
+                repMeter = "同事情誼", repDelta = 1, repReason = "你關心了他,氣氛軟下來",
             ),
         ),
     ),
@@ -175,6 +192,7 @@ fun WorkplaceChatScreen(navController: NavHostController) {
     var mood by remember { mutableStateOf("不耐") }
     val pendingLines = remember { mutableStateListOf<Pair<String, String>>() }
     var awaitingChoice by remember { mutableStateOf(true) }
+    var repPop by remember { mutableStateOf<RepChange?>(null) }
     var queuedMotion by remember { mutableStateOf(SceneMotion.NONE) }
     var queuedMood by remember { mutableStateOf<String?>(null) }
 
@@ -233,12 +251,19 @@ fun WorkplaceChatScreen(navController: NavHostController) {
         awaitingChoice = false
         queuedMood = c.moodAfter
         queuedMotion = c.motion
+        if (c.repDelta != 0) {
+            repPop = WorkplaceState.apply(c.repMeter, c.repDelta, c.repReason, day = 1)
+        }
         pendingLines.clear()
         pendingLines.add("你" to c.playerLine)
         pendingLines.add("Ken" to c.kenReact)
         phase = ScenePhase.TALKING
         val (s, t) = pendingLines.removeAt(0)
         speaker = s; fullText = t
+    }
+
+    LaunchedEffect(repPop) {
+        if (repPop != null) { kotlinx.coroutines.delay(1900); repPop = null }
     }
 
     Box(Modifier.fillMaxSize().background(InkCharcoal)) {
@@ -471,6 +496,29 @@ fun WorkplaceChatScreen(navController: NavHostController) {
                 ) {
                     Text("回到路徑",
                         color = PaperWhite, fontWeight = FontWeight.Black)
+                }
+            }
+        }
+
+        // 聲望變動彈窗
+        repPop?.let { rc ->
+            Box(
+                Modifier.fillMaxSize().padding(top = 80.dp),
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                Row(
+                    Modifier.clip(RoundedCornerShape(50))
+                        .background(if (rc.delta > 0) AccentGreen else AccentRed)
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        (if (rc.delta > 0) "▲ " else "▼ ") + rc.meter + " " +
+                            (if (rc.delta > 0) "+" else "") + rc.delta,
+                        color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 13.sp,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(rc.reason, color = PaperWhite.copy(alpha = 0.9f), fontSize = 11.sp)
                 }
             }
         }

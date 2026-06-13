@@ -38,6 +38,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
+import com.careersandbox.app.data.mock.RepChange
+import com.careersandbox.app.data.mock.WorkplaceState
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 import kotlinx.coroutines.delay
@@ -59,6 +61,9 @@ private data class MeetChoice(
     val kenReact: String,
     val moodAfter: String,                           // 會議氣氛:緊 / 僵 / 緩 / 鬆
     val motion: MeetMotion,
+    val repMeter: String = "專業形象",
+    val repDelta: Int = 0,
+    val repReason: String = "",
 )
 
 private data class MeetBeat(
@@ -82,6 +87,7 @@ private val meetBeats = listOf(
                 "阿凱" to "五個工作天。一個都壓不掉。",
                 "(他記了一筆)好,有數字了。繼續。",
                 "緊", MeetMotion.TILT,
+                repMeter = "專業形象", repDelta = 2, repReason = "先要數據再表態,Ken 記了一筆",
             ),
             MeetChoice(
                 "順著業務", "快",
@@ -89,6 +95,7 @@ private val meetBeats = listOf(
                 "阿凱" to "(他終於抬頭)付款炸掉的時候,誰半夜起來修?",
                 "你聽到工程的問題了。這不叫判斷,叫賭。",
                 "僵", MeetMotion.SHAKE,
+                repMeter = "專業形象", repDelta = -2, repReason = "邊上邊補=賭,不是判斷",
             ),
             MeetChoice(
                 "站工程", "保守",
@@ -96,6 +103,7 @@ private val meetBeats = listOf(
                 "小芳" to "延兩週?客戶的違約金,算你的?",
                 "立場可以。但你只回答了一邊的問題。",
                 "僵", MeetMotion.NONE,
+                repMeter = "專業形象", repDelta = -1, repReason = "立場對,但只回答了一邊",
             ),
         ),
     ),
@@ -108,6 +116,7 @@ private val meetBeats = listOf(
                 "小芳" to "……這個我可以去談。",
                 "(他往後靠)這才像個方案。",
                 "緩", MeetMotion.TILT,
+                repMeter = "專業形象", repDelta = 2, repReason = "分階段:看得到東西,也鎖得住風險",
             ),
             MeetChoice(
                 "加班硬趕", "燃燒",
@@ -115,6 +124,7 @@ private val meetBeats = listOf(
                 "阿凱" to "(他看了你兩秒)加班可以。品質,我不保證。",
                 "用人的肝去填排程的洞。記住這個選擇的成本。",
                 "緊", MeetMotion.NONE,
+                repMeter = "同事情誼", repDelta = -1, repReason = "用同事的肝填排程的洞",
             ),
             MeetChoice(
                 "丟回給主管", "上拋",
@@ -122,6 +132,7 @@ private val meetBeats = listOf(
                 null,
                 "(他盯著你)我找你來,就是要你的決定。……分階段。下次,這句話要從你嘴裡出來。",
                 "僵", MeetMotion.SHAKE,
+                repMeter = "主管信任", repDelta = -2, repReason = "Ken 要的是你的決定,不是上拋",
             ),
         ),
     ),
@@ -134,6 +145,7 @@ private val meetBeats = listOf(
                 "小芳" to "(她快速記下)可以,這個說法能用。",
                 "跨部門,就是這樣補位的。",
                 "鬆", MeetMotion.TILT,
+                repMeter = "同事情誼", repDelta = 2, repReason = "你給了小芳能用的說法",
             ),
             MeetChoice(
                 "切割", "自掃",
@@ -141,6 +153,7 @@ private val meetBeats = listOf(
                 "小芳" to "(她笑了一下,不太好看)行,各掃門前雪嘛。",
                 "牆,就是這樣砌起來的。",
                 "僵", MeetMotion.SHAKE,
+                repMeter = "同事情誼", repDelta = -2, repReason = "各掃門前雪,牆就這樣砌起來",
             ),
             MeetChoice(
                 "拉主管背書", "借力",
@@ -148,6 +161,7 @@ private val meetBeats = listOf(
                 null,
                 "信我可以發。但下次,先想自己能不能扛,再來借我的名字。",
                 "緩", MeetMotion.NONE,
+                repMeter = "主管信任", repDelta = -1, repReason = "先想能不能扛,再借主管的名字",
             ),
         ),
     ),
@@ -160,6 +174,7 @@ private val meetBeats = listOf(
                 null,
                 "(他難得鬆了一下眉)能看見自己的洞,比方案值錢。",
                 "鬆", MeetMotion.TILT,
+                repMeter = "專業形象", repDelta = 1, repReason = "能看見自己的洞,比方案值錢",
             ),
             MeetChoice(
                 "打高分", "自信",
@@ -167,6 +182,7 @@ private val meetBeats = listOf(
                 null,
                 "方案是大家湊的。九分,留給下次自己扛全場的時候。",
                 "緊", MeetMotion.NONE,
+                repMeter = "主管信任", repDelta = -1, repReason = "方案是大家湊的",
             ),
             MeetChoice(
                 "謙到底", "低姿態",
@@ -174,6 +190,7 @@ private val meetBeats = listOf(
                 null,
                 "過度貶低跟過度膨脹一樣,都不準。重打。",
                 "緊", MeetMotion.NONE,
+                repMeter = "專業形象", repDelta = -1, repReason = "過度貶低跟膨脹一樣不準",
             ),
         ),
     ),
@@ -270,6 +287,9 @@ fun WorkplaceMeetingScreen(navController: NavHostController) {
     }
 
     fun choose(c: MeetChoice) {
+        if (c.repDelta != 0) {
+            repPop = WorkplaceState.apply(c.repMeter, c.repDelta, c.repReason, day = 3)
+        }
         awaitingChoice = false
         queuedMood = c.moodAfter
         queuedMotion = c.motion
@@ -473,5 +493,29 @@ fun WorkplaceMeetingScreen(navController: NavHostController) {
                 }
             }
         }
+
+        // 聲望變動彈窗
+        repPop?.let { rc ->
+            Box(
+                Modifier.fillMaxSize().padding(top = 80.dp),
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                Row(
+                    Modifier.clip(RoundedCornerShape(50))
+                        .background(if (rc.delta > 0) AccentGreen else AccentRed)
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        (if (rc.delta > 0) "\u25B2 " else "\u25BC ") + rc.meter + " " +
+                            (if (rc.delta > 0) "+" else "") + rc.delta,
+                        color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 13.sp,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(rc.reason, color = PaperWhite.copy(alpha = 0.9f), fontSize = 11.sp)
+                }
+            }
+        }
+
     }
 }

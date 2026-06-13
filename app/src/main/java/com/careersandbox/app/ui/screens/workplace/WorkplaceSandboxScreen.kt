@@ -46,6 +46,8 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
 import com.careersandbox.app.navigation.Routes
+import com.careersandbox.app.data.mock.WorkplaceState
+import androidx.compose.animation.core.animateFloatAsState
 import com.careersandbox.app.ui.components.StaggeredAppear
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
@@ -117,6 +119,11 @@ fun WorkplaceSandboxScreen(navController: NavHostController) {
             }
         }
 
+        Spacer(Modifier.height(20.dp))
+
+        // === 職場聲望儀表板(貫穿五天的主線)===
+        StaggeredAppear(delayMillis = 80) { ReputationDashboard() }
+
         Spacer(Modifier.height(30.dp))
 
         // === zigzag 路徑 ===
@@ -145,7 +152,12 @@ fun WorkplaceSandboxScreen(navController: NavHostController) {
         )
 
         Spacer(Modifier.height(40.dp))
-    }
+        }
+
+        // 入職介紹:第一次進沙盒播一次
+        if (!WorkplaceState.seenIntro.value) {
+            SandboxIntroOverlay(onStart = { WorkplaceState.seenIntro.value = true })
+        }
     }
 }
 
@@ -383,6 +395,105 @@ private fun SandboxBackdrop() {
                 radius = if (i % 3 == 0) 7f else 4.5f,
                 center = o,
             )
+        }
+    }
+}
+
+/* ===================== 職場聲望儀表板 ===================== */
+
+@Composable
+private fun ReputationDashboard() {
+    Column(
+        modifier = Modifier
+            .padding(horizontal = 20.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(PaperWhite)
+            .padding(18.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("這週的你", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 15.sp)
+            Spacer(Modifier.weight(1f))
+            Text("每個選擇都在累積", color = InkGray400, fontSize = 10.sp)
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            WorkplaceState.persona(),
+            color = BrandDeepOrange, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+        )
+        Spacer(Modifier.height(14.dp))
+        RepMeter("主管信任", WorkplaceState.managerTrust.value, BrandOrange)
+        Spacer(Modifier.height(10.dp))
+        RepMeter("同事情誼", WorkplaceState.peerBond.value, BrandAmber)
+        Spacer(Modifier.height(10.dp))
+        RepMeter("專業形象", WorkplaceState.proImage.value, BrandDeepOrange)
+    }
+}
+
+@Composable
+private fun RepMeter(label: String, value: Int, color: Color) {
+    val frac by animateFloatAsState(
+        targetValue = value / 10f,
+        animationSpec = tween(700, easing = FastOutSlowInEasing),
+        label = "rep$label",
+    )
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(label, color = InkGray700, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.width(64.dp))
+        Spacer(Modifier.width(10.dp))
+        Box(
+            Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(50)).background(InkGray100),
+        ) {
+            Box(
+                Modifier.fillMaxWidth(frac.coerceAtLeast(0.02f)).fillMaxHeight()
+                    .clip(RoundedCornerShape(50)).background(color),
+            )
+        }
+        Spacer(Modifier.width(10.dp))
+        Text("$value", color = color, fontWeight = FontWeight.Black, fontSize = 14.sp,
+            modifier = Modifier.width(20.dp))
+    }
+}
+
+/* ===================== 入職介紹 ===================== */
+
+@Composable
+private fun SandboxIntroOverlay(onStart: () -> Unit) {
+    Box(
+        Modifier.fillMaxSize().background(InkCharcoal.copy(alpha = 0.92f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            Modifier.padding(horizontal = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Image(
+                painter = painterResource(R.drawable.beaver_point),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.size(110.dp),
+            )
+            Spacer(Modifier.height(16.dp))
+            Text("這是你入職的第一週", color = PaperWhite,
+                fontWeight = FontWeight.Black, fontSize = 22.sp)
+            Spacer(Modifier.height(12.dp))
+            Text(
+                "每個選擇都會影響三件事:主管怎麼看你、同事跟不跟你、你像不像個專業的人。",
+                color = PaperWhite.copy(alpha = 0.8f), fontSize = 14.sp, lineHeight = 22.sp,
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "犯錯沒關係,這裡不會留案底。",
+                color = BrandAmber, fontSize = 13.sp, fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(28.dp))
+            Box(
+                Modifier.clip(RoundedCornerShape(16.dp)).background(BrandOrange)
+                    .pressScale(onClick = onStart)
+                    .padding(horizontal = 32.dp, vertical = 14.dp),
+            ) {
+                Text("開始第一週", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 15.sp)
+            }
         }
     }
 }
