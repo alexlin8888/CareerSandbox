@@ -18,6 +18,13 @@ import androidx.navigation.compose.rememberNavController
 import com.careersandbox.app.navigation.CareerSandboxNavHost
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.BottomNav
+import com.careersandbox.app.ui.components.TourState
+import com.careersandbox.app.ui.components.FeatureTourOverlay
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import com.careersandbox.app.ui.components.shouldShowBottomNav
 import com.careersandbox.app.ui.theme.CareerSandboxTheme
 
@@ -55,17 +62,35 @@ fun CareerSandboxApp() {
         }
     }
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.background,
-        bottomBar = {
-            if (shouldShowBottomNav(currentRoute)) {
-                BottomNav(navController)
+    val context = LocalContext.current
+    val onHome = currentRoute == Routes.HOME
+    var tourVisible by remember { mutableStateOf(false) }
+    // 首次啟動、且回到首頁時自動播一次
+    LaunchedEffect(onHome) {
+        if (onHome && TourState.shouldShowOnLaunch(context)) tourVisible = true
+    }
+    // 設定頁手動重看
+    LaunchedEffect(TourState.forceShow) {
+        if (TourState.forceShow) { tourVisible = true; TourState.forceShow = false }
+    }
+
+    Box(Modifier.fillMaxSize()) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = MaterialTheme.colorScheme.background,
+            bottomBar = {
+                if (shouldShowBottomNav(currentRoute)) {
+                    BottomNav(navController)
+                }
+            },
+        ) { innerPadding ->
+            Box(Modifier.fillMaxSize().padding(innerPadding)) {
+                CareerSandboxNavHost(navController = navController)
             }
-        },
-    ) { innerPadding ->
-        Box(Modifier.fillMaxSize().padding(innerPadding)) {
-            CareerSandboxNavHost(navController = navController)
+        }
+        FeatureTourOverlay(visible = tourVisible) {
+            tourVisible = false
+            TourState.markSeen(context)
         }
     }
 }

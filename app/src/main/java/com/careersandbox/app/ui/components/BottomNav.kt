@@ -13,6 +13,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -106,6 +108,9 @@ fun BottomNav(navController: NavHostController) {
         Column(
             modifier = Modifier
                 .size(width = 60.dp, height = 68.dp)
+                .onGloballyPositioned {
+                    TourAnchors.bounds[Routes.INTERVIEW_HUB] = it.boundsInRoot()
+                }
                 .pressScale {
                     navigateToTab(navController, Routes.INTERVIEW_HUB, currentRoute)
                 },
@@ -149,6 +154,9 @@ private fun PillTab(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
+    val anchorMod = Modifier.onGloballyPositioned {
+        TourAnchors.bounds[tab.route] = it.boundsInRoot()
+    }
     val iconColor by animateColorAsState(
         targetValue = if (selected) InkCharcoal else InkGray400,
         animationSpec = tween(240),
@@ -161,7 +169,7 @@ private fun PillTab(
     )
 
     Column(
-        modifier = Modifier
+        modifier = anchorMod
             .width(56.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(bgColor)
