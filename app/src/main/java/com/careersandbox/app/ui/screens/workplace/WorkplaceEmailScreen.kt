@@ -243,7 +243,7 @@ fun WorkplaceEmailScreen(navController: NavHostController) {
     LaunchedEffect(phase) {
         if (phase == "REVIEW" && !repSettled) {
             repSettled = true
-            val correct = judged.count { it.correct }
+            val correct = judged.count { it.right }
             val wrong = judged.size - correct
             // 收件匣處理的準度 → 專業形象(對 +,錯扣一點,淨值結算)
             val delta = (correct - wrong).coerceIn(-3, 3)

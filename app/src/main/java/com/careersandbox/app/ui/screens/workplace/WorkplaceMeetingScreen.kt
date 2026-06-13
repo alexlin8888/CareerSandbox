@@ -231,6 +231,7 @@ fun WorkplaceMeetingScreen(navController: NavHostController) {
     var awaitingChoice by remember { mutableStateOf(true) }
     var queuedMotion by remember { mutableStateOf(MeetMotion.NONE) }
     var queuedMood by remember { mutableStateOf<String?>(null) }
+    var repPop by remember { mutableStateOf<RepChange?>(null) }
 
     val scope = rememberCoroutineScope()
     val shakeX = remember { Animatable(0f) }
