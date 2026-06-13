@@ -145,13 +145,12 @@ fun FeatureTourOverlay(visible: Boolean, onClose: () -> Unit) {
 
             // 箭頭:從卡片指向 tab(畫在洞的正上方)
             anchor?.let {
-                val arrowYpx = it.top - 14.dp.toPx()
                 Canvas(
                     Modifier
                         .offset {
                             IntOffset(
                                 (it.center.x - 12.dp.toPx()).roundToInt(),
-                                (arrowYpx - 12.dp.toPx()).roundToInt(),
+                                (it.top - 14.dp.toPx() - 12.dp.toPx()).roundToInt(),
                             )
                         }
                         .size(24.dp),
