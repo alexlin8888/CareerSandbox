@@ -31,6 +31,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -688,9 +689,6 @@ private fun SkillGapSection() {
     val matched = roleRequires.filter { it in userHas }   // 交集:要、你有
     val other = userHas.filter { it !in roleRequires }    // 你有、但這份 JD 沒要求
 
-    var showGap by remember { mutableStateOf(true) }
-    var showMatched by remember { mutableStateOf(false) }
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -705,65 +703,54 @@ private fun SkillGapSection() {
             color = InkGray500, fontSize = 13.sp, lineHeight = 19.sp,
         )
         Spacer(Modifier.height(16.dp))
-        SkillGapVenn(
-            gapSkills = gap,
-            matchedSkills = matched,
-            otherSkills = other,
-            onGapTap = { showGap = !showGap },
-            onMatchedTap = { showMatched = !showMatched },
-        )
+        LedgerHeader(matchedCount = matched.size, gapCount = gap.size)
         Spacer(Modifier.height(16.dp))
 
-        // 還缺 — 差集優先,可展開行動卡
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().pressScale { showGap = !showGap },
-        ) {
-            Box(Modifier.size(8.dp).clip(CircleShape).background(BrandDeepOrange))
+        // 還缺:差集是主角,直接全展開
+        var heroIn by remember { mutableStateOf(false) }
+        LaunchedEffect(Unit) { heroIn = true }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            PulseDot()
             Spacer(Modifier.width(8.dp))
-            Text("還缺(點開看怎麼補)", color = BrandDeepOrange, fontWeight = FontWeight.Black, fontSize = 13.sp)
+            Text("還缺 ${gap.size} 項", color = BrandDeepOrange, fontWeight = FontWeight.Black, fontSize = 14.sp)
             Spacer(Modifier.weight(1f))
-            Icon(
-                if (showGap) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
-                contentDescription = null, tint = InkGray400, modifier = Modifier.size(18.dp),
-            )
+            Text("先補這裡", color = InkGray400, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         }
-        AnimatedVisibility(visible = showGap) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
-                gap.forEach { GapDetailCard(it) }
+        Spacer(Modifier.height(10.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            gap.forEachIndexed { gi, gSkill ->
+                val rv by animateFloatAsState(
+                    targetValue = if (heroIn) 1f else 0f,
+                    animationSpec = tween(380, delayMillis = gi * 110, easing = FastOutSlowInEasing),
+                    label = "heroRow$gi",
+                )
+                Box(
+                    Modifier
+                        .alpha(rv)
+                        .offset(y = ((1f - rv) * 14).dp),
+                ) { GapDetailCard(gSkill) }
             }
         }
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(16.dp))
 
-        // 已符合 — 收合低調
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().pressScale { showMatched = !showMatched },
-        ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(8.dp).clip(CircleShape).background(AccentGreen))
             Spacer(Modifier.width(8.dp))
             Text("已符合 ${matched.size} 項", color = InkGray700, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-            Spacer(Modifier.weight(1f))
-            Icon(
-                if (showMatched) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
-                contentDescription = null, tint = InkGray400, modifier = Modifier.size(18.dp),
-            )
         }
-        AnimatedVisibility(visible = showMatched) {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(top = 8.dp),
-            ) {
-                matched.forEach { c ->
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50))
-                            .background(InkGray100)
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
-                    ) {
-                        Text(c, color = InkGray700, fontWeight = FontWeight.Medium, fontSize = 12.sp)
-                    }
+        Spacer(Modifier.height(8.dp))
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            matched.forEach { c ->
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(InkGray100)
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                ) {
+                    Text("✓ $c", color = InkGray700, fontWeight = FontWeight.Medium, fontSize = 12.sp)
                 }
             }
         }
@@ -863,212 +850,6 @@ private fun GapDetailCard(skill: String) {
     }
 }
 
-@Composable
-private fun SkillGapVenn(
-    gapSkills: List<String>,
-    matchedSkills: List<String>,
-    otherSkills: List<String>,
-    onGapTap: () -> Unit,
-    onMatchedTap: () -> Unit,
-) {
-    var appear by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { appear = true }
-    // 右圓(你)從右側滑進來疊上左圓 — 「你正在靠近這份工作」
-    val slide by animateFloatAsState(
-        targetValue = if (appear) 0f else 1f,
-        animationSpec = tween(1000, easing = FastOutSlowInEasing),
-        label = "vennSlide",
-    )
-    val grow by animateFloatAsState(
-        targetValue = if (appear) 1f else 0f,
-        animationSpec = tween(450),
-        label = "vennGrow",
-    )
-    val chipAlpha by animateFloatAsState(
-        targetValue = if (appear) 1f else 0f,
-        animationSpec = tween(400, delayMillis = 1050),
-        label = "vennChips",
-    )
-    val stripeAnim = rememberInfiniteTransition(label = "vennStripes")
-    val phase by stripeAnim.animateFloat(
-        initialValue = 0f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(2800, easing = LinearEasing)),
-        label = "phase",
-    )
-    val gapPulse by stripeAnim.animateFloat(
-        initialValue = 1f, targetValue = 1.06f,
-        animationSpec = infiniteRepeatable(tween(1500), RepeatMode.Reverse),
-        label = "gapPulse",
-    )
-    val animGap by animateIntAsState(targetValue = if (appear) gapSkills.size else 0, label = "vennGap")
-    val animMatch by animateIntAsState(targetValue = if (appear) matchedSkills.size else 0, label = "vennMatch")
-
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Box(
-            modifier = Modifier.fillMaxWidth().height(200.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Canvas(modifier = Modifier.fillMaxWidth().height(200.dp)) {
-                val h = size.height
-                val rL = h * 0.43f
-                val rR = h * 0.35f
-                if (grow <= 0.02f) return@Canvas
-                val cy = h / 2f
-                val cx = size.width / 2f
-                val d = (rL + rR) * 0.58f
-                val cxL = cx - d / 2f
-                val cxR = cx + d / 2f + size.width * 0.42f * slide
-                val leftPath = Path().apply { addOval(Rect(Offset(cxL, cy), rL * grow)) }
-                val rightPath = Path().apply { addOval(Rect(Offset(cxR, cy), rR * grow)) }
-                val diff = Path().apply { op(leftPath, rightPath, PathOperation.Difference) }
-                val inter = Path().apply { op(leftPath, rightPath, PathOperation.Intersect) }
-                // 你有的(右圈)— 低調灰
-                drawPath(rightPath, color = InkGray200.copy(alpha = 0.5f * grow))
-                // 交集(符合)— 暖色淺
-                drawPath(inter, color = BrandPeach.copy(alpha = 0.9f))
-                // 差集(還缺)— 底色 + 飄動斜紋:還沒填滿的那塊
-                drawPath(diff, color = BrandDeepOrange.copy(alpha = 0.30f * grow))
-                clipPath(diff) {
-                    val stripeW = 5.dp.toPx()
-                    val gapW = 15.dp.toPx()
-                    val step = stripeW + gapW
-                    rotate(degrees = -24f, pivot = Offset(cxL, cy)) {
-                        var x = -size.width + phase * step
-                        while (x < size.width * 2f) {
-                            drawRect(
-                                color = BrandDeepOrange.copy(alpha = 0.35f),
-                                topLeft = Offset(x, cy - size.height * 1.5f),
-                                size = Size(stripeW, size.height * 3f),
-                            )
-                            x += step
-                        }
-                    }
-                }
-                // 外框
-                drawPath(leftPath, color = BrandDeepOrange.copy(alpha = grow), style = Stroke(width = 3.dp.toPx()))
-                drawPath(
-                    rightPath,
-                    color = InkGray400.copy(alpha = grow),
-                    style = Stroke(
-                        width = 2.dp.toPx(),
-                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f)),
-                    ),
-                )
-            }
-            // 圈標籤
-            Text(
-                "職位要求",
-                color = BrandDeepOrange, fontSize = 10.sp, fontWeight = FontWeight.Bold,
-                modifier = Modifier.align(Alignment.TopStart).padding(start = 22.dp, top = 6.dp),
-            )
-            Text(
-                "你有的",
-                color = InkGray500, fontSize = 10.sp, fontWeight = FontWeight.Bold,
-                modifier = Modifier.align(Alignment.TopEnd).padding(end = 40.dp, top = 20.dp),
-            )
-            // 還缺:數字 + 技能 chip 住進差集
-            Column(
-                modifier = Modifier.align(Alignment.Center).offset(x = (-64).dp).alpha(chipAlpha),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Text("還缺 ", color = PaperWhite, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 3.dp))
-                    Text("$animGap", color = PaperWhite, fontSize = 28.sp,
-                        fontWeight = FontWeight.Black,
-                        modifier = Modifier.scale(gapPulse))
-                }
-                Spacer(Modifier.height(6.dp))
-                gapSkills.take(3).forEach { skill ->
-                    Box(
-                        modifier = Modifier
-                            .padding(vertical = 2.dp)
-                            .clip(RoundedCornerShape(50))
-                            .background(PaperWhite)
-                            .padding(horizontal = 8.dp, vertical = 3.dp),
-                    ) {
-                        Text(skill, color = BrandDeepOrange, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                    }
-                }
-            }
-            // 符合:數字 + 小 chip 住進交集
-            Column(
-                modifier = Modifier.align(Alignment.Center).offset(x = 12.dp).alpha(chipAlpha),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text("符合 $animMatch", color = BrandDeepOrange, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                Spacer(Modifier.height(4.dp))
-                matchedSkills.take(3).forEach { skill ->
-                    Box(
-                        modifier = Modifier
-                            .padding(vertical = 1.dp)
-                            .clip(RoundedCornerShape(50))
-                            .background(PaperWhite.copy(alpha = 0.85f))
-                            .padding(horizontal = 6.dp, vertical = 2.dp),
-                    ) {
-                        Text(skill, color = InkGray700, fontSize = 8.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-            // 你多出來的(右圓專屬區,低調)
-            Column(
-                modifier = Modifier.align(Alignment.Center).offset(x = 88.dp).alpha(chipAlpha),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text("你多出來的", color = InkGray400, fontSize = 8.sp, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(4.dp))
-                otherSkills.take(3).forEach { skill ->
-                    Box(
-                        modifier = Modifier
-                            .padding(vertical = 1.dp)
-                            .clip(RoundedCornerShape(50))
-                            .background(PaperWhite.copy(alpha = 0.7f))
-                            .padding(horizontal = 6.dp, vertical = 2.dp),
-                    ) {
-                        Text(skill, color = InkGray500, fontSize = 8.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-
-            // 可點區域:差集 → 缺項卡;交集 → 已符合清單
-            Box(
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .fillMaxHeight()
-                    .fillMaxWidth(0.36f)
-                    .pressScale(onClick = onGapTap),
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .offset(x = 12.dp)
-                    .width(70.dp)
-                    .height(130.dp)
-                    .pressScale(onClick = onMatchedTap),
-            )
-        }
-        Spacer(Modifier.height(4.dp))
-        Text("點圖上的區域,看細節", color = InkGray400, fontSize = 10.sp)
-        Spacer(Modifier.height(10.dp))
-        // 一句話總結(不動)
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .clip(RoundedCornerShape(50))
-                .background(BrandPeach.copy(alpha = 0.25f))
-                .padding(horizontal = 14.dp, vertical = 7.dp),
-        ) {
-            Text("這份 JD 你已符合 ", color = InkGray500, fontSize = 12.sp)
-            Text("${matchedSkills.size}", color = AccentGreen, fontSize = 14.sp, fontWeight = FontWeight.Black)
-            Text(" 項,還差 ", color = InkGray500, fontSize = 12.sp)
-            Text("${gapSkills.size}", color = BrandDeepOrange, fontSize = 14.sp, fontWeight = FontWeight.Black)
-            Text(" 項就到位", color = InkGray500, fontSize = 12.sp)
-        }
-    }
-}
-
 /* ===================== #12 分數怎麼算 ===================== */
 
 @Composable
@@ -1118,4 +899,60 @@ private fun ScoreExplainerCard() {
             )
         }
     }
+}
+
+@Composable
+private fun LedgerHeader(matchedCount: Int, gapCount: Int) {
+    val total = matchedCount + gapCount
+    var appear by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { appear = true }
+    val animMatched by animateIntAsState(
+        targetValue = if (appear) matchedCount else 0,
+        animationSpec = tween(900, easing = FastOutSlowInEasing),
+        label = "ledMatched",
+    )
+    val prog by animateFloatAsState(
+        targetValue = if (appear && total > 0) matchedCount.toFloat() / total else 0f,
+        animationSpec = tween(1000, delayMillis = 150, easing = FastOutSlowInEasing),
+        label = "ledProg",
+    )
+    Column(Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text("符合", color = InkGray500, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 5.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("$animMatched", color = InkBlack, fontWeight = FontWeight.Black,
+                fontSize = 34.sp, lineHeight = 34.sp)
+            Text(" / $total 項", color = InkGray400, fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 4.dp))
+            Spacer(Modifier.weight(1f))
+            Text("${(prog * 100).toInt()}%", color = BrandDeepOrange,
+                fontWeight = FontWeight.Black, fontSize = 16.sp)
+        }
+        Spacer(Modifier.height(8.dp))
+        Box(
+            Modifier.fillMaxWidth().height(8.dp)
+                .clip(RoundedCornerShape(50)).background(InkGray100),
+        ) {
+            Box(
+                Modifier.fillMaxWidth(prog.coerceAtLeast(0.02f)).fillMaxHeight()
+                    .clip(RoundedCornerShape(50)).background(BrandOrange),
+            )
+        }
+    }
+}
+
+@Composable
+private fun PulseDot() {
+    val t = rememberInfiniteTransition(label = "pulseDot")
+    val sc by t.animateFloat(
+        initialValue = 1f, targetValue = 1.25f,
+        animationSpec = infiniteRepeatable(tween(600), RepeatMode.Reverse),
+        label = "pd",
+    )
+    Box(
+        Modifier.size(10.dp)
+            .graphicsLayer { scaleX = sc; scaleY = sc }
+            .clip(CircleShape).background(BrandDeepOrange),
+    )
 }
