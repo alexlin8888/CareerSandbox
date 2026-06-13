@@ -130,6 +130,29 @@ fun CompetitionDetailScreen(navController: NavHostController, compId: String) {
                 Spacer(Modifier.height(2.dp))
                 Text("依你的職能輪廓,推薦互補的夥伴", color = InkGray500, fontSize = 12.sp)
                 Spacer(Modifier.height(12.dp))
+                // 滑卡找隊友入口
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(InkBlack)
+                        .pressScale { navController.navigate(Routes.TEAM_MATCH) }
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        Modifier.size(44.dp).clip(CircleShape).background(BrandOrange),
+                        contentAlignment = Alignment.Center,
+                    ) { Icon(Icons.Outlined.Favorite, contentDescription = null, tint = PaperWhite, modifier = Modifier.size(22.dp)) }
+                    Spacer(Modifier.width(14.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("滑卡找隊友", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                        Spacer(Modifier.height(2.dp))
+                        Text("一張一張看,右滑想揪、左滑跳過", color = PaperWhite.copy(alpha = 0.7f), fontSize = 12.sp)
+                    }
+                    Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = PaperWhite.copy(alpha = 0.8f))
+                }
+                Spacer(Modifier.height(14.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     teammates.forEachIndexed { idx, tm ->
                         StaggeredAppear(delayMillis = idx * 80) {

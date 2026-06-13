@@ -14,6 +14,7 @@ import androidx.navigation.navArgument
 import com.careersandbox.app.ui.screens.competition.CompetitionDetailScreen
 import com.careersandbox.app.ui.screens.competition.CompetitionListScreen
 import com.careersandbox.app.ui.screens.competition.TeamChatScreen
+import com.careersandbox.app.ui.screens.competition.TeamMatchScreen
 import com.careersandbox.app.ui.screens.home.ArticleDetailScreen
 import com.careersandbox.app.ui.screens.home.HomeHubScreen
 import com.careersandbox.app.ui.screens.home.NotificationsAllScreen
@@ -115,6 +116,7 @@ fun CareerSandboxNavHost(
 
         composable(Routes.COMPETITION_LIST) { CompetitionListScreen(navController) }
         composable(Routes.TEAM_CHAT) { TeamChatScreen(navController) }
+        composable(Routes.TEAM_MATCH) { TeamMatchScreen(navController) }
         composable(
             route = Routes.COMPETITION_DETAIL,
             arguments = listOf(navArgument("compId") { type = NavType.StringType }),
