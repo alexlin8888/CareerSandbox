@@ -251,6 +251,16 @@ fun InterviewReportScreen(navController: NavHostController) {
 
                 Spacer(Modifier.height(32.dp))
 
+                // === STAR 結構拆解(把回答標成四色塊,缺哪塊一眼看到)===
+                SectionTitleDark("STAR 結構拆解")
+                Spacer(Modifier.height(6.dp))
+                Text("以你「做不太好的決定」那題為例,看你的回答補了 STAR 的哪幾段。",
+                    color = PaperWhite.copy(alpha = 0.55f), fontSize = 12.sp, lineHeight = 18.sp)
+                Spacer(Modifier.height(12.dp))
+                StarBreakdown()
+
+                Spacer(Modifier.height(32.dp))
+
                 // === #5 該提、但沒提到 ===
                 SectionTitleDark("該提、但你沒提到")
                 Spacer(Modifier.height(12.dp))
@@ -674,5 +684,63 @@ private fun OmissionSection() {
             "面試教練的重點:不只看你講了什麼,更看你「該講卻沒講」的。",
             color = BrandYellow, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, lineHeight = 16.sp,
         )
+    }
+}
+
+private data class StarPart(val key: String, val name: String, val present: Boolean, val fromAnswer: String, val hint: String)
+
+@Composable
+private fun StarBreakdown() {
+    val parts = listOf(
+        StarPart("S", "情境 Situation", true, "「我們辦過一場聯名活動」", "有交代背景"),
+        StarPart("T", "任務 Task", true, "「前期要決定推廣規模」", "任務算清楚"),
+        StarPart("A", "行動 Action", true, "「沒先測試就直接全推」", "行動講了,但偏簡略"),
+        StarPart("R", "結果 Result", false, "", "缺這段:結果數字 + 你學到什麼"),
+    )
+    val colors = mapOf(
+        "S" to AccentBlue, "T" to BrandAmber, "A" to BrandOrange, "R" to AccentRed,
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        parts.forEach { part ->
+            val c = colors[part.key] ?: BrandOrange
+            Row(
+                Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(if (part.present) c.copy(alpha = 0.16f) else Color(0x14FFFFFF))
+                    .padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    Modifier.size(34.dp).clip(RoundedCornerShape(10.dp))
+                        .background(if (part.present) c else InkGray700),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(part.key, color = if (part.present) InkCharcoal else InkGray400,
+                        fontWeight = FontWeight.Black, fontSize = 15.sp)
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(part.name, color = PaperWhite, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Spacer(Modifier.width(8.dp))
+                        if (part.present) {
+                            Icon(Icons.Outlined.Check, contentDescription = null,
+                                tint = c, modifier = Modifier.size(14.dp))
+                        } else {
+                            Box(
+                                Modifier.clip(RoundedCornerShape(50)).background(AccentRed.copy(alpha = 0.25f))
+                                    .padding(horizontal = 8.dp, vertical = 2.dp),
+                            ) { Text("缺", color = AccentRed, fontSize = 10.sp, fontWeight = FontWeight.Black) }
+                        }
+                    }
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        if (part.present) part.fromAnswer else part.hint,
+                        color = if (part.present) PaperWhite.copy(alpha = 0.7f) else AccentRed.copy(alpha = 0.85f),
+                        fontSize = 12.sp, lineHeight = 17.sp,
+                    )
+                }
+            }
+        }
     }
 }

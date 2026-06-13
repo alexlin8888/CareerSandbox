@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.InterviewConfig
@@ -54,6 +55,7 @@ fun InterviewSetupScreen(navController: NavHostController) {
     var customJd by remember { mutableStateOf("") }
     var format by remember { mutableStateOf("single") }   // single | panel
     var difficulty by remember { mutableStateOf(InterviewConfig.difficulty) }
+    var showWarmup by remember { mutableStateOf(false) }
     var round by remember { mutableStateOf(InterviewConfig.round) }
     var language by remember { mutableStateOf(InterviewConfig.language) }
     var type by remember { mutableStateOf(InterviewConfig.type) }
@@ -92,12 +94,7 @@ fun InterviewSetupScreen(navController: NavHostController) {
                                 InterviewConfig.customIndustry = customIndustry
                                 InterviewConfig.customJd = customJd
                             }
-                            navController.navigate(
-                                if (format == "panel") Routes.INTERVIEW_LIVE_PANEL
-                                else Routes.INTERVIEW_LIVE_INDIVIDUAL
-                            ) {
-                                popUpTo(Routes.INTERVIEW_HUB)
-                            }
+                            showWarmup = true
                         },
                     contentAlignment = Alignment.Center,
                 ) {
@@ -227,6 +224,53 @@ fun InterviewSetupScreen(navController: NavHostController) {
             }
 
             Spacer(Modifier.height(32.dp))
+        }
+    }
+
+    if (showWarmup) {
+        val roundLabel = when (round) {
+            1 -> "第一關 · 暖身"
+            2 -> "專業關 · 深入問經歷"
+            else -> "綜合關 · 壓力測試"
+        }
+        Dialog(onDismissRequest = { showWarmup = false }) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(PaperWhite)
+                    .padding(24.dp),
+            ) {
+                Text("準備好了嗎", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 22.sp)
+                Spacer(Modifier.height(14.dp))
+                Box(
+                    Modifier.clip(RoundedCornerShape(50)).background(BrandPeach.copy(alpha = 0.5f))
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                ) { Text(roundLabel, color = BrandDeepOrange, fontSize = 12.sp, fontWeight = FontWeight.Black) }
+                Spacer(Modifier.height(16.dp))
+                WarmupLine("這場大概問 3-4 題,答錯不扣分,這裡只是練習。")
+                WarmupLine("講經歷時想一下 STAR:情境、任務、行動、結果。")
+                WarmupLine("不用搶快,先深呼吸一口,想好再開口。")
+                Spacer(Modifier.height(20.dp))
+                Box(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(InkBlack)
+                        .pressScale {
+                            showWarmup = false
+                            navController.navigate(
+                                if (format == "panel") Routes.INTERVIEW_LIVE_PANEL
+                                else Routes.INTERVIEW_LIVE_INDIVIDUAL
+                            ) { popUpTo(Routes.INTERVIEW_HUB) }
+                        }
+                        .padding(vertical = 13.dp),
+                    contentAlignment = Alignment.Center,
+                ) { Text("開始", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 15.sp) }
+                Spacer(Modifier.height(8.dp))
+                Text("再看一下設定", color = InkGray500, fontSize = 13.sp,
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .pressScale { showWarmup = false }
+                        .padding(8.dp))
+            }
         }
     }
 }
@@ -500,5 +544,15 @@ private fun InterviewerTile(p: Interviewer, big: Boolean, modifier: Modifier = M
         Text(p.angle, color = PaperWhite.copy(alpha = 0.6f),
             style = MaterialTheme.typography.labelSmall,
             textAlign = TextAlign.Center)
+    }
+}
+
+
+@Composable
+private fun WarmupLine(text: String) {
+    Row(Modifier.padding(vertical = 5.dp), verticalAlignment = Alignment.Top) {
+        Box(Modifier.padding(top = 5.dp).size(6.dp).clip(CircleShape).background(BrandOrange))
+        Spacer(Modifier.width(10.dp))
+        Text(text, color = InkGray700, fontSize = 13.sp, lineHeight = 20.sp)
     }
 }
