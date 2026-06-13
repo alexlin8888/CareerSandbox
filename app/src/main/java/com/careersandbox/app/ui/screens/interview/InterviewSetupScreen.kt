@@ -229,9 +229,9 @@ fun InterviewSetupScreen(navController: NavHostController) {
 
     if (showWarmup) {
         val roundLabel = when (round) {
-            1 -> "第一關 · 暖身"
-            2 -> "專業關 · 深入問經歷"
-            else -> "綜合關 · 壓力測試"
+            "初試" -> "初試 · 暖身關"
+            "複試" -> "複試 · 深入問經歷"
+            else -> "主管面 · 壓力測試"
         }
         Dialog(onDismissRequest = { showWarmup = false }) {
             Column(
