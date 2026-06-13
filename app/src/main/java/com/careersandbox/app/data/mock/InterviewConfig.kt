@@ -8,4 +8,10 @@ object InterviewConfig {
     var type: String = "行為"         // 行為 / 技術 / 情境
     var difficulty: String = "中等"   // 新手 / 中等 / 困難
     var groupInterviewers: Int = 1    // 團體面試:1 位主持 / 3 位 panel
+    // 自訂職位脈絡(讓 AI 出題更準)
+    var customRole: String = ""
+    var customCompany: String = ""
+    var customSeniority: String = "新鮮人"   // 新鮮人 / 1-3年 / 資深
+    var customIndustry: String = ""
+    var customJd: String = ""
 }

@@ -9,6 +9,10 @@ import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.Canvas
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -509,45 +513,52 @@ private fun HexRadar(values: List<Int>, modifier: Modifier = Modifier) {
 
 @Composable
 private fun QuickPracticeCard(navController: NavHostController) {
+    val pulse = rememberInfiniteTransition(label = "quickPulse")
+    val glow by pulse.animateFloat(
+        initialValue = 0.85f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(1100), RepeatMode.Reverse),
+        label = "quickGlow",
+    )
     Row(
         modifier = Modifier
             .padding(horizontal = 20.dp)
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(BrandPeach.copy(alpha = 0.5f))
+            .background(InkBlack)
             .pressScale {
-                navController.navigate(Routes.INTERVIEW_LIVE_INDIVIDUAL) {
-                    popUpTo(Routes.INTERVIEW_HUB)
-                }
+                navController.navigate(Routes.INTERVIEW_QUICK)
             }
-            .padding(16.dp),
+            .padding(18.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            Modifier.size(48.dp).clip(CircleShape).background(PaperWhite),
+            Modifier.size(50.dp).clip(CircleShape)
+                .background(BrandOrange.copy(alpha = glow)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Outlined.Timer, contentDescription = null, tint = BrandDeepOrange, modifier = Modifier.size(24.dp))
+            Icon(Icons.Outlined.Bolt, contentDescription = null,
+                tint = PaperWhite, modifier = Modifier.size(26.dp))
         }
         Spacer(Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("快速練習", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 18.sp)
+                Text("快速面試", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 18.sp)
                 Spacer(Modifier.width(8.dp))
                 Box(
-                    Modifier.clip(RoundedCornerShape(50)).background(PaperWhite).padding(horizontal = 8.dp, vertical = 2.dp),
+                    Modifier.clip(RoundedCornerShape(50)).background(BrandOrange)
+                        .padding(horizontal = 8.dp, vertical = 2.dp),
                 ) {
-                    Text("約 5 分鐘", color = BrandDeepOrange, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    Text("60 秒一題", color = PaperWhite, fontSize = 10.sp, fontWeight = FontWeight.Black)
                 }
             }
             Spacer(Modifier.height(3.dp))
             Text(
-                "1-3 題 · 不用設定 · 低壓力暖身,隨時來一場",
-                color = InkGray700, fontSize = 12.sp, lineHeight = 17.sp,
+                "免設定 · 抽一題就開始 · 答完馬上再來一題",
+                color = PaperWhite.copy(alpha = 0.7f), fontSize = 12.sp, lineHeight = 17.sp,
             )
         }
         Spacer(Modifier.width(8.dp))
-        Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = BrandDeepOrange)
+        Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = PaperWhite.copy(alpha = 0.8f))
     }
 }
 

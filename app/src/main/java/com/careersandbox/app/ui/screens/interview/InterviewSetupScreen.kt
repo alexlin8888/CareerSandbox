@@ -8,6 +8,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -15,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -45,7 +47,11 @@ private data class Interviewer(val name: String, val angle: String, val drawable
 fun InterviewSetupScreen(navController: NavHostController) {
     val jobs = MockData.jobApplications
     var selectedJobId by remember { mutableStateOf(jobs.firstOrNull()?.id ?: "custom") }
-    var customJob by remember { mutableStateOf("") }
+    var customRole by remember { mutableStateOf("") }
+    var customCompany by remember { mutableStateOf("") }
+    var customSeniority by remember { mutableStateOf("新鮮人") }
+    var customIndustry by remember { mutableStateOf("") }
+    var customJd by remember { mutableStateOf("") }
     var format by remember { mutableStateOf("single") }   // single | panel
     var difficulty by remember { mutableStateOf(InterviewConfig.difficulty) }
     var round by remember { mutableStateOf(InterviewConfig.round) }
@@ -79,6 +85,13 @@ fun InterviewSetupScreen(navController: NavHostController) {
                             InterviewConfig.language = language
                             InterviewConfig.type = type
                             InterviewConfig.difficulty = difficulty
+                            if (isCustom) {
+                                InterviewConfig.customRole = customRole
+                                InterviewConfig.customCompany = customCompany
+                                InterviewConfig.customSeniority = customSeniority
+                                InterviewConfig.customIndustry = customIndustry
+                                InterviewConfig.customJd = customJd
+                            }
                             navController.navigate(
                                 if (format == "panel") Routes.INTERVIEW_LIVE_PANEL
                                 else Routes.INTERVIEW_LIVE_INDIVIDUAL
@@ -121,9 +134,12 @@ fun InterviewSetupScreen(navController: NavHostController) {
             }
             CustomJobCard(
                 selected = isCustom,
-                value = customJob,
+                role = customRole, onRole = { customRole = it },
+                company = customCompany, onCompany = { customCompany = it },
+                seniority = customSeniority, onSeniority = { customSeniority = it },
+                industry = customIndustry, onIndustry = { customIndustry = it },
+                jd = customJd, onJd = { customJd = it },
                 onSelect = { selectedJobId = "custom" },
-                onValueChange = { customJob = it },
             )
 
             Spacer(Modifier.height(28.dp))
@@ -256,12 +272,25 @@ private fun JobTargetCard(job: JobApplication, selected: Boolean, onClick: () ->
 }
 
 @Composable
-private fun CustomJobCard(selected: Boolean, value: String, onSelect: () -> Unit, onValueChange: (String) -> Unit) {
+private fun CustomJobCard(
+    selected: Boolean,
+    role: String, onRole: (String) -> Unit,
+    company: String, onCompany: (String) -> Unit,
+    seniority: String, onSeniority: (String) -> Unit,
+    industry: String, onIndustry: (String) -> Unit,
+    jd: String, onJd: (String) -> Unit,
+    onSelect: () -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(if (selected) BrandOrange.copy(alpha = 0.12f) else InkGray100)
+            .background(if (selected) BrandPeach.copy(alpha = 0.25f) else InkGray50)
+            .border(
+                width = if (selected) 2.dp else 1.dp,
+                color = if (selected) BrandOrange else InkGray200,
+                shape = RoundedCornerShape(16.dp),
+            )
             .pressScale(onClick = onSelect)
             .padding(16.dp),
     ) {
@@ -278,19 +307,76 @@ private fun CustomJobCard(selected: Boolean, value: String, onSelect: () -> Unit
             Text("自訂職位",
                 color = if (selected) BrandDeepOrange else InkBlack,
                 fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Spacer(Modifier.weight(1f))
+            if (selected) {
+                val done = listOf(role, company, industry, jd).count { it.isNotBlank() } + 1
+                Text("$done / 5",
+                    color = InkGray400, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
         }
         if (selected) {
-            Spacer(Modifier.height(12.dp))
-            OutlinedTextField(
-                value = value, onValueChange = onValueChange,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp), singleLine = true,
-                placeholder = { Text("輸入職位名稱", color = InkGray400) },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = BrandOrange, unfocusedBorderColor = InkGray300,
-                ),
-            )
+            Spacer(Modifier.height(14.dp))
+            CtxField("職位名稱", role, onRole, "例:資料分析師")
+            Spacer(Modifier.height(10.dp))
+            CtxField("公司(選填)", company, onCompany, "例:某電商新創")
+            Spacer(Modifier.height(10.dp))
+            Text("資歷", color = InkGray700, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("新鮮人", "1-3年", "資深").forEach { lv ->
+                    val on = seniority == lv
+                    Box(
+                        Modifier.clip(RoundedCornerShape(50))
+                            .background(if (on) InkBlack else InkGray100)
+                            .pressScale { onSeniority(lv) }
+                            .padding(horizontal = 14.dp, vertical = 7.dp),
+                    ) {
+                        Text(lv, color = if (on) PaperWhite else InkGray700,
+                            fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            CtxField("產業(選填)", industry, onIndustry, "例:電商、金融、教育")
+            Spacer(Modifier.height(10.dp))
+            CtxField("貼上 JD(選填,越完整題目越準)", jd, onJd,
+                "把職缺描述貼進來,面試官會照著出題", multiline = true)
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Outlined.Lightbulb, contentDescription = null,
+                    tint = BrandAmber, modifier = Modifier.size(14.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("填得越多,面試官的問題就越貼近這個職位。",
+                    color = InkGray500, fontSize = 11.sp)
+            }
         }
+    }
+}
+
+@Composable
+private fun CtxField(
+    label: String, value: String, onChange: (String) -> Unit,
+    hint: String, multiline: Boolean = false,
+) {
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(label, color = InkGray700, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            if (value.isNotBlank()) {
+                Spacer(Modifier.width(6.dp))
+                Box(Modifier.size(5.dp).clip(CircleShape).background(AccentGreen))
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        OutlinedTextField(
+            value = value, onValueChange = onChange,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            singleLine = !multiline, minLines = if (multiline) 3 else 1,
+            placeholder = { Text(hint, color = InkGray400, fontSize = 13.sp) },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = BrandOrange, unfocusedBorderColor = InkGray300,
+            ),
+        )
     }
 }
 
