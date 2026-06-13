@@ -291,7 +291,21 @@ fun CareerExplorationScreen(navController: NavHostController) {
                     }
                     Spacer(Modifier.height(20.dp))
 
-                    AnimatedSection(visible = visible, delayMs = 520) {
+                    AnimatedSection(visible = visible, delayMs = 500) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(BrandOrange)
+                                .pressScale { navController.navigate(Routes.LEARNING_PATH) },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text("打開學習路徑", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    AnimatedSection(visible = visible, delayMs = 560) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()

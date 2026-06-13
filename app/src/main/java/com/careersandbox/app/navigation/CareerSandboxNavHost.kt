@@ -112,6 +112,7 @@ fun CareerSandboxNavHost(
         composable(Routes.RESUME_PROFILE) { ResumeProfileScreen(navController) }
         composable(Routes.RESUME_UPLOAD_PROCESSING) { ResumeUploadProcessingScreen(navController) }
         composable(Routes.CAREER_EXPLORATION) { CareerExplorationScreen(navController) }
+        composable(Routes.LEARNING_PATH) { LearningPathScreen(navController) }
         composable(Routes.FIT_ANALYSIS) { FitAnalysisScreen(navController) }
 
         composable(Routes.COMPETITION_LIST) { CompetitionListScreen(navController) }
