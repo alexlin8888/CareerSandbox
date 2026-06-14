@@ -26,6 +26,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.careersandbox.app.R
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.Image
 import androidx.navigation.NavHostController
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
@@ -128,10 +131,12 @@ private fun ProgressHeader(done: Int, total: Int) {
         targetValue = if (appear && total > 0) done.toFloat() / total else 0f,
         animationSpec = tween(1000, delayMillis = 120, easing = FastOutSlowInEasing), label = "ldProg",
     )
-    Column(
+    Row(
         Modifier.padding(horizontal = 20.dp).fillMaxWidth()
             .clip(RoundedCornerShape(18.dp)).background(InkBlack).padding(18.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
+      Column(Modifier.weight(1f)) {
         Row(verticalAlignment = Alignment.Bottom) {
             Text("已掌握", color = PaperWhite.copy(alpha = 0.55f), fontSize = 11.sp,
                 fontWeight = FontWeight.Medium, modifier = Modifier.padding(bottom = 5.dp))
@@ -150,6 +155,13 @@ private fun ProgressHeader(done: Int, total: Int) {
                     .clip(RoundedCornerShape(50)).background(BrandOrange),
             )
         }
+      }
+      Spacer(Modifier.width(12.dp))
+      Image(
+          painter = painterResource(R.drawable.beaver_idea),
+          contentDescription = null,
+          modifier = Modifier.size(64.dp),
+      )
     }
 }
 

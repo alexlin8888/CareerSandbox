@@ -27,6 +27,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.careersandbox.app.R
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.Image
 import androidx.navigation.NavHostController
 import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.data.model.TeamMate
@@ -355,10 +358,11 @@ private fun MatchPopup(tm: TeamMate, onChat: () -> Unit, onKeep: () -> Unit) {
                 Spacer(Modifier.height(6.dp))
                 Text("你和 ${tm.name} 都想一起組隊", color = InkGray700, fontSize = 14.sp)
                 Spacer(Modifier.height(20.dp))
-                Box(
-                    Modifier.size(80.dp).clip(CircleShape).background(BrandPeach.copy(alpha = 0.5f)),
-                    contentAlignment = Alignment.Center,
-                ) { Text(tm.name.first().toString(), color = BrandDeepOrange, fontWeight = FontWeight.Black, fontSize = 34.sp) }
+                Image(
+                    painter = painterResource(R.drawable.beaver_highfive),
+                    contentDescription = null,
+                    modifier = Modifier.size(120.dp),
+                )
                 Spacer(Modifier.height(20.dp))
                 Box(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(BrandOrange)
