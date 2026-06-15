@@ -189,6 +189,20 @@ private fun PlanCards(navController: NavHostController) {
             illustrationRes = R.drawable.undraw_group_video_k4jx,
             onClick = { navController.navigate(Routes.INTERVIEW_SETUP_GROUP) },
         )
+
+        // 影像面試卡(新,創新性)
+        PlanCard(
+            number = "03",
+            title = "影像面試",
+            eyebrow = "鏡頭 + 即時覺察",
+            description = "開鏡頭對著河狸面試官練,\n看自己的眼神與表現",
+            tagText = "練習工具",
+            tagBg = AccentGreen,
+            tagFg = PaperWhite,
+            cardBg = SolidColor(BrandOrange),
+            illustrationRes = R.drawable.beaver_present,
+            onClick = { navController.navigate(Routes.INTERVIEW_VIDEO) },
+        )
     }
 }
 
