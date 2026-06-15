@@ -261,6 +261,16 @@ fun InterviewReportScreen(navController: NavHostController) {
 
                 Spacer(Modifier.height(32.dp))
 
+                // === 影像維度（若做了影像面試）===
+                SectionTitleDark("影像維度")
+                Spacer(Modifier.height(6.dp))
+                Text("這是影像面試練習時的自我覺察參考,不是評分。分析在你的裝置上完成。",
+                    color = PaperWhite.copy(alpha = 0.55f), fontSize = 12.sp, lineHeight = 18.sp)
+                Spacer(Modifier.height(12.dp))
+                VideoDimensionSection()
+
+                Spacer(Modifier.height(32.dp))
+
                 // === #5 該提、但沒提到 ===
                 SectionTitleDark("該提、但你沒提到")
                 Spacer(Modifier.height(12.dp))
@@ -741,6 +751,58 @@ private fun StarBreakdown() {
                     )
                 }
             }
+        }
+    }
+}
+
+private data class VideoDim(val name: String, val score: Int, val hint: String)
+
+@Composable
+private fun VideoDimensionSection() {
+    // MediaPipe 接點:這裡的分數真接入時來自影像面試 session 的平均
+    val dims = listOf(
+        VideoDim("眼神接觸", 78, "大部分時間看著鏡頭,中段低頭找詞時斷了幾次。下次想詞可以往上看。"),
+        VideoDim("姿態穩定度", 85, "坐得穩、沒有大幅晃動,給人沉穩的印象。"),
+        VideoDim("表情自然度", 70, "整體放鬆,但講到難題時眉頭會皺。練習時可留意一下。"),
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        dims.forEach { d ->
+            val color = when {
+                d.score >= 80 -> AccentGreen
+                d.score >= 65 -> BrandOrange
+                else -> AccentRed
+            }
+            Column(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+                    .background(Color(0x14FFFFFF)).padding(16.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(d.name, color = PaperWhite, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Spacer(Modifier.weight(1f))
+                    Text("${d.score}", color = color, fontWeight = FontWeight.Black, fontSize = 18.sp)
+                    Text(" / 100", color = PaperWhite.copy(alpha = 0.4f), fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold)
+                }
+                Spacer(Modifier.height(8.dp))
+                Box(
+                    Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(50))
+                        .background(PaperWhite.copy(alpha = 0.12f)),
+                ) {
+                    Box(
+                        Modifier.fillMaxWidth(d.score / 100f).fillMaxHeight()
+                            .clip(RoundedCornerShape(50)).background(color),
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(d.hint, color = PaperWhite.copy(alpha = 0.7f), fontSize = 12.sp, lineHeight = 18.sp)
+            }
+        }
+        // 練習工具聲明
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(5.dp).clip(CircleShape).background(AccentGreen))
+            Spacer(Modifier.width(6.dp))
+            Text("練習工具 · 這些數字幫你自我覺察,不會用來評斷你,也不會上傳。",
+                color = PaperWhite.copy(alpha = 0.4f), fontSize = 10.sp)
         }
     }
 }
