@@ -64,13 +64,8 @@ interface ResumeHierarchyProvider {
 /** Mock 實作:母版接現有使用者資料,職缺/版本用代表性範例。真接後端時整個換掉。 */
 object MockResumeHierarchyProvider : ResumeHierarchyProvider {
 
-    override fun master(): ResumeMaster = ResumeMaster(
-        ownerName = MockData.currentUser.name,
-        experienceCount = MockData.experiences.size,
-        skills = MockData.currentUser.skillsHave,
-    )
-
-    override fun jobTargets(): List<JobTarget> = listOf(
+    // 用 snapshot state list 撐住,讓「新增版本」後讀到它的畫面會自動重組
+    private val _targets = androidx.compose.runtime.mutableStateListOf(
         JobTarget(
             id = "jt_pm",
             title = "Junior PM",
@@ -100,4 +95,32 @@ object MockResumeHierarchyProvider : ResumeHierarchyProvider {
             ),
         ),
     )
+
+    override fun master(): ResumeMaster = ResumeMaster(
+        ownerName = MockData.currentUser.name,
+        experienceCount = MockData.experiences.size,
+        skills = MockData.currentUser.skillsHave,
+    )
+
+    override fun jobTargets(): List<JobTarget> = _targets
+
+    /**
+     * 把一次 JD 客製存成某職缺底下的新版本(草稿)。
+     * 後端接點:真接入時這裡會把客製內容寫進該職缺的版本資料表,並回傳新版本。
+     */
+    fun addVersion(targetId: String, note: String) {
+        val i = _targets.indexOfFirst { it.id == targetId }
+        if (i < 0) return
+        val t = _targets[i]
+        val nextLabel = "版本 " + ('A' + t.versions.size)
+        _targets[i] = t.copy(
+            versions = t.versions + ResumeVersion(
+                id = "${targetId}_v${t.versions.size}",
+                label = nextLabel,
+                status = SubmissionStatus.DRAFT,
+                submittedDate = null,
+                note = note,
+            ),
+        )
+    }
 }

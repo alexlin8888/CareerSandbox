@@ -43,6 +43,7 @@ import com.careersandbox.app.ui.components.StickyNote
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 import com.careersandbox.app.data.mock.MockData
+import com.careersandbox.app.data.mock.MockResumeHierarchyProvider
 import kotlinx.coroutines.delay
 
 private enum class JdPhase { INPUT, ANALYZING, RESULT }
@@ -90,6 +91,7 @@ fun JdCustomizeScreen(navController: NavHostController) {
             JdPhase.RESULT -> ResultPhase(
                 onBack = { phase = JdPhase.INPUT },
                 onExport = { navController.navigate(Routes.pdfExportDialog("custom")) },
+                onViewVersions = { navController.navigate(Routes.RESUME_HIERARCHY) },
                 contentPadding = pad,
             )
         }
@@ -387,7 +389,7 @@ private fun AnalyzingPhase(onDone: () -> Unit, contentPadding: PaddingValues) {
 
 // ========== 階段 3:結果 ==========
 @Composable
-private fun ResultPhase(onBack: () -> Unit, onExport: () -> Unit, contentPadding: PaddingValues) {
+private fun ResultPhase(onBack: () -> Unit, onExport: () -> Unit, onViewVersions: () -> Unit, contentPadding: PaddingValues) {
     Column(
         modifier = Modifier
             .padding(contentPadding)
@@ -405,6 +407,8 @@ private fun ResultPhase(onBack: () -> Unit, onExport: () -> Unit, contentPadding
             )
         }
         var showPreview by remember { mutableStateOf(false) }
+        var showSaveSheet by remember { mutableStateOf(false) }
+        var savedTo by remember { mutableStateOf<String?>(null) }
 
         // 完成慶祝(品牌大使)
         Row(
@@ -497,6 +501,27 @@ private fun ResultPhase(onBack: () -> Unit, onExport: () -> Unit, contentPadding
         }
         Spacer(Modifier.height(10.dp))
 
+        // 存成某職缺的新版本(接履歷階層架構)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(BrandOrange)
+                .pressScale { showSaveSheet = true },
+            contentAlignment = Alignment.Center,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Outlined.WorkOutline, contentDescription = null,
+                    tint = PaperWhite, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("存成某職缺的新版本",
+                    color = PaperWhite, fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleSmall)
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+
         // 主按鈕
         Box(
             modifier = Modifier
@@ -566,6 +591,67 @@ private fun ResultPhase(onBack: () -> Unit, onExport: () -> Unit, contentPadding
                         Text("這就是匯出後 PDF 的內容方向", color = InkGray400, fontSize = 11.sp)
                     }
                 },
+            )
+        }
+
+        // 選職缺存成新版本
+        if (showSaveSheet) {
+            val note = "依 JD 客製:保留 ${highlights.size} 段重點" +
+                if (dimmedItems.isNotEmpty()) "、弱化 ${dimmedItems.size} 段" else ""
+            AlertDialog(
+                onDismissRequest = { showSaveSheet = false },
+                confirmButton = {},
+                dismissButton = {
+                    TextButton(onClick = { showSaveSheet = false }) { Text("取消") }
+                },
+                title = { Text("存到哪個職缺?") },
+                text = {
+                    Column {
+                        Text("這次客製會存成該職缺底下的新版本(草稿)",
+                            color = InkGray500, fontSize = 12.sp)
+                        Spacer(Modifier.height(12.dp))
+                        MockResumeHierarchyProvider.jobTargets().forEach { t ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(InkGray100)
+                                    .pressScale {
+                                        MockResumeHierarchyProvider.addVersion(t.id, note)
+                                        savedTo = "${t.title}・${t.company}"
+                                        showSaveSheet = false
+                                    }
+                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                            ) {
+                                Column {
+                                    Text("${t.title}・${t.company}",
+                                        color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                    Text("目前 ${t.versions.size} 版",
+                                        color = InkGray500, fontSize = 11.sp)
+                                }
+                            }
+                            Spacer(Modifier.height(8.dp))
+                        }
+                    }
+                },
+            )
+        }
+
+        // 存檔成功確認
+        savedTo?.let { dest ->
+            AlertDialog(
+                onDismissRequest = { savedTo = null },
+                confirmButton = {
+                    TextButton(onClick = {
+                        savedTo = null
+                        onViewVersions()
+                    }) { Text("查看職缺與版本") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { savedTo = null }) { Text("繼續客製") }
+                },
+                title = { Text("已存成新版本") },
+                text = { Text("已加到「$dest」底下,狀態為草稿。") },
             )
         }
 
