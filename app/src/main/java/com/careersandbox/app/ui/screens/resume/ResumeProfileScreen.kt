@@ -104,7 +104,7 @@ fun ResumeProfileScreen(navController: NavHostController) {
                             Icon(Icons.Outlined.AutoAwesome, contentDescription = null,
                                 tint = BrandAmber, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("針對 JD 客製化",
+                            Text("針對職缺客製化",
                                 color = PaperWhite,
                                 fontWeight = FontWeight.Black,
                                 style = MaterialTheme.typography.titleMedium)

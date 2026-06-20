@@ -223,7 +223,7 @@ private fun RecommendedActions(navController: NavHostController) {
     val actions = listOf(
         ActionItem(Icons.Outlined.Edit, "補上量化數字", "你的經歷少了具體成果數字,recruiter 最在意這個", "去編輯經歷", Routes.EXPERIENCE_LIST),
         ActionItem(Icons.Outlined.Explore, "看相近的職位", "根據你的能力輪廓,還有幾個適合的方向", "探索職涯", Routes.CAREER_EXPLORATION),
-        ActionItem(Icons.Outlined.Description, "為這份 JD 客製履歷", "把母版調整成更貼近這個職缺的版本", "開始客製", Routes.JD_CUSTOMIZE),
+        ActionItem(Icons.Outlined.Description, "為這個職缺客製履歷", "把母版調整成更貼近這個職缺的版本", "開始客製", Routes.JD_CUSTOMIZE),
     )
     Text("推薦行動", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 20.sp)
     Spacer(Modifier.height(2.dp))

@@ -336,12 +336,20 @@ private fun DonePhase(onClose: () -> Unit, contentPadding: PaddingValues) {
                     .clip(RoundedCornerShape(16.dp))
                     .background(InkBlack)
                     .pressScale {
-                        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(android.content.Intent.EXTRA_SUBJECT, "我的履歷 - CareerSandbox")
-                            putExtra(android.content.Intent.EXTRA_TEXT, "這是我用 CareerSandbox 製作的履歷")
+                        try {
+                            val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(android.content.Intent.EXTRA_SUBJECT, "我的履歷 - CareerSandbox")
+                                putExtra(android.content.Intent.EXTRA_TEXT, "這是我用 CareerSandbox 製作的履歷")
+                            }
+                            val chooser = android.content.Intent.createChooser(intent, "分享履歷")
+                                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                            ctx.startActivity(chooser)
+                        } catch (e: Exception) {
+                            android.widget.Toast.makeText(
+                                ctx, "目前無法開啟分享", android.widget.Toast.LENGTH_SHORT
+                            ).show()
                         }
-                        ctx.startActivity(android.content.Intent.createChooser(intent, "分享履歷"))
                     },
                 contentAlignment = Alignment.Center,
             ) {
