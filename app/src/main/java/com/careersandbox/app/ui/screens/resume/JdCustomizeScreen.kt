@@ -42,6 +42,7 @@ import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.StickyNote
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
+import com.careersandbox.app.data.mock.MockData
 import kotlinx.coroutines.delay
 
 private enum class JdPhase { INPUT, ANALYZING, RESULT }
@@ -396,6 +397,15 @@ private fun ResultPhase(onBack: () -> Unit, onExport: () -> Unit, contentPadding
     ) {
         Spacer(Modifier.height(8.dp))
 
+        val highlights = remember {
+            listOf(
+                "用 SQL 整理銷售資料,流程從 6 小時縮短至 1.5 小時(節省 75%)" to listOf("SQL", "資料分析"),
+                "主導 2 個 A/B 測試,轉換率提升 14%" to listOf("A/B 測試", "量化思考"),
+                "跨部門協作:行銷、設計、工程,每週同步進度" to listOf("跨部門協作"),
+            )
+        }
+        var showPreview by remember { mutableStateOf(false) }
+
         // 完成慶祝(品牌大使)
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -431,20 +441,10 @@ private fun ResultPhase(onBack: () -> Unit, onExport: () -> Unit, contentPadding
 
         // 已強化
         SectionTitle("已強化", "AI 認為對這份 JD 重要的段落")
-        HighlightItem(
-            text = "用 SQL 整理銷售資料,流程從 6 小時縮短至 1.5 小時(節省 75%)",
-            matched = listOf("SQL", "資料分析"),
-        )
-        Spacer(Modifier.height(10.dp))
-        HighlightItem(
-            text = "主導 2 個 A/B 測試,轉換率提升 14%",
-            matched = listOf("A/B 測試", "量化思考"),
-        )
-        Spacer(Modifier.height(10.dp))
-        HighlightItem(
-            text = "跨部門協作:行銷、設計、工程,每週同步進度",
-            matched = listOf("跨部門協作"),
-        )
+        highlights.forEachIndexed { i, (text, matched) ->
+            HighlightItem(text = text, matched = matched)
+            if (i < highlights.size - 1) Spacer(Modifier.height(10.dp))
+        }
 
         Spacer(Modifier.height(28.dp))
 
@@ -479,6 +479,23 @@ private fun ResultPhase(onBack: () -> Unit, onExport: () -> Unit, contentPadding
         MissingChips(listOf("PRD 撰寫", "user story", "SaaS 邏輯"))
 
         Spacer(Modifier.height(36.dp))
+
+        // 預覽客製版
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(BrandPeach)
+                .pressScale { showPreview = true },
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("預覽客製版",
+                color = BrandDeepOrange,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleSmall)
+        }
+        Spacer(Modifier.height(10.dp))
 
         // 主按鈕
         Box(
@@ -518,6 +535,38 @@ private fun ResultPhase(onBack: () -> Unit, onExport: () -> Unit, contentPadding
                 color = InkBlack,
                 fontWeight = FontWeight.SemiBold,
                 style = MaterialTheme.typography.titleSmall)
+        }
+
+        if (showPreview) {
+            val user = MockData.currentUser
+            AlertDialog(
+                onDismissRequest = { showPreview = false },
+                confirmButton = {
+                    TextButton(onClick = { showPreview = false }) { Text("關閉") }
+                },
+                title = { Text("客製版預覽") },
+                text = {
+                    Column {
+                        Text(user.name, fontWeight = FontWeight.Black, fontSize = 20.sp, color = InkBlack)
+                        Text("${user.school} · ${user.department} · ${user.year}",
+                            color = InkGray500, fontSize = 12.sp)
+                        Spacer(Modifier.height(12.dp))
+                        Text("為這份 JD 保留的重點", color = BrandDeepOrange,
+                            fontWeight = FontWeight.Black, fontSize = 12.sp)
+                        Spacer(Modifier.height(6.dp))
+                        highlights.forEach { (text, _) ->
+                            Text("· $text", color = InkGray700, fontSize = 12.sp, lineHeight = 17.sp)
+                            Spacer(Modifier.height(6.dp))
+                        }
+                        if (dimmedItems.isNotEmpty()) {
+                            Text("已隱藏 ${dimmedItems.size} 段較不相關的經歷",
+                                color = InkGray400, fontSize = 11.sp)
+                        }
+                        Spacer(Modifier.height(10.dp))
+                        Text("這就是匯出後 PDF 的內容方向", color = InkGray400, fontSize = 11.sp)
+                    }
+                },
+            )
         }
 
         Spacer(Modifier.height(40.dp))
