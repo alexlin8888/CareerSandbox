@@ -39,11 +39,26 @@ data class QuestionFeedback(
     val better: String,
 )
 
+/** STAR 拆解的一段(S/T/A/R);present=false 表示這段在回答中缺漏 */
+data class StarPart(
+    val key: String,
+    val name: String,
+    val present: Boolean,
+    val fromAnswer: String,  // present 時:從回答中對到的句子
+    val hint: String,        // 缺漏時:該補什麼
+)
+
+/** 影像維度的一項(分數來自影像面試 session 的 MediaPipe 平均;見 VideoFaceMetrics) */
+data class VideoDim(val name: String, val score: Int, val hint: String)
+
 /** 面試報告核心回饋分析器(後端接點) */
 interface InterviewReportProvider {
     fun faceDimensions(): List<FaceDimension>
     fun subScores(): List<SubScore>
     fun questionFeedbacks(): List<QuestionFeedback>
+    fun starParts(): List<StarPart>          // STAR 結構拆解
+    fun videoDims(): List<VideoDim>          // 影像維度(MediaPipe 平均)
+    fun improvements(): List<String>         // 下次可以試試
 }
 
 /** Mock 實作:代表性範例,讓 UI 在 demo / UIUX 階段可完整展示。真接後端時整個換掉。 */
@@ -105,5 +120,24 @@ object MockInterviewReportProvider : InterviewReportProvider {
             comment = "誠實面對失誤是好的,但只講事實沒有反思。STAR 結構缺了 Result 的學習段落。",
             better = "觸及只有預期三成,我覆盤後發現缺了「先小規模測試」這一步。下次再辦時我先用兩個小貼文測流量,結果觸及達標。",
         ),
+    )
+
+    override fun starParts(): List<StarPart> = listOf(
+        StarPart("S", "情境 Situation", true, "「我們辦過一場聯名活動」", "有交代背景"),
+        StarPart("T", "任務 Task", true, "「前期要決定推廣規模」", "任務算清楚"),
+        StarPart("A", "行動 Action", true, "「沒先測試就直接全推」", "行動講了,但偏簡略"),
+        StarPart("R", "結果 Result", false, "", "缺這段:結果數字 + 你學到什麼"),
+    )
+
+    override fun videoDims(): List<VideoDim> = listOf(
+        VideoDim("眼神接觸", 78, "大部分時間看著鏡頭,中段低頭找詞時斷了幾次。下次想詞可以往上看。"),
+        VideoDim("姿態穩定度", 85, "坐得穩、沒有大幅晃動,給人沉穩的印象。"),
+        VideoDim("表情自然度", 70, "整體放鬆,但講到難題時眉頭會皺。練習時可留意一下。"),
+    )
+
+    override fun improvements(): List<String> = listOf(
+        "回答前先重複問題一次,確認你聽對了",
+        "講失敗時用 STAR 結構,結尾一定要有「我從中學到」",
+        "互動性可以再強,主動問面試官「我這樣理解對嗎」",
     )
 }

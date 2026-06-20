@@ -245,9 +245,9 @@ fun InterviewReportScreen(navController: NavHostController) {
                 SectionTitleDark("下次可以試試")
                 Spacer(Modifier.height(12.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ImprovementCard("回答前先重複問題一次,確認你聽對了")
-                    ImprovementCard("講失敗時用 STAR 結構,結尾一定要有「我從中學到」")
-                    ImprovementCard("互動性可以再強,主動問面試官「我這樣理解對嗎」")
+                    com.careersandbox.app.data.mock.MockInterviewReportProvider.improvements().forEach {
+                        ImprovementCard(it)
+                    }
                 }
 
                 Spacer(Modifier.height(32.dp))
@@ -655,16 +655,9 @@ private fun OmissionSection() {
     }
 }
 
-private data class StarPart(val key: String, val name: String, val present: Boolean, val fromAnswer: String, val hint: String)
-
 @Composable
 private fun StarBreakdown() {
-    val parts = listOf(
-        StarPart("S", "情境 Situation", true, "「我們辦過一場聯名活動」", "有交代背景"),
-        StarPart("T", "任務 Task", true, "「前期要決定推廣規模」", "任務算清楚"),
-        StarPart("A", "行動 Action", true, "「沒先測試就直接全推」", "行動講了,但偏簡略"),
-        StarPart("R", "結果 Result", false, "", "缺這段:結果數字 + 你學到什麼"),
-    )
+    val parts = com.careersandbox.app.data.mock.MockInterviewReportProvider.starParts()
     val colors = mapOf(
         "S" to AccentBlue, "T" to BrandAmber, "A" to BrandOrange, "R" to AccentRed,
     )
@@ -713,16 +706,9 @@ private fun StarBreakdown() {
     }
 }
 
-private data class VideoDim(val name: String, val score: Int, val hint: String)
-
 @Composable
 private fun VideoDimensionSection() {
-    // MediaPipe 接點:這裡的分數真接入時來自影像面試 session 的平均
-    val dims = listOf(
-        VideoDim("眼神接觸", 78, "大部分時間看著鏡頭,中段低頭找詞時斷了幾次。下次想詞可以往上看。"),
-        VideoDim("姿態穩定度", 85, "坐得穩、沒有大幅晃動,給人沉穩的印象。"),
-        VideoDim("表情自然度", 70, "整體放鬆,但講到難題時眉頭會皺。練習時可留意一下。"),
-    )
+    val dims = com.careersandbox.app.data.mock.MockInterviewReportProvider.videoDims()
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         dims.forEach { d ->
             val color = when {
