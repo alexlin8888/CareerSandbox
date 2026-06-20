@@ -121,6 +121,43 @@ fun CompetitionDetailScreen(navController: NavHostController, compId: String) {
                 }
                 Spacer(Modifier.height(28.dp))
 
+                // === 搜尋這個比賽(無官方連結,導向網路搜尋)===
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(InkGray100)
+                        .pressScale {
+                            try {
+                                val q = java.net.URLEncoder.encode("${comp.title} ${comp.organizer}", "UTF-8")
+                                ctx.startActivity(
+                                    android.content.Intent(
+                                        android.content.Intent.ACTION_VIEW,
+                                        android.net.Uri.parse("https://www.google.com/search?q=$q"),
+                                    ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                )
+                            } catch (e: Exception) {
+                                Toast.makeText(ctx, "找不到可開啟的瀏覽器", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                        .padding(horizontal = 16.dp),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.Search, contentDescription = null, tint = InkBlack,
+                            modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("搜尋這個比賽", color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text("在瀏覽器查更多官方資訊", color = InkGray500, fontSize = 11.sp)
+                        }
+                        Icon(Icons.Outlined.OpenInNew, contentDescription = null, tint = InkGray400,
+                            modifier = Modifier.size(16.dp))
+                    }
+                }
+                Spacer(Modifier.height(28.dp))
+
                 // === 為什麼推薦你 ===
                 WhyRecommendCard(accent)
                 Spacer(Modifier.height(28.dp))
