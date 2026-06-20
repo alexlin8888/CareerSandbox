@@ -269,8 +269,10 @@ private fun HeroSection(navController: NavHostController) {
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Bottom,
             ) {
-                // 左:64% 大數字
-                Column(modifier = Modifier.fillMaxWidth(0.55f)) {
+                // 左:64% 大數字(點擊→履歷頁)
+                Column(modifier = Modifier
+                    .fillMaxWidth(0.55f)
+                    .pressScale { navController.navigate(Routes.RESUME_HUB) }) {
                     Text(
                         "這週你完成了",
                         color = PaperWhite.copy(alpha = 0.85f),
@@ -866,6 +868,13 @@ private fun CompetitionSection(navController: NavHostController) {
                 fontWeight = FontWeight.Black,
                 fontSize = 22.sp,
                 modifier = Modifier.weight(1f),
+            )
+            Text(
+                "查看全部",
+                color = InkGray500,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 13.sp,
+                modifier = Modifier.pressScale { navController.navigate(Routes.COMPETITION_LIST) },
             )
         }
         Spacer(Modifier.height(4.dp))
