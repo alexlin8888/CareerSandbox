@@ -294,6 +294,7 @@ private fun ExportingPhase(onDone: () -> Unit, contentPadding: PaddingValues) {
 
 @Composable
 private fun DonePhase(onClose: () -> Unit, contentPadding: PaddingValues) {
+    var fileName by remember { mutableStateOf("履歷_AlexLin_2026") }
     Column(
         modifier = Modifier
             .padding(contentPadding)
@@ -319,11 +320,30 @@ private fun DonePhase(onClose: () -> Unit, contentPadding: PaddingValues) {
             fontSize = 24.sp,
         )
         Spacer(Modifier.height(6.dp))
-        Text(
-            "履歷_AlexLin_2026.pdf",
-            color = InkGray500,
-            style = MaterialTheme.typography.bodyMedium,
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .width(200.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(InkGray100)
+                    .padding(horizontal = 12.dp, vertical = 9.dp),
+            ) {
+                androidx.compose.foundation.text.BasicTextField(
+                    value = fileName,
+                    onValueChange = { fileName = it },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = androidx.compose.ui.text.TextStyle(
+                        color = InkBlack,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    ),
+                )
+            }
+            Text(".pdf", color = InkGray500, fontSize = 14.sp, modifier = Modifier.padding(start = 4.dp))
+        }
+        Spacer(Modifier.height(4.dp))
+        Text("匯出前可改檔名", color = InkGray400, fontSize = 11.sp)
 
         Spacer(Modifier.height(40.dp))
 
@@ -337,17 +357,22 @@ private fun DonePhase(onClose: () -> Unit, contentPadding: PaddingValues) {
                     .background(InkBlack)
                     .pressScale {
                         try {
+                            val file = com.careersandbox.app.data.pdf.DeviceResumePdfGenerator.generate(ctx, fileName)
+                            val uri = androidx.core.content.FileProvider.getUriForFile(
+                                ctx, "${ctx.packageName}.fileprovider", file
+                            )
                             val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                                type = "text/plain"
+                                type = "application/pdf"
+                                putExtra(android.content.Intent.EXTRA_STREAM, uri)
                                 putExtra(android.content.Intent.EXTRA_SUBJECT, "我的履歷 - CareerSandbox")
-                                putExtra(android.content.Intent.EXTRA_TEXT, "這是我用 CareerSandbox 製作的履歷")
+                                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
                             }
                             val chooser = android.content.Intent.createChooser(intent, "分享履歷")
                                 .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
                             ctx.startActivity(chooser)
                         } catch (e: Exception) {
                             android.widget.Toast.makeText(
-                                ctx, "目前無法開啟分享", android.widget.Toast.LENGTH_SHORT
+                                ctx, "目前無法產生或分享 PDF", android.widget.Toast.LENGTH_SHORT
                             ).show()
                         }
                     },
