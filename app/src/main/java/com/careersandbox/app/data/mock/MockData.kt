@@ -52,7 +52,7 @@ object MockData {
         recommendedJobs = 12,
     )
 
-    val experiences = listOf(
+    val experiences = androidx.compose.runtime.mutableStateListOf(
         Experience("e1", "校內社團行銷組長", "社團", "2024.09 - 2025.06",
             "負責年度成發活動的社群推廣,從零開始建立 IG 帳號,九個月內累積 1200 名追蹤。",
             listOf("領導", "內容創作", "數據分析", "簡報")),

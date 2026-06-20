@@ -28,6 +28,7 @@ import com.careersandbox.app.ui.theme.*
 fun ExperienceListScreen(navController: NavHostController) {
     val categories = listOf("全部", "學業", "工作", "社團", "競賽", "其他")
     var selectedCategory by remember { mutableStateOf("全部") }
+    var pendingDelete by remember { mutableStateOf<Experience?>(null) }
 
     Scaffold(
         containerColor = PaperOff,
@@ -100,18 +101,42 @@ fun ExperienceListScreen(navController: NavHostController) {
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxSize(),
                 ) {
-                    items(filtered) { e -> ExperienceCard(e) { navController.navigate(Routes.EXPERIENCE_EDIT) } }
+                    items(filtered, key = { it.id }) { e ->
+                        ExperienceCard(
+                            e,
+                            onEdit = { navController.navigate(Routes.EXPERIENCE_EDIT) },
+                            onDelete = { pendingDelete = e },
+                        )
+                    }
                     item { Spacer(Modifier.height(24.dp)) }
                 }
             }
+        }
+
+        pendingDelete?.let { exp ->
+            AlertDialog(
+                onDismissRequest = { pendingDelete = null },
+                title = { Text("刪除這筆經歷?") },
+                text = { Text("「${exp.title}」會從你的母版移除。") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        MockData.experiences.remove(exp)
+                        pendingDelete = null
+                    }) { Text("刪除", color = BrandDeepOrange) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pendingDelete = null }) { Text("取消", color = InkGray500) }
+                },
+            )
         }
     }
 }
 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun ExperienceCard(e: Experience, onClick: () -> Unit = {}) {
-    WhiteCard(onClick = onClick) {
+private fun ExperienceCard(e: Experience, onEdit: () -> Unit = {}, onDelete: () -> Unit = {}) {
+    var menuOpen by remember { mutableStateOf(false) }
+    WhiteCard(onClick = onEdit) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 Modifier
@@ -125,8 +150,19 @@ private fun ExperienceCard(e: Experience, onClick: () -> Unit = {}) {
             Spacer(Modifier.width(8.dp))
             Text(e.timeRange, style = MaterialTheme.typography.labelSmall, color = InkGray500)
             Spacer(Modifier.weight(1f))
-            Icon(Icons.Outlined.MoreHoriz, contentDescription = null,
-                tint = InkGray400, modifier = Modifier.size(20.dp))
+            Box {
+                IconButton(onClick = { menuOpen = true }, modifier = Modifier.size(24.dp)) {
+                    Icon(Icons.Outlined.MoreHoriz, contentDescription = "更多",
+                        tint = InkGray400, modifier = Modifier.size(20.dp))
+                }
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    DropdownMenuItem(text = { Text("編輯") }, onClick = { menuOpen = false; onEdit() })
+                    DropdownMenuItem(
+                        text = { Text("刪除", color = BrandDeepOrange) },
+                        onClick = { menuOpen = false; onDelete() },
+                    )
+                }
+            }
         }
         Spacer(Modifier.height(10.dp))
         Text(e.title, style = MaterialTheme.typography.titleMedium,
