@@ -236,7 +236,7 @@ private fun HeroSection(navController: NavHostController) {
             Spacer(Modifier.height(4.dp))
             // 姓名 + 年級
             Row(verticalAlignment = Alignment.Bottom) {
-                Box {
+                Box(modifier = Modifier.pressScale { navController.navigate(Routes.PROFILE) }) {
                     Text(MockData.currentUser.name,
                         color = PaperWhite,
                         fontWeight = FontWeight.Black,

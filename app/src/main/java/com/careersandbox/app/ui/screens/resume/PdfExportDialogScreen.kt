@@ -99,9 +99,9 @@ private fun SelectTemplatePhase(
     contentPadding: PaddingValues,
 ) {
     val templates = listOf(
-        TemplateInfo("現代橫式", "簡潔大方,適合一般職位", "Modern", BrandOrange),
-        TemplateInfo("中文台式", "經典台灣求職版型,含照片", "Traditional", BrandDeepOrange),
-        TemplateInfo("英文一頁式", "矽谷 Tech 風,強調量化成果", "One-Page", GlowPurple),
+        TemplateInfo("現代橫式", "簡潔大方,適合一般職位 · A4", "Modern", BrandOrange),
+        TemplateInfo("中文台式", "經典台灣求職版型,含照片 · A4", "Traditional", BrandDeepOrange),
+        TemplateInfo("英文一頁式", "矽谷 Tech 風,強調量化成果 · A4", "One-Page", GlowPurple),
     )
 
     Column(
