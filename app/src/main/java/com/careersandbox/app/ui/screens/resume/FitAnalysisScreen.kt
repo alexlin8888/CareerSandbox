@@ -52,6 +52,8 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.MockData
+import com.careersandbox.app.data.mock.MockFitAnalysisService
+import com.careersandbox.app.data.mock.JobFit
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.ScatteredDecorations
 import com.careersandbox.app.ui.components.WaveHeroBackground
@@ -131,6 +133,10 @@ fun FitAnalysisScreen(navController: NavHostController) {
             )
         )
     }
+    val jobs = remember { MockFitAnalysisService.availableJobs() }
+    var selectedJobId by remember { mutableStateOf(jobs.first().jobId) }
+    val fit = remember(selectedJobId) { MockFitAnalysisService.fitFor(selectedJobId) }
+
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { visible = true }
 
@@ -142,7 +148,11 @@ fun FitAnalysisScreen(navController: NavHostController) {
 
             Column(modifier = Modifier.padding(horizontal = 24.dp).padding(top = 20.dp, bottom = 40.dp)) {
                 AnimatedSection(visible = visible, delayMs = 0) {
-                    FitHeroJobCard()
+                    JobSelectorRow(jobs = jobs, selectedId = selectedJobId, onSelect = { selectedJobId = it })
+                }
+                Spacer(Modifier.height(14.dp))
+                AnimatedSection(visible = visible, delayMs = 60) {
+                    FitHeroJobCard(fit)
                 }
                 Spacer(Modifier.height(20.dp))
 
@@ -159,7 +169,7 @@ fun FitAnalysisScreen(navController: NavHostController) {
                 when (activeTab) {
                     0 -> {
                         // === #20 技能差距(文氏圖,強調差集)===
-                        SkillGapSection()
+                        SkillGapSection(fit.requiredSkills)
                         Spacer(Modifier.height(20.dp))
                         Box(Modifier.fillMaxWidth().height(1.dp).background(InkGray200))
                         Spacer(Modifier.height(20.dp))
@@ -344,9 +354,9 @@ private fun FitHeroSection(onBack: () -> Unit) {
 }
 
 @Composable
-private fun FitHeroJobCard() {
+private fun FitHeroJobCard(fit: JobFit) {
     val animScore by animateIntAsState(
-        targetValue = 82,
+        targetValue = fit.matchScore,
         animationSpec = tween(1200, easing = FastOutSlowInEasing),
         label = "hero_score",
     )
@@ -366,19 +376,19 @@ private fun FitHeroJobCard() {
                     .background(Brush.linearGradient(listOf(BrandDeepOrange, BrandAmber))),
                 contentAlignment = Alignment.Center,
             ) {
-                Text("A", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 20.sp)
+                Text(fit.title.take(1), color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 20.sp)
             }
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text("Junior PM", color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                Text("Acer · 產品實習", color = InkGray500, fontSize = 12.sp)
+                Text(fit.title, color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                Text(fit.company, color = InkGray500, fontSize = 12.sp)
             }
             Icon(Icons.Outlined.BookmarkBorder, contentDescription = null, tint = InkGray400, modifier = Modifier.size(20.dp))
         }
         Spacer(Modifier.height(14.dp))
 
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            listOf("產品實習", "全職", "初級").forEach { chip ->
+            fit.tags.forEach { chip ->
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(14.dp))
@@ -416,15 +426,52 @@ private fun FitHeroJobCard() {
                         .background(AccentGreen.copy(alpha = 0.15f))
                         .padding(horizontal = 8.dp, vertical = 3.dp),
                 ) {
-                    Text("數據導向型", color = AccentGreen, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
+                    Text(fit.styleTag, color = AccentGreen, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
                 }
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text("月薪", color = InkGray500, fontSize = 11.sp)
                 Spacer(Modifier.height(2.dp))
-                Text("50-80k", color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                Text(fit.salary, color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 17.sp)
                 Spacer(Modifier.height(6.dp))
-                Text("10/14 截止", color = InkGray400, fontSize = 11.sp)
+                Text(fit.deadline, color = InkGray400, fontSize = 11.sp)
+            }
+        }
+    }
+}
+
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun JobSelectorRow(jobs: List<JobFit>, selectedId: String, onSelect: (String) -> Unit) {
+    Column {
+        Text(
+            "選一份職缺,看你的母版對它的適配",
+            color = InkGray500,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Spacer(Modifier.height(8.dp))
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            jobs.forEach { job ->
+                val sel = job.jobId == selectedId
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(if (sel) InkBlack else PaperWhite)
+                        .pressScale { onSelect(job.jobId) }
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        job.title,
+                        color = if (sel) PaperWhite else InkGray700,
+                        fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium,
+                        fontSize = 12.sp,
+                    )
+                }
             }
         }
     }
@@ -737,10 +784,10 @@ private fun TaskDetailRow(label: String, text: String) {
 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun SkillGapSection() {
+private fun SkillGapSection(requiredSkills: List<String>) {
     val userHas = MockData.currentUser.skillsHave
-    // 這份 JD(產品經理)要求的技能
-    val roleRequires = listOf("SQL", "使用者訪談", "A/B 測試", "Figma", "Python", "GA4")
+    // 這個職缺要求的技能(由選中的職缺帶入)
+    val roleRequires = requiredSkills
     val gap = roleRequires.filter { it !in userHas }      // 差集:要、但你還沒有
     val matched = roleRequires.filter { it in userHas }   // 交集:要、你有
     val other = userHas.filter { it !in roleRequires }    // 你有、但這份 JD 沒要求
@@ -866,6 +913,10 @@ private val gapDetails = mapOf(
     "Python" to GapDetail("「會 Python 資料處理者佳」", "用 pandas 重做一次你在 Excel 上做過的分析。"),
     "GA4" to GapDetail("「熟 GA4 事件與漏斗分析」", "幫社團網站掛上 GA4,跑出一份兩週流量報告。"),
     "使用者訪談" to GapDetail("「具使用者訪談與需求彙整能力」", "訪談 3 位同學的求職流程,整理成痛點清單。"),
+    "統計" to GapDetail("「具基礎統計概念,能判讀顯著性」", "Khan Academy 統計入門,看懂 p 值與信賴區間就夠面試用。"),
+    "資料視覺化" to GapDetail("「能用圖表清楚呈現分析結果」", "用 Looker Studio 把一份資料做成三張會說話的圖。"),
+    "內容行銷" to GapDetail("「規劃內容並追蹤成效」", "幫社團經營一個月貼文,記錄觸及與互動的變化。"),
+    "社群經營" to GapDetail("「經營社群、提升互動」", "選一個平台,設定一個月成長目標並覆盤數據。"),
 )
 
 @Composable
