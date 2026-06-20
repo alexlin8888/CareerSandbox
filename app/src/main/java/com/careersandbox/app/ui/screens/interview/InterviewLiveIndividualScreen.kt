@@ -37,40 +37,6 @@ import com.careersandbox.app.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private fun String.containsAny(vararg keys: String) = keys.any { this.contains(it) }
-
-// 關鍵字感知追問池(之後由 LangGraph evaluate_node 取代,介面不變)
-private val probesData = listOf(
-    "這個數字是怎麼算出來的?基準是什麼?",
-    "如果數據跟你的直覺打架,你信哪個?為什麼?",
-)
-private val probesTeam = listOf(
-    "團隊裡誰跟你意見最不合?那次最後怎麼收?",
-    "如果有人擺爛,你的第一步是什麼?",
-)
-private val probesFail = listOf(
-    "這件事裡,你自己要負的是哪一塊?",
-    "同樣的錯,後來有再犯嗎?你改了什麼?",
-)
-private val probesHonest = listOf(
-    "沒關係,當場想。你會從哪裡開始?",
-    "可以。那換個你熟的,講一個你最有把握的決定。",
-)
-private val probesTime = listOf(
-    "時間砍一半,你先丟掉哪一塊?",
-    "你怎麼判斷一件事該做快的版本,還是好的版本?",
-)
-private val microReactions = listOf("嗯。", "(他停了一下)", "(低頭記了些什麼)", "(點了點頭)")
-
-private fun pickProbe(said: String, idx: Int, fallback: List<String>): String = when {
-    said.containsAny("不知道", "不確定", "沒想過", "沒有經驗") -> probesHonest.random()
-    said.containsAny("數據", "資料", "數字", "分析", "%", "成長") -> probesData.random()
-    said.containsAny("團隊", "合作", "夥伴", "組員", "溝通", "衝突") -> probesTeam.random()
-    said.containsAny("失敗", "錯", "搞砸", "延期", "沒做好") -> probesFail.random()
-    said.containsAny("時間", "趕", "deadline", "來不及", "期限") -> probesTime.random()
-    else -> fallback[idx % fallback.size]
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InterviewLiveIndividualScreen(navController: NavHostController) {
@@ -137,7 +103,7 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
     fun submitAnswer(visible: String, analyzed: String) {
         if (isTyping || reaction != null || phase != "MAIN") return
         messages.add(ChatMessage("u${messages.size}", "你", visible, isUser = true))
-        reaction = microReactions.random()
+        reaction = com.careersandbox.app.data.mock.MockInterviewProber.reaction()
         scope.launch {
             delay(800); reaction = null
             isTyping = true; delay(1300)
@@ -150,7 +116,7 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
                     phase = "REVERSE"
                     t("好,主要的問題就到這裡。最後,你有什麼想問我們的?", "Alright, that covers the main questions. One last thing: what would you like to ask us?")
                 }
-                else -> pickProbe(analyzed, followUpIdx, probes).also { lastProbe = it }
+                else -> com.careersandbox.app.data.mock.MockInterviewProber.probe(analyzed, followUpIdx, probes).also { lastProbe = it }
             }
             messages.add(ChatMessage("ai${messages.size}", "面試官", reply, isUser = false))
             questionShownAt = System.currentTimeMillis()
