@@ -182,37 +182,12 @@ fun InterviewReportScreen(navController: NavHostController) {
                 SectionTitleDark("三大面向")
                 Spacer(Modifier.height(12.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    FaceCard(
-                        letter = "內", name = "內容", score = 71,
-                        verdict = "有講到重點,但缺乏具體數字與亮點。",
-                        points = listOf(
-                            "自我介紹加 1-2 個量化成就(追蹤數、效率提升倍數)",
-                            "回答時多舉一個具體例子,少用空泛形容詞",
-                        ),
-                    )
-                    FaceCard(
-                        letter = "構", name = "結構", score = 82,
-                        verdict = "邏輯清楚,但講失敗經歷時 STAR 的 Result 段常缺。",
-                        points = listOf(
-                            "講經歷一律用 STAR:情境 → 任務 → 行動 → 結果",
-                            "結尾補一句「我從中學到什麼」",
-                        ),
-                    )
-                    FaceCard(
-                        letter = "達", name = "表達", score = 70,
-                        verdict = "整體流暢,但語速偏快、語調起伏不足。",
-                        points = listOf(
-                            "放慢語速,重點句講完停半秒",
-                            "用語調強調關鍵字,不要從頭平到尾",
-                        ),
-                        prosody = listOf(
-                            "語速" to "220 字/分 · 偏快",
-                            "停頓" to "偏少 · 句子間幾乎不停",
-                            "語調" to "起伏不足 · 偏平",
-                            "填充詞" to "「嗯 / 那個」8 次",
-                            "開口前思考" to "平均 4.2 秒 · 最長 11 秒",
-                        ),
-                    )
+                    com.careersandbox.app.data.mock.MockInterviewReportProvider.faceDimensions().forEach { d ->
+                        FaceCard(
+                            letter = d.letter, name = d.name, score = d.score,
+                            verdict = d.verdict, points = d.points, prosody = d.prosody,
+                        )
+                    }
                 }
 
                 Spacer(Modifier.height(32.dp))
@@ -221,12 +196,9 @@ fun InterviewReportScreen(navController: NavHostController) {
                 SectionTitleDark("細項分數")
                 Spacer(Modifier.height(12.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    DimensionRow("內容深度", 78)
-                    DimensionRow("邏輯清晰度", 82)
-                    DimensionRow("表達流暢度", 71)
-                    DimensionRow("互動能力", 68)
-                    DimensionRow("應變能力", 64)
-                    DimensionRow("自信程度", 80)
+                    com.careersandbox.app.data.mock.MockInterviewReportProvider.subScores().forEach {
+                        DimensionRow(it.name, it.score)
+                    }
                 }
 
                 Spacer(Modifier.height(32.dp))
@@ -235,18 +207,9 @@ fun InterviewReportScreen(navController: NavHostController) {
                 SectionTitleDark("逐題回顧")
                 Spacer(Modifier.height(12.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    QuestionReview(
-                        q = "請你做一個簡短的自我介紹。",
-                        a = "你好,我是中山資管系大三的 Alex,過去主要做過社團行銷和資料分析實習,想往產品經理發展。",
-                        comment = "有清楚交代背景,但缺乏亮點。可以加 1-2 個具體成就。",
-                        better = "我是中山資管大三的 Alex,把社團 IG 從 0 經營到 1200 追蹤,實習用 SQL 把週報效率提升 4 倍,接下來想把這些經驗帶到產品端。",
-                    )
-                    QuestionReview(
-                        q = "可以講一個你覺得做得不太好的決定嗎?",
-                        a = "我們曾經辦過一場聯名活動,前期沒有先測試小規模就直接全推,結果觸及只有預期的三成。",
-                        comment = "誠實面對失誤是好的,但只講事實沒有反思。STAR 結構缺了 Result 的學習段落。",
-                        better = "觸及只有預期三成,我覆盤後發現缺了「先小規模測試」這一步。下次再辦時我先用兩個小貼文測流量,結果觸及達標。",
-                    )
+                    com.careersandbox.app.data.mock.MockInterviewReportProvider.questionFeedbacks().forEach {
+                        QuestionReview(q = it.question, a = it.answer, comment = it.comment, better = it.better)
+                    }
                 }
 
                 Spacer(Modifier.height(32.dp))
