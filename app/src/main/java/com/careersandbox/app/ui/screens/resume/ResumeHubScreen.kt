@@ -285,8 +285,50 @@ private fun StripStat(label: String, value: Int, modifier: Modifier = Modifier) 
 private fun BentoActions(navController: NavHostController) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp)) {
         BentoMaster(onClick = { navController.navigate(Routes.RESUME_PROFILE) })
+        Spacer(Modifier.height(8.dp))
+        JobTargetsEntry(onClick = { navController.navigate(Routes.RESUME_HIERARCHY) })
         Spacer(Modifier.height(4.dp))
         ToolStrip(navController)
+    }
+}
+
+@Composable
+private fun JobTargetsEntry(onClick: () -> Unit) {
+    val targets = com.careersandbox.app.data.mock.MockResumeHierarchyProvider.jobTargets()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(InkBlack)
+            .pressScale(onClick = onClick)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier.size(44.dp).clip(RoundedCornerShape(13.dp)).background(BrandOrange),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Outlined.WorkOutline, contentDescription = null,
+                tint = PaperWhite, modifier = Modifier.size(22.dp))
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text("職缺與版本", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 17.sp)
+            Spacer(Modifier.height(2.dp))
+            Text("針對每個職缺客製,追蹤投遞狀態",
+                color = PaperWhite.copy(alpha = 0.7f), fontSize = 12.sp, lineHeight = 15.sp)
+        }
+        Spacer(Modifier.width(8.dp))
+        Box(
+            Modifier
+                .clip(RoundedCornerShape(10.dp))
+                .background(PaperWhite.copy(alpha = 0.15f))
+                .padding(horizontal = 9.dp, vertical = 4.dp),
+        ) {
+            Text("${targets.size} 職缺", color = PaperWhite, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+        }
+        Icon(Icons.Outlined.ChevronRight, contentDescription = null,
+            tint = PaperWhite.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
     }
 }
 

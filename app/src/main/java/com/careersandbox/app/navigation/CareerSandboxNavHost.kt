@@ -96,6 +96,7 @@ fun CareerSandboxNavHost(
         }
         composable(Routes.HOME) { HomeHubScreen(navController) }
         composable(Routes.RESUME_HUB) { ResumeHubScreen(navController) }
+        composable(Routes.RESUME_HIERARCHY) { ResumeHierarchyScreen(navController) }
         composable(Routes.INTERVIEW_HUB) { InterviewHubScreen(navController) }
         composable(Routes.WORKPLACE_SANDBOX) { WorkplaceSandboxScreen(navController) }
         composable(Routes.WORKPLACE_CHAT) { WorkplaceChatScreen(navController) }
