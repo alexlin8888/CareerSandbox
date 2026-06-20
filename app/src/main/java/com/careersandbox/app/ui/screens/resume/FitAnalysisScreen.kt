@@ -72,6 +72,9 @@ private data class FitTask(
     val subtitle: String,
     val tagText: String,
     var done: Boolean = false,
+    val what: String = "",
+    val gain: String = "",
+    val hrValue: String = "",
 )
 
 @Composable
@@ -113,9 +116,18 @@ fun FitAnalysisScreen(navController: NavHostController) {
     var tasks by remember {
         mutableStateOf(
             listOf(
-                FitTask("t1", "參加一場黑客松", "建議 4 月前完成", "創新 +12", false),
-                FitTask("t2", "寫一段失敗復原經歷", "面試考古題出現率高", "抗壓 +8", false),
-                FitTask("t3", "完成電商實習量化描述", "已完成 · 數據 +5", "", true),
+                FitTask("t1", "參加一場黑客松", "建議 4 月前完成", "創新 +12", false,
+                    what = "挑一場 2-3 天的主題黑客松(資料或產品類佳),組隊做出能 demo 的雛形,留下作品連結與一頁說明。",
+                    gain = "創新思考與快速執行——你的履歷目前少有從 0 到 1 的專案。",
+                    hrValue = "面對沒有標準答案的問題,你怎麼定義問題、做取捨、在時限內交出東西。"),
+                FitTask("t2", "寫一段失敗復原經歷", "面試考古題出現率高", "抗壓 +8", false,
+                    what = "從過去經歷挑一個卡關或搞砸的時刻,用「狀況 → 你怎麼處理 → 結果與學到什麼」寫成一段 STAR。",
+                    gain = "抗壓性與反思能力——這是面試高頻題,你的履歷現在幾乎沒有挫折敘述。",
+                    hrValue = "遇到挫折你是逃避卸責,還是承擔修正。誠實面對失敗反而加分。"),
+                FitTask("t3", "完成電商實習量化描述", "已完成 · 數據 +5", "", true,
+                    what = "把電商實習的成果補上具體數字(處理多少筆資料、效率提升幾 %、影響多少營收)。",
+                    gain = "數據能力的佐證——抽象描述換成數字,說服力差很多。",
+                    hrValue = "你做的事的規模與影響,recruiter 用數字就能快速判斷。"),
             )
         )
     }
@@ -618,62 +630,106 @@ private fun CapabilityRow(cap: Capability) {
 
 @Composable
 private fun TaskCard(task: FitTask, onToggle: () -> Unit) {
-    Row(
+    var expanded by remember { mutableStateOf(false) }
+    val hasDetail = task.what.isNotEmpty()
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(InkGray100.copy(alpha = 0.5f))
-            .pressScale(onClick = onToggle)
+            .pressScale { if (hasDetail) expanded = !expanded }
             .padding(horizontal = 14.dp, vertical = 13.dp),
-        verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (task.done) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // 勾選圈:獨立點擊切換完成,不觸發展開
             Box(
-                modifier = Modifier
-                    .size(24.dp)
-                    .clip(CircleShape)
-                    .background(BrandDeepOrange),
+                modifier = Modifier.size(24.dp).pressScale(onClick = onToggle),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Outlined.Check, contentDescription = null, tint = PaperWhite, modifier = Modifier.size(14.dp))
+                if (task.done) {
+                    Box(
+                        modifier = Modifier.size(24.dp).clip(CircleShape).background(BrandDeepOrange),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(Icons.Outlined.Check, contentDescription = null, tint = PaperWhite, modifier = Modifier.size(14.dp))
+                    }
+                } else {
+                    Canvas(modifier = Modifier.size(24.dp)) {
+                        drawCircle(
+                            color = InkGray300,
+                            radius = size.width / 2f - 1.dp.toPx(),
+                            style = Stroke(width = 2.dp.toPx()),
+                        )
+                    }
+                }
             }
-        } else {
-            Canvas(modifier = Modifier.size(24.dp)) {
-                drawCircle(
-                    color = InkGray300,
-                    radius = size.width / 2f - 1.dp.toPx(),
-                    style = Stroke(width = 2.dp.toPx()),
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    task.title,
+                    color = if (task.done) InkGray500 else InkBlack,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    textDecoration = if (task.done) TextDecoration.LineThrough else TextDecoration.None,
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    task.subtitle,
+                    color = if (task.done) AccentGreen else InkGray500,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            if (!task.done && task.tagText.isNotEmpty()) {
+                Spacer(Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(BrandPeach)
+                        .padding(horizontal = 9.dp, vertical = 4.dp),
+                ) {
+                    Text(task.tagText, color = BrandDeepOrange, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                }
+            }
+            if (hasDetail) {
+                Spacer(Modifier.width(6.dp))
+                Icon(
+                    if (expanded) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = InkGray400,
+                    modifier = Modifier.size(20.dp),
                 )
             }
         }
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                task.title,
-                color = if (task.done) InkGray500 else InkBlack,
-                fontWeight = FontWeight.Bold,
-                fontSize = 15.sp,
-                textDecoration = if (task.done) TextDecoration.LineThrough else TextDecoration.None,
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                task.subtitle,
-                color = if (task.done) AccentGreen else InkGray500,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-        if (!task.done && task.tagText.isNotEmpty()) {
-            Spacer(Modifier.width(8.dp))
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(BrandPeach)
-                    .padding(horizontal = 9.dp, vertical = 4.dp),
-            ) {
-                Text(task.tagText, color = BrandDeepOrange, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+        androidx.compose.animation.AnimatedVisibility(visible = expanded) {
+            Column(modifier = Modifier.padding(top = 12.dp, start = 36.dp, end = 4.dp)) {
+                TaskDetailRow("具體做什麼", task.what)
+                Spacer(Modifier.height(9.dp))
+                TaskDetailRow("補強什麼", task.gain)
+                Spacer(Modifier.height(9.dp))
+                TaskDetailRow("HR 想看到", task.hrValue)
             }
         }
+    }
+}
+
+@Composable
+private fun TaskDetailRow(label: String, text: String) {
+    Column {
+        Text(
+            label,
+            color = BrandDeepOrange,
+            fontWeight = FontWeight.Black,
+            fontSize = 11.sp,
+            letterSpacing = 0.5.sp,
+        )
+        Spacer(Modifier.height(3.dp))
+        Text(
+            text,
+            color = InkGray700,
+            fontSize = 12.sp,
+            lineHeight = 17.sp,
+        )
     }
 }
 
