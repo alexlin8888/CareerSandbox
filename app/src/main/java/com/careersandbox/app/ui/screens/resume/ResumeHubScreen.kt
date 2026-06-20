@@ -308,7 +308,7 @@ private fun JobTargetsEntry(onClick: () -> Unit) {
             Modifier.size(44.dp).clip(RoundedCornerShape(13.dp)).background(BrandOrange),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Outlined.WorkOutline, contentDescription = null,
+            Icon(Icons.Outlined.Description, contentDescription = null,
                 tint = PaperWhite, modifier = Modifier.size(22.dp))
         }
         Spacer(Modifier.width(14.dp))

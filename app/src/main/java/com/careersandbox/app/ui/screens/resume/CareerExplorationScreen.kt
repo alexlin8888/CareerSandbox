@@ -86,7 +86,7 @@ private val allCareerRecs = listOf(
         id = "pm", title = "產品經理", subtitleEn = "Product Manager",
         shortSubtitle = "PM · 50-80k", salary = "50-80k", openings = "890",
         matchScore = 78, missingSkills = listOf("PRD 撰寫", "user story", "SaaS 邏輯"),
-        category = "產品", icon = Icons.Outlined.WorkOutline,
+        category = "產品", icon = Icons.Outlined.Description,
     ),
     CareerRec(
         id = "growth", title = "行銷策略", subtitleEn = "Growth Marketing",

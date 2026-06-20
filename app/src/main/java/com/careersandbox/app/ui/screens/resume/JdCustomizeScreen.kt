@@ -512,7 +512,7 @@ private fun ResultPhase(onBack: () -> Unit, onExport: () -> Unit, onViewVersions
             contentAlignment = Alignment.Center,
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.WorkOutline, contentDescription = null,
+                Icon(Icons.Outlined.Description, contentDescription = null,
                     tint = PaperWhite, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text("存成某職缺的新版本",
