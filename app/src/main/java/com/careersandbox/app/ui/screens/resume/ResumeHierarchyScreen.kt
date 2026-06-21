@@ -138,6 +138,7 @@ private fun JobTargetCard(target: JobTarget) {
     var expanded by remember { mutableStateOf(false) }
     var editingVersion by remember { mutableStateOf<ResumeVersion?>(null) }
     var versionToDelete by remember { mutableStateOf<ResumeVersion?>(null) }
+    var showDeleteTarget by remember { mutableStateOf(false) }
     WhiteCard(onClick = { expanded = !expanded }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -185,6 +186,19 @@ private fun JobTargetCard(target: JobTarget) {
                     )
                     if (idx < target.versions.size - 1) Spacer(Modifier.height(12.dp))
                 }
+                Spacer(Modifier.height(14.dp))
+                Box(Modifier.fillMaxWidth().height(1.dp).background(InkGray100))
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.pressScale { showDeleteTarget = true },
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Outlined.Delete, contentDescription = null,
+                        tint = AccentRed, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("刪除此職缺", color = AccentRed,
+                        fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                }
             }
         }
     }
@@ -212,6 +226,22 @@ private fun JobTargetCard(target: JobTarget) {
             },
             title = { Text("刪除版本") },
             text = { Text("確定刪除「${ver.label}」?此動作無法復原。") },
+        )
+    }
+    if (showDeleteTarget) {
+        AlertDialog(
+            onDismissRequest = { showDeleteTarget = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    MockResumeHierarchyProvider.removeJobTarget(target.id)
+                    showDeleteTarget = false
+                }) { Text("刪除") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteTarget = false }) { Text("取消") }
+            },
+            title = { Text("刪除職缺") },
+            text = { Text("確定刪除「${target.title}・${target.company}」?其下 ${target.versions.size} 個版本會一起刪除,無法復原。") },
         )
     }
 }

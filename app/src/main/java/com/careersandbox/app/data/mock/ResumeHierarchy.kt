@@ -140,6 +140,11 @@ object MockResumeHierarchyProvider : ResumeHierarchyProvider {
         )
     }
 
+    /** 刪除某個職缺(連同其下所有版本)。後端接點:刪除職缺與其版本紀錄。 */
+    fun removeJobTarget(targetId: String) {
+        _targets.removeAll { it.id == targetId }
+    }
+
     /**
      * 更新某個版本的投遞狀態(草稿→已投遞→面試中…)。
      * 後端接點:真接入時這裡會更新該版本的投遞狀態,並可一併記錄狀態異動時間。
