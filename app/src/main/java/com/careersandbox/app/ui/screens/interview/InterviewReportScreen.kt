@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
+import com.careersandbox.app.data.mock.InterviewConfig
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
@@ -36,6 +37,9 @@ import com.careersandbox.app.ui.theme.*
 @Composable
 fun InterviewReportScreen(navController: NavHostController) {
     val ctx = LocalContext.current
+    // 只有剛做完影像面試才顯示影像維度;讀取後重置,避免下次文字/語音面試誤顯示。
+    val showVideoDims = remember { InterviewConfig.lastWasVideo }
+    LaunchedEffect(Unit) { InterviewConfig.lastWasVideo = false }
     val onShare: () -> Unit = {
         val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
             type = "text/plain"
@@ -224,15 +228,16 @@ fun InterviewReportScreen(navController: NavHostController) {
 
                 Spacer(Modifier.height(32.dp))
 
-                // === 影像維度（若做了影像面試）===
-                SectionTitleDark("影像維度")
-                Spacer(Modifier.height(6.dp))
-                Text("這是影像面試練習時的自我覺察參考,不是評分。分析在你的裝置上完成。",
-                    color = PaperWhite.copy(alpha = 0.55f), fontSize = 12.sp, lineHeight = 18.sp)
-                Spacer(Modifier.height(12.dp))
-                VideoDimensionSection()
-
-                Spacer(Modifier.height(32.dp))
+                // === 影像維度（只在剛做完影像面試時顯示）===
+                if (showVideoDims) {
+                    SectionTitleDark("影像維度")
+                    Spacer(Modifier.height(6.dp))
+                    Text("這是影像面試練習時的自我覺察參考,不是評分。分析在你的裝置上完成。",
+                        color = PaperWhite.copy(alpha = 0.55f), fontSize = 12.sp, lineHeight = 18.sp)
+                    Spacer(Modifier.height(12.dp))
+                    VideoDimensionSection()
+                    Spacer(Modifier.height(32.dp))
+                }
 
                 // === #5 該提、但沒提到 ===
                 SectionTitleDark("該提、但你沒提到")

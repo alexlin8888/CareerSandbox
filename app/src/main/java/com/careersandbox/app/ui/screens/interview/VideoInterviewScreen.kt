@@ -45,6 +45,7 @@ import androidx.core.content.ContextCompat
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.FaceMetrics
+import com.careersandbox.app.data.mock.InterviewConfig
 import com.careersandbox.app.data.mock.MockFaceMetricsProvider
 import com.careersandbox.app.data.mock.PaceState
 import com.careersandbox.app.data.mock.videoInterviewQuestions
@@ -73,8 +74,9 @@ fun VideoInterviewScreen(navController: NavHostController) {
         ActivityResultContracts.RequestPermission()
     ) { granted -> hasCamPermission = granted }
 
-    // 進畫面就請求權限(若還沒給)
+    // 進畫面就請求權限(若還沒給),並標記這是影像面試(報告據此顯示影像維度)
     LaunchedEffect(Unit) {
+        InterviewConfig.lastWasVideo = true
         if (!hasCamPermission) permLauncher.launch(Manifest.permission.CAMERA)
     }
 
