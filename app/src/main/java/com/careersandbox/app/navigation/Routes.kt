@@ -22,7 +22,6 @@ object Routes {
     const val EXPERIENCE_EDIT = "experience_edit"
     const val TEAM_CHAT = "team_chat"
     const val TEAM_MATCH = "team_match"
-    const val RESUME_EDITOR = "resume_editor"
     const val JD_CUSTOMIZE = "jd_customize"
 
     const val INTERVIEW_SETUP_INDIVIDUAL = "interview_setup_individual"

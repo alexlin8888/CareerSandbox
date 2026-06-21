@@ -84,7 +84,7 @@ fun HomeHubScreen(navController: NavHostController) {
                         contentScale = ContentScale.Fit,
                     )
                     Text(
-                        "今天也一起加油!",
+                        "今天也辛苦了",
                         color = InkGray500,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
