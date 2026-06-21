@@ -30,6 +30,7 @@ import com.careersandbox.app.ui.theme.*
 fun ResumeHierarchyScreen(navController: NavHostController) {
     val master = MockResumeHierarchyProvider.master()
     val targets = MockResumeHierarchyProvider.jobTargets()
+    var showAddDialog by remember { mutableStateOf(false) }
     Scaffold(
         containerColor = PaperOff,
         topBar = {
@@ -54,16 +55,42 @@ fun ResumeHierarchyScreen(navController: NavHostController) {
         ) {
             item { MasterCard(master) }
             item {
-                Column {
-                    Text("職缺 (${targets.size})", color = InkBlack,
-                        fontWeight = FontWeight.Black, fontSize = 18.sp)
-                    Spacer(Modifier.height(2.dp))
-                    Text("每個應徵目標一張,點開看各版本與投遞狀態",
-                        color = InkGray500, fontSize = 12.sp)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("職缺 (${targets.size})", color = InkBlack,
+                            fontWeight = FontWeight.Black, fontSize = 18.sp)
+                        Spacer(Modifier.height(2.dp))
+                        Text("每個應徵目標一張,點開看各版本與投遞狀態",
+                            color = InkGray500, fontSize = 12.sp)
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(BrandPeach)
+                            .pressScale { showAddDialog = true }
+                            .padding(horizontal = 12.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Outlined.Add, contentDescription = null,
+                            tint = BrandDeepOrange, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("新增", color = BrandDeepOrange,
+                            fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
                 }
             }
             items(targets, key = { it.id }) { target -> JobTargetCard(target) }
             item { Spacer(Modifier.height(8.dp)) }
+        }
+        if (showAddDialog) {
+            AddTargetDialog(
+                onAdd = { t, c ->
+                    MockResumeHierarchyProvider.addJobTarget(t, c)
+                    showAddDialog = false
+                },
+                onDismiss = { showAddDialog = false },
+            )
         }
     }
 }
@@ -109,6 +136,7 @@ private fun InfoPill(text: String) {
 @Composable
 private fun JobTargetCard(target: JobTarget) {
     var expanded by remember { mutableStateOf(false) }
+    var editingVersion by remember { mutableStateOf<ResumeVersion?>(null) }
     WhiteCard(onClick = { expanded = !expanded }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -148,21 +176,39 @@ private fun JobTargetCard(target: JobTarget) {
                 Box(Modifier.fillMaxWidth().height(1.dp).background(InkGray100))
                 Spacer(Modifier.height(12.dp))
                 target.versions.forEachIndexed { idx, v ->
-                    VersionRow(v)
+                    VersionRow(v, onEditStatus = { editingVersion = it })
                     if (idx < target.versions.size - 1) Spacer(Modifier.height(12.dp))
                 }
             }
         }
     }
+    editingVersion?.let { ver ->
+        StatusPickerDialog(
+            current = ver.status,
+            onPick = { newStatus ->
+                MockResumeHierarchyProvider.updateVersionStatus(ver.id, newStatus)
+                editingVersion = null
+            },
+            onDismiss = { editingVersion = null },
+        )
+    }
 }
 
 @Composable
-private fun VersionRow(v: ResumeVersion) {
+private fun VersionRow(v: ResumeVersion, onEditStatus: (ResumeVersion) -> Unit) {
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(v.label, color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Spacer(Modifier.width(8.dp))
-            StatusBadge(v.status)
+            Row(
+                modifier = Modifier.pressScale { onEditStatus(v) },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                StatusBadge(v.status)
+                Spacer(Modifier.width(4.dp))
+                Icon(Icons.Outlined.Edit, contentDescription = "變更狀態",
+                    tint = InkGray400, modifier = Modifier.size(13.dp))
+            }
         }
         Spacer(Modifier.height(3.dp))
         Text(v.note, color = InkGray500, fontSize = 12.sp, lineHeight = 16.sp)
@@ -171,6 +217,83 @@ private fun VersionRow(v: ResumeVersion) {
             Text("投遞於 $it", color = InkGray400, fontSize = 11.sp)
         }
     }
+}
+
+@Composable
+private fun AddTargetDialog(onAdd: (String, String) -> Unit, onDismiss: () -> Unit) {
+    var title by remember { mutableStateOf("") }
+    var company by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                onClick = { onAdd(title.trim(), company.trim()) },
+                enabled = title.isNotBlank() && company.isNotBlank(),
+            ) { Text("新增") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
+        title = { Text("新增職缺") },
+        text = {
+            Column {
+                Text("先建職缺,之後在 JD 客製化把客製存成它的版本",
+                    color = InkGray500, fontSize = 12.sp)
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("職位") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = company,
+                    onValueChange = { company = it },
+                    label = { Text("公司") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+    )
+}
+
+@Composable
+private fun StatusPickerDialog(
+    current: SubmissionStatus,
+    onPick: (SubmissionStatus) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
+        title = { Text("更新投遞狀態") },
+        text = {
+            Column {
+                SubmissionStatus.values().forEach { s ->
+                    val selected = s == current
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (selected) BrandPeach else InkGray100)
+                            .pressScale { onPick(s) }
+                            .padding(horizontal = 14.dp, vertical = 11.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        StatusBadge(s)
+                        Spacer(Modifier.weight(1f))
+                        if (selected) {
+                            Icon(Icons.Outlined.Check, contentDescription = null,
+                                tint = BrandDeepOrange, modifier = Modifier.size(16.dp))
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
+            }
+        },
+    )
 }
 
 @Composable

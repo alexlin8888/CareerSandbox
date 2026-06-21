@@ -123,4 +123,37 @@ object MockResumeHierarchyProvider : ResumeHierarchyProvider {
             ),
         )
     }
+
+    /**
+     * 新增一個職缺(空版本)。
+     * 後端接點:真接入時這裡會在使用者的職缺資料表新增一筆。
+     */
+    fun addJobTarget(title: String, company: String) {
+        _targets.add(
+            JobTarget(
+                id = "jt_${System.currentTimeMillis()}",
+                title = title,
+                company = company,
+                jdKeywords = emptyList(),
+                versions = emptyList(),
+            )
+        )
+    }
+
+    /**
+     * 更新某個版本的投遞狀態(草稿→已投遞→面試中…)。
+     * 後端接點:真接入時這裡會更新該版本的投遞狀態,並可一併記錄狀態異動時間。
+     */
+    fun updateVersionStatus(versionId: String, status: SubmissionStatus) {
+        for (i in _targets.indices) {
+            val t = _targets[i]
+            val vi = t.versions.indexOfFirst { it.id == versionId }
+            if (vi >= 0) {
+                val newVersions = t.versions.toMutableList()
+                newVersions[vi] = newVersions[vi].copy(status = status)
+                _targets[i] = t.copy(versions = newVersions)
+                return
+            }
+        }
+    }
 }
