@@ -137,6 +137,7 @@ private fun InfoPill(text: String) {
 private fun JobTargetCard(target: JobTarget) {
     var expanded by remember { mutableStateOf(false) }
     var editingVersion by remember { mutableStateOf<ResumeVersion?>(null) }
+    var versionToDelete by remember { mutableStateOf<ResumeVersion?>(null) }
     WhiteCard(onClick = { expanded = !expanded }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -176,7 +177,12 @@ private fun JobTargetCard(target: JobTarget) {
                 Box(Modifier.fillMaxWidth().height(1.dp).background(InkGray100))
                 Spacer(Modifier.height(12.dp))
                 target.versions.forEachIndexed { idx, v ->
-                    VersionRow(v, onEditStatus = { editingVersion = it })
+                    VersionRow(
+                        v = v,
+                        onEditStatus = { editingVersion = it },
+                        onDuplicate = { MockResumeHierarchyProvider.duplicateVersion(v.id) },
+                        onDelete = { versionToDelete = v },
+                    )
                     if (idx < target.versions.size - 1) Spacer(Modifier.height(12.dp))
                 }
             }
@@ -192,10 +198,32 @@ private fun JobTargetCard(target: JobTarget) {
             onDismiss = { editingVersion = null },
         )
     }
+    versionToDelete?.let { ver ->
+        AlertDialog(
+            onDismissRequest = { versionToDelete = null },
+            confirmButton = {
+                TextButton(onClick = {
+                    MockResumeHierarchyProvider.removeVersion(ver.id)
+                    versionToDelete = null
+                }) { Text("刪除") }
+            },
+            dismissButton = {
+                TextButton(onClick = { versionToDelete = null }) { Text("取消") }
+            },
+            title = { Text("刪除版本") },
+            text = { Text("確定刪除「${ver.label}」?此動作無法復原。") },
+        )
+    }
 }
 
 @Composable
-private fun VersionRow(v: ResumeVersion, onEditStatus: (ResumeVersion) -> Unit) {
+private fun VersionRow(
+    v: ResumeVersion,
+    onEditStatus: (ResumeVersion) -> Unit,
+    onDuplicate: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    var menuOpen by remember { mutableStateOf(false) }
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(v.label, color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 14.sp)
@@ -208,6 +236,23 @@ private fun VersionRow(v: ResumeVersion, onEditStatus: (ResumeVersion) -> Unit) 
                 Spacer(Modifier.width(4.dp))
                 Icon(Icons.Outlined.Edit, contentDescription = "變更狀態",
                     tint = InkGray400, modifier = Modifier.size(13.dp))
+            }
+            Spacer(Modifier.weight(1f))
+            Box {
+                IconButton(onClick = { menuOpen = true }, modifier = Modifier.size(28.dp)) {
+                    Icon(Icons.Outlined.MoreVert, contentDescription = "更多",
+                        tint = InkGray400, modifier = Modifier.size(18.dp))
+                }
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    DropdownMenuItem(
+                        text = { Text("複製為新版本") },
+                        onClick = { menuOpen = false; onDuplicate() },
+                    )
+                    DropdownMenuItem(
+                        text = { Text("刪除版本") },
+                        onClick = { menuOpen = false; onDelete() },
+                    )
+                }
             }
         }
         Spacer(Modifier.height(3.dp))

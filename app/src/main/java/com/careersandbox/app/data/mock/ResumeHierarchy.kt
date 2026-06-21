@@ -156,4 +156,33 @@ object MockResumeHierarchyProvider : ResumeHierarchyProvider {
             }
         }
     }
+
+    /** 把某版本複製成同職缺底下的新版本(草稿)。後端接點:寫入一筆新版本。 */
+    fun duplicateVersion(versionId: String) {
+        for (i in _targets.indices) {
+            val t = _targets[i]
+            val v = t.versions.firstOrNull { it.id == versionId } ?: continue
+            _targets[i] = t.copy(
+                versions = t.versions + v.copy(
+                    id = "${t.id}_v${System.currentTimeMillis()}",
+                    label = "版本 " + ('A' + t.versions.size),
+                    status = SubmissionStatus.DRAFT,
+                    submittedDate = null,
+                    note = v.note + "(複製)",
+                ),
+            )
+            return
+        }
+    }
+
+    /** 刪除某個版本。後端接點:刪除該版本紀錄。 */
+    fun removeVersion(versionId: String) {
+        for (i in _targets.indices) {
+            val t = _targets[i]
+            if (t.versions.any { it.id == versionId }) {
+                _targets[i] = t.copy(versions = t.versions.filterNot { it.id == versionId })
+                return
+            }
+        }
+    }
 }
