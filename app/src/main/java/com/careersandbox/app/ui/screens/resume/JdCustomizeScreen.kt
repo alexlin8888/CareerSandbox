@@ -404,6 +404,9 @@ private fun ResultPhase(onBack: () -> Unit, onExport: () -> Unit, onViewVersions
         val highlights = remember {
             customized.filter { it.highlighted }.map { it.text to it.matchedKeywords }
         }
+        val covered = remember { MockJdCustomizer.coveredKeywords(MockData.experiences) }
+        val totalKw = MockJdCustomizer.jdKeywords.size
+        val matchScore = remember { if (totalKw == 0) 0 else covered.size * 100 / totalKw }
         var showPreview by remember { mutableStateOf(false) }
         var showSaveSheet by remember { mutableStateOf(false) }
         var savedTo by remember { mutableStateOf<String?>(null) }
@@ -428,13 +431,13 @@ private fun ResultPhase(onBack: () -> Unit, onExport: () -> Unit, onViewVersions
         Spacer(Modifier.height(16.dp))
 
         // 適配度大卡
-        MatchScoreCard(score = 82)
+        MatchScoreCard(score = matchScore)
 
         Spacer(Modifier.height(24.dp))
 
         // 三大指標
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            MetricMini("關鍵字命中", "8 / 11", AccentGreen, modifier = Modifier.weight(1f))
+            MetricMini("關鍵字命中", "${covered.size} / $totalKw", AccentGreen, modifier = Modifier.weight(1f))
             MetricMini("硬實力", "高", BrandOrange, modifier = Modifier.weight(1f))
             MetricMini("軟實力", "中", BrandAmber, modifier = Modifier.weight(1f))
         }

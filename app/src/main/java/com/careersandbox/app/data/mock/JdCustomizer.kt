@@ -29,7 +29,9 @@ interface JdCustomizer {
  * 真接後端時換成真正的 JD ↔ 經歷比對或 LLM 評分,介面不變。
  */
 object MockJdCustomizer : JdCustomizer {
-    private val jdRelevantTags = setOf("數據分析", "SQL", "報表", "Excel")
+    /** 這份 JD 看重的關鍵技能(後端接入時來自 JD 解析) */
+    val jdKeywords: List<String> = listOf("數據分析", "SQL", "報表", "Excel", "Python")
+    private val jdRelevantTags = jdKeywords.toSet()
 
     override fun customize(experiences: List<Experience>): List<CustomizedItem> =
         experiences.map { exp ->
@@ -40,4 +42,8 @@ object MockJdCustomizer : JdCustomizer {
                 highlighted = matched.size >= 2,
             )
         }
+
+    /** 母版涵蓋到的 JD 關鍵字(用來算命中率與適配度) */
+    fun coveredKeywords(experiences: List<Experience>): List<String> =
+        jdKeywords.filter { kw -> experiences.any { kw in it.tags } }
 }
