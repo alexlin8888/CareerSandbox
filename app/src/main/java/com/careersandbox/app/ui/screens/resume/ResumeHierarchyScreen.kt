@@ -60,6 +60,13 @@ fun ResumeHierarchyScreen(navController: NavHostController) {
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             item { MasterCard(master) }
+            val allVersions = targets.flatMap { it.versions }
+            if (allVersions.isNotEmpty()) {
+                val statusCounts = SubmissionStatus.values()
+                    .map { s -> s to allVersions.count { it.status == s } }
+                    .filter { it.second > 0 }
+                item { StatusSummaryCard(statusCounts) }
+            }
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
@@ -401,16 +408,54 @@ private fun StatusPickerDialog(
     )
 }
 
+private fun statusColor(status: SubmissionStatus): Color = when (status) {
+    SubmissionStatus.DRAFT -> InkGray400
+    SubmissionStatus.SUBMITTED -> AccentBlue
+    SubmissionStatus.INTERVIEWING -> BrandOrange
+    SubmissionStatus.WAITING -> BrandAmber
+    SubmissionStatus.REJECTED -> AccentRed
+    SubmissionStatus.OFFER -> AccentGreen
+}
+
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun StatusSummaryCard(counts: List<Pair<SubmissionStatus, Int>>) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(PaperWhite)
+            .padding(16.dp),
+    ) {
+        Text("投遞概況", color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+        Spacer(Modifier.height(10.dp))
+        androidx.compose.foundation.layout.FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            counts.forEach { (status, count) ->
+                val c = statusColor(status)
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(c.copy(alpha = 0.12f))
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(Modifier.size(7.dp).clip(RoundedCornerShape(50)).background(c))
+                    Spacer(Modifier.width(6.dp))
+                    Text(status.label, color = c, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                    Spacer(Modifier.width(4.dp))
+                    Text("$count", color = c, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun StatusBadge(status: SubmissionStatus) {
-    val color: Color = when (status) {
-        SubmissionStatus.DRAFT -> InkGray400
-        SubmissionStatus.SUBMITTED -> AccentBlue
-        SubmissionStatus.INTERVIEWING -> BrandOrange
-        SubmissionStatus.WAITING -> BrandAmber
-        SubmissionStatus.REJECTED -> AccentRed
-        SubmissionStatus.OFFER -> AccentGreen
-    }
+    val color: Color = statusColor(status)
     Box(
         Modifier
             .clip(RoundedCornerShape(50))
