@@ -81,6 +81,21 @@ fun ResumeHierarchyScreen(navController: NavHostController) {
                 }
             }
             items(targets, key = { it.id }) { target -> JobTargetCard(target) }
+            if (targets.isEmpty()) {
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(PaperWhite)
+                            .padding(20.dp),
+                    ) {
+                        Text("還沒有職缺", color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Spacer(Modifier.height(3.dp))
+                        Text("按右上「新增」建立第一個應徵目標", color = InkGray500, fontSize = 12.sp)
+                    }
+                }
+            }
             item { Spacer(Modifier.height(8.dp)) }
         }
         if (showAddDialog) {
@@ -157,34 +172,43 @@ private fun JobTargetCard(target: JobTarget) {
         androidx.compose.animation.AnimatedVisibility(visible = expanded) {
             Column {
                 Spacer(Modifier.height(12.dp))
-                Text("這個 JD 重視", color = InkGray500, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.height(6.dp))
-                androidx.compose.foundation.layout.FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    target.jdKeywords.forEach { kw ->
-                        Box(
-                            Modifier
-                                .clip(RoundedCornerShape(50))
-                                .background(BrandPeach)
-                                .padding(horizontal = 10.dp, vertical = 4.dp),
-                        ) {
-                            Text(kw, color = BrandDeepOrange, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
+                if (target.jdKeywords.isNotEmpty()) {
+                    Text("這個 JD 重視", color = InkGray500, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(6.dp))
+                    androidx.compose.foundation.layout.FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        target.jdKeywords.forEach { kw ->
+                            Box(
+                                Modifier
+                                    .clip(RoundedCornerShape(50))
+                                    .background(BrandPeach)
+                                    .padding(horizontal = 10.dp, vertical = 4.dp),
+                            ) {
+                                Text(kw, color = BrandDeepOrange, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
+                            }
                         }
                     }
+                    Spacer(Modifier.height(14.dp))
+                    Box(Modifier.fillMaxWidth().height(1.dp).background(InkGray100))
+                    Spacer(Modifier.height(12.dp))
                 }
-                Spacer(Modifier.height(14.dp))
-                Box(Modifier.fillMaxWidth().height(1.dp).background(InkGray100))
-                Spacer(Modifier.height(12.dp))
-                target.versions.forEachIndexed { idx, v ->
-                    VersionRow(
-                        v = v,
-                        onEditStatus = { editingVersion = it },
-                        onDuplicate = { MockResumeHierarchyProvider.duplicateVersion(v.id) },
-                        onDelete = { versionToDelete = v },
-                    )
-                    if (idx < target.versions.size - 1) Spacer(Modifier.height(12.dp))
+                if (target.versions.isEmpty()) {
+                    Text("還沒有版本", color = InkBlack, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                    Spacer(Modifier.height(2.dp))
+                    Text("到 JD 客製化,把客製存成這個職缺的版本",
+                        color = InkGray500, fontSize = 12.sp, lineHeight = 16.sp)
+                } else {
+                    target.versions.forEachIndexed { idx, v ->
+                        VersionRow(
+                            v = v,
+                            onEditStatus = { editingVersion = it },
+                            onDuplicate = { MockResumeHierarchyProvider.duplicateVersion(v.id) },
+                            onDelete = { versionToDelete = v },
+                        )
+                        if (idx < target.versions.size - 1) Spacer(Modifier.height(12.dp))
+                    }
                 }
                 Spacer(Modifier.height(14.dp))
                 Box(Modifier.fillMaxWidth().height(1.dp).background(InkGray100))
