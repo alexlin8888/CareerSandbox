@@ -42,6 +42,8 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.MockData
+import com.careersandbox.app.data.mock.MockResumeHierarchyProvider
+import com.careersandbox.app.data.mock.SubmissionStatus
 import com.careersandbox.app.data.model.Article
 import com.careersandbox.app.data.model.ArticleCategory
 import com.careersandbox.app.navigation.Routes
@@ -57,6 +59,8 @@ fun HomeHubScreen(navController: NavHostController) {
             StaggeredAppear(delayMillis = 0) { HeroSection(navController) }
             Spacer(Modifier.height(32.dp))
             StaggeredAppear(delayMillis = 60) { ContinueJobCard(navController) }
+            Spacer(Modifier.height(20.dp))
+            StaggeredAppear(delayMillis = 75) { JobProgressCard(navController) }
             Spacer(Modifier.height(20.dp))
             StaggeredAppear(delayMillis = 90) { ArticleSection(navController) }
             Spacer(Modifier.height(24.dp))
@@ -88,6 +92,66 @@ fun HomeHubScreen(navController: NavHostController) {
                 }
             }
             Spacer(Modifier.height(16.dp))
+        }
+    }
+}
+
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun JobProgressCard(navController: NavHostController) {
+    val targets = MockResumeHierarchyProvider.jobTargets()
+    val allVersions = targets.flatMap { it.versions }
+    if (allVersions.isEmpty()) return
+    val counts = SubmissionStatus.values()
+        .map { s -> s to allVersions.count { it.status == s } }
+        .filter { it.second > 0 }
+    Column(
+        modifier = Modifier
+            .padding(horizontal = 20.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(BrandPeach.copy(alpha = 0.22f))
+            .pressScale { navController.navigate(Routes.RESUME_HIERARCHY) }
+            .padding(16.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("求職進度", color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Spacer(Modifier.weight(1f))
+            Text("${targets.size} 個職缺", color = InkGray500, fontSize = 12.sp)
+            Spacer(Modifier.width(4.dp))
+            Icon(
+                Icons.Outlined.ChevronRight, contentDescription = null,
+                tint = InkGray400, modifier = Modifier.size(18.dp),
+            )
+        }
+        Spacer(Modifier.height(12.dp))
+        androidx.compose.foundation.layout.FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            counts.forEach { (status, count) ->
+                val c = when (status) {
+                    SubmissionStatus.DRAFT -> InkGray400
+                    SubmissionStatus.SUBMITTED -> AccentBlue
+                    SubmissionStatus.INTERVIEWING -> BrandOrange
+                    SubmissionStatus.WAITING -> BrandAmber
+                    SubmissionStatus.REJECTED -> AccentRed
+                    SubmissionStatus.OFFER -> AccentGreen
+                }
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(c.copy(alpha = 0.12f))
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(Modifier.size(7.dp).clip(CircleShape).background(c))
+                    Spacer(Modifier.width(6.dp))
+                    Text(status.label, color = c, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                    Spacer(Modifier.width(4.dp))
+                    Text("$count", color = c, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                }
+            }
         }
     }
 }
