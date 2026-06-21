@@ -43,6 +43,7 @@ import com.careersandbox.app.ui.components.StickyNote
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 import com.careersandbox.app.data.mock.MockData
+import com.careersandbox.app.data.mock.MockJdCustomizer
 import com.careersandbox.app.data.mock.MockResumeHierarchyProvider
 import kotlinx.coroutines.delay
 
@@ -399,12 +400,9 @@ private fun ResultPhase(onBack: () -> Unit, onExport: () -> Unit, onViewVersions
     ) {
         Spacer(Modifier.height(8.dp))
 
+        val customized = remember { MockJdCustomizer.customize(MockData.experiences) }
         val highlights = remember {
-            listOf(
-                "用 SQL 整理銷售資料,流程從 6 小時縮短至 1.5 小時(節省 75%)" to listOf("SQL", "資料分析"),
-                "主導 2 個 A/B 測試,轉換率提升 14%" to listOf("A/B 測試", "量化思考"),
-                "跨部門協作:行銷、設計、工程,每週同步進度" to listOf("跨部門協作"),
-            )
+            customized.filter { it.highlighted }.map { it.text to it.matchedKeywords }
         }
         var showPreview by remember { mutableStateOf(false) }
         var showSaveSheet by remember { mutableStateOf(false) }
@@ -455,8 +453,7 @@ private fun ResultPhase(onBack: () -> Unit, onExport: () -> Unit, onViewVersions
         // 已弱化(減法)— 使用者可主動拉回
         val dimmedItems = remember {
             mutableStateListOf(
-                "IG 從 0 經營到 1200 追蹤",
-                "辦過 3 場校園活動 220+ 人到場",
+                *customized.filter { !it.highlighted }.map { it.text }.toTypedArray()
             )
         }
         if (dimmedItems.isNotEmpty()) {
