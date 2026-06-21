@@ -22,6 +22,7 @@ import com.careersandbox.app.data.mock.MockResumeHierarchyProvider
 import com.careersandbox.app.data.mock.ResumeMaster
 import com.careersandbox.app.data.mock.ResumeVersion
 import com.careersandbox.app.data.mock.SubmissionStatus
+import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
 
@@ -39,6 +40,11 @@ fun ResumeHierarchyScreen(navController: NavHostController) {
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Outlined.ArrowBack, contentDescription = null, tint = InkBlack)
+                    }
+                },
+                actions = {
+                    TextButton(onClick = { navController.navigate(Routes.RESUME_ARCH_INTRO) }) {
+                        Text("怎麼用", color = BrandDeepOrange, fontWeight = FontWeight.SemiBold)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = PaperOff),
