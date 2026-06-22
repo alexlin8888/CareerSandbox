@@ -145,6 +145,28 @@ fun WorkplaceReviewScreen(navController: NavHostController) {
 
             Spacer(Modifier.height(14.dp))
 
+            // === 後果回收:午餐接住阿凱 → 週五的回禮(只在當天接住才出現)===
+            if (WorkplaceState.hasFlag("lunch_bonded_akai")) {
+                StaggeredAppear(delayMillis = 480) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(BrandPeach.copy(alpha = 0.14f))
+                            .padding(18.dp),
+                    ) {
+                        Text("後續", color = BrandDeepOrange, fontSize = 11.sp,
+                            fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "午餐那天你接住了阿凱的話。週五下班前,他晃到你桌邊,丟下一句:下週有個小案子,算你一個。",
+                            color = PaperWhite.copy(alpha = 0.85f), fontSize = 13.sp, lineHeight = 20.sp,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+            }
+
             // === 時刻卡:哪句話造成的 ===
             moments.forEachIndexed { i, m ->
                 StaggeredAppear(delayMillis = 550 + i * 250) {
