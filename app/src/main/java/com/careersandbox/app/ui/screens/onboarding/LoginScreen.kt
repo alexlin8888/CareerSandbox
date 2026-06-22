@@ -144,22 +144,29 @@ fun LoginScreen(
 
                 Spacer(Modifier.height(36.dp))
 
+                val canLogin = email.isNotBlank() && password.isNotBlank()
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp)
-                        .shadow(elevation = 14.dp,
-                            shape = RoundedCornerShape(16.dp),
-                            spotColor = BrandOrange.copy(alpha = 0.6f))
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Brush.linearGradient(
-                            listOf(BrandDeepOrange, BrandOrange, BrandAmber))
+                        .then(
+                            if (canLogin) Modifier.shadow(
+                                elevation = 14.dp,
+                                shape = RoundedCornerShape(16.dp),
+                                spotColor = BrandOrange.copy(alpha = 0.6f),
+                            ) else Modifier
                         )
-                        .pressScale { onLogin() },
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(
+                            if (canLogin) Brush.linearGradient(
+                                listOf(BrandDeepOrange, BrandOrange, BrandAmber)
+                            ) else Brush.linearGradient(listOf(InkGray200, InkGray200))
+                        )
+                        .pressScale { if (canLogin) onLogin() },
                     contentAlignment = Alignment.Center,
                 ) {
                     Text("登入 →",
-                        color = PaperWhite,
+                        color = if (canLogin) PaperWhite else InkGray400,
                         fontWeight = FontWeight.Black,
                         style = MaterialTheme.typography.titleMedium)
                 }
