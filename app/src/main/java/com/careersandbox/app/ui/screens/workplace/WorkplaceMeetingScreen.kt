@@ -197,8 +197,9 @@ private val meetBeats = listOf(
 )
 
 private fun meetKenSprite(mood: String): Int = when (mood) {
-    "緩", "鬆" -> R.drawable.interviewer_tech
-    else -> R.drawable.ken_stern
+    "緩", "鬆" -> R.drawable.ken_soft
+    "僵" -> R.drawable.ken_stern
+    else -> R.drawable.ken_neutral
 }
 
 private fun colleagueSprite(name: String): Int = when (name) {
