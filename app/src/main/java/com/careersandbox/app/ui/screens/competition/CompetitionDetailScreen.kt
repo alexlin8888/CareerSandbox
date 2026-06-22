@@ -49,9 +49,8 @@ fun CompetitionDetailScreen(navController: NavHostController, compId: String) {
 
     // 加入隊伍狀態
     val ctx = LocalContext.current
-    var joinedTeamId by remember { mutableStateOf<String?>(null) }
-    var invitedIds = remember { mutableStateListOf<String>() }
-    var appliedTeamIds = remember { mutableStateListOf<String>() }
+    val invitedIds = remember { mutableStateListOf<String>() }
+    val appliedTeamIds = remember { mutableStateListOf<String>() }
     // 邀請對話框:存當前要邀請的隊友(null = 不顯示)
     var inviteTarget by remember { mutableStateOf<TeamMate?>(null) }
     // 申請對話框:存當前要申請的隊伍
