@@ -19,7 +19,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -32,20 +34,23 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import coil.compose.AsyncImage
 import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.data.model.JobApplication
 import com.careersandbox.app.data.model.VersionStatus
 import com.careersandbox.app.navigation.Routes
+import com.careersandbox.app.ui.components.ScatteredDecorations
+import com.careersandbox.app.ui.components.WaveHeroBackground
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 
 /**
- * Resume hub — Evora-inspired redesign.
- * Structure: orange hero (view-master CTA) -> AI overview dark card ->
- *            tool tiles -> job list (logo holder + status pill).
- * Brand kept: orange gradient hero + beaver. Submission status shown
- * per-row (pills) instead of a separate aggregate card.
+ * Resume hub — Evora-inspired redesign (final).
+ * Layout: wave hero -> prominent master card (overlaps hero) ->
+ *         cross-resume AI overview (read-only) -> tool tiles -> job list.
+ * Company logos are fetched live as favicons (Coil) since they are the
+ * company's own icon; falls back to a colored initial when no domain maps.
  */
 @Composable
 fun ResumeHubScreen(navController: NavHostController) {
@@ -58,20 +63,18 @@ fun ResumeHubScreen(navController: NavHostController) {
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
         ) {
-            HeroSection(navController)
-            Spacer(Modifier.height(22.dp))
-            AnimatedSection(visible = visible, delayMs = 0) {
-                AiOverviewCard(navController)
+            HeroSection()
+            // content lifts onto the hero bottom so the master card overlaps
+            Column(modifier = Modifier.offset(y = (-28).dp)) {
+                MasterCard(navController)
+                Spacer(Modifier.height(22.dp))
+                AnimatedSection(visible = visible, delayMs = 0) { AiOverviewCard() }
+                Spacer(Modifier.height(22.dp))
+                AnimatedSection(visible = visible, delayMs = 120) { ToolStrip(navController) }
+                Spacer(Modifier.height(24.dp))
+                AnimatedSection(visible = visible, delayMs = 200) { JobApplicationsSection(navController) }
+                Spacer(Modifier.height(44.dp))
             }
-            Spacer(Modifier.height(22.dp))
-            AnimatedSection(visible = visible, delayMs = 120) {
-                ToolStrip(navController)
-            }
-            Spacer(Modifier.height(24.dp))
-            AnimatedSection(visible = visible, delayMs = 200) {
-                JobApplicationsSection(navController)
-            }
-            Spacer(Modifier.height(34.dp))
         }
     }
 }
@@ -94,54 +97,28 @@ private fun AnimatedSection(
     }
 }
 
-/* ===== HERO — orange gradient, rounded bottom, view-master CTA + beaver ===== */
+/* ===== HERO — wave background (consistent with other pages) + beaver ===== */
 @Composable
-private fun HeroSection(navController: NavHostController) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(258.dp)
-            .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(Color(0xFFFF7E40), Color(0xFFF2531C), Color(0xFFD33F19)),
-                ),
+private fun HeroSection() {
+    Box(modifier = Modifier.fillMaxWidth().height(260.dp)) {
+        WaveHeroBackground(
+            gradient = Brush.linearGradient(
+                colors = listOf(BrandDeepOrange, BrandOrange, BrandAmber),
             ),
-    ) {
-        // soft corner glow
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .offset(x = 44.dp, y = (-44).dp)
-                .size(220.dp)
-                .background(
-                    brush = Brush.radialGradient(
-                        colors = listOf(Color(0x33FFFFFF), Color(0x00FFFFFF)),
-                    ),
-                    shape = CircleShape,
-                ),
+            heightDp = 260,
         )
-
-        Image(
-            painter = painterResource(R.drawable.beaver_clipboard),
-            contentDescription = null,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .offset(x = (-2).dp, y = 6.dp)
-                .size(150.dp),
-            contentScale = ContentScale.Fit,
-        )
+        ScatteredDecorations(modifier = Modifier.fillMaxSize().alpha(0.6f))
 
         Column(
             modifier = Modifier
-                .padding(start = 24.dp, top = 60.dp, end = 24.dp)
-                .fillMaxWidth(0.62f),
+                .padding(start = 24.dp, top = 58.dp, end = 24.dp)
+                .fillMaxWidth(0.6f),
         ) {
             Text(
                 "MY RESUME",
                 color = PaperWhite.copy(alpha = 0.85f),
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
                 letterSpacing = 3.sp,
             )
             Spacer(Modifier.height(12.dp))
@@ -154,26 +131,77 @@ private fun HeroSection(navController: NavHostController) {
                 lineHeight = 18.sp,
                 fontWeight = FontWeight.Medium,
             )
-            Spacer(Modifier.height(16.dp))
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(13.dp))
-                    .background(PaperWhite)
-                    .pressScale { navController.navigate(Routes.RESUME_PROFILE) }
-                    .padding(horizontal = 16.dp, vertical = 11.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("檢視母版", color = BrandDeepOrange, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Spacer(Modifier.width(7.dp))
-                Icon(Icons.Outlined.ArrowForward, contentDescription = null, tint = BrandDeepOrange, modifier = Modifier.size(15.dp))
-            }
+        }
+
+        Image(
+            painter = painterResource(R.drawable.beaver_clipboard),
+            contentDescription = null,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .offset(x = 0.dp, y = 4.dp)
+                .size(150.dp),
+            contentScale = ContentScale.Fit,
+        )
+    }
+}
+
+/* ===== MASTER CARD — prominent entry, overlaps hero ===== */
+@Composable
+private fun MasterCard(navController: NavHostController) {
+    val resume = MockData.masterResume
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+            .shadow(14.dp, RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(22.dp))
+            .background(PaperWhite)
+            .pressScale { navController.navigate(Routes.RESUME_PROFILE) }
+            .padding(15.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(52.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Brush.linearGradient(listOf(BrandOrange, BrandDeepOrange))),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Outlined.Description, contentDescription = null, tint = PaperWhite, modifier = Modifier.size(26.dp))
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text("母版履歷", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 17.sp)
+            Spacer(Modifier.height(3.dp))
+            Text(
+                "${resume.totalExperiences} 段經歷 · ${resume.totalSkills} 項技能 · 所有版本源頭",
+                color = InkGray500,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+            )
+        }
+        Spacer(Modifier.width(10.dp))
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(13.dp))
+                .background(Brush.linearGradient(listOf(BrandOrange, BrandDeepOrange)))
+                .padding(horizontal = 14.dp, vertical = 9.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("檢視", color = PaperWhite, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = PaperWhite, modifier = Modifier.size(15.dp))
         }
     }
 }
 
-/* ===== AI overview (dark card, colored score bars + suggestion) ===== */
+/* ===== AI overview — cross-resume analysis, read-only (no navigation) ===== */
 @Composable
-private fun AiOverviewCard(navController: NavHostController) {
+private fun AiOverviewCard() {
+    val apps = MockData.jobApplications
+    val totalVersions = apps.sumOf { it.versions.size }
+    val avgMatch = if (apps.isNotEmpty()) apps.map { it.matchScore }.average().toInt() else 0
+    val quantFraction = 1f / totalVersions.coerceAtLeast(1)
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -193,41 +221,48 @@ private fun AiOverviewCard(navController: NavHostController) {
             }
             Spacer(Modifier.width(9.dp))
             Text("履歷總覽", color = PaperWhite, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.weight(1f))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.pressScale { navController.navigate(Routes.FIT_ANALYSIS) },
-            ) {
-                Text("看完整分析", color = BrandAmber, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = BrandAmber, modifier = Modifier.size(15.dp))
-            }
-        }
-        Spacer(Modifier.height(16.dp))
-        AiBar("內容完整度", 0.82f, "82%", AccentGreen)
-        Spacer(Modifier.height(11.dp))
-        AiBar("量化成果", 0.58f, "58%", BrandAmber)
-        Spacer(Modifier.height(11.dp))
-        AiBar("關鍵字匹配", 0.76f, "76%", BrandOrange)
-        Spacer(Modifier.height(15.dp))
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-            Icon(Icons.Outlined.Info, contentDescription = null, tint = BrandAmber, modifier = Modifier.size(15.dp))
-            Spacer(Modifier.width(8.dp))
             Text(
-                "量化成果偏低——在 2 段經歷補上數字(成長率、規模、節省工時),整體說服力會明顯提升。",
-                color = PaperWhite.copy(alpha = 0.62f),
+                "綜覽 ${apps.size} 職缺 · $totalVersions 版本",
+                color = PaperWhite.copy(alpha = 0.45f),
                 fontSize = 11.sp,
-                lineHeight = 17.sp,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.SemiBold,
             )
         }
+        Spacer(Modifier.height(15.dp))
+        AiBar("量化成果覆蓋", quantFraction, "1 / $totalVersions 版本", BrandAmber)
+        Spacer(Modifier.height(11.dp))
+        AiBar("平均適配度", avgMatch / 100f, "$avgMatch%", BrandOrange)
+
+        Spacer(Modifier.height(15.dp))
+        Box(Modifier.fillMaxWidth().height(1.dp).background(PaperWhite.copy(alpha = 0.08f)))
+        Spacer(Modifier.height(14.dp))
+
+        Finding(
+            Color(0xFF5B9BD5),
+            "職缺領域分散",
+            "Acer、KKday、字節跳動 橫跨硬體、旅遊、內容科技,各份履歷該突顯不同經歷,別共用同一版。",
+        )
+        Spacer(Modifier.height(13.dp))
+        Finding(
+            BrandAmber,
+            "共同缺口:量化不足",
+            "版本普遍缺具體數字。補上成長率、規模、節省工時,說服力最有感。",
+        )
+        Spacer(Modifier.height(13.dp))
+        Finding(
+            AccentGreen,
+            "待補關鍵字",
+            "字節跳動(UX 研究)版本缺「使用者研究」「A/B 測試」等字,與 JD 匹配偏低。",
+        )
     }
 }
 
 @Composable
-private fun AiBar(label: String, fraction: Float, pct: String, color: Color) {
+private fun AiBar(label: String, fraction: Float, value: String, color: Color) {
     Column {
-        Row {
-            Text(label, color = PaperWhite.copy(alpha = 0.7f), fontSize = 12.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
-            Text(pct, color = PaperWhite, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(label, color = PaperWhite.copy(alpha = 0.72f), fontSize = 12.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+            Text(value, color = PaperWhite.copy(alpha = 0.55f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
         }
         Spacer(Modifier.height(6.dp))
         Box(
@@ -239,7 +274,7 @@ private fun AiBar(label: String, fraction: Float, pct: String, color: Color) {
         ) {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth(fraction)
+                    .fillMaxWidth(fraction.coerceIn(0f, 1f))
                     .fillMaxHeight()
                     .clip(RoundedCornerShape(5.dp))
                     .background(color),
@@ -248,7 +283,26 @@ private fun AiBar(label: String, fraction: Float, pct: String, color: Color) {
     }
 }
 
-/* ===== tools — white tiles with warm icon chip ===== */
+@Composable
+private fun Finding(dotColor: Color, title: String, desc: String) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+        Box(
+            Modifier
+                .padding(top = 4.dp)
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(dotColor),
+        )
+        Spacer(Modifier.width(10.dp))
+        Column {
+            Text(title, color = PaperWhite, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            Spacer(Modifier.height(2.dp))
+            Text(desc, color = PaperWhite.copy(alpha = 0.6f), fontSize = 11.sp, lineHeight = 16.sp, fontWeight = FontWeight.Medium)
+        }
+    }
+}
+
+/* ===== tools ===== */
 @Composable
 private fun ToolStrip(navController: NavHostController) {
     Row(
@@ -291,7 +345,7 @@ private fun ToolTile(icon: ImageVector, label: String, modifier: Modifier = Modi
     }
 }
 
-/* ===== job list — clean Evora rows (logo holder + status pill) ===== */
+/* ===== job list — real company favicons + status pill ===== */
 @Composable
 private fun JobApplicationsSection(navController: NavHostController) {
     Column(modifier = Modifier.padding(horizontal = 20.dp)) {
@@ -348,9 +402,10 @@ private fun JobApplicationsSection(navController: NavHostController) {
 @Composable
 private fun JobRow(job: JobApplication, index: Int, onClick: () -> Unit) {
     val latest = job.versions.maxByOrNull { it.versionNumber }
+    val domain = companyDomain(job.company)
     val initial = job.company.firstOrNull()?.toString() ?: "?"
-    val logoColors = listOf(Color(0xFFC5121C), Color(0xFF73A81B), Color(0xFF0E76BC))
-    val logoColor = logoColors[index % logoColors.size]
+    val accentColors = listOf(Color(0xFFEC9430), Color(0xFF83B81A), Color(0xFF5B9BD5))
+    val accent = accentColors[index % accentColors.size]
 
     Row(
         modifier = Modifier
@@ -361,16 +416,25 @@ private fun JobRow(job: JobApplication, index: Int, onClick: () -> Unit) {
             .padding(start = 13.dp, top = 13.dp, bottom = 13.dp, end = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // white logo holder — real logo fetched per-company in production
+        // white holder — fetches the company's own icon (favicon) at runtime
         Box(
             modifier = Modifier
                 .size(46.dp)
-                .clip(CircleShape)
+                .clip(RoundedCornerShape(13.dp))
                 .background(PaperWhite)
-                .border(1.5.dp, InkGray200, CircleShape),
+                .border(1.5.dp, InkGray200, RoundedCornerShape(13.dp)),
             contentAlignment = Alignment.Center,
         ) {
-            Text(initial, color = logoColor, fontWeight = FontWeight.Black, fontSize = 16.sp)
+            if (domain != null) {
+                AsyncImage(
+                    model = "https://www.google.com/s2/favicons?domain=$domain&sz=128",
+                    contentDescription = job.company,
+                    modifier = Modifier.size(28.dp),
+                    contentScale = ContentScale.Fit,
+                )
+            } else {
+                Text(initial, color = accent, fontWeight = FontWeight.Black, fontSize = 16.sp)
+            }
         }
         Spacer(Modifier.width(13.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -417,4 +481,20 @@ private fun AddJobRow(onClick: () -> Unit) {
         Spacer(Modifier.width(7.dp))
         Text("新增職缺", color = BrandDeepOrange, fontWeight = FontWeight.Bold, fontSize = 13.sp)
     }
+}
+
+/** Map a company name to a domain so we can fetch its icon. Extend as job data grows. */
+private fun companyDomain(company: String): String? = when (company.trim().lowercase()) {
+    "acer", "宏碁" -> "acer.com"
+    "kkday" -> "kkday.com"
+    "字節跳動", "bytedance" -> "bytedance.com"
+    "聯發科", "mediatek" -> "mediatek.com"
+    "台積電", "tsmc" -> "tsmc.com"
+    "華碩", "asus" -> "asus.com"
+    "google", "谷歌" -> "google.com"
+    "微軟", "microsoft" -> "microsoft.com"
+    "nvidia", "輝達" -> "nvidia.com"
+    "蝦皮", "shopee" -> "shopee.tw"
+    "line" -> "line.me"
+    else -> null
 }
