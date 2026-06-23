@@ -88,17 +88,17 @@ fun FitAnalysisScreen(navController: NavHostController) {
             Capability(
                 "數據能力", 96, "硬實力",
                 "從你修過的資料庫、統計課,加上 2 段含量化成果的經歷推估。",
-                "已經很強,面試時直接用具體數字佐證即可。", target = 80,
+                "已經很強,面試時直接用具體數字佐證即可。", target = 98,
             ),
             Capability(
                 "溝通協作", 90, "軟實力",
                 "從社團幹部、簡報、跨組專案的敘述推估。",
-                "維持就好,可補一句處理意見衝突的例子讓它更立體。", target = 78,
+                "維持就好,可補一句處理意見衝突的例子讓它更立體。", target = 94,
             ),
             Capability(
                 "團隊合作", 76, "軟實力",
                 "從 3 段團隊經歷推估,但多半是執行角色。",
-                "找一次主導或協調角色的經歷寫進去,分數會更有說服力。", target = 85,
+                "找一次主導或協調角色的經歷寫進去,分數會更有說服力。", target = 88,
             ),
             Capability(
                 "領導力", 72, "軟實力",
@@ -108,12 +108,12 @@ fun FitAnalysisScreen(navController: NavHostController) {
             Capability(
                 "抗壓性", 65, "軟實力",
                 "面試常考的面向;你的履歷目前少有面對挫折的敘述。",
-                "補一段「遇到挫折 → 怎麼處理 → 結果」的經歷,這項會明顯拉高。", target = 82,
+                "補一段「遇到挫折 → 怎麼處理 → 結果」的經歷,這項會明顯拉高。", target = 85,
             ),
             Capability(
                 "創新思考", 58, "軟實力",
                 "從專案的新穎性推估,目前偏少。",
-                "參加一次黑客松或提案活動,留下一個可以寫的成果。", target = 85,
+                "參加一次黑客松或提案活動,留下一個可以寫的成果。", target = 88,
             ),
         )
     }
@@ -520,20 +520,21 @@ private fun CapabilityRadar(capabilities: List<Capability>, animateProgress: Boo
         animationSpec = tween(1300, easing = FastOutSlowInEasing),
         label = "radar",
     )
+    val gapThreshold = 15
     val biggestGap = capabilities.maxByOrNull { it.target - it.score }
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
             .background(PaperWhite)
-            .padding(vertical = 22.dp, horizontal = 18.dp),
+            .padding(vertical = 20.dp, horizontal = 14.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Box(modifier = Modifier.size(270.dp), contentAlignment = Alignment.Center) {
+        Box(modifier = Modifier.fillMaxWidth().height(300.dp), contentAlignment = Alignment.Center) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val cx = size.width / 2f
                 val cy = size.height / 2f
-                val radius = size.minDimension / 2f * 0.64f
+                val radius = size.minDimension / 2f * 0.60f
                 fun axisAngle(i: Int): Double = -Math.PI / 2 + 2 * Math.PI * i / n
                 fun point(i: Int, r: Float): Offset {
                     val a = axisAngle(i)
@@ -548,63 +549,50 @@ private fun CapabilityRadar(capabilities: List<Capability>, animateProgress: Boo
                     p.close()
                     return p
                 }
-
-                // 背景同心多邊形(4 圈)
+                // 背景同心多邊形 + 軸線(淺灰)
                 for (ring in 1..4) {
                     drawPath(polygon { ring / 4f }, color = InkGray100, style = Stroke(width = 1f))
                 }
-                // 軸線
                 for (i in 0 until n) {
-                    drawLine(InkGray200, start = Offset(cx, cy), end = point(i, radius), strokeWidth = 1f)
+                    drawLine(InkGray100, start = Offset(cx, cy), end = point(i, radius), strokeWidth = 1f)
                 }
-
                 val cur = { i: Int -> (capabilities[i].score / 100f) * anim }
                 val tgt = { i: Int -> (capabilities[i].target / 100f) * anim }
-                val currentPath = polygon(cur)
-                val targetPath = polygon(tgt)
-
-                // 差集區域(目標 − 現有)= 你還缺的,紅色面積
-                val gapPath = Path().apply { op(targetPath, currentPath, PathOperation.Difference) }
-                drawPath(gapPath, color = AccentRed.copy(alpha = 0.15f))
-
-                // 現有能力(填色 + 描邊)
-                drawPath(currentPath, color = BrandDeepOrange.copy(alpha = 0.20f))
-                drawPath(currentPath, color = BrandDeepOrange, style = Stroke(width = 2.5f))
-
-                // 目標需求(虛線外框)
+                // 目標需求:灰色虛線外框(無填色,當基準線)
                 drawPath(
-                    targetPath,
-                    color = BrandAmber,
+                    polygon(tgt),
+                    color = InkGray400,
                     style = Stroke(width = 2f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f), 0f)),
                 )
-
-                // 頂點:現有橘點;缺口軸再標一個目標紅點
+                // 現有能力:橘色填色 + 描邊(明確內包)
+                drawPath(polygon(cur), color = BrandOrange.copy(alpha = 0.22f))
+                drawPath(polygon(cur), color = BrandDeepOrange, style = Stroke(width = 3f))
+                // 頂點:現有橘點;目標點(缺口大標紅、否則灰)
                 for (i in 0 until n) {
-                    drawCircle(BrandDeepOrange, radius = 3.5f, center = point(i, radius * cur(i)))
-                    if (capabilities[i].target > capabilities[i].score) {
-                        drawCircle(AccentRed, radius = 3.5f, center = point(i, radius * tgt(i)))
-                    }
+                    drawCircle(BrandDeepOrange, radius = 4f, center = point(i, radius * cur(i)))
+                    val gapBig = (capabilities[i].target - capabilities[i].score) >= gapThreshold
+                    drawCircle(if (gapBig) AccentRed else InkGray400, radius = 3.5f, center = point(i, radius * tgt(i)))
                 }
             }
-            // 軸標籤:缺口項標紅加粗
+            // 軸標籤:缺口大者標紅加粗
             capabilities.forEachIndexed { i, cap ->
                 val a = -Math.PI / 2 + 2 * Math.PI * i / n
-                val dx = (kotlin.math.cos(a) * 108).toFloat()
-                val dy = (kotlin.math.sin(a) * 108).toFloat()
-                val isGap = cap.target > cap.score
+                val dx = (kotlin.math.cos(a) * 98).toFloat()
+                val dy = (kotlin.math.sin(a) * 98).toFloat()
+                val gapBig = (cap.target - cap.score) >= gapThreshold
                 Text(
                     cap.label,
-                    color = if (isGap) AccentRed else InkGray700,
+                    color = if (gapBig) AccentRed else InkGray700,
                     fontSize = 10.5.sp,
-                    fontWeight = if (isGap) FontWeight.Black else FontWeight.SemiBold,
+                    fontWeight = if (gapBig) FontWeight.Black else FontWeight.SemiBold,
                     modifier = Modifier.offset(x = dx.dp, y = dy.dp),
                 )
             }
         }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
             LegendItem(color = BrandDeepOrange, label = "現有能力", filled = true)
-            LegendItem(color = BrandAmber, label = "目標需求", filled = false)
+            LegendItem(color = InkGray400, label = "目標需求", filled = false)
             LegendItem(color = AccentRed, label = "待補強", filled = true)
         }
         if (biggestGap != null && biggestGap.target > biggestGap.score) {
