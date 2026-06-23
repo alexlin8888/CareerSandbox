@@ -221,11 +221,11 @@ private fun AiOverviewCard() {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(7.dp))
+                    .clip(RoundedCornerShape(9.dp))
                     .background(Brush.linearGradient(listOf(BrandAmber, BrandOrange)))
-                    .padding(horizontal = 7.dp, vertical = 3.dp),
+                    .padding(horizontal = 9.dp, vertical = 5.dp),
             ) {
-                Text("AI", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 10.sp, letterSpacing = 1.sp)
+                Text("AI", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 14.sp, letterSpacing = 1.sp)
             }
             Spacer(Modifier.width(9.dp))
             Text("履歷總覽", color = PaperWhite, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.weight(1f))

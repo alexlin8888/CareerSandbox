@@ -277,9 +277,15 @@ private fun MatchRing(score: Int) {
                 style = Stroke(width = sw, cap = StrokeCap.Round),
             )
         }
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("$score", color = BrandDeepOrange, fontWeight = FontWeight.Black, fontSize = 17.sp, lineHeight = 17.sp)
-            Text("適配", color = InkGray500, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text("$score", color = BrandDeepOrange, fontWeight = FontWeight.Black, fontSize = 18.sp)
+            Text(
+                "%",
+                color = BrandDeepOrange,
+                fontWeight = FontWeight.Black,
+                fontSize = 10.sp,
+                modifier = Modifier.padding(bottom = 2.dp),
+            )
         }
     }
 }
