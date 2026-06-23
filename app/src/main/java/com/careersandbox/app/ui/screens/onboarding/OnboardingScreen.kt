@@ -5,23 +5,30 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ArrowForward
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.careersandbox.app.R
@@ -29,9 +36,13 @@ import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
 
+private val OnbBg = Color(0xFFFFF8F3)
+private val OnbCardBorder = Color(0xFFF0E6DC)
+private val Espresso = Color(0xFF3D2419)
+
 @Composable
 fun OnboardingScreen(onDone: () -> Unit) {
-    // #25 / #11:第一次進來先用教學卡介紹四大功能與「母版」概念,再進入填資料表單
+    // #25 / #11:第一次進來先用教學卡介紹功能與「母版」概念,再進入填資料表單
     var showIntro by remember { mutableStateOf(true) }
     if (showIntro) {
         OnboardingIntro(onStart = { showIntro = false })
@@ -39,6 +50,269 @@ fun OnboardingScreen(onDone: () -> Unit) {
         OnboardingForm(onDone = onDone)
     }
 }
+
+/* ===================== 共用元件 ===================== */
+
+@Composable
+private fun OnbTopBar(onSkip: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("職涯沙盒", color = BrandDeepOrange, fontWeight = FontWeight.Black, fontSize = 14.sp)
+            Spacer(Modifier.width(6.dp))
+            Text("CAREER SANDBOX", color = InkGray400, fontWeight = FontWeight.SemiBold, fontSize = 9.sp)
+        }
+        Text(
+            "跳過介紹",
+            color = InkGray400,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.pressScale { onSkip() }.padding(6.dp),
+        )
+    }
+}
+
+@Composable
+private fun OnbLabel(text: String) {
+    Text(text, color = BrandDeepOrange, fontSize = 12.sp, fontWeight = FontWeight.Black)
+}
+
+@Composable
+private fun OnbHighlight(text: String) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(7.dp))
+            .background(BrandAmber.copy(alpha = 0.5f))
+            .padding(horizontal = 9.dp, vertical = 5.dp),
+    ) {
+        Text(text, color = InkBlack, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun OnbPrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .height(54.dp)
+            .shadow(10.dp, RoundedCornerShape(16.dp), spotColor = BrandOrange.copy(alpha = 0.4f))
+            .clip(RoundedCornerShape(16.dp))
+            .background(Brush.linearGradient(listOf(BrandOrange, BrandDeepOrange)))
+            .pressScale(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(text, color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 15.sp, maxLines = 1)
+            Spacer(Modifier.width(8.dp))
+            Icon(Icons.Outlined.ArrowForward, contentDescription = null, tint = PaperWhite, modifier = Modifier.size(18.dp))
+        }
+    }
+}
+
+@Composable
+private fun OnbChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(if (selected) BrandDeepOrange else PaperWhite)
+            .border(1.5.dp, if (selected) BrandDeepOrange else InkGray200, RoundedCornerShape(50))
+            .pressScale(onClick = onClick)
+            .padding(horizontal = 15.dp, vertical = 10.dp),
+    ) {
+        Text(label, color = if (selected) PaperWhite else InkGray700, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+    }
+}
+
+@Composable
+private fun OnbBottomNav(showBack: Boolean, onBack: () -> Unit, nextText: String, onNext: () -> Unit) {
+    Column(modifier = Modifier.fillMaxWidth().padding(bottom = 30.dp)) {
+        if (showBack) {
+            Text(
+                "← 上一步",
+                color = InkGray400,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.pressScale { onBack() }.padding(vertical = 6.dp),
+            )
+            Spacer(Modifier.height(8.dp))
+        }
+        OnbPrimaryButton(text = nextText, onClick = onNext, modifier = Modifier.fillMaxWidth())
+    }
+}
+
+/* ===================== 導覽(5 卡) ===================== */
+
+@Composable
+private fun OnboardingIntro(onStart: () -> Unit) {
+    val totalCards = 5
+    var card by remember { mutableIntStateOf(0) }
+
+    Column(
+        modifier = Modifier.fillMaxSize().background(OnbBg).padding(horizontal = 24.dp),
+    ) {
+        Spacer(Modifier.height(52.dp))
+        OnbTopBar(onSkip = onStart)
+
+        AnimatedContent(
+            targetState = card,
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            transitionSpec = {
+                (fadeIn(tween(300)) + slideInHorizontally(tween(300)) { it / 4 })
+                    .togetherWith(fadeOut(tween(150)))
+            },
+            label = "introCard",
+        ) { c ->
+            when (c) {
+                0 -> IntroCard(
+                    "01 / 05", R.drawable.beaver_wave, "歡迎來到\nCareerSandbox", null,
+                    "履歷、模擬面試、職涯探索、職場體驗,在同一個地方把求職一次準備好。",
+                )
+                1 -> IntroCard(
+                    "02 / 05", R.drawable.beaver_resume, "先建一份「母版」", "母版 = 你最完整的綜合履歷",
+                    "把所有經歷、技能、作品都放進去,先不為任何公司修飾。之後的客製版本,都從這份母版長出來。",
+                )
+                2 -> IntroTierCard("03 / 05")
+                3 -> IntroCard(
+                    "04 / 05", R.drawable.beaver_celebrate, "跟 AI 面試官練習", "想練幾分鐘,都可以",
+                    "可以調面試官的強度、貼上 JD、選擇要給他看哪一份履歷版本。練完拿到分面向的回饋:內容、結構、表達。",
+                )
+                4 -> IntroCard(
+                    "05 / 05", R.drawable.beaver_search, "用自己的話找方向", "重點是你「還缺什麼」",
+                    "還不確定想要什麼工作?用一句話描述你在意的事,系統幫你收斂、清楚標出你還缺哪些技能。選定後,進職場沙盒提前體驗那份工作的一天。",
+                )
+            }
+        }
+
+        // 進度圓點(左對齊,選中拉長)
+        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)) {
+            repeat(totalCards) { i ->
+                Box(
+                    Modifier
+                        .padding(end = 6.dp)
+                        .height(7.dp)
+                        .width(if (i == card) 22.dp else 7.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(if (i == card) BrandDeepOrange else InkGray200),
+                )
+            }
+        }
+
+        OnbBottomNav(
+            showBack = card > 0,
+            onBack = { card-- },
+            nextText = if (card == totalCards - 1) "開始建立我的資料" else "下一步",
+            onNext = { if (card < totalCards - 1) card++ else onStart() },
+        )
+    }
+}
+
+@Composable
+private fun IntroCard(label: String, beaver: Int, title: String, highlight: String?, body: String) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        Spacer(Modifier.height(10.dp))
+        OnbLabel(label)
+        Spacer(Modifier.height(14.dp))
+        Text(title, color = InkBlack, fontWeight = FontWeight.Black, fontSize = 27.sp, lineHeight = 34.sp)
+        if (highlight != null) {
+            Spacer(Modifier.height(14.dp))
+            OnbHighlight(highlight)
+        }
+        Spacer(Modifier.height(16.dp))
+        Text(body, color = InkGray500, fontSize = 14.sp, lineHeight = 23.sp)
+        Spacer(Modifier.weight(1f))
+        Image(
+            painter = painterResource(beaver),
+            contentDescription = null,
+            modifier = Modifier.fillMaxWidth().height(175.dp),
+            contentScale = ContentScale.Fit,
+        )
+        Spacer(Modifier.height(6.dp))
+    }
+}
+
+@Composable
+private fun IntroTierCard(label: String) {
+    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+        Spacer(Modifier.height(10.dp))
+        OnbLabel(label)
+        Spacer(Modifier.height(14.dp))
+        Text(
+            buildAnnotatedString {
+                append("一份")
+                withStyle(SpanStyle(background = BrandAmber)) { append("母版") }
+                append("\n長出多個版本")
+            },
+            color = InkBlack, fontWeight = FontWeight.Black, fontSize = 27.sp, lineHeight = 36.sp,
+        )
+        Spacer(Modifier.height(16.dp))
+        Text(
+            "同一份母版,針對不同公司強調不同經歷。每個版本可以單獨標記投遞狀態。",
+            color = InkGray500, fontSize = 14.sp, lineHeight = 23.sp,
+        )
+        Spacer(Modifier.height(26.dp))
+
+        // 深色 anchor 卡:母版(基底)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(Brush.linearGradient(listOf(Espresso, Color(0xFF1F1209))))
+                .padding(18.dp),
+        ) {
+            Column {
+                Box(
+                    Modifier.clip(RoundedCornerShape(8.dp)).background(BrandAmber)
+                        .padding(horizontal = 10.dp, vertical = 3.dp),
+                ) {
+                    Text("母版履歷", color = Espresso, fontWeight = FontWeight.Black, fontSize = 11.sp)
+                }
+                Spacer(Modifier.height(10.dp))
+                Text("你的完整經歷庫", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                Spacer(Modifier.height(4.dp))
+                Text("不為任何公司修飾,收錄所有經歷", color = PaperWhite.copy(alpha = 0.6f), fontSize = 12.sp)
+            }
+        }
+
+        Box(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp), contentAlignment = Alignment.Center) {
+            HandDrawnArrow(modifier = Modifier.height(34.dp).width(54.dp), color = InkGray400, strokeWidth = 2.5f)
+        }
+
+        // 兩個衍生版本
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            VersionMini(modifier = Modifier.weight(1f), company = "台積電 PM 版", accent = AccentGreen, statusLabel = "投遞中")
+            VersionMini(modifier = Modifier.weight(1f), company = "新創 PM 版", accent = BrandOrange, statusLabel = "草稿")
+        }
+        Spacer(Modifier.height(10.dp))
+    }
+}
+
+@Composable
+private fun VersionMini(modifier: Modifier = Modifier, company: String, accent: Color, statusLabel: String) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(PaperWhite)
+            .border(1.5.dp, OnbCardBorder, RoundedCornerShape(16.dp))
+            .padding(14.dp),
+    ) {
+        Column {
+            Box(Modifier.size(width = 28.dp, height = 4.dp).clip(RoundedCornerShape(50)).background(accent))
+            Spacer(Modifier.height(10.dp))
+            Text(company, color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Spacer(Modifier.height(8.dp))
+            Box(
+                Modifier.clip(RoundedCornerShape(50)).background(accent.copy(alpha = 0.15f))
+                    .padding(horizontal = 8.dp, vertical = 3.dp),
+            ) {
+                Text(statusLabel, color = accent, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
+}
+
+/* ===================== 註冊表單(4 步) ===================== */
 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
@@ -54,22 +328,28 @@ private fun OnboardingForm(onDone: () -> Unit) {
     var year by remember { mutableStateOf("") }
 
     Column(
-        modifier = Modifier.fillMaxSize().background(PaperOff).padding(horizontal = 24.dp),
+        modifier = Modifier.fillMaxSize().background(OnbBg).padding(horizontal = 24.dp),
     ) {
         Spacer(Modifier.height(56.dp))
-        // 進度
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            repeat(total) { i ->
-                Box(
-                    Modifier.weight(1f).height(4.dp).clip(RoundedCornerShape(50))
-                        .background(if (i + 1 <= step) BrandOrange else InkGray200)
-                )
-            }
+        // 標籤 + STEP
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("建立你的資料", color = InkGray500, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Text("STEP $step / $total", color = BrandDeepOrange, fontSize = 12.sp, fontWeight = FontWeight.Black)
         }
-        Spacer(Modifier.height(8.dp))
-        Text("Step $step / $total", style = MaterialTheme.typography.labelSmall, color = InkGray400)
+        Spacer(Modifier.height(14.dp))
+        // 單一進度條
+        Box(modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(50)).background(InkGray200)) {
+            Box(
+                Modifier.fillMaxWidth(step.toFloat() / total).height(8.dp).clip(RoundedCornerShape(50))
+                    .background(Brush.horizontalGradient(listOf(BrandOrange, BrandDeepOrange))),
+            )
+        }
 
-        Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.height(26.dp))
 
         AnimatedContent(
             targetState = step,
@@ -82,8 +362,7 @@ private fun OnboardingForm(onDone: () -> Unit) {
         ) { current ->
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 when (current) {
-                    1 -> Step1(name, { name = it }, school, { school = it },
-                        dept, { dept = it }, year, { year = it })
+                    1 -> Step1(name, { name = it }, school, { school = it }, dept, { dept = it }, year, { year = it })
                     2 -> Step2(interests)
                     3 -> Step3(skillsHave, skillsWant)
                     4 -> Step4()
@@ -91,20 +370,22 @@ private fun OnboardingForm(onDone: () -> Unit) {
             }
         }
 
-        Spacer(Modifier.height(16.dp))
-        Row(Modifier.fillMaxWidth().padding(bottom = 32.dp)) {
-            if (step > 1) {
-                SecondaryButton(text = "上一步", onClick = { step-- },
-                    modifier = Modifier.weight(1f))
-                Spacer(Modifier.width(12.dp))
-            }
-            PrimaryDarkButton(
-                text = if (step == total) "開始使用" else "下一步",
-                onClick = { if (step < total) step++ else onDone() },
-                modifier = Modifier.weight(1f),
-            )
-        }
+        Spacer(Modifier.height(12.dp))
+        OnbBottomNav(
+            showBack = step > 1,
+            onBack = { step-- },
+            nextText = if (step == total) "開始使用" else "下一步",
+            onNext = { if (step < total) step++ else onDone() },
+        )
     }
+}
+
+@Composable
+private fun FormHeadline(title: String, subtitle: String) {
+    Text(title, color = InkBlack, fontWeight = FontWeight.Black, fontSize = 26.sp, lineHeight = 32.sp)
+    Spacer(Modifier.height(10.dp))
+    Text(subtitle, color = InkGray500, fontSize = 14.sp, lineHeight = 22.sp)
+    Spacer(Modifier.height(24.dp))
 }
 
 @Composable
@@ -114,11 +395,7 @@ private fun Step1(
     dept: String, onDept: (String) -> Unit,
     year: String, onYear: (String) -> Unit,
 ) {
-    Text("先認識你", style = MaterialTheme.typography.headlineLarge,
-        color = InkBlack, fontWeight = FontWeight.ExtraBold)
-    Spacer(Modifier.height(8.dp))
-    Text("這些只用來推薦合適內容", color = InkGray500, style = MaterialTheme.typography.bodyMedium)
-    Spacer(Modifier.height(32.dp))
+    FormHeadline("先認識你", "這些只用來推薦合適內容,不會公開。")
     OnboardField("姓名", name, onName)
     OnboardField("學校", school, onSchool)
     OnboardField("系所", dept, onDept)
@@ -128,8 +405,7 @@ private fun Step1(
 @Composable
 private fun OnboardField(label: String, value: String, onChange: (String) -> Unit) {
     Column(Modifier.padding(bottom = 14.dp)) {
-        Text(label, style = MaterialTheme.typography.labelLarge,
-            color = InkGray700, fontWeight = FontWeight.SemiBold)
+        Text(label, color = InkGray700, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
         Spacer(Modifier.height(6.dp))
         OutlinedTextField(
             value = value,
@@ -138,11 +414,11 @@ private fun OnboardField(label: String, value: String, onChange: (String) -> Uni
             shape = RoundedCornerShape(14.dp),
             singleLine = true,
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = InkBlack,
+                focusedBorderColor = BrandOrange,
                 unfocusedBorderColor = InkGray200,
-                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-            )
+                focusedContainerColor = PaperWhite,
+                unfocusedContainerColor = PaperWhite,
+            ),
         )
     }
 }
@@ -150,20 +426,11 @@ private fun OnboardField(label: String, value: String, onChange: (String) -> Uni
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun Step2(selected: MutableList<String>) {
-    Text("你想探索的方向", style = MaterialTheme.typography.headlineLarge,
-        color = InkBlack, fontWeight = FontWeight.ExtraBold)
-    Spacer(Modifier.height(8.dp))
-    Text("選 3-5 個,可以隨時改 ・ 已選 ${selected.size}/5",
-        color = InkGray500, style = MaterialTheme.typography.bodyMedium)
-    Spacer(Modifier.height(24.dp))
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
+    FormHeadline("你想探索的方向", "選 3-5 個,可以隨時改 ・ 已選 ${selected.size}/5")
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         MockData.jobInterests.forEach { item ->
-            PillChip(label = item, selected = item in selected, onClick = {
-                if (item in selected) selected.remove(item)
-                else if (selected.size < 5) selected.add(item)
+            OnbChip(label = item, selected = item in selected, onClick = {
+                if (item in selected) selected.remove(item) else if (selected.size < 5) selected.add(item)
             })
         }
     }
@@ -172,30 +439,22 @@ private fun Step2(selected: MutableList<String>) {
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun Step3(skillsHave: MutableList<String>, skillsWant: MutableList<String>) {
-    Text("你會什麼", style = MaterialTheme.typography.headlineLarge,
-        color = InkBlack, fontWeight = FontWeight.ExtraBold)
-    Spacer(Modifier.height(8.dp))
-    Text("先盤點手上有的", color = InkGray500, style = MaterialTheme.typography.bodyMedium)
-    Spacer(Modifier.height(24.dp))
-    Text("我擅長", style = MaterialTheme.typography.titleMedium,
-        color = InkBlack, fontWeight = FontWeight.SemiBold)
-    Spacer(Modifier.height(10.dp))
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    FormHeadline("你會什麼", "先盤點手上有的,再勾想學的。")
+    Text("我擅長", color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+    Spacer(Modifier.height(12.dp))
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         MockData.skills.forEach { s ->
-            PillChip(s, selected = s in skillsHave) {
+            OnbChip(s, selected = s in skillsHave) {
                 if (s in skillsHave) skillsHave.remove(s) else skillsHave.add(s)
             }
         }
     }
-    Spacer(Modifier.height(22.dp))
-    Text("我想學", style = MaterialTheme.typography.titleMedium,
-        color = InkBlack, fontWeight = FontWeight.SemiBold)
-    Spacer(Modifier.height(10.dp))
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Spacer(Modifier.height(24.dp))
+    Text("我想學", color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+    Spacer(Modifier.height(12.dp))
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         MockData.skills.forEach { s ->
-            PillChip(s, selected = s in skillsWant) {
+            OnbChip(s, selected = s in skillsWant) {
                 if (s in skillsWant) skillsWant.remove(s) else skillsWant.add(s)
             }
         }
@@ -205,18 +464,12 @@ private fun Step3(skillsHave: MutableList<String>, skillsWant: MutableList<Strin
 @Composable
 private fun Step4() {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Image(
-            painter = painterResource(R.drawable.beaver_thumbsup),
-            contentDescription = null,
-            modifier = Modifier.size(72.dp),
-        )
-        Spacer(Modifier.width(12.dp))
+        Image(painter = painterResource(R.drawable.beaver_thumbsup), contentDescription = null, modifier = Modifier.size(72.dp))
+        Spacer(Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text("準備好了", style = MaterialTheme.typography.headlineLarge,
-                color = InkBlack, fontWeight = FontWeight.ExtraBold)
-            Spacer(Modifier.height(8.dp))
-            Text("根據你的選擇,以下幾件事可以先做",
-                color = InkGray500, style = MaterialTheme.typography.bodyMedium)
+            Text("準備好了", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 26.sp)
+            Spacer(Modifier.height(6.dp))
+            Text("根據你的選擇,以下幾件事可以先做", color = InkGray500, fontSize = 14.sp, lineHeight = 22.sp)
         }
     }
     Spacer(Modifier.height(24.dp))
@@ -228,279 +481,24 @@ private fun Step4() {
     )
     items.forEachIndexed { idx, (no, content) ->
         StaggeredAppear(delayMillis = idx * 100) {
-            WhiteCard(modifier = Modifier.padding(bottom = 10.dp)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 10.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(PaperWhite)
+                    .border(1.5.dp, OnbCardBorder, RoundedCornerShape(16.dp))
+                    .padding(16.dp),
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(no, style = MaterialTheme.typography.displaySmall,
-                        color = BrandOrange, fontWeight = FontWeight.Black)
+                    Text(no, color = BrandOrange, fontWeight = FontWeight.Black, fontSize = 30.sp)
                     Spacer(Modifier.width(16.dp))
                     Column {
-                        Text(content.first, style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold, color = InkBlack)
+                        Text(content.first, color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                         Spacer(Modifier.height(2.dp))
-                        Text(content.second, style = MaterialTheme.typography.bodySmall,
-                            color = InkGray500)
+                        Text(content.second, color = InkGray500, fontSize = 13.sp)
                     }
                 }
-            }
-        }
-    }
-}
-
-/* ===================== #25 / #11 首次登入教學卡 ===================== */
-
-@Composable
-private fun OnboardingIntro(onStart: () -> Unit) {
-    val totalCards = 5
-    var card by remember { mutableIntStateOf(0) }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(PaperOff)
-            .padding(horizontal = 24.dp),
-    ) {
-        Spacer(Modifier.height(48.dp))
-        // 跳過介紹
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-        ) {
-            Text(
-                "跳過介紹",
-                color = InkGray400,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.pressScale { onStart() }.padding(8.dp),
-            )
-        }
-
-        AnimatedContent(
-            targetState = card,
-            modifier = Modifier.weight(1f).fillMaxWidth(),
-            transitionSpec = {
-                (fadeIn(tween(300)) + slideInHorizontally(tween(300)) { it / 4 })
-                    .togetherWith(fadeOut(tween(150)))
-            },
-            label = "introCard",
-        ) { c ->
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                when (c) {
-                    0 -> IntroBeaverCard(
-                        beaver = R.drawable.beaver_wave,
-                        title = "歡迎來到 CareerSandbox",
-                        highlight = null,
-                        body = "履歷、模擬面試、職涯探索、職場體驗,在同一個地方把求職一次準備好。",
-                    )
-                    1 -> IntroBeaverCard(
-                        beaver = R.drawable.beaver_resume,
-                        title = "先建一份「母版」",
-                        highlight = "母版 = 你最完整的綜合履歷",
-                        body = "把所有經歷、技能、作品都放進去,先不為任何公司修飾。之後的客製版本,都從這份母版長出來。",
-                    )
-                    2 -> IntroTierCard()
-                    3 -> IntroBeaverCard(
-                        beaver = R.drawable.beaver_celebrate,
-                        title = "跟 AI 面試官練習",
-                        highlight = "想練幾分鐘,都可以",
-                        body = "可以調面試官的強度、貼上 JD、選擇要給他看哪一份履歷版本。練完拿到分面向的回饋:內容、結構、表達。",
-                    )
-                    4 -> IntroBeaverCard(
-                        beaver = R.drawable.beaver_search,
-                        title = "用自己的話找方向",
-                        highlight = "重點是你「還缺什麼」",
-                        body = "還不確定想要什麼工作?用一句話描述你在意的事,系統幫你收斂、清楚標出你還缺哪些技能。選定後,進職場沙盒提前體驗那份工作的一天。",
-                    )
-                }
-            }
-        }
-
-        // 進度圓點
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-            horizontalArrangement = Arrangement.Center,
-        ) {
-            repeat(totalCards) { i ->
-                Box(
-                    Modifier
-                        .padding(horizontal = 4.dp)
-                        .size(if (i == card) 9.dp else 7.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(if (i == card) BrandOrange else InkGray200),
-                )
-            }
-        }
-
-        Row(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp)) {
-            if (card > 0) {
-                SecondaryButton(
-                    text = "上一步",
-                    onClick = { card-- },
-                    modifier = Modifier.weight(1f),
-                )
-                Spacer(Modifier.width(12.dp))
-            }
-            PrimaryDarkButton(
-                text = if (card == totalCards - 1) "開始建立我的資料" else "下一步",
-                onClick = { if (card < totalCards - 1) card++ else onStart() },
-                modifier = Modifier.weight(1f),
-            )
-        }
-    }
-}
-
-@Composable
-private fun IntroBeaverCard(
-    beaver: Int,
-    title: String,
-    highlight: String?,
-    body: String,
-) {
-    Image(
-        painter = painterResource(beaver),
-        contentDescription = null,
-        contentScale = ContentScale.Fit,
-        modifier = Modifier.size(160.dp),
-    )
-    Spacer(Modifier.height(28.dp))
-    Text(
-        title,
-        color = InkBlack,
-        fontWeight = FontWeight.Black,
-        fontSize = 26.sp,
-        textAlign = TextAlign.Center,
-    )
-    if (highlight != null) {
-        Spacer(Modifier.height(16.dp))
-        HighlighterText(
-            text = highlight,
-            highlightColor = BrandAmber,
-            textColor = InkBlack,
-            fontSize = 16,
-            fontWeight = FontWeight.Bold,
-        )
-    }
-    Spacer(Modifier.height(16.dp))
-    Text(
-        body,
-        color = InkGray500,
-        fontSize = 15.sp,
-        lineHeight = 24.sp,
-        textAlign = TextAlign.Center,
-        modifier = Modifier.padding(horizontal = 8.dp),
-    )
-}
-
-@Composable
-private fun IntroTierCard() {
-    Image(
-        painter = painterResource(R.drawable.beaver_present),
-        contentDescription = null,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(180.dp),
-        contentScale = ContentScale.Fit,
-    )
-    Spacer(Modifier.height(16.dp))
-    Text(
-        "再依職缺客製版本",
-        color = InkBlack,
-        fontWeight = FontWeight.Black,
-        fontSize = 26.sp,
-        textAlign = TextAlign.Center,
-    )
-    Spacer(Modifier.height(10.dp))
-    Text(
-        "同一份母版,針對不同公司強調不同經歷。每個版本可以單獨標記投遞狀態。",
-        color = InkGray500,
-        fontSize = 15.sp,
-        lineHeight = 24.sp,
-        textAlign = TextAlign.Center,
-        modifier = Modifier.padding(horizontal = 8.dp),
-    )
-    Spacer(Modifier.height(28.dp))
-
-    // 母版
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(BrandAmber)
-            .padding(vertical = 18.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("母版", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 18.sp)
-            Spacer(Modifier.height(2.dp))
-            Text(
-                "完整綜合履歷(不修飾)",
-                color = BrandDeepOrange,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-    }
-
-    // 手繪箭頭往下
-    HandDrawnArrow(
-        modifier = Modifier.height(40.dp).width(64.dp),
-        color = BrandDeepOrange,
-        strokeWidth = 2.5f,
-    )
-
-    // 兩個版本
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        VersionMini(
-            modifier = Modifier.weight(1f),
-            company = "台積電 PM 版",
-            accent = AccentGreen,
-            statusLabel = "投遞中",
-        )
-        VersionMini(
-            modifier = Modifier.weight(1f),
-            company = "新創 PM 版",
-            accent = BrandOrange,
-            statusLabel = "草稿",
-        )
-    }
-}
-
-@Composable
-private fun VersionMini(
-    modifier: Modifier = Modifier,
-    company: String,
-    accent: androidx.compose.ui.graphics.Color,
-    statusLabel: String,
-) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(PaperWhite)
-            .padding(14.dp),
-    ) {
-        Column {
-            Box(
-                Modifier
-                    .size(width = 28.dp, height = 4.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(accent),
-            )
-            Spacer(Modifier.height(10.dp))
-            Text(company, color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            Spacer(Modifier.height(8.dp))
-            Box(
-                Modifier
-                    .clip(RoundedCornerShape(50))
-                    .background(accent.copy(alpha = 0.15f))
-                    .padding(horizontal = 8.dp, vertical = 3.dp),
-            ) {
-                Text(statusLabel, color = accent, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
             }
         }
     }
