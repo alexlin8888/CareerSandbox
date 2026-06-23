@@ -137,9 +137,9 @@ private fun HeroSection() {
             painter = painterResource(R.drawable.beaver_clipboard),
             contentDescription = null,
             modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .offset(x = 0.dp, y = 4.dp)
-                .size(150.dp),
+                .align(Alignment.TopEnd)
+                .offset(x = 0.dp, y = 56.dp)
+                .size(148.dp),
             contentScale = ContentScale.Fit,
         )
     }
@@ -240,7 +240,7 @@ private fun AiOverviewCard() {
         Finding(
             Color(0xFF5B9BD5),
             "職缺領域分散",
-            "Acer、KKday、字節跳動 橫跨硬體、旅遊、內容科技,各份履歷該突顯不同經歷,別共用同一版。",
+            "Acer、KKday、蝦皮 橫跨硬體、旅遊、電商,各份履歷該突顯不同經歷,別共用同一版。",
         )
         Spacer(Modifier.height(13.dp))
         Finding(
@@ -252,7 +252,7 @@ private fun AiOverviewCard() {
         Finding(
             AccentGreen,
             "待補關鍵字",
-            "字節跳動(UX 研究)版本缺「使用者研究」「A/B 測試」等字,與 JD 匹配偏低。",
+            "蝦皮(UX 研究)版本缺「使用者研究」「A/B 測試」等字,與 JD 匹配偏低。",
         )
     }
 }

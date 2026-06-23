@@ -102,7 +102,7 @@ object MockData {
         ),
         JobApplication(
             id = "j3",
-            company = "字節跳動",
+            company = "蝦皮",
             position = "UX 研究員(實習)",
             jdSnippet = "尋找對使用者研究有興趣的學生,進行訪談、可用性測試。",
             matchScore = 32,
