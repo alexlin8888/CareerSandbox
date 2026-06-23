@@ -7,6 +7,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoAwesome
@@ -18,6 +19,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
@@ -36,13 +39,10 @@ fun SplashScreen(onDone: () -> Unit) {
     var stage by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) {
-        delay(100)
-        stage = 1
-        delay(400)
-        stage = 2
-        delay(400)
-        stage = 3
-        delay(1100)
+        delay(100); stage = 1
+        delay(400); stage = 2
+        delay(400); stage = 3
+        delay(1200)
         try { onDone() } catch (_: Throwable) {}
     }
 
@@ -50,23 +50,25 @@ fun SplashScreen(onDone: () -> Unit) {
     val floatY by infinite.animateFloat(
         initialValue = 0f,
         targetValue = 12f,
-        animationSpec = infiniteRepeatable(
-            tween(2400, easing = FastOutSlowInEasing),
-            RepeatMode.Reverse,
-        ),
+        animationSpec = infiniteRepeatable(tween(2400, easing = FastOutSlowInEasing), RepeatMode.Reverse),
         label = "floatY",
     )
 
-    Box(modifier = Modifier.fillMaxSize().background(InkCharcoal)) {
-        // 散落線稿裝飾
-        ScatteredDecorations(modifier = Modifier.fillMaxSize().alpha(0.5f))
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.linearGradient(
+                    listOf(Color(0xFFFF8243), Color(0xFFF2531C), Color(0xFFD6390F)),
+                ),
+            ),
+    ) {
+        ScatteredDecorations(modifier = Modifier.fillMaxSize().alpha(0.45f))
 
-        Column(
-            modifier = Modifier.fillMaxSize().padding(32.dp),
-        ) {
-            Spacer(Modifier.height(64.dp))
+        Column(modifier = Modifier.fillMaxSize().padding(34.dp)) {
+            Spacer(Modifier.height(60.dp))
 
-            // AI Powered 徽章
+            // AI Powered badge
             AnimatedVisibility(
                 visible = stage >= 1,
                 enter = fadeIn(tween(500)) + slideInVertically(tween(500)) { -it / 2 },
@@ -75,23 +77,19 @@ fun SplashScreen(onDone: () -> Unit) {
                     Modifier
                         .clip(RoundedCornerShape(50))
                         .background(BrandYellow)
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                        .padding(horizontal = 13.dp, vertical = 7.dp),
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.AutoAwesome, contentDescription = null,
-                            tint = InkCharcoal, modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("AI Powered",
-                            color = InkCharcoal,
-                            fontWeight = FontWeight.Black,
-                            style = MaterialTheme.typography.labelSmall)
+                        Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = InkBlack, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(5.dp))
+                        Text("AI POWERED", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 11.sp, letterSpacing = 0.5.sp)
                     }
                 }
             }
 
             Spacer(Modifier.height(40.dp))
 
-            // 主標題 — 巨大不對稱
+            // big title
             AnimatedVisibility(
                 visible = stage >= 2,
                 enter = fadeIn(tween(600)) + slideInVertically(tween(600)) { it / 6 },
@@ -99,49 +97,59 @@ fun SplashScreen(onDone: () -> Unit) {
                 Text(
                     text = buildAnnotatedString {
                         append("找工作\n")
-                        withStyle(SpanStyle(color = BrandOrange)) { append("不再") }
+                        withStyle(SpanStyle(color = Color(0xFF2A1505))) { append("不再") }
                         append("\n孤單。")
                     },
                     color = PaperWhite,
                     fontWeight = FontWeight.Black,
                     fontSize = 56.sp,
-                    lineHeight = 62.sp,
-                    letterSpacing = (-1.5).sp,
+                    lineHeight = 60.sp,
+                    letterSpacing = (-2).sp,
                 )
             }
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(22.dp))
 
-            AnimatedVisibility(
-                visible = stage >= 3,
-                enter = fadeIn(tween(600)),
-            ) {
+            AnimatedVisibility(visible = stage >= 3, enter = fadeIn(tween(600))) {
                 Column {
                     Text(
                         "AI 陪你找方向 / 練面試 / 寫履歷",
-                        color = InkGray400,
+                        color = PaperWhite.copy(alpha = 0.92f),
                         style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
                     )
                     Spacer(Modifier.height(16.dp))
-                    Text("CAREER SANDBOX",
-                        color = PaperWhite.copy(alpha = 0.6f),
+                    Text(
+                        "職涯沙盒 · CAREER SANDBOX",
+                        color = PaperWhite.copy(alpha = 0.62f),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Black,
-                        letterSpacing = 4.sp)
+                        letterSpacing = 4.sp,
+                    )
                 }
             }
 
             Spacer(Modifier.weight(1f))
+
+            // loading dots
+            AnimatedVisibility(visible = stage >= 3, enter = fadeIn(tween(500))) {
+                Row(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.width(22.dp).height(8.dp).clip(RoundedCornerShape(5.dp)).background(PaperWhite))
+                    Box(Modifier.size(8.dp).clip(CircleShape).background(PaperWhite.copy(alpha = 0.45f)))
+                    Box(Modifier.size(8.dp).clip(CircleShape).background(PaperWhite.copy(alpha = 0.45f)))
+                }
+            }
+            Spacer(Modifier.height(8.dp))
         }
 
-        // 插畫破框 — 從右下進入,半個身體在畫面外
+        // beaver — floats in from bottom-right, half out of frame
         AnimatedVisibility(
             visible = stage >= 1,
             enter = fadeIn(tween(900)) + slideInVertically(tween(900)) { it / 3 },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .offset(x = 24.dp, y = floatY.dp + 48.dp)
-                .size(320.dp),
+                .offset(x = 18.dp, y = floatY.dp + 36.dp)
+                .size(330.dp),
         ) {
             Image(
                 painter = painterResource(R.drawable.beaver_wave),
