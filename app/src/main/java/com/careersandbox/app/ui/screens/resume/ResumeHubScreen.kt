@@ -10,6 +10,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -68,11 +69,15 @@ fun ResumeHubScreen(navController: NavHostController) {
             HeroSection()
             Spacer(Modifier.height(14.dp))
             AnimatedSection(visible = visible, delayMs = 0) {
-                SubmissionStatsCard()
+                BentoGrid(navController)
             }
-            Spacer(Modifier.height(14.dp))
-            AnimatedSection(visible = visible, delayMs = 140) {
-                BentoActions(navController)
+            Spacer(Modifier.height(12.dp))
+            AnimatedSection(visible = visible, delayMs = 120) {
+                StatStrip()
+            }
+            Spacer(Modifier.height(10.dp))
+            AnimatedSection(visible = visible, delayMs = 200) {
+                ToolStrip(navController)
             }
             Spacer(Modifier.height(20.dp))
             AnimatedSection(visible = visible, delayMs = 260) {
@@ -161,238 +166,187 @@ private fun HeroSection() {
     }
 }
 
-/**
- * ===== v12 投遞統計卡(白底大圓角)=====
- * 管線面板:深色單卡 = 已投遞大數 + 草稿→編輯→投遞管線 + 職缺/版本/技能 strip
+/* ===== C 優化版 · Bento 網格 =====
+ * 母版大磚(左) + 已投遞磚 + 職缺與版本磚(右,直欄)
+ * 註:已投遞=投遞狀態追蹤,暫定 — 待隊友端確認是否要串接投遞功能
  */
 @Composable
-private fun SubmissionStatsCard() {
-    val apps = MockData.jobApplications
-    val totalSubmitted = apps.flatMap { it.versions }.count { it.status == VersionStatus.SUBMITTED }
-    val totalEditing = apps.flatMap { it.versions }.count { it.status == VersionStatus.EDITING }
-    val totalDraft = apps.flatMap { it.versions }.count { it.status == VersionStatus.DRAFT }
-    val totalJobs = apps.size
-    val totalVersions = apps.sumOf { it.versions.size }
-    val totalSkills = MockData.masterResume.totalSkills
-
-    var shown by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { shown = true }
-    val animSubmitted by animateIntAsState(
-        targetValue = totalSubmitted,
-        animationSpec = tween(1100, easing = FastOutSlowInEasing),
-        label = "submitted",
-    )
-
-    Column(
-        modifier = Modifier
-            .padding(horizontal = 14.dp)
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
-            .background(InkBlack)
-            .padding(horizontal = 18.dp, vertical = 16.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("已投遞",
-                    color = PaperWhite.copy(alpha = 0.55f),
-                    fontSize = 10.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Medium)
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Text("$animSubmitted",
-                        color = BrandAmber, fontWeight = FontWeight.Black,
-                        fontSize = 42.sp, lineHeight = 42.sp)
-                    Spacer(Modifier.width(5.dp))
-                    Text("件", color = PaperWhite.copy(alpha = 0.5f), fontSize = 13.sp,
-                        modifier = Modifier.padding(bottom = 6.dp))
-                }
-            }
-            PipelineNode(0, shown, totalDraft, "草稿", InkGray400)
-            PipelineLink(1, shown)
-            PipelineNode(2, shown, totalEditing, "編輯中", BrandAmber)
-            PipelineLink(3, shown)
-            PipelineNode(4, shown, totalSubmitted, "已投遞", BrandOrange)
-        }
-        Spacer(Modifier.height(14.dp))
-        Row(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
-                .background(PaperWhite.copy(alpha = 0.08f))
-                .padding(vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            StripStat("職缺", totalJobs, Modifier.weight(1f))
-            Box(Modifier.width(1.dp).height(22.dp).background(PaperWhite.copy(alpha = 0.12f)))
-            StripStat("版本", totalVersions, Modifier.weight(1f))
-            Box(Modifier.width(1.dp).height(22.dp).background(PaperWhite.copy(alpha = 0.12f)))
-            StripStat("技能", totalSkills, Modifier.weight(1f))
-        }
-    }
-}
-
-@Composable
-private fun PipelineNode(order: Int, shown: Boolean, value: Int, label: String, color: Color) {
-    val v by animateFloatAsState(
-        targetValue = if (shown) 1f else 0f,
-        animationSpec = tween(420, delayMillis = order * 110, easing = FastOutSlowInEasing),
-        label = "pn$label",
-    )
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.alpha(v).offset(y = ((1f - v) * 8).dp),
-    ) {
-        Box(
-            Modifier.size(34.dp).clip(CircleShape).background(color.copy(alpha = 0.22f)),
-            contentAlignment = Alignment.Center,
-        ) { Text("$value", color = color, fontWeight = FontWeight.Black, fontSize = 14.sp) }
-        Spacer(Modifier.height(4.dp))
-        Text(label, color = PaperWhite.copy(alpha = 0.55f), fontSize = 9.sp, fontWeight = FontWeight.Bold)
-    }
-}
-
-@Composable
-private fun PipelineLink(order: Int, shown: Boolean) {
-    val v by animateFloatAsState(
-        targetValue = if (shown) 1f else 0f,
-        animationSpec = tween(420, delayMillis = order * 110, easing = FastOutSlowInEasing),
-        label = "pl$order",
-    )
-    Box(
-        Modifier.padding(horizontal = 4.dp).padding(bottom = 14.dp)
-            .width(14.dp).height(2.dp)
-            .clip(RoundedCornerShape(50))
-            .background(PaperWhite.copy(alpha = 0.04f + 0.18f * v)),
-    )
-}
-
-@Composable
-private fun StripStat(label: String, value: Int, modifier: Modifier = Modifier) {
-    val animated by animateIntAsState(
-        targetValue = value,
-        animationSpec = tween(1100, easing = FastOutSlowInEasing),
-        label = "ss$label",
-    )
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("$animated", color = PaperWhite, fontWeight = FontWeight.Black,
-            fontSize = 20.sp, lineHeight = 20.sp)
-        Spacer(Modifier.height(2.dp))
-        Text(label, color = PaperWhite.copy(alpha = 0.5f), fontSize = 10.sp)
-    }
-}
-
-/**
- * ===== v12 BENTO =====
- * MASTER 全寬大卡 + 4 個透明工具
- */
-@Composable
-private fun BentoActions(navController: NavHostController) {
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp)) {
-        BentoMaster(onClick = { navController.navigate(Routes.RESUME_PROFILE) })
-        Spacer(Modifier.height(8.dp))
-        JobTargetsEntry(onClick = { navController.navigate(Routes.RESUME_HIERARCHY) })
-        Spacer(Modifier.height(4.dp))
-        ToolStrip(navController)
-    }
-}
-
-@Composable
-private fun JobTargetsEntry(onClick: () -> Unit) {
-    val targets = com.careersandbox.app.data.mock.MockResumeHierarchyProvider.jobTargets()
+private fun BentoGrid(navController: NavHostController) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(InkBlack)
-            .pressScale(onClick = onClick)
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Box(
-            Modifier.size(44.dp).clip(RoundedCornerShape(13.dp)).background(BrandOrange),
-            contentAlignment = Alignment.Center,
+        MasterTile(
+            modifier = Modifier.weight(1.28f),
+            onClick = { navController.navigate(Routes.RESUME_PROFILE) },
+        )
+        Column(
+            modifier = Modifier.weight(0.92f),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Icon(Icons.Outlined.Description, contentDescription = null,
-                tint = PaperWhite, modifier = Modifier.size(22.dp))
+            SubmittedTile()
+            JobVersionsTile(onClick = { navController.navigate(Routes.RESUME_HIERARCHY) })
         }
-        Spacer(Modifier.width(14.dp))
-        Column(Modifier.weight(1f)) {
-            Text("職缺與版本", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 17.sp)
-            Spacer(Modifier.height(2.dp))
-            Text("針對每個職缺客製,追蹤投遞狀態",
-                color = PaperWhite.copy(alpha = 0.7f), fontSize = 12.sp, lineHeight = 15.sp)
-        }
-        Spacer(Modifier.width(8.dp))
-        Box(
-            Modifier
-                .clip(RoundedCornerShape(10.dp))
-                .background(PaperWhite.copy(alpha = 0.15f))
-                .padding(horizontal = 9.dp, vertical = 4.dp),
-        ) {
-            Text("${targets.size} 職缺", color = PaperWhite, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-        }
-        Icon(Icons.Outlined.ChevronRight, contentDescription = null,
-            tint = PaperWhite.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
     }
 }
 
+/** 母版大磚:不主打完成度(改放經歷/技能於數據條),河狸沿用 beaver_writing */
 @Composable
-private fun BentoMaster(onClick: () -> Unit) {
+private fun MasterTile(modifier: Modifier = Modifier, onClick: () -> Unit) {
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(150.dp)
+        modifier = modifier
+            .height(270.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(BrandDeepOrange)
             .pressScale(onClick = onClick),
     ) {
-        Box(
-            Modifier
-                .align(Alignment.TopEnd)
-                .offset(x = 30.dp, y = (-30).dp)
-                .size(120.dp)
-                .clip(CircleShape)
-                .background(PaperWhite.copy(alpha = 0.08f)),
-        )
         Image(
             painter = painterResource(R.drawable.beaver_writing),
             contentDescription = null,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .offset(x = (-10).dp, y = (-2).dp)
-                .size(112.dp)
+                .offset(x = 4.dp, y = 2.dp)
+                .size(92.dp)
                 .alpha(0.95f),
             contentScale = ContentScale.Fit,
         )
-        Column(modifier = Modifier.align(Alignment.CenterStart).padding(start = 18.dp).fillMaxWidth(0.55f)) {
-            Text("MASTER",
-                color = PaperWhite.copy(alpha = 0.85f),
+        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            Text(
+                "MASTER · 完整履歷",
+                color = PaperWhite.copy(alpha = 0.82f),
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.SemiBold,
-                letterSpacing = 2.sp)
-            Spacer(Modifier.height(6.dp))
-            Text("檢視母版",
-                color = PaperWhite,
-                fontWeight = FontWeight.Black,
-                fontSize = 24.sp,
-                lineHeight = 28.sp)
-            Spacer(Modifier.height(4.dp))
-            Text("你的基本資料、經歷、技能,組成這份完整履歷",
+                letterSpacing = 1.5.sp,
+            )
+            Spacer(Modifier.height(8.dp))
+            Text("檢視母版", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 23.sp, lineHeight = 27.sp)
+            Spacer(Modifier.height(7.dp))
+            Text(
+                "你的基本資料、經歷、技能,組成這份完整履歷",
                 color = PaperWhite.copy(alpha = 0.9f),
                 fontSize = 12.sp,
-                lineHeight = 16.sp)
-            Spacer(Modifier.height(10.dp))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(PaperWhite.copy(alpha = 0.2f))
-                    .padding(horizontal = 10.dp, vertical = 5.dp),
-            ) {
-                Text("${MockData.masterResume.totalExperiences} 段經歷",
-                    color = PaperWhite,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.labelSmall)
-                Spacer(Modifier.width(5.dp))
-                Icon(Icons.Outlined.ArrowForward, contentDescription = null, tint = PaperWhite, modifier = Modifier.size(13.dp))
+                lineHeight = 16.sp,
+                modifier = Modifier.fillMaxWidth(0.78f),
+            )
+            Spacer(Modifier.weight(1f))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("檢視 / 編輯", color = PaperWhite, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+                Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = PaperWhite, modifier = Modifier.size(16.dp))
             }
         }
+    }
+}
+
+/** 已投遞磚(投遞狀態追蹤,暫定) */
+@Composable
+private fun SubmittedTile() {
+    val apps = MockData.jobApplications
+    val submitted = apps.flatMap { it.versions }.count { it.status == VersionStatus.SUBMITTED }
+    val editing = apps.flatMap { it.versions }.count { it.status == VersionStatus.EDITING }
+    val draft = apps.flatMap { it.versions }.count { it.status == VersionStatus.DRAFT }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(InkBlack)
+            .padding(15.dp),
+    ) {
+        Text("已投遞", color = PaperWhite.copy(alpha = 0.6f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text("$submitted", color = BrandAmber, fontWeight = FontWeight.Black, fontSize = 28.sp, lineHeight = 28.sp)
+            Spacer(Modifier.width(3.dp))
+            Text("件", color = PaperWhite.copy(alpha = 0.55f), fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
+        }
+        Spacer(Modifier.height(11.dp))
+        StatusRow("草稿", draft, InkGray400)
+        Spacer(Modifier.height(7.dp))
+        StatusRow("編輯中", editing, BrandAmber)
+        Spacer(Modifier.height(7.dp))
+        StatusRow("已投遞", submitted, BrandOrange)
+    }
+}
+
+@Composable
+private fun StatusRow(label: String, value: Int, color: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(7.dp).clip(CircleShape).background(color))
+        Spacer(Modifier.width(8.dp))
+        Text(label, color = PaperWhite.copy(alpha = 0.62f), fontSize = 12.sp, modifier = Modifier.weight(1f))
+        Text("$value", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 13.sp)
+    }
+}
+
+/** 職缺與版本磚:通往三層架構頁(母版→職缺→版本) */
+@Composable
+private fun JobVersionsTile(onClick: () -> Unit) {
+    val targets = com.careersandbox.app.data.mock.MockResumeHierarchyProvider.jobTargets()
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(PaperWhite)
+            .border(1.dp, InkBlack.copy(alpha = 0.12f), RoundedCornerShape(18.dp))
+            .pressScale(onClick = onClick)
+            .padding(15.dp),
+    ) {
+        Box(
+            Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(BrandDeepOrange.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Outlined.Description, contentDescription = null, tint = BrandDeepOrange, modifier = Modifier.size(18.dp))
+        }
+        Spacer(Modifier.height(9.dp))
+        Text("職缺與版本", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 15.sp)
+        Spacer(Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.clip(RoundedCornerShape(7.dp)).background(PaperWarm).padding(horizontal = 9.dp, vertical = 3.dp),
+            ) {
+                Text("${targets.size} 職缺", color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+            }
+            Spacer(Modifier.weight(1f))
+            Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = InkGray400, modifier = Modifier.size(18.dp))
+        }
+    }
+}
+
+/** 數據條:經歷 / 技能 / 職缺 / 版本 */
+@Composable
+private fun StatStrip() {
+    val apps = MockData.jobApplications
+    val jobs = apps.size
+    val versions = apps.sumOf { it.versions.size }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 14.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(PaperWhite)
+            .border(1.dp, InkBlack.copy(alpha = 0.12f), RoundedCornerShape(18.dp))
+            .padding(vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        StatCell("段經歷", MockData.masterResume.totalExperiences, Modifier.weight(1f))
+        StatDivider()
+        StatCell("項技能", MockData.masterResume.totalSkills, Modifier.weight(1f))
+        StatDivider()
+        StatCell("職缺", jobs, Modifier.weight(1f))
+        StatDivider()
+        StatCell("版本", versions, Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun StatDivider() {
+    Box(Modifier.width(1.dp).height(26.dp).background(InkBlack.copy(alpha = 0.1f)))
+}
+
+@Composable
+private fun StatCell(label: String, value: Int, modifier: Modifier = Modifier) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("$value", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 20.sp, lineHeight = 20.sp)
+        Spacer(Modifier.height(2.dp))
+        Text(label, color = InkGray500, fontSize = 10.sp)
     }
 }
 
