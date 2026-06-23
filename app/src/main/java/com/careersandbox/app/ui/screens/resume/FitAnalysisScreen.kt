@@ -17,6 +17,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.border
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -66,6 +67,7 @@ private data class Capability(
     val kind: String = "軟實力",
     val basis: String = "",
     val howTo: String = "",
+    val target: Int = 80,
 )
 
 private data class FitTask(
@@ -86,32 +88,32 @@ fun FitAnalysisScreen(navController: NavHostController) {
             Capability(
                 "數據能力", 96, "硬實力",
                 "從你修過的資料庫、統計課,加上 2 段含量化成果的經歷推估。",
-                "已經很強,面試時直接用具體數字佐證即可。",
+                "已經很強,面試時直接用具體數字佐證即可。", target = 80,
             ),
             Capability(
                 "溝通協作", 90, "軟實力",
                 "從社團幹部、簡報、跨組專案的敘述推估。",
-                "維持就好,可補一句處理意見衝突的例子讓它更立體。",
+                "維持就好,可補一句處理意見衝突的例子讓它更立體。", target = 78,
             ),
             Capability(
                 "團隊合作", 76, "軟實力",
                 "從 3 段團隊經歷推估,但多半是執行角色。",
-                "找一次主導或協調角色的經歷寫進去,分數會更有說服力。",
+                "找一次主導或協調角色的經歷寫進去,分數會更有說服力。", target = 85,
             ),
             Capability(
                 "領導力", 72, "軟實力",
                 "從幹部經歷推估,但缺帶人、帶專案的量化結果。",
-                "寫一段你帶領 N 個人完成某件事、結果如何的 STAR 敘述。",
+                "寫一段你帶領 N 個人完成某件事、結果如何的 STAR 敘述。", target = 90,
             ),
             Capability(
                 "抗壓性", 65, "軟實力",
                 "面試常考的面向;你的履歷目前少有面對挫折的敘述。",
-                "補一段「遇到挫折 → 怎麼處理 → 結果」的經歷,這項會明顯拉高。",
+                "補一段「遇到挫折 → 怎麼處理 → 結果」的經歷,這項會明顯拉高。", target = 82,
             ),
             Capability(
                 "創新思考", 58, "軟實力",
                 "從專案的新穎性推估,目前偏少。",
-                "參加一次黑客松或提案活動,留下一個可以寫的成果。",
+                "參加一次黑客松或提案活動,留下一個可以寫的成果。", target = 85,
             ),
         )
     }
@@ -518,70 +520,126 @@ private fun CapabilityRadar(capabilities: List<Capability>, animateProgress: Boo
         animationSpec = tween(1300, easing = FastOutSlowInEasing),
         label = "radar",
     )
-    Box(
+    val biggestGap = capabilities.maxByOrNull { it.target - it.score }
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
             .background(PaperWhite)
-            .padding(vertical = 20.dp),
-        contentAlignment = Alignment.Center,
+            .padding(vertical = 22.dp, horizontal = 18.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Canvas(modifier = Modifier.size(220.dp)) {
-            val cx = size.width / 2f
-            val cy = size.height / 2f
-            val radius = size.minDimension / 2f * 0.78f
-            // 從正上方開始,順時針
-            fun axisAngle(i: Int): Double = -Math.PI / 2 + 2 * Math.PI * i / n
-            fun point(i: Int, r: Float): Offset {
-                val a = axisAngle(i)
-                return Offset(cx + (r * kotlin.math.cos(a)).toFloat(), cy + (r * kotlin.math.sin(a)).toFloat())
-            }
-
-            // 背景同心多邊形(4 圈)
-            for (ring in 1..4) {
-                val rr = radius * ring / 4f
-                val path = androidx.compose.ui.graphics.Path()
-                for (i in 0 until n) {
-                    val p = point(i, rr)
-                    if (i == 0) path.moveTo(p.x, p.y) else path.lineTo(p.x, p.y)
+        Box(modifier = Modifier.size(270.dp), contentAlignment = Alignment.Center) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val cx = size.width / 2f
+                val cy = size.height / 2f
+                val radius = size.minDimension / 2f * 0.64f
+                fun axisAngle(i: Int): Double = -Math.PI / 2 + 2 * Math.PI * i / n
+                fun point(i: Int, r: Float): Offset {
+                    val a = axisAngle(i)
+                    return Offset(cx + (r * kotlin.math.cos(a)).toFloat(), cy + (r * kotlin.math.sin(a)).toFloat())
                 }
-                path.close()
-                drawPath(path, color = InkGray200, style = Stroke(width = 1f))
+                fun polygon(ratio: (Int) -> Float): Path {
+                    val p = Path()
+                    for (i in 0 until n) {
+                        val pt = point(i, radius * ratio(i))
+                        if (i == 0) p.moveTo(pt.x, pt.y) else p.lineTo(pt.x, pt.y)
+                    }
+                    p.close()
+                    return p
+                }
+
+                // 背景同心多邊形(4 圈)
+                for (ring in 1..4) {
+                    drawPath(polygon { ring / 4f }, color = InkGray100, style = Stroke(width = 1f))
+                }
+                // 軸線
+                for (i in 0 until n) {
+                    drawLine(InkGray200, start = Offset(cx, cy), end = point(i, radius), strokeWidth = 1f)
+                }
+
+                val cur = { i: Int -> (capabilities[i].score / 100f) * anim }
+                val tgt = { i: Int -> (capabilities[i].target / 100f) * anim }
+                val currentPath = polygon(cur)
+                val targetPath = polygon(tgt)
+
+                // 差集區域(目標 − 現有)= 你還缺的,紅色面積
+                val gapPath = Path().apply { op(targetPath, currentPath, PathOperation.Difference) }
+                drawPath(gapPath, color = AccentRed.copy(alpha = 0.15f))
+
+                // 現有能力(填色 + 描邊)
+                drawPath(currentPath, color = BrandDeepOrange.copy(alpha = 0.20f))
+                drawPath(currentPath, color = BrandDeepOrange, style = Stroke(width = 2.5f))
+
+                // 目標需求(虛線外框)
+                drawPath(
+                    targetPath,
+                    color = BrandAmber,
+                    style = Stroke(width = 2f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f), 0f)),
+                )
+
+                // 頂點:現有橘點;缺口軸再標一個目標紅點
+                for (i in 0 until n) {
+                    drawCircle(BrandDeepOrange, radius = 3.5f, center = point(i, radius * cur(i)))
+                    if (capabilities[i].target > capabilities[i].score) {
+                        drawCircle(AccentRed, radius = 3.5f, center = point(i, radius * tgt(i)))
+                    }
+                }
             }
-            // 軸線
-            for (i in 0 until n) {
-                drawLine(InkGray200, start = Offset(cx, cy), end = point(i, radius), strokeWidth = 1f)
-            }
-            // 能力多邊形(動畫展開)
-            val dataPath = androidx.compose.ui.graphics.Path()
-            for (i in 0 until n) {
-                val ratio = (capabilities[i].score / 100f) * anim
-                val p = point(i, radius * ratio)
-                if (i == 0) dataPath.moveTo(p.x, p.y) else dataPath.lineTo(p.x, p.y)
-            }
-            dataPath.close()
-            drawPath(dataPath, color = BrandDeepOrange.copy(alpha = 0.18f))
-            drawPath(dataPath, color = BrandDeepOrange, style = Stroke(width = 2f))
-            // 頂點圓點
-            for (i in 0 until n) {
-                val ratio = (capabilities[i].score / 100f) * anim
-                drawCircle(BrandDeepOrange, radius = 3f, center = point(i, radius * ratio))
+            // 軸標籤:缺口項標紅加粗
+            capabilities.forEachIndexed { i, cap ->
+                val a = -Math.PI / 2 + 2 * Math.PI * i / n
+                val dx = (kotlin.math.cos(a) * 108).toFloat()
+                val dy = (kotlin.math.sin(a) * 108).toFloat()
+                val isGap = cap.target > cap.score
+                Text(
+                    cap.label,
+                    color = if (isGap) AccentRed else InkGray700,
+                    fontSize = 10.5.sp,
+                    fontWeight = if (isGap) FontWeight.Black else FontWeight.SemiBold,
+                    modifier = Modifier.offset(x = dx.dp, y = dy.dp),
+                )
             }
         }
-        // 軸標籤(用 6 個定位的 Text 疊上去)
-        capabilities.forEachIndexed { i, cap ->
-            val a = -Math.PI / 2 + 2 * Math.PI * i / n
-            val labelR = 0.5f  // 相對 fraction,用 offset 近似
-            val dx = (kotlin.math.cos(a) * 118).toFloat()
-            val dy = (kotlin.math.sin(a) * 118).toFloat()
-            Text(
-                cap.label,
-                color = InkGray700,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.offset(x = dx.dp, y = dy.dp),
-            )
+        Spacer(Modifier.height(16.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            LegendItem(color = BrandDeepOrange, label = "現有能力", filled = true)
+            LegendItem(color = BrandAmber, label = "目標需求", filled = false)
+            LegendItem(color = AccentRed, label = "待補強", filled = true)
         }
+        if (biggestGap != null && biggestGap.target > biggestGap.score) {
+            Spacer(Modifier.height(12.dp))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(AccentRed.copy(alpha = 0.08f))
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+            ) {
+                Text(
+                    "最大缺口:${biggestGap.label}(目標 ${biggestGap.target}・現有 ${biggestGap.score})",
+                    color = AccentRed,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LegendItem(color: Color, label: String, filled: Boolean) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(11.dp)
+                .clip(RoundedCornerShape(3.dp))
+                .then(
+                    if (filled) Modifier.background(color.copy(alpha = 0.85f))
+                    else Modifier.border(1.5.dp, color, RoundedCornerShape(3.dp))
+                ),
+        )
+        Spacer(Modifier.width(5.dp))
+        Text(label, color = InkGray700, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
