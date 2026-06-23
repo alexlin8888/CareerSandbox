@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
@@ -19,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.keyframes
@@ -27,6 +29,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -40,6 +44,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import coil.compose.AsyncImage
 import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.data.mock.MockResumeHierarchyProvider
@@ -59,8 +64,6 @@ fun HomeHubScreen(navController: NavHostController) {
             StaggeredAppear(delayMillis = 0) { HeroSection(navController) }
             Spacer(Modifier.height(32.dp))
             StaggeredAppear(delayMillis = 60) { ContinueJobCard(navController) }
-            Spacer(Modifier.height(20.dp))
-            StaggeredAppear(delayMillis = 75) { JobProgressCard(navController) }
             Spacer(Modifier.height(20.dp))
             StaggeredAppear(delayMillis = 90) { ArticleSection(navController) }
             Spacer(Modifier.height(24.dp))
@@ -156,97 +159,140 @@ private fun JobProgressCard(navController: NavHostController) {
     }
 }
 
-/** 接著做 — 首頁直接接上脊椎:職缺 → 練面試 / 還缺什麼 */
+/** 接著做 — 美化版:白卡 + 公司 logo + 適配環 + 雙動作 */
 @Composable
 private fun ContinueJobCard(navController: NavHostController) {
     val job = MockData.jobApplications.firstOrNull() ?: return
+    val domain = companyDomain(job.company)
     Column(
         modifier = Modifier
             .padding(horizontal = 20.dp)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(BrandPeach.copy(alpha = 0.4f))
+            .shadow(14.dp, RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(24.dp))
+            .background(PaperWhite)
             .pressScale { navController.navigate(Routes.jobApplicationDetail(job.id)) }
-            .padding(16.dp),
+            .padding(18.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(6.dp).clip(CircleShape).background(BrandDeepOrange))
-            Spacer(Modifier.width(6.dp))
-            Text("接著做",
+            Spacer(Modifier.width(7.dp))
+            Text(
+                "接著做",
                 color = BrandDeepOrange,
-                style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Black,
-                letterSpacing = 2.sp)
+                fontSize = 11.sp,
+                letterSpacing = 2.sp,
+            )
             Spacer(Modifier.weight(1f))
-            Text("你最近在準備的職缺",
-                color = InkGray500,
-                fontSize = 11.sp)
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(BrandAmber.copy(alpha = 0.16f))
+                    .padding(horizontal = 10.dp, vertical = 4.dp),
+            ) {
+                Text("編輯中", color = Color(0xFFA76A00), fontWeight = FontWeight.Bold, fontSize = 10.sp)
+            }
         }
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(15.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(PaperWarm)
+                    .border(1.dp, InkGray200, RoundedCornerShape(14.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (domain != null) {
+                    AsyncImage(
+                        model = "https://www.google.com/s2/favicons?domain=$domain&sz=128",
+                        contentDescription = job.company,
+                        modifier = Modifier.size(29.dp),
+                        contentScale = ContentScale.Fit,
+                    )
+                } else {
+                    Text(job.company.take(1), color = BrandDeepOrange, fontWeight = FontWeight.Black, fontSize = 17.sp)
+                }
+            }
+            Spacer(Modifier.width(13.dp))
             Column(Modifier.weight(1f)) {
-                Text(job.position,
-                    color = InkBlack,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 18.sp)
+                Text(job.position, color = InkBlack, fontWeight = FontWeight.Black, fontSize = 18.sp)
                 Spacer(Modifier.height(2.dp))
-                Text(job.company,
-                    color = InkGray500,
-                    style = MaterialTheme.typography.bodySmall)
+                Text(job.company, color = InkGray500, fontSize = 13.sp, fontWeight = FontWeight.Medium)
             }
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text("${job.matchScore}",
-                    color = BrandDeepOrange,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 30.sp,
-                    lineHeight = 30.sp)
-                Text("%",
-                    color = BrandDeepOrange,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 14.sp,
-                    modifier = Modifier.padding(bottom = 4.dp))
-            }
+            MatchRing(job.matchScore)
         }
-        Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Spacer(Modifier.height(16.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(InkBlack)
+                    .clip(RoundedCornerShape(13.dp))
+                    .background(Brush.linearGradient(listOf(BrandOrange, BrandDeepOrange)))
                     .pressScale { navController.navigate(Routes.INTERVIEW_SETUP_INDIVIDUAL) }
-                    .padding(vertical = 10.dp),
+                    .padding(vertical = 11.dp),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.Outlined.Mic, contentDescription = null,
-                    tint = PaperWhite, modifier = Modifier.size(15.dp))
+                Icon(Icons.Outlined.Mic, contentDescription = null, tint = PaperWhite, modifier = Modifier.size(15.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("練面試",
-                    color = PaperWhite,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.labelLarge)
+                Text("練面試", color = PaperWhite, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
             }
             Row(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(PaperWhite)
+                    .clip(RoundedCornerShape(13.dp))
+                    .border(1.5.dp, BrandDeepOrange.copy(alpha = 0.35f), RoundedCornerShape(13.dp))
                     .pressScale { navController.navigate(Routes.FIT_ANALYSIS) }
-                    .padding(vertical = 10.dp),
+                    .padding(vertical = 11.dp),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.Outlined.Analytics, contentDescription = null,
-                    tint = BrandDeepOrange, modifier = Modifier.size(15.dp))
+                Icon(Icons.Outlined.Analytics, contentDescription = null, tint = BrandDeepOrange, modifier = Modifier.size(15.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("還缺什麼",
-                    color = BrandDeepOrange,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.labelLarge)
+                Text("還缺什麼", color = BrandDeepOrange, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
             }
         }
     }
+}
+
+@Composable
+private fun MatchRing(score: Int) {
+    Box(modifier = Modifier.size(54.dp), contentAlignment = Alignment.Center) {
+        Canvas(modifier = Modifier.size(54.dp)) {
+            val sw = 5.dp.toPx()
+            drawArc(
+                color = InkGray200,
+                startAngle = -90f,
+                sweepAngle = 360f,
+                useCenter = false,
+                style = Stroke(width = sw, cap = StrokeCap.Round),
+            )
+            drawArc(
+                brush = Brush.sweepGradient(listOf(BrandAmber, BrandOrange, BrandDeepOrange)),
+                startAngle = -90f,
+                sweepAngle = 360f * (score / 100f).coerceIn(0f, 1f),
+                useCenter = false,
+                style = Stroke(width = sw, cap = StrokeCap.Round),
+            )
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("$score", color = BrandDeepOrange, fontWeight = FontWeight.Black, fontSize = 17.sp, lineHeight = 17.sp)
+            Text("適配", color = InkGray500, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+private fun companyDomain(company: String): String? = when (company.trim().lowercase()) {
+    "acer", "宏碁" -> "acer.com"
+    "kkday" -> "kkday.com"
+    "蝦皮", "shopee" -> "shopee.tw"
+    "聯發科", "mediatek" -> "mediatek.com"
+    "台積電", "tsmc" -> "tsmc.com"
+    "華碩", "asus" -> "asus.com"
+    "google", "谷歌" -> "google.com"
+    else -> null
 }
 
 /** Hero 區:wave 漸層 + 大字 + 插畫 + **僅在此區的線稿裝飾** */

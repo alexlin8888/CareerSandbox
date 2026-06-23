@@ -202,14 +202,22 @@ private fun AiOverviewCard() {
     val avgMatch = if (apps.isNotEmpty()) apps.map { it.matchScore }.average().toInt() else 0
     val quantFraction = 1f / totalVersions.coerceAtLeast(1)
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp)
             .clip(RoundedCornerShape(22.dp))
-            .background(InkBlack)
-            .padding(18.dp),
+            .background(Brush.linearGradient(listOf(Color(0xFF3D2419), Color(0xFF1F1611)))),
     ) {
+        // decorative warm glow, top-right
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .size(190.dp)
+                .offset(x = 50.dp, y = (-70).dp)
+                .background(Brush.radialGradient(listOf(BrandDeepOrange.copy(alpha = 0.30f), Color.Transparent))),
+        )
+        Column(modifier = Modifier.padding(18.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier
@@ -254,6 +262,7 @@ private fun AiOverviewCard() {
             "待補關鍵字",
             "蝦皮(UX 研究)版本缺「使用者研究」「A/B 測試」等字,與 JD 匹配偏低。",
         )
+        }
     }
 }
 
