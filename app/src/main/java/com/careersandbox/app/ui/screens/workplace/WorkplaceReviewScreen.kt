@@ -7,6 +7,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.*
@@ -53,6 +60,19 @@ fun WorkplaceReviewScreen(navController: NavHostController) {
         HiddenStat("同事情誼", WorkplaceState.peerBond.value * 10, netFor("同事情誼"), reasonFor("同事情誼"), AccentBlue),
         HiddenStat("專業形象", WorkplaceState.proImage.value * 10, netFor("專業形象"), reasonFor("專業形象"), BrandAmber),
     )
+    val mtV = WorkplaceState.managerTrust.value
+    val pbV = WorkplaceState.peerBond.value
+    val prV = WorkplaceState.proImage.value
+    fun cap(v: Float): Int = (v * 10f).toInt().coerceIn(0, 100)
+    val radarAxes = listOf(
+        RadarAxis("向上溝通", cap(mtV.toFloat()), 78),
+        RadarAxis("跨部門協作", cap(pbV.toFloat()), 75),
+        RadarAxis("專業判斷", cap(prV.toFloat()), 82),
+        RadarAxis("抗壓應變", cap((mtV + pbV + prV) / 3f), 70),
+        RadarAxis("主動當責", cap(prV * 0.6f + mtV * 0.4f), 80),
+        RadarAxis("自我覺察", cap(prV * 0.7f + pbV * 0.3f), 68),
+    )
+    val radarTopGap = radarAxes.maxByOrNull { it.target - it.current }
     val moments = listOf(
         MomentCard(
             "沒找藉口的那次",
@@ -139,6 +159,52 @@ fun WorkplaceReviewScreen(navController: NavHostController) {
                     stats.forEachIndexed { i, st ->
                         HiddenStatRow(st)
                         if (i != stats.lastIndex) Spacer(Modifier.height(14.dp))
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(14.dp))
+
+            // === 能力輪廓雷達(差集:現有 vs 角色目標)===
+            StaggeredAppear(delayMillis = 400) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(PaperWhite.copy(alpha = 0.06f))
+                        .padding(18.dp),
+                ) {
+                    Text("這週,也悄悄畫出了你的能力輪廓。",
+                        color = PaperWhite.copy(alpha = 0.85f),
+                        fontSize = 13.sp, lineHeight = 20.sp)
+                    Spacer(Modifier.height(4.dp))
+                    Text("橘色是現在的你,虛線是這個位子期待的樣子。凹進去的,是下週可以長的地方。",
+                        color = PaperWhite.copy(alpha = 0.5f),
+                        fontSize = 11.sp, lineHeight = 17.sp)
+                    WeekCapabilityRadar(axes = radarAxes, animate = true)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(12.dp).clip(RoundedCornerShape(3.dp)).background(BrandDeepOrange))
+                        Spacer(Modifier.width(6.dp))
+                        Text("現在的你", color = PaperWhite.copy(alpha = 0.7f), fontSize = 11.sp)
+                        Spacer(Modifier.width(16.dp))
+                        Box(Modifier.size(12.dp).clip(RoundedCornerShape(3.dp)).background(PaperWhite.copy(alpha = 0.45f)))
+                        Spacer(Modifier.width(6.dp))
+                        Text("位子的期待", color = PaperWhite.copy(alpha = 0.7f), fontSize = 11.sp)
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    radarTopGap?.let { g ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(BrandAmber.copy(alpha = 0.14f))
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text("↑", color = BrandAmber, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                            Spacer(Modifier.width(10.dp))
+                            Text("下週最值得長的:" + g.label + "(離期待還差 " + (g.target - g.current) + ")",
+                                color = PaperWhite.copy(alpha = 0.85f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
@@ -307,6 +373,82 @@ private fun ReviewMomentCard(m: MomentCard) {
             color = PaperWhite.copy(alpha = 0.85f),
             fontSize = 13.sp,
             lineHeight = 20.sp)
+    }
+}
+
+private data class RadarAxis(val label: String, val current: Int, val target: Int)
+
+@Composable
+private fun WeekCapabilityRadar(axes: List<RadarAxis>, animate: Boolean) {
+    val n = axes.size
+    val anim by animateFloatAsState(
+        targetValue = if (animate) 1f else 0f,
+        animationSpec = tween(1300, easing = FastOutSlowInEasing),
+        label = "weekradar",
+    )
+    Box(
+        modifier = Modifier.fillMaxWidth().height(300.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(modifier = Modifier.size(240.dp)) {
+            val cx = size.width / 2f
+            val cy = size.height / 2f
+            val radius = size.minDimension / 2f * 0.74f
+            fun axisAngle(i: Int): Double = -Math.PI / 2 + 2 * Math.PI * i / n
+            fun point(i: Int, r: Float): Offset {
+                val a = axisAngle(i)
+                return Offset(cx + (r * kotlin.math.cos(a)).toFloat(), cy + (r * kotlin.math.sin(a)).toFloat())
+            }
+            for (ring in 1..4) {
+                val rr = radius * ring / 4f
+                val path = androidx.compose.ui.graphics.Path()
+                for (i in 0 until n) {
+                    val p = point(i, rr)
+                    if (i == 0) path.moveTo(p.x, p.y) else path.lineTo(p.x, p.y)
+                }
+                path.close()
+                drawPath(path, color = PaperWhite.copy(alpha = 0.10f), style = Stroke(width = 1f))
+            }
+            for (i in 0 until n) {
+                drawLine(PaperWhite.copy(alpha = 0.10f), start = Offset(cx, cy), end = point(i, radius), strokeWidth = 1f)
+            }
+            val targetPath = androidx.compose.ui.graphics.Path()
+            for (i in 0 until n) {
+                val p = point(i, radius * (axes[i].target / 100f))
+                if (i == 0) targetPath.moveTo(p.x, p.y) else targetPath.lineTo(p.x, p.y)
+            }
+            targetPath.close()
+            drawPath(targetPath, color = PaperWhite.copy(alpha = 0.45f),
+                style = Stroke(width = 2f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f))))
+            val curPath = androidx.compose.ui.graphics.Path()
+            for (i in 0 until n) {
+                val p = point(i, radius * (axes[i].current / 100f) * anim)
+                if (i == 0) curPath.moveTo(p.x, p.y) else curPath.lineTo(p.x, p.y)
+            }
+            curPath.close()
+            drawPath(curPath, color = BrandOrange.copy(alpha = 0.30f))
+            drawPath(curPath, color = BrandDeepOrange, style = Stroke(width = 2f))
+            for (i in 0 until n) {
+                drawCircle(BrandDeepOrange, radius = 3f, center = point(i, radius * (axes[i].current / 100f) * anim))
+            }
+        }
+        axes.forEachIndexed { i, ax ->
+            val a = -Math.PI / 2 + 2 * Math.PI * i / n
+            val dx = (kotlin.math.cos(a) * 112).toFloat()
+            val dy = (kotlin.math.sin(a) * 112).toFloat()
+            val gap = ax.target - ax.current
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.offset(x = dx.dp, y = dy.dp),
+            ) {
+                Text(ax.label,
+                    color = if (gap >= 25) BrandAmber else PaperWhite.copy(alpha = 0.85f),
+                    fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text("" + ax.current,
+                    color = if (gap >= 25) BrandAmber else PaperWhite.copy(alpha = 0.5f),
+                    fontSize = 9.sp, fontWeight = FontWeight.Black)
+            }
+        }
     }
 }
 
