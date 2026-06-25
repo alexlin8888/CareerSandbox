@@ -29,7 +29,6 @@ import com.careersandbox.app.ui.screens.profile.SettingsNotificationsScreen
 import com.careersandbox.app.ui.screens.profile.SettingsPrivacyScreen
 import com.careersandbox.app.ui.screens.profile.SettingsProfileScreen
 import com.careersandbox.app.ui.screens.resume.*
-import com.careersandbox.app.ui.screens.workplace.WorkplaceChatScreen
 import com.careersandbox.app.ui.screens.workplace.Day1OneOnOneScreen
 import com.careersandbox.app.ui.screens.workplace.Day2EmailScreen
 import com.careersandbox.app.ui.screens.workplace.Day3MeetingScreen
@@ -46,10 +45,6 @@ import com.careersandbox.app.ui.screens.workplace.NovaMeetScreen
 import com.careersandbox.app.ui.screens.workplace.NovaDocScreen
 import com.careersandbox.app.ui.screens.workplace.NovaGramScreen
 import com.careersandbox.app.ui.screens.workplace.NovaDashboardScreen
-import com.careersandbox.app.ui.screens.workplace.WorkplaceMeetingScreen
-import com.careersandbox.app.ui.screens.workplace.WorkplaceLunchScreen
-import com.careersandbox.app.ui.screens.workplace.WorkplaceEmailScreen
-import com.careersandbox.app.ui.screens.workplace.WorkplaceReviewScreen
 import com.careersandbox.app.ui.screens.workplace.WorkplaceSandboxScreen
 
 @OptIn(ExperimentalAnimationApi::class)
