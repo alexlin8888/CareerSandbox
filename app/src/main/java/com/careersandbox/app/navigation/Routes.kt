@@ -28,6 +28,8 @@ object Routes {
     const val NOVA_DOC = "nova_doc"
     const val NOVA_GRAM = "nova_gram"
     const val NOVA_DASHBOARD = "nova_dashboard"
+    // 沙盒日場景之間的沉浸過場(夜晚滑手機)
+    const val NIGHT_INTERLUDE_1 = "night_interlude_1"
     const val PROFILE = "profile"
 
     const val EXPERIENCE_LIST = "experience_list"

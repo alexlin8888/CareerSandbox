@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
+import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.data.mock.RepChange
 import com.careersandbox.app.data.mock.WorkplaceState
 import com.careersandbox.app.ui.components.pressScale
@@ -58,6 +59,7 @@ private data class StanceChoice(
     val repMeter: String = "主管信任",
     val repDelta: Int = 0,
     val repReason: String = "",
+    val flag: String? = null,   // 跨天旗標:夜晚過場/後續場景回收
 )
 
 private data class Beat(
@@ -122,7 +124,7 @@ private val beats = listOf(
                 "就……事情比較多,一忙就忘了同步。",
                 "(他盯著你兩秒)忙不是理由,是現象。再來一次。",
                 "更不耐", SceneMotion.SHAKE,
-                repMeter = "主管信任", repDelta = -2, repReason = "「太忙忘了」被他當成藉口",
+                repMeter = "主管信任", repDelta = -2, repReason = "「太忙忘了」被他當成藉口", flag = "d1_dodged",
             ),
         ),
     ),
@@ -138,17 +140,17 @@ private val beats = listOf(
             ),
             StanceChoice(
                 "開口要支援", "要資源",
-                "如果阿哲能借我半天,週二就能收掉,風險低很多。",
+                "如果阿凱能借我半天,週二就能收掉,風險低很多。",
                 "(他想了一下)我去跟他主管說。這種話早講,半天就能省兩天。",
                 "緩和", SceneMotion.TILT,
-                repMeter = "主管信任", repDelta = 1, repReason = "你早點開口要支援,省了兩天",
+                repMeter = "主管信任", repDelta = 1, repReason = "你早點開口要支援,省了兩天", flag = "d1_asked_akai",
             ),
             StanceChoice(
                 "說盡量趕", "保守承諾",
                 "我盡量趕,應該……來得及。",
                 "「應該」進不了我的報告。給我一個你敢簽名的日期。",
                 "不耐", SceneMotion.SHAKE,
-                repMeter = "專業形象", repDelta = -2, repReason = "「應該」進不了他的報告",
+                repMeter = "專業形象", repDelta = -2, repReason = "「應該」進不了他的報告", flag = "d1_dodged",
             ),
         ),
     ),
@@ -167,14 +169,14 @@ private val beats = listOf(
                 "目前沒有,我自己可以。",
                 "(他看了你一眼)行。但這扇門一直開著,別等淹到脖子才敲。",
                 "平靜", SceneMotion.NONE,
-                repMeter = "主管信任", repDelta = 1, repReason = "你說自己可以,他把門留著",
+                repMeter = "主管信任", repDelta = 1, repReason = "你說自己可以,他把門留著", flag = "d1_solo",
             ),
             StanceChoice(
                 "反過來關心他", "反客為主",
                 "倒是你,這週往上報的壓力,還好嗎?",
                 "(他愣了一下,笑出來)輪不到你操心。滾回去工作。",
                 "緩和", SceneMotion.TILT,
-                repMeter = "同事情誼", repDelta = 1, repReason = "你關心了他,氣氛軟下來",
+                repMeter = "同事情誼", repDelta = 1, repReason = "你關心了他,氣氛軟下來", flag = "d1_warm",
             ),
         ),
     ),
@@ -254,6 +256,7 @@ fun WorkplaceChatScreen(navController: NavHostController) {
         if (c.repDelta != 0) {
             repPop = WorkplaceState.apply(c.repMeter, c.repDelta, c.repReason, day = 1)
         }
+        c.flag?.let { WorkplaceState.setFlag(it) }
         pendingLines.clear()
         pendingLines.add("你" to c.playerLine)
         pendingLines.add("Ken" to c.kenReact)
@@ -482,7 +485,7 @@ fun WorkplaceChatScreen(navController: NavHostController) {
                 Text("你今天的選擇,Ken 都記著。",
                     color = PaperWhite.copy(alpha = 0.75f), fontSize = 13.sp)
                 Spacer(Modifier.height(4.dp))
-                Text("痕跡,週五揭曉。",
+                Text("先回家吧。痕跡,週五揭曉。",
                     color = BrandOrange, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(28.dp))
                 Box(
@@ -491,10 +494,10 @@ fun WorkplaceChatScreen(navController: NavHostController) {
                         .height(50.dp)
                         .clip(RoundedCornerShape(14.dp))
                         .background(BrandOrange)
-                        .pressScale { navController.popBackStack() },
+                        .pressScale { navController.navigate(Routes.NIGHT_INTERLUDE_1) },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("回到路徑",
+                    Text("走出會議室",
                         color = PaperWhite, fontWeight = FontWeight.Black)
                 }
             }
