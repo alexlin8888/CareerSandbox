@@ -47,7 +47,7 @@ import kotlinx.coroutines.launch
 
 /* =====================================================================
    Day 3:跨部門會議 —— 視覺小說引擎(雙立繪版)
-   小芳答應了客戶、阿凱測試只跑六成,Ken 點名你表態。
+   小芳答應了客戶、阿哲測試只跑六成,Ken 點名你表態。
    ===================================================================== */
 
 private enum class MeetMotion { NONE, SHAKE, TILT }
@@ -74,7 +74,7 @@ private data class MeetBeat(
 
 private val meetingOpening = listOf(
     "小芳" to "先說好消息,客戶那邊我已經答應月底前上線。單子簽了。",
-    "阿凱" to "(他沒抬頭)迴歸測試跑了六成。剩下的四成,全是付款流程。",
+    "阿哲" to "(他沒抬頭)迴歸測試跑了六成。剩下的四成,全是付款流程。",
 )
 
 private val meetBeats = listOf(
@@ -84,7 +84,7 @@ private val meetBeats = listOf(
             MeetChoice(
                 "先要數據,再表態", "穩",
                 "我先確認一件事:剩下四成的測試,全力跑最快幾天?",
-                "阿凱" to "五個工作天。一個都壓不掉。",
+                "阿哲" to "五個工作天。一個都壓不掉。",
                 "(他記了一筆)好,有數字了。繼續。",
                 "緊", MeetMotion.TILT,
                 repMeter = "專業形象", repDelta = 2, repReason = "先要數據再表態,Ken 記了一筆",
@@ -92,7 +92,7 @@ private val meetBeats = listOf(
             MeetChoice(
                 "順著業務", "快",
                 "客戶都簽了,月底就上。測試邊上邊補。",
-                "阿凱" to "(他終於抬頭)付款炸掉的時候,誰半夜起來修?",
+                "阿哲" to "(他終於抬頭)付款炸掉的時候,誰半夜起來修?",
                 "你聽到工程的問題了。這不叫判斷,叫賭。",
                 "僵", MeetMotion.SHAKE,
                 repMeter = "專業形象", repDelta = -2, repReason = "邊上邊補=賭,不是判斷",
@@ -121,7 +121,7 @@ private val meetBeats = listOf(
             MeetChoice(
                 "加班硬趕", "燃燒",
                 "工程這週加班趕測試,我陪著跑。月底全量上。",
-                "阿凱" to "(他看了你兩秒)加班可以。品質,我不保證。",
+                "阿哲" to "(他看了你兩秒)加班可以。品質,我不保證。",
                 "用人的肝去填排程的洞。記住這個選擇的成本。",
                 "緊", MeetMotion.NONE,
                 repMeter = "同事情誼", repDelta = -1, repReason = "用同事的肝填排程的洞",
@@ -210,7 +210,7 @@ private fun colleagueSprite(name: String): Int = when (name) {
 private fun speakerColor(name: String): Color = when (name) {
     "Ken" -> BrandDeepOrange
     "小芳" -> BrandOrange
-    "阿凱" -> AccentBlue
+    "阿哲" -> AccentBlue
     else -> InkCharcoal
 }
 
@@ -247,7 +247,7 @@ fun WorkplaceMeetingScreen(navController: NavHostController) {
         }
     }
     LaunchedEffect(speaker) {
-        if (speaker == "小芳" || speaker == "阿凱") lastColleague = speaker
+        if (speaker == "小芳" || speaker == "阿哲") lastColleague = speaker
     }
 
     fun playMotion(m: MeetMotion) {

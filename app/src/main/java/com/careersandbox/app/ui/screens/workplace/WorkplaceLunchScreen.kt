@@ -68,7 +68,7 @@ private data class LunchBeat(
 
 private val lunchOpening = listOf(
     "小芳" to "(她壓低聲音)欸,你聽說了嗎?三樓的產品部,下個月要改組。",
-    "阿凱" to "(他攪著咖啡,沒接話)",
+    "阿哲" to "(他攪著咖啡,沒接話)",
 )
 
 private val lunchBeats = listOf(
@@ -79,7 +79,7 @@ private val lunchBeats = listOf(
                 "聽,但不接力", "界線",
                 "消息我收到了。不過改組這種事,等正式信吧,猜來猜去傷感情。",
                 "小芳" to "(她聳聳肩)行吧,你這人真穩。",
-                closing = "阿凱" to "(阿凱難得開口)……同意。",
+                closing = "阿哲" to "(阿哲難得開口)……同意。",
                 moodAfter = "鬆",
                 repMeter = "同事情誼", repDelta = 1, repReason = "守住界線,小芳反而覺得你穩",
             ),
@@ -87,7 +87,7 @@ private val lunchBeats = listOf(
                 "加入猜測", "下注",
                 "我猜會動。Ken 最近開會的樣子,像在準備什麼。",
                 "小芳" to "(她眼睛亮了)對吧對吧。欸,這話我能往外說嗎?",
-                closing = "阿凱" to "(他抬眼看了你一下,又低下去)",
+                closing = "阿哲" to "(他抬眼看了你一下,又低下去)",
                 moodAfter = "尬",
                 repMeter = "同事情誼", repDelta = -1, repReason = "跟著傳話,話會傳回來",
             ),
@@ -95,27 +95,27 @@ private val lunchBeats = listOf(
                 "打聽更多", "挖",
                 "你消息哪來的?還知道什麼?",
                 "小芳" to "嘿,人資的小美跟我好。再說下去,要請我喝飲料了。",
-                closing = "阿凱" to "(他把咖啡喝完,看了看你們)",
+                closing = "阿哲" to "(他把咖啡喝完,看了看你們)",
                 moodAfter = "鬆",
                 repMeter = "同事情誼", repDelta = 0, repReason = "打聽更多,小芳留了個尾巴",
             ),
         ),
     ),
     LunchBeat(
-        "阿凱", "(被小芳點名,他頓了一下)……週末就,寫一點自己的小工具。自動整理測試報告的。",
+        "阿哲", "(被小芳點名,他頓了一下)……週末就,寫一點自己的小工具。自動整理測試報告的。",
         listOf(
             LunchChoice(
                 "真心好奇", "靠近",
                 "等等,自動整理測試報告?那不就是我們上週哀號的那個?demo 給我看。",
-                "阿凱" to "(他耳朵有點紅)……午休後,到我位子。",
+                "阿哲" to "(他耳朵有點紅)……午休後,到我位子。",
                 closing = "小芳" to "哇,他從來沒給我看過。",
                 moodAfter = "暖",
-                repMeter = "同事情誼", repDelta = 2, repReason = "真心好奇,阿凱第一次給你看東西",
+                repMeter = "同事情誼", repDelta = 2, repReason = "真心好奇,阿哲第一次給你看東西",
             ),
             LunchChoice(
                 "客套帶過", "滑過",
                 "不錯喔,很充實。",
-                "阿凱" to "(他點點頭,話題就死在這裡)",
+                "阿哲" to "(他點點頭,話題就死在這裡)",
                 closing = "小芳" to "(她翻了個白眼)你們兩個,乾。",
                 moodAfter = "尬",
                 repMeter = "同事情誼", repDelta = -1, repReason = "客套帶過,話題死在這裡",
@@ -123,7 +123,7 @@ private val lunchBeats = listOf(
             LunchChoice(
                 "順勢開玩笑", "玩",
                 "工程師的週末還是在寫 code,你們是不是都這樣?",
-                "阿凱" to "(他想了想)……比開會好。",
+                "阿哲" to "(他想了想)……比開會好。",
                 closing = "小芳" to "(她笑出聲)這句我要記下來。",
                 moodAfter = "鬆",
                 repMeter = "同事情誼", repDelta = 1, repReason = "玩笑開得剛好,氣氛鬆了",
@@ -137,7 +137,7 @@ private val lunchBeats = listOf(
                 "就事論事", "穩",
                 "他釘的是方案,不是人。而且說真的,被釘完,方案有變好。",
                 "小芳" to "(她想挖更多,沒挖到)嘖,無聊。",
-                closing = "阿凱" to "(他嘴角動了一下)",
+                closing = "阿哲" to "(他嘴角動了一下)",
                 moodAfter = "鬆",
                 repMeter = "專業形象", repDelta = 1, repReason = "就事論事,沒被帶進抱怨",
             ),
@@ -145,7 +145,7 @@ private val lunchBeats = listOf(
                 "跟著抱怨", "洩壓",
                 "真的,有時候覺得他標準高到不講理。",
                 "小芳" to "對吧。放心,這話我幫你保密啦。",
-                closing = "阿凱" to "(他安靜地看著你們兩個)",
+                closing = "阿哲" to "(他安靜地看著你們兩個)",
                 moodAfter = "尬",
                 repMeter = "專業形象", repDelta = -1, repReason = "背後抱怨主管,在新公司是險棋",
             ),
@@ -153,27 +153,27 @@ private val lunchBeats = listOf(
                 "反問她", "回拋",
                 "你先說,你覺得呢?",
                 "小芳" to "我?我覺得他可怕又可靠啊。好啦,不聊這個。",
-                closing = "阿凱" to "(他看了看牆上的鐘)",
+                closing = "阿哲" to "(他看了看牆上的鐘)",
                 moodAfter = "鬆",
                 repMeter = "同事情誼", repDelta = 0, repReason = "反問擋掉了,但也沒走近",
             ),
         ),
     ),
     LunchBeat(
-        "阿凱", "(他站起來)十二點五十了。……下午,測試報告的事,找我。",
+        "阿哲", "(他站起來)十二點五十了。……下午,測試報告的事,找我。",
         listOf(
             LunchChoice(
                 "定下來", "接住",
                 "好,兩點半,我帶著問題去。",
-                "阿凱" to "(他點頭,走兩步又回頭)……帶你的筆電。",
+                "阿哲" to "(他點頭,走兩步又回頭)……帶你的筆電。",
                 closing = "小芳" to "(她小聲)他這樣,是真的要教你欸。",
                 moodAfter = "暖",
-                repMeter = "同事情誼", repDelta = 2, repReason = "接住阿凱的善意,他要帶你了",
+                repMeter = "同事情誼", repDelta = 2, repReason = "接住阿哲的善意,他要帶你了",
             ),
             LunchChoice(
                 "模糊帶過", "飄",
                 "好啊好啊,有空一定。",
-                "阿凱" to "(他「嗯」了一聲,門關上)",
+                "阿哲" to "(他「嗯」了一聲,門關上)",
                 closing = "小芳" to "「有空」在他的字典裡,就是不會來的意思。",
                 moodAfter = "尬",
                 repMeter = "同事情誼", repDelta = -2, repReason = "「有空」在他字典裡=不會來",
@@ -182,7 +182,7 @@ private val lunchBeats = listOf(
                 "順便揪小芳", "擴圈",
                 "一起吧,小芳上次不是也想看自動報表?",
                 "小芳" to "咦,我嗎?……好啊。",
-                closing = "阿凱" to "(他停了一秒)……人多,也行。",
+                closing = "阿哲" to "(他停了一秒)……人多,也行。",
                 moodAfter = "暖",
                 repMeter = "同事情誼", repDelta = 2, repReason = "把圈子拉大,兩個同事都靠近",
             ),
@@ -192,7 +192,7 @@ private val lunchBeats = listOf(
 
 private fun lunchSpeakerColor(name: String): Color = when (name) {
     "小芳" -> BrandOrange
-    "阿凱" -> AccentBlue
+    "阿哲" -> AccentBlue
     else -> InkCharcoal
 }
 
@@ -328,8 +328,8 @@ fun WorkplaceLunchScreen(navController: NavHostController) {
                     )
                 }
 
-                // 右:阿凱
-                val kaiActive = speaker == "阿凱"
+                // 右:阿哲
+                val kaiActive = speaker == "阿哲"
                 val ka by animateFloatAsState(if (kaiActive) 1f else 0.5f, label = "ka")
                 val ks by animateFloatAsState(if (kaiActive) 1f else 0.9f, label = "ks")
                 Column(
