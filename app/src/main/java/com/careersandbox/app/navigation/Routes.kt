@@ -17,6 +17,17 @@ object Routes {
     const val WORKPLACE_LUNCH = "workplace_lunch"
     const val WORKPLACE_REVIEW = "workplace_review"
     const val NOVA_CHAT = "nova_chat"
+    // Nova suite standalone screens (item3): generic-UI workplace surfaces
+    const val NOVA_CHAT_LIST = "nova_chat_list"
+    const val NOVA_MAIL_INBOX = "nova_mail_inbox"
+    const val NOVA_MAIL_OPEN = "nova_mail_open"
+    const val NOVA_LOCK = "nova_lock"
+    const val NOVA_CALENDAR = "nova_calendar"
+    const val NOVA_TEAM = "nova_team"
+    const val NOVA_MEET = "nova_meet"
+    const val NOVA_DOC = "nova_doc"
+    const val NOVA_GRAM = "nova_gram"
+    const val NOVA_DASHBOARD = "nova_dashboard"
     const val PROFILE = "profile"
 
     const val EXPERIENCE_LIST = "experience_list"

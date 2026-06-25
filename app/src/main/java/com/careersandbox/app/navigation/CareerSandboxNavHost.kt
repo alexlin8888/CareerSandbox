@@ -31,6 +31,16 @@ import com.careersandbox.app.ui.screens.profile.SettingsProfileScreen
 import com.careersandbox.app.ui.screens.resume.*
 import com.careersandbox.app.ui.screens.workplace.WorkplaceChatScreen
 import com.careersandbox.app.ui.screens.workplace.NovaChatScreen
+import com.careersandbox.app.ui.screens.workplace.NovaChatListScreen
+import com.careersandbox.app.ui.screens.workplace.NovaMailInboxScreen
+import com.careersandbox.app.ui.screens.workplace.NovaMailOpenScreen
+import com.careersandbox.app.ui.screens.workplace.NovaLockScreen
+import com.careersandbox.app.ui.screens.workplace.NovaCalendarScreen
+import com.careersandbox.app.ui.screens.workplace.NovaTeamScreen
+import com.careersandbox.app.ui.screens.workplace.NovaMeetScreen
+import com.careersandbox.app.ui.screens.workplace.NovaDocScreen
+import com.careersandbox.app.ui.screens.workplace.NovaGramScreen
+import com.careersandbox.app.ui.screens.workplace.NovaDashboardScreen
 import com.careersandbox.app.ui.screens.workplace.WorkplaceMeetingScreen
 import com.careersandbox.app.ui.screens.workplace.WorkplaceLunchScreen
 import com.careersandbox.app.ui.screens.workplace.WorkplaceEmailScreen
@@ -106,6 +116,16 @@ fun CareerSandboxNavHost(
         composable(Routes.WORKPLACE_LUNCH) { WorkplaceLunchScreen(navController) }
         composable(Routes.WORKPLACE_EMAIL) { WorkplaceEmailScreen(navController) }
         composable(Routes.NOVA_CHAT) { NovaChatScreen(navController) }
+        composable(Routes.NOVA_CHAT_LIST) { NovaChatListScreen(navController) }
+        composable(Routes.NOVA_MAIL_INBOX) { NovaMailInboxScreen(navController) }
+        composable(Routes.NOVA_MAIL_OPEN) { NovaMailOpenScreen(navController) }
+        composable(Routes.NOVA_LOCK) { NovaLockScreen(navController) }
+        composable(Routes.NOVA_CALENDAR) { NovaCalendarScreen(navController) }
+        composable(Routes.NOVA_TEAM) { NovaTeamScreen(navController) }
+        composable(Routes.NOVA_MEET) { NovaMeetScreen(navController) }
+        composable(Routes.NOVA_DOC) { NovaDocScreen(navController) }
+        composable(Routes.NOVA_GRAM) { NovaGramScreen(navController) }
+        composable(Routes.NOVA_DASHBOARD) { NovaDashboardScreen(navController) }
         composable(Routes.WORKPLACE_REVIEW) { WorkplaceReviewScreen(navController) }
         composable(Routes.PROFILE) { ProfileScreen(navController) }
 
