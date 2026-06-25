@@ -47,7 +47,7 @@ import kotlinx.coroutines.launch
 
 /* =====================================================================
    Day 3:跨部門會議 —— 視覺小說引擎(雙立繪版)
-   小芳答應了客戶、阿哲測試只跑六成,Ken 點名你表態。
+   Vivian答應了客戶、阿哲測試只跑六成,Ken 點名你表態。
    ===================================================================== */
 
 private enum class MeetMotion { NONE, SHAKE, TILT }
@@ -64,6 +64,7 @@ private data class MeetChoice(
     val repMeter: String = "專業形象",
     val repDelta: Int = 0,
     val repReason: String = "",
+    val kenFace: Int? = null,   // 該選擇下 Ken 的即時表情(覆蓋 mood 對應)
 )
 
 private data class MeetBeat(
@@ -73,7 +74,7 @@ private data class MeetBeat(
 )
 
 private val meetingOpening = listOf(
-    "小芳" to "先說好消息,客戶那邊我已經答應月底前上線。單子簽了。",
+    "Vivian" to "先說好消息,客戶那邊我已經答應月底前上線。單子簽了。",
     "阿哲" to "(他沒抬頭)迴歸測試跑了六成。剩下的四成,全是付款流程。",
 )
 
@@ -96,11 +97,12 @@ private val meetBeats = listOf(
                 "你聽到工程的問題了。這不叫判斷,叫賭。",
                 "僵", MeetMotion.SHAKE,
                 repMeter = "專業形象", repDelta = -2, repReason = "邊上邊補=賭,不是判斷",
+                kenFace = R.drawable.ken_concerned,
             ),
             MeetChoice(
                 "站工程", "保守",
                 "測試沒跑完就是不能上。延兩週。",
-                "小芳" to "延兩週?客戶的違約金,算你的?",
+                "Vivian" to "延兩週?客戶的違約金,算你的?",
                 "立場可以。但你只回答了一邊的問題。",
                 "僵", MeetMotion.NONE,
                 repMeter = "專業形象", repDelta = -1, repReason = "立場對,但只回答了一邊",
@@ -113,7 +115,7 @@ private val meetBeats = listOf(
             MeetChoice(
                 "分階段上線", "拆解",
                 "月底先上非付款功能,付款模組第二週測完補上。客戶看得到東西,風險也鎖得住。",
-                "小芳" to "……這個我可以去談。",
+                "Vivian" to "……這個我可以去談。",
                 "(他往後靠)這才像個方案。",
                 "緩", MeetMotion.TILT,
                 repMeter = "專業形象", repDelta = 2, repReason = "分階段:看得到東西,也鎖得住風險",
@@ -133,31 +135,32 @@ private val meetBeats = listOf(
                 "(他盯著你)我找你來,就是要你的決定。……分階段。下次,這句話要從你嘴裡出來。",
                 "僵", MeetMotion.SHAKE,
                 repMeter = "主管信任", repDelta = -2, repReason = "Ken 要的是你的決定,不是上拋",
+                kenFace = R.drawable.ken_angry,
             ),
         ),
     ),
     MeetBeat(
-        "小芳", "那違約條款怎麼辦?「分階段」三個字,合約上可沒有。我要拿什麼去跟客戶說?",
+        "Vivian", "那違約條款怎麼辦?「分階段」三個字,合約上可沒有。我要拿什麼去跟客戶說?",
         listOf(
             MeetChoice(
                 "給她武器", "補位",
                 "跟客戶說:核心功能如期,付款模組多兩週是為了金流安全。這個說法,他們法務聽得進去。",
-                "小芳" to "(她快速記下)可以,這個說法能用。",
+                "Vivian" to "(她快速記下)可以,這個說法能用。",
                 "跨部門,就是這樣補位的。",
                 "鬆", MeetMotion.TILT,
-                repMeter = "同事情誼", repDelta = 2, repReason = "你給了小芳能用的說法",
+                repMeter = "同事情誼", repDelta = 2, repReason = "你給了Vivian能用的說法",
             ),
             MeetChoice(
                 "切割", "自掃",
                 "對外溝通是業務的職責,我顧好上線就好。",
-                "小芳" to "(她笑了一下,不太好看)行,各掃門前雪嘛。",
+                "Vivian" to "(她笑了一下,不太好看)行,各掃門前雪嘛。",
                 "牆,就是這樣砌起來的。",
                 "僵", MeetMotion.SHAKE,
                 repMeter = "同事情誼", repDelta = -2, repReason = "各掃門前雪,牆就這樣砌起來",
             ),
             MeetChoice(
                 "拉主管背書", "借力",
-                "請 Ken 發一封信給客戶窗口,分階段方案有主管背書,小芳比較好談。",
+                "請 Ken 發一封信給客戶窗口,分階段方案有主管背書,Vivian比較好談。",
                 null,
                 "信我可以發。但下次,先想自己能不能扛,再來借我的名字。",
                 "緩", MeetMotion.NONE,
@@ -175,6 +178,7 @@ private val meetBeats = listOf(
                 "(他難得鬆了一下眉)能看見自己的洞,比方案值錢。",
                 "鬆", MeetMotion.TILT,
                 repMeter = "專業形象", repDelta = 1, repReason = "能看見自己的洞,比方案值錢",
+                kenFace = R.drawable.ken_laughing,
             ),
             MeetChoice(
                 "打高分", "自信",
@@ -183,6 +187,7 @@ private val meetBeats = listOf(
                 "方案是大家湊的。九分,留給下次自己扛全場的時候。",
                 "緊", MeetMotion.NONE,
                 repMeter = "主管信任", repDelta = -1, repReason = "方案是大家湊的",
+                kenFace = R.drawable.ken_surprised,
             ),
             MeetChoice(
                 "謙到底", "低姿態",
@@ -197,19 +202,20 @@ private val meetBeats = listOf(
 )
 
 private fun meetKenSprite(mood: String): Int = when (mood) {
-    "緩", "鬆" -> R.drawable.ken_soft
+    "鬆" -> R.drawable.ken_happy
+    "緩" -> R.drawable.ken_soft
     "僵" -> R.drawable.ken_stern
     else -> R.drawable.ken_neutral
 }
 
 private fun colleagueSprite(name: String): Int = when (name) {
-    "小芳" -> R.drawable.colleague_gossip
+    "Vivian" -> R.drawable.colleague_vivian
     else -> R.drawable.colleague_quiet
 }
 
 private fun speakerColor(name: String): Color = when (name) {
     "Ken" -> BrandDeepOrange
-    "小芳" -> BrandOrange
+    "Vivian" -> BrandOrange
     "阿哲" -> AccentBlue
     else -> InkCharcoal
 }
@@ -222,7 +228,7 @@ fun WorkplaceMeetingScreen(navController: NavHostController) {
     var fullText by remember { mutableStateOf(meetingOpening[0].second) }
     var typed by remember { mutableStateOf("") }
     var mood by remember { mutableStateOf("緊") }
-    var lastColleague by remember { mutableStateOf("小芳") }
+    var lastColleague by remember { mutableStateOf("Vivian") }
     val pendingLines = remember {
         mutableStateListOf<Pair<String, String>>().apply {
             addAll(meetingOpening.drop(1))
@@ -232,6 +238,8 @@ fun WorkplaceMeetingScreen(navController: NavHostController) {
     var awaitingChoice by remember { mutableStateOf(true) }
     var queuedMotion by remember { mutableStateOf(MeetMotion.NONE) }
     var queuedMood by remember { mutableStateOf<String?>(null) }
+    var queuedKenFace by remember { mutableStateOf<Int?>(null) }
+    var kenFaceOverride by remember { mutableStateOf<Int?>(null) }
     var repPop by remember { mutableStateOf<RepChange?>(null) }
 
     val scope = rememberCoroutineScope()
@@ -247,7 +255,7 @@ fun WorkplaceMeetingScreen(navController: NavHostController) {
         }
     }
     LaunchedEffect(speaker) {
-        if (speaker == "小芳" || speaker == "阿哲") lastColleague = speaker
+        if (speaker == "Vivian" || speaker == "阿哲") lastColleague = speaker
     }
 
     fun playMotion(m: MeetMotion) {
@@ -275,12 +283,14 @@ fun WorkplaceMeetingScreen(navController: NavHostController) {
             if (s == "Ken") {
                 playMotion(queuedMotion); queuedMotion = MeetMotion.NONE
                 queuedMood?.let { m -> mood = m }; queuedMood = null
+                kenFaceOverride = queuedKenFace; queuedKenFace = null
             }
         } else if (awaitingChoice) {
             phase = MeetPhase.CHOOSING
         } else if (beatIdx < meetBeats.lastIndex) {
             beatIdx++
             awaitingChoice = true
+            kenFaceOverride = null
             speaker = meetBeats[beatIdx].promptSpeaker
             fullText = meetBeats[beatIdx].prompt
         } else {
@@ -294,6 +304,7 @@ fun WorkplaceMeetingScreen(navController: NavHostController) {
         }
         awaitingChoice = false
         queuedMood = c.moodAfter
+        queuedKenFace = c.kenFace
         queuedMotion = c.motion
         pendingLines.clear()
         pendingLines.add("你" to c.playerLine)
@@ -381,7 +392,7 @@ fun WorkplaceMeetingScreen(navController: NavHostController) {
                         },
                 ) {
                     Image(
-                        painter = painterResource(meetKenSprite(mood)),
+                        painter = painterResource(kenFaceOverride ?: meetKenSprite(mood)),
                         contentDescription = null,
                         contentScale = ContentScale.Fit,
                         modifier = Modifier.size(160.dp).alpha(ka).scale(ks),
