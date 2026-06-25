@@ -208,9 +208,17 @@ private fun meetKenSprite(mood: String): Int = when (mood) {
     else -> R.drawable.ken_neutral
 }
 
-private fun colleagueSprite(name: String): Int = when (name) {
-    "Vivian" -> R.drawable.colleague_vivian
-    else -> R.drawable.colleague_quiet
+private fun colleagueSprite(name: String, mood: String): Int = when (name) {
+    "Vivian" -> when (mood) {                              // 業務:氣氛好→滿意,僵→不悅,其餘→自信
+        "鬆" -> R.drawable.colleague_vivian_satisfied
+        "僵" -> R.drawable.colleague_vivian_displeased
+        else -> R.drawable.colleague_vivian
+    }
+    else -> when (mood) {                                  // 工程(阿哲):好→釋然,僵→挫折,其餘→疲憊
+        "鬆" -> R.drawable.colleague_akai_calm
+        "僵" -> R.drawable.colleague_akai_frustrated
+        else -> R.drawable.colleague_quiet
+    }
 }
 
 private fun speakerColor(name: String): Color = when (name) {
@@ -366,7 +374,7 @@ fun WorkplaceMeetingScreen(navController: NavHostController) {
                         .padding(start = 6.dp, bottom = 6.dp),
                 ) {
                     Image(
-                        painter = painterResource(colleagueSprite(lastColleague)),
+                        painter = painterResource(colleagueSprite(lastColleague, mood)),
                         contentDescription = null,
                         contentScale = ContentScale.Fit,
                         modifier = Modifier.size(150.dp).alpha(ca).scale(cs),
