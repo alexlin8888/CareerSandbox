@@ -137,13 +137,50 @@ fun WorkplaceSandboxScreen(navController: NavHostController) {
                     day = day,
                     isCurrent = idx == currentIdx,
                     isDone = WorkplaceState.isDayDone(day.dayNo),
-                    onClick = day.route?.let { r -> { navController.navigate(r) } },
+                    onClick = if (WorkplaceState.isDayDone(day.dayNo)) null
+                    else day.route?.let { r -> { navController.navigate(r) } },
                 )
             }
             if (idx != week.lastIndex) Spacer(Modifier.height(22.dp))
         }
 
         Spacer(Modifier.height(36.dp))
+
+        // === 重新開始(沙盒核心:換個選擇,這一週就不一樣)===
+        if (WorkplaceState.completedDays.isNotEmpty()) {
+            val allDone = WorkplaceState.completedDays.size >= week.size
+            StaggeredAppear(delayMillis = 600) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                ) {
+                    if (allDone) {
+                        Text("第一週走完了。",
+                            color = InkBlack, fontWeight = FontWeight.Black, fontSize = 15.sp)
+                        Spacer(Modifier.height(4.dp))
+                        Text("換個選擇,這一週會不一樣。",
+                            color = InkGray400, fontSize = 12.sp)
+                        Spacer(Modifier.height(12.dp))
+                    }
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(if (allDone) BrandDeepOrange else PaperWhite)
+                            .then(
+                                if (allDone) Modifier
+                                else Modifier.border(1.dp, InkGray300, RoundedCornerShape(50)),
+                            )
+                            .pressScale { WorkplaceState.reset() }
+                            .padding(horizontal = 22.dp, vertical = 11.dp),
+                    ) {
+                        Text("重新開始這一週",
+                            color = if (allDone) PaperWhite else InkGray400,
+                            fontWeight = FontWeight.Black, fontSize = 13.sp)
+                    }
+                }
+            }
+            Spacer(Modifier.height(28.dp))
+        }
 
         // === 產業選擇(次要,移至頁尾)===
         IndustrySelector(selected = industry, onSelect = { industry = it })
