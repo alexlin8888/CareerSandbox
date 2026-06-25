@@ -40,6 +40,7 @@ import androidx.navigation.NavHostController
 import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.RepChange
 import com.careersandbox.app.data.mock.WorkplaceState
+import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 import kotlinx.coroutines.delay
@@ -47,7 +48,7 @@ import kotlinx.coroutines.launch
 
 /* =====================================================================
    Day 3:跨部門會議 —— 視覺小說引擎(雙立繪版)
-   Vivian答應了客戶、阿哲測試只跑六成,Ken 點名你表態。
+   Vivian答應了客戶、阿凱測試只跑六成,Ken 點名你表態。
    ===================================================================== */
 
 private enum class MeetMotion { NONE, SHAKE, TILT }
@@ -65,6 +66,7 @@ private data class MeetChoice(
     val repDelta: Int = 0,
     val repReason: String = "",
     val kenFace: Int? = null,   // 該選擇下 Ken 的即時表情(覆蓋 mood 對應)
+    val flag: String? = null,   // 跨天旗標:夜晚過場回收
 )
 
 private data class MeetBeat(
@@ -75,7 +77,7 @@ private data class MeetBeat(
 
 private val meetingOpening = listOf(
     "Vivian" to "先說好消息,客戶那邊我已經答應月底前上線。單子簽了。",
-    "阿哲" to "(他沒抬頭)迴歸測試跑了六成。剩下的四成,全是付款流程。",
+    "阿凱" to "(他沒抬頭)迴歸測試跑了六成。剩下的四成,全是付款流程。",
 )
 
 private val meetBeats = listOf(
@@ -85,7 +87,7 @@ private val meetBeats = listOf(
             MeetChoice(
                 "先要數據,再表態", "穩",
                 "我先確認一件事:剩下四成的測試,全力跑最快幾天?",
-                "阿哲" to "五個工作天。一個都壓不掉。",
+                "阿凱" to "五個工作天。一個都壓不掉。",
                 "(他記了一筆)好,有數字了。繼續。",
                 "緊", MeetMotion.TILT,
                 repMeter = "專業形象", repDelta = 2, repReason = "先要數據再表態,Ken 記了一筆",
@@ -93,7 +95,7 @@ private val meetBeats = listOf(
             MeetChoice(
                 "順著業務", "快",
                 "客戶都簽了,月底就上。測試邊上邊補。",
-                "阿哲" to "(他終於抬頭)付款炸掉的時候,誰半夜起來修?",
+                "阿凱" to "(他終於抬頭)付款炸掉的時候,誰半夜起來修?",
                 "你聽到工程的問題了。這不叫判斷,叫賭。",
                 "僵", MeetMotion.SHAKE,
                 repMeter = "專業形象", repDelta = -2, repReason = "邊上邊補=賭,不是判斷",
@@ -123,10 +125,10 @@ private val meetBeats = listOf(
             MeetChoice(
                 "加班硬趕", "燃燒",
                 "工程這週加班趕測試,我陪著跑。月底全量上。",
-                "阿哲" to "(他看了你兩秒)加班可以。品質,我不保證。",
+                "阿凱" to "(他看了你兩秒)加班可以。品質,我不保證。",
                 "用人的肝去填排程的洞。記住這個選擇的成本。",
                 "緊", MeetMotion.NONE,
-                repMeter = "同事情誼", repDelta = -1, repReason = "用同事的肝填排程的洞",
+                repMeter = "同事情誼", repDelta = -1, repReason = "用同事的肝填排程的洞", flag = "d3_burned_team",
             ),
             MeetChoice(
                 "丟回給主管", "上拋",
@@ -134,7 +136,7 @@ private val meetBeats = listOf(
                 null,
                 "(他盯著你)我找你來,就是要你的決定。……分階段。下次,這句話要從你嘴裡出來。",
                 "僵", MeetMotion.SHAKE,
-                repMeter = "主管信任", repDelta = -2, repReason = "Ken 要的是你的決定,不是上拋",
+                repMeter = "主管信任", repDelta = -2, repReason = "Ken 要的是你的決定,不是上拋", flag = "d3_passed_buck",
                 kenFace = R.drawable.ken_angry,
             ),
         ),
@@ -148,7 +150,7 @@ private val meetBeats = listOf(
                 "Vivian" to "(她快速記下)可以,這個說法能用。",
                 "跨部門,就是這樣補位的。",
                 "鬆", MeetMotion.TILT,
-                repMeter = "同事情誼", repDelta = 2, repReason = "你給了Vivian能用的說法",
+                repMeter = "同事情誼", repDelta = 2, repReason = "你給了Vivian能用的說法", flag = "d3_backed_vivian",
             ),
             MeetChoice(
                 "切割", "自掃",
@@ -156,7 +158,7 @@ private val meetBeats = listOf(
                 "Vivian" to "(她笑了一下,不太好看)行,各掃門前雪嘛。",
                 "牆,就是這樣砌起來的。",
                 "僵", MeetMotion.SHAKE,
-                repMeter = "同事情誼", repDelta = -2, repReason = "各掃門前雪,牆就這樣砌起來",
+                repMeter = "同事情誼", repDelta = -2, repReason = "各掃門前雪,牆就這樣砌起來", flag = "d3_left_vivian",
             ),
             MeetChoice(
                 "拉主管背書", "借力",
@@ -164,7 +166,7 @@ private val meetBeats = listOf(
                 null,
                 "信我可以發。但下次,先想自己能不能扛,再來借我的名字。",
                 "緩", MeetMotion.NONE,
-                repMeter = "主管信任", repDelta = -1, repReason = "先想能不能扛,再借主管的名字",
+                repMeter = "主管信任", repDelta = -1, repReason = "先想能不能扛,再借主管的名字", flag = "d3_passed_buck",
             ),
         ),
     ),
@@ -214,7 +216,7 @@ private fun colleagueSprite(name: String, mood: String): Int = when (name) {
         "僵" -> R.drawable.colleague_vivian_displeased
         else -> R.drawable.colleague_vivian
     }
-    else -> when (mood) {                                  // 工程(阿哲):好→釋然,僵→挫折,其餘→疲憊
+    else -> when (mood) {                                  // 工程(阿凱):好→釋然,僵→挫折,其餘→疲憊
         "鬆" -> R.drawable.colleague_akai_calm
         "僵" -> R.drawable.colleague_akai_frustrated
         else -> R.drawable.colleague_quiet
@@ -224,7 +226,7 @@ private fun colleagueSprite(name: String, mood: String): Int = when (name) {
 private fun speakerColor(name: String): Color = when (name) {
     "Ken" -> BrandDeepOrange
     "Vivian" -> BrandOrange
-    "阿哲" -> AccentBlue
+    "阿凱" -> AccentBlue
     else -> InkCharcoal
 }
 
@@ -263,7 +265,7 @@ fun WorkplaceMeetingScreen(navController: NavHostController) {
         }
     }
     LaunchedEffect(speaker) {
-        if (speaker == "Vivian" || speaker == "阿哲") lastColleague = speaker
+        if (speaker == "Vivian" || speaker == "阿凱") lastColleague = speaker
     }
 
     fun playMotion(m: MeetMotion) {
@@ -310,6 +312,7 @@ fun WorkplaceMeetingScreen(navController: NavHostController) {
         if (c.repDelta != 0) {
             repPop = WorkplaceState.apply(c.repMeter, c.repDelta, c.repReason, day = 3)
         }
+        c.flag?.let { WorkplaceState.setFlag(it) }
         awaitingChoice = false
         queuedMood = c.moodAfter
         queuedKenFace = c.kenFace
@@ -500,17 +503,17 @@ fun WorkplaceMeetingScreen(navController: NavHostController) {
                 Text("三個部門的帳,今天都記在你身上了。",
                     color = PaperWhite.copy(alpha = 0.75f), fontSize = 13.sp)
                 Spacer(Modifier.height(4.dp))
-                Text("痕跡,週五揭曉。",
+                Text("先回家吧。痕跡,週五揭曉。",
                     color = BrandOrange, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(28.dp))
                 Box(
                     modifier = Modifier.fillMaxWidth().height(50.dp)
                         .clip(RoundedCornerShape(14.dp))
                         .background(BrandOrange)
-                        .pressScale { navController.popBackStack() },
+                        .pressScale { navController.navigate(Routes.NIGHT_INTERLUDE_3) },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("回到路徑", color = PaperWhite, fontWeight = FontWeight.Black)
+                    Text("走出會議室", color = PaperWhite, fontWeight = FontWeight.Black)
                 }
             }
         }

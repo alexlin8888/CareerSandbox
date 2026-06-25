@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.data.mock.WorkplaceState
+import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.R
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
@@ -80,7 +81,7 @@ private data class StormMail(
 )
 
 private val zoneNames = mapOf(
-    "NOW" to "現在處理", "HOLD" to "暫存格", "ENG" to "工程・阿哲", "SALES" to "業務・Vivian",
+    "NOW" to "現在處理", "HOLD" to "暫存格", "ENG" to "工程・阿凱", "SALES" to "業務・Vivian",
 )
 
 private val stormDeck = listOf(
@@ -101,7 +102,7 @@ private val stormDeck = listOf(
         listOf("系統問題", "不在你權限"),
         "ENG",
         "系統故障給工程,你拖著只會更慢。",
-        "付款卡住是系統問題,你修不了。給工程阿哲。"),
+        "付款卡住是系統問題,你修不了。給工程阿凱。"),
     StormMail(10, "福委會", "全公司", InkGray400,
         "週五下午茶問卷",
         "選珍奶或咖啡,週四前填即可。",
@@ -146,7 +147,7 @@ private val stormDeck = listOf(
         listOf("技術問題"),
         "ENG",
         "規格問題給工程,答案才會是對的。",
-        "API 規格是工程的領域。給阿哲。"),
+        "API 規格是工程的領域。給阿凱。"),
     StormMail(12, "人資部", "全公司", InkGray400,
         "年度健檢時段開放預約",
         "本月內完成預約即可。",
@@ -173,7 +174,7 @@ private val stormDeck = listOf(
         listOf("擋住別人", "權限問題"),
         "ENG", 
         "解鎖權限在工程手上,而且前線正卡著。",
-        "帳號只有工程能解,客服正被擋著。給阿哲。",
+        "帳號只有工程能解,客服正被擋著。給阿凱。",
         urgentAt = 55),
     StormMail(2, "財務部", "財務", InkGray700,
         "請款單據今天 17:00 截止",
@@ -251,6 +252,17 @@ fun WorkplaceEmailScreen(navController: NavHostController) {
                 WorkplaceState.apply("專業形象", delta,
                     "收件匣處理:$correct 對 $wrong 錯", day = 2)
             }
+            // 跨天旗標:給夜晚過場回收
+            WorkplaceState.setFlag(
+                when {
+                    correct >= 5 && correct > wrong * 2 -> "d2_sharp"
+                    wrong > correct -> "d2_messy"
+                    else -> "d2_ok"
+                },
+            )
+            // 把不該丟的硬塞給 Vivian → 同事會有反應
+            val dumpedOnVivian = judged.count { it.pick == "SALES" && !it.right }
+            if (dumpedOnVivian >= 2) WorkplaceState.setFlag("d2_dumped_vivian")
         }
     }
 
@@ -290,7 +302,7 @@ fun WorkplaceEmailScreen(navController: NavHostController) {
                     judged.clear(); urgentIds.clear()
                     phase = "BRIEF"
                 },
-                onBack = { navController.popBackStack() },
+                onBack = { navController.navigate(Routes.NIGHT_INTERLUDE_2) },
             )
         }
     }
@@ -361,10 +373,10 @@ private val practiceMails = listOf(
         "手感對了。", "差一點。這封要去右下角的黑盤。"),
     StormMail(102, "教練", "暖身", BrandOrange,
         "這封是技術問題,給工程",
-        "拖到上面工程阿哲的頭上。",
-        "客戶說系統壞了,這種信給工程。把卡片拖到上面工程・阿哲的席位。",
+        "拖到上面工程阿凱的頭上。",
+        "客戶說系統壞了,這種信給工程。把卡片拖到上面工程・阿凱的席位。",
         "拖到工程席", listOf("暖身 2 / 2"), "ENG",
-        "對,轉交就是拖到人頭上。", "技術問題要給工程,拖到阿哲頭上。"),
+        "對,轉交就是拖到人頭上。", "技術問題要給工程,拖到阿凱頭上。"),
 )
 
 @Composable
@@ -507,7 +519,7 @@ private fun WarDesk(
 
         // 轉交席
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            PersonZone("ENG", "工程・阿哲", R.drawable.colleague_quiet, hovered == "ENG", zoneRects, Modifier.weight(1f))
+            PersonZone("ENG", "工程・阿凱", R.drawable.colleague_quiet, hovered == "ENG", zoneRects, Modifier.weight(1f))
             PersonZone("SALES", "業務・Vivian", R.drawable.colleague_vivian, hovered == "SALES", zoneRects, Modifier.weight(1f))
         }
 

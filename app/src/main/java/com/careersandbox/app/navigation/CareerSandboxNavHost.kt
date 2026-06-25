@@ -42,6 +42,10 @@ import com.careersandbox.app.ui.screens.workplace.NovaDocScreen
 import com.careersandbox.app.ui.screens.workplace.NovaGramScreen
 import com.careersandbox.app.ui.screens.workplace.NovaDashboardScreen
 import com.careersandbox.app.ui.screens.workplace.NightInterlude1Screen
+import com.careersandbox.app.ui.screens.workplace.NightInterlude2Screen
+import com.careersandbox.app.ui.screens.workplace.NightInterlude3Screen
+import com.careersandbox.app.ui.screens.workplace.NightInterlude4Screen
+import com.careersandbox.app.ui.screens.workplace.NightInterlude5Screen
 import com.careersandbox.app.ui.screens.workplace.WorkplaceMeetingScreen
 import com.careersandbox.app.ui.screens.workplace.WorkplaceLunchScreen
 import com.careersandbox.app.ui.screens.workplace.WorkplaceEmailScreen
@@ -128,6 +132,10 @@ fun CareerSandboxNavHost(
         composable(Routes.NOVA_GRAM) { NovaGramScreen(navController) }
         composable(Routes.NOVA_DASHBOARD) { NovaDashboardScreen(navController) }
         composable(Routes.NIGHT_INTERLUDE_1) { NightInterlude1Screen(navController) }
+        composable(Routes.NIGHT_INTERLUDE_2) { NightInterlude2Screen(navController) }
+        composable(Routes.NIGHT_INTERLUDE_3) { NightInterlude3Screen(navController) }
+        composable(Routes.NIGHT_INTERLUDE_4) { NightInterlude4Screen(navController) }
+        composable(Routes.NIGHT_INTERLUDE_5) { NightInterlude5Screen(navController) }
         composable(Routes.WORKPLACE_REVIEW) { WorkplaceReviewScreen(navController) }
         composable(Routes.PROFILE) { ProfileScreen(navController) }
 

@@ -30,6 +30,10 @@ object Routes {
     const val NOVA_DASHBOARD = "nova_dashboard"
     // 沙盒日場景之間的沉浸過場(夜晚滑手機)
     const val NIGHT_INTERLUDE_1 = "night_interlude_1"
+    const val NIGHT_INTERLUDE_2 = "night_interlude_2"
+    const val NIGHT_INTERLUDE_3 = "night_interlude_3"
+    const val NIGHT_INTERLUDE_4 = "night_interlude_4"
+    const val NIGHT_INTERLUDE_5 = "night_interlude_5"
     const val PROFILE = "profile"
 
     const val EXPERIENCE_LIST = "experience_list"
