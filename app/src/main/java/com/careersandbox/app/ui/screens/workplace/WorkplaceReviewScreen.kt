@@ -234,6 +234,57 @@ fun WorkplaceReviewScreen(navController: NavHostController) {
                 Spacer(Modifier.height(10.dp))
             }
 
+            // === 關係餘響:讀這一週的選擇,綜述你把關係留在哪 ===
+            run {
+                val rel = buildList {
+                    if (WorkplaceState.hasFlag("d3_backed_vivian"))
+                        add("Vivian — 會議上你給了她能用的說法,這週你們之間有了點交情。")
+                    else if (WorkplaceState.hasFlag("d3_left_vivian"))
+                        add("Vivian — 那天你選了各掃門前雪,剩下的日子只談公事。")
+                    if (WorkplaceState.hasFlag("d3_burned_team"))
+                        add("工程 — 為了排程你讓他們加班,阿凱沒抱怨,但也沒再主動找你。")
+                    if (WorkplaceState.hasFlag("d3_passed_buck"))
+                        add("Ken — 會議上你把決定丟回給他。他接了,但記著:他要的是你的判斷。")
+                    if (WorkplaceState.hasFlag("d1_solo") && !WorkplaceState.hasFlag("d1_asked_akai"))
+                        add("你自己 — 從第一天就習慣一個人扛。能幹,但也獨。")
+                    if (WorkplaceState.hasFlag("d4_badmouth"))
+                        add("小芳 — 你對 Ken 的抱怨她說會保密,但茶水間沒有秘密。")
+                }
+                if (rel.isNotEmpty()) {
+                    StaggeredAppear(delayMillis = 520) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(InkCharcoal.copy(alpha = 0.45f))
+                                .padding(18.dp),
+                        ) {
+                            Text("關係餘響", color = BrandAmber, fontSize = 11.sp,
+                                fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+                            Spacer(Modifier.height(10.dp))
+                            rel.forEachIndexed { i, line ->
+                                if (i > 0) Spacer(Modifier.height(8.dp))
+                                Text(line, color = PaperWhite.copy(alpha = 0.82f),
+                                    fontSize = 13.sp, lineHeight = 20.sp)
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                }
+            }
+
+            // 沒走滿五天的提醒(完成追蹤:此刻 1–4 天的完成數)
+            if (WorkplaceState.completedDays.size < 4) {
+                StaggeredAppear(delayMillis = 540) {
+                    Text(
+                        "(這週有幾天你跳過了——完整走一遍,這份週報會更準。)",
+                        color = PaperWhite.copy(alpha = 0.5f), fontSize = 12.sp, lineHeight = 18.sp,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+            }
+
             // === 時刻卡:哪句話造成的 ===
             moments.forEachIndexed { i, m ->
                 StaggeredAppear(delayMillis = 550 + i * 250) {
