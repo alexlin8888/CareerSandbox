@@ -2,6 +2,7 @@ package com.careersandbox.app.ui.screens.workplace
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -39,7 +40,7 @@ fun NovaMeetScreen(navController: NavHostController) {
 
         // ===== 頂部資訊列 =====
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, top = 14.dp, bottom = 10.dp),
+            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {

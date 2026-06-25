@@ -67,7 +67,7 @@ fun NovaMailInboxScreen(navController: NavHostController) {
 
             // ===== 搜尋列 =====
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, top = 14.dp, bottom = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Row(
