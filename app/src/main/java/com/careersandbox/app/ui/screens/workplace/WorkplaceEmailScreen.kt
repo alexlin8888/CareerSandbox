@@ -80,7 +80,7 @@ private data class StormMail(
 )
 
 private val zoneNames = mapOf(
-    "NOW" to "現在處理", "HOLD" to "暫存格", "ENG" to "工程・阿哲", "SALES" to "業務・小芳",
+    "NOW" to "現在處理", "HOLD" to "暫存格", "ENG" to "工程・阿哲", "SALES" to "業務・Vivian",
 )
 
 private val stormDeck = listOf(
@@ -118,8 +118,8 @@ private val stormDeck = listOf(
         "想了解企業方案的報價",
         listOf("商務需求"),
         "SALES",
-        "報價是業務的場子,小芳接最快。",
-        "報價和導入要談判,這是業務的事。給小芳。"),
+        "報價是業務的場子,Vivian接最快。",
+        "報價和導入要談判,這是業務的事。給Vivian。"),
     StormMail(11, "產業週報", "電子報", InkGray400,
         "本週產業動態 #214",
         "AI 工具市場整理與五則新聞。",
@@ -138,7 +138,7 @@ private val stormDeck = listOf(
         "NOW",
         "30 秒能回的就現在回,別讓客戶等一天。",
         "你手上就有連結,30 秒的事。現在回。"),
-    StormMail(5, "業務小芳", "同事", InkCharcoal,
+    StormMail(5, "業務Vivian", "同事", InkCharcoal,
         "客戶問資料匯出的 API 規格",
         "這我看不懂,幫忙看該找誰。",
         "客戶問資料匯出的 API 規格與頻率限制,這部分我看不懂,幫忙看該找誰?",
@@ -163,8 +163,8 @@ private val stormDeck = listOf(
         "有兩條條款想調整",
         listOf("商務談判"),
         "SALES",
-        "條款談判是業務的活,給小芳。",
-        "續約要談條款,不在你桌上。給小芳。"),
+        "條款談判是業務的活,給Vivian。",
+        "續約要談條款,不在你桌上。給Vivian。"),
     StormMail(6, "客服值班", "同事", InkCharcoal,
         "後台帳號被鎖了",
         "三次密碼錯誤,客戶資料調不出來。",
@@ -193,7 +193,7 @@ private val stormDeck = listOf(
         listOf("商務合作", "能等"),
         "SALES",
         "合作案給業務評估,不用你拍板。",
-        "贊助合作讓業務去評。給小芳。"),
+        "贊助合作讓業務去評。給Vivian。"),
 )
 
 private data class Judgment(val mail: StormMail, val pick: String, val right: Boolean)
@@ -508,7 +508,7 @@ private fun WarDesk(
         // 轉交席
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             PersonZone("ENG", "工程・阿哲", R.drawable.colleague_quiet, hovered == "ENG", zoneRects, Modifier.weight(1f))
-            PersonZone("SALES", "業務・小芳", R.drawable.colleague_gossip, hovered == "SALES", zoneRects, Modifier.weight(1f))
+            PersonZone("SALES", "業務・Vivian", R.drawable.colleague_vivian, hovered == "SALES", zoneRects, Modifier.weight(1f))
         }
 
         // 信卡舞台
