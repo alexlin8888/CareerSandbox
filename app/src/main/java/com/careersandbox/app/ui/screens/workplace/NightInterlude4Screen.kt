@@ -52,6 +52,7 @@ fun NightInterlude4Screen(navController: NavHostController) {
         foreshadow = "明天就週五了。這一週的每個選擇,Ken 都記著——明天,該結帳了。",
         navController = navController,
         backTo = Routes.WORKPLACE_SANDBOX,
+        dayDone = 4,
     ) {
         NightMsgCard("小芳", "訊息", fangMsg, Color(0xFFE0A04A))
         Spacer(Modifier.height(12.dp))

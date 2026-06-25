@@ -19,7 +19,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.border
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Coffee
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.EmojiEvents
@@ -127,11 +129,14 @@ fun WorkplaceSandboxScreen(navController: NavHostController) {
         Spacer(Modifier.height(30.dp))
 
         // === zigzag 路徑 ===
+        // 當前 = 第一個還沒完成的天(全完成則 -1,無人呼吸)
+        val currentIdx = week.indexOfFirst { !WorkplaceState.isDayDone(it.dayNo) }
         week.forEachIndexed { idx, day ->
             StaggeredAppear(delayMillis = 120 + idx * 90) {
                 PathNodeBlock(
                     day = day,
-                    isCurrent = idx == 0,
+                    isCurrent = idx == currentIdx,
+                    isDone = WorkplaceState.isDayDone(day.dayNo),
                     onClick = day.route?.let { r -> { navController.navigate(r) } },
                 )
             }
@@ -167,6 +172,7 @@ fun WorkplaceSandboxScreen(navController: NavHostController) {
 private fun PathNodeBlock(
     day: PathDay,
     isCurrent: Boolean,
+    isDone: Boolean = false,
     onClick: (() -> Unit)?,
 ) {
     val scope = rememberCoroutineScope()
@@ -251,6 +257,22 @@ private fun PathNodeBlock(
                 ) {
                     Icon(day.icon, contentDescription = null,
                         tint = iconTint, modifier = Modifier.size(28.dp))
+                }
+                // 完成徽章:綠底白勾,蓋右上角
+                if (isDone) {
+                    Box(
+                        Modifier
+                            .size(24.dp)
+                            .align(Alignment.TopEnd)
+                            .offset(x = 2.dp, y = (-2).dp)
+                            .clip(CircleShape)
+                            .background(AccentGreen)
+                            .border(2.dp, PaperWhite, CircleShape),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(Icons.Outlined.Check, contentDescription = "完成",
+                            tint = PaperWhite, modifier = Modifier.size(14.dp))
+                    }
                 }
             }
             Spacer(Modifier.height(8.dp))

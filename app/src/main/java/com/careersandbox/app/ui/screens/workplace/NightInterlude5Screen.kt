@@ -37,6 +37,7 @@ fun NightInterlude5Screen(navController: NavHostController) {
         foreshadow = "你看著那則訊息,很久沒回。窗外的城市還亮著。明天,還是要醒來。",
         navController = navController,
         backTo = Routes.WORKPLACE_SANDBOX,
+        dayDone = 5,
         continueLabel = "結束第一週",
     ) {
         NightMsgCard("媽", "訊息", momMsg, Color(0xFFE0A04A))

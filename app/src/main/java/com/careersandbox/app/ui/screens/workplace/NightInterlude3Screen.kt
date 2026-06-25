@@ -52,6 +52,7 @@ fun NightInterlude3Screen(navController: NavHostController) {
         foreshadow = "明天中午跟同事吃飯。今天的事之後,這頓飯,氣氛大概很微妙。",
         navController = navController,
         backTo = Routes.WORKPLACE_SANDBOX,
+        dayDone = 3,
     ) {
         NightMsgCard("Vivian", "業務", vivianMsg, Color(0xFFC77DFF))
         Spacer(Modifier.height(12.dp))

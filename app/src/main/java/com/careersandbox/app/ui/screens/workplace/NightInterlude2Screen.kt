@@ -45,6 +45,7 @@ fun NightInterlude2Screen(navController: NavHostController) {
         foreshadow = "明天有個跨部門會議。聽說,不是每個部門都站在你這邊。",
         navController = navController,
         backTo = Routes.WORKPLACE_SANDBOX,
+        dayDone = 2,
     ) {
         NightMsgCard("Ken", "NovaChat", kenMsg, Color(0xFFB85C3A))
         Spacer(Modifier.height(12.dp))

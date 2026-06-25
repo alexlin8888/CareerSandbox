@@ -56,6 +56,7 @@ fun NightInterlude1Screen(navController: NavHostController) {
         foreshadow = "睡前最後一個念頭:明天的信箱,大概不會太安靜。",
         navController = navController,
         backTo = Routes.WORKPLACE_SANDBOX,
+        dayDone = 1,
     ) {
         NightMsgCard("Ken", "NovaChat", kenMsg, Color(0xFFB85C3A))
         Spacer(Modifier.height(12.dp))

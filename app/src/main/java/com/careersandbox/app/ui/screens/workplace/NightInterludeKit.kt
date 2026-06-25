@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.careersandbox.app.data.mock.WorkplaceState
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.BrandOrange
 import com.careersandbox.app.ui.theme.PaperWhite
@@ -53,6 +54,7 @@ fun NightShell(
     navController: NavHostController,
     backTo: String,
     continueLabel: String = "把手機放下,睡了",
+    dayDone: Int? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val scroll = rememberScrollState()
@@ -80,7 +82,10 @@ fun NightShell(
             Box(
                 Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(16.dp))
                     .background(BrandOrange)
-                    .pressScale { navController.popBackStack(backTo, inclusive = false) },
+                    .pressScale {
+                        dayDone?.let { WorkplaceState.completeDay(it) }
+                        navController.popBackStack(backTo, inclusive = false)
+                    },
                 contentAlignment = Alignment.Center,
             ) {
                 Text(continueLabel, color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 15.sp)
