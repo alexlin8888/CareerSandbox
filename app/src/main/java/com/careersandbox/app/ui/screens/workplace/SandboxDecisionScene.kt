@@ -42,7 +42,7 @@ data class DecisionChoice(
     val flag: String? = null,      // 跨天旗標(後果回收)
 )
 
-private val Espresso = Color(0xFF281C12)
+private val DsEspresso = Color(0xFF281C12)
 private val PaperWhite = Color(0xFFFFF8F3)
 private val Amber = Color(0xFFFFB627)
 private val WarmOrange = Color(0xFFF2531C)
@@ -153,7 +153,7 @@ fun SandboxDecisionScene(
                         .clip(RoundedCornerShape(999.dp)).background(Amber)
                         .padding(horizontal = 16.dp, vertical = 6.dp),
                 ) {
-                    Text(speaker, color = Espresso, fontSize = 14.sp, fontWeight = FontWeight.Black)
+                    Text(speaker, color = DsEspresso, fontSize = 14.sp, fontWeight = FontWeight.Black)
                 }
             }
 
@@ -175,7 +175,7 @@ fun SandboxDecisionScene(
                         Text(c.letter, color = WarmOrange, fontSize = 14.sp, fontWeight = FontWeight.Black)
                     }
                     Spacer(Modifier.width(14.dp))
-                    Text(c.label, color = Espresso, fontSize = 15.sp, fontWeight = FontWeight.Medium, lineHeight = 21.sp)
+                    Text(c.label, color = DsEspresso, fontSize = 15.sp, fontWeight = FontWeight.Medium, lineHeight = 21.sp)
                 }
                 Spacer(Modifier.height(12.dp))
             }
@@ -192,7 +192,7 @@ fun SandboxDecisionScene(
                 val up = rc.delta > 0
                 Row(
                     Modifier.clip(RoundedCornerShape(999.dp))
-                        .background(Espresso)
+                        .background(DsEspresso)
                         .padding(horizontal = 18.dp, vertical = 11.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {

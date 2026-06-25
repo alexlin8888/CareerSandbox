@@ -38,7 +38,7 @@ import com.careersandbox.app.data.mock.WorkplaceState
    真急件各有旗標。對齊你 Claude Design 的「郵件場景」版面。
    ===================================================================== */
 
-private data class StormMail(
+private data class Day2Mail(
     val sender: String,
     val email: String,
     val avatarLetter: String,
@@ -62,7 +62,7 @@ fun Day2EmailScreen(navController: NavHostController) {
 
     val red = Color(0xFFEA4335)
     val mails = listOf(
-        StormMail(
+        Day2Mail(
             "Ken", "ken@novapay.com", "K", Color(0xFF1A73E8),
             "分帳的事", "收件匣", red,
             "今天 5 點前,給我一個能對客戶交代的版本。不用完美,但要能講。\n\n— Ken",
@@ -73,7 +73,7 @@ fun Day2EmailScreen(navController: NavHostController) {
                     "專業形象", -1, "主管的信擺著不回"),
             ),
         ),
-        StormMail(
+        Day2Mail(
             "阿哲", "jhe@novapay.com", "哲", Color(0xFF12B5A5),
             "Re: 分帳 bug 進度", "工作", Color(0xFFF59E0B),
             "race condition 我還在追,別逼我給假的日期。下午會議我會說明。\n\n— 阿哲",
@@ -84,7 +84,7 @@ fun Day2EmailScreen(navController: NavHostController) {
                     "同事情誼", -1, "逼假日期,工程記仇", "d2_push_eng"),
             ),
         ),
-        StormMail(
+        Day2Mail(
             "Vivian", "vivian@novapay.com", "V", Color(0xFFEC4899),
             "客戶問 API 匯出規格", "收件匣", red,
             "客戶問資料匯出的 API 規格,這部分我看不懂…幫忙看一下該找誰?急。",
@@ -97,7 +97,7 @@ fun Day2EmailScreen(navController: NavHostController) {
                     "專業形象", -1, "不懂裝懂,危險"),
             ),
         ),
-        StormMail(
+        Day2Mail(
             "系統通知", "noreply@novapay.com", "!", Color(0xFFEF4444),
             "【緊急】後台帳號已鎖定", "工作", Color(0xFFF59E0B),
             "你的後台帳號因三次密碼錯誤已鎖定。客戶資料目前無法調出,demo 相關查詢受影響。",
@@ -108,7 +108,7 @@ fun Day2EmailScreen(navController: NavHostController) {
                     "專業形象", -2, "漏接真急件", "d2_miss_urgent"),
             ),
         ),
-        StormMail(
+        Day2Mail(
             "媽", "mom@home", "媽", Color(0xFFE0A04A),
             "Fwd: 久坐傷身,記得起來走走", "收件匣", red,
             "看到這篇想到你。中午有沒有好好吃飯?不要又一杯咖啡撐一天。",
