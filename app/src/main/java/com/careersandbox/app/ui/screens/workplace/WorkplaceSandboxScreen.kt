@@ -19,9 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.border
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Coffee
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.EmojiEvents
@@ -114,12 +112,34 @@ fun WorkplaceSandboxScreen(navController: NavHostController) {
                     color = PaperWhite,
                     fontWeight = FontWeight.Black,
                     fontSize = 26.sp)
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(10.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier.clip(RoundedCornerShape(999.dp))
+                            .background(PaperWhite.copy(alpha = 0.18f))
+                            .padding(horizontal = 10.dp, vertical = 4.dp),
+                    ) {
+                        Text("你的角色", color = PaperWhite, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Text("NovaPay 產品助理（Junior PM）",
+                        color = PaperWhite, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                }
+                Spacer(Modifier.height(10.dp))
                 Text("在這裡踩雷,總比上班才踩好。",
                     color = PaperWhite.copy(alpha = 0.85f),
                     fontSize = 13.sp)
             }
         }
+
+        Spacer(Modifier.height(12.dp))
+        // === 本週卡司(角色職稱)===
+        Text(
+            "本週卡司 ・ Ken 主管 ・ 阿哲 工程 ・ Vivian 業務 ・ 小芳 前輩",
+            color = InkGray400,
+            fontSize = 12.sp,
+            modifier = Modifier.padding(horizontal = 24.dp),
+        )
 
         Spacer(Modifier.height(20.dp))
 
@@ -129,58 +149,18 @@ fun WorkplaceSandboxScreen(navController: NavHostController) {
         Spacer(Modifier.height(30.dp))
 
         // === zigzag 路徑 ===
-        // 當前 = 第一個還沒完成的天(全完成則 -1,無人呼吸)
-        val currentIdx = week.indexOfFirst { !WorkplaceState.isDayDone(it.dayNo) }
         week.forEachIndexed { idx, day ->
             StaggeredAppear(delayMillis = 120 + idx * 90) {
                 PathNodeBlock(
                     day = day,
-                    isCurrent = idx == currentIdx,
-                    isDone = WorkplaceState.isDayDone(day.dayNo),
-                    onClick = if (WorkplaceState.isDayDone(day.dayNo)) null
-                    else day.route?.let { r -> { navController.navigate(r) } },
+                    isCurrent = idx == 0,
+                    onClick = day.route?.let { r -> { navController.navigate(r) } },
                 )
             }
             if (idx != week.lastIndex) Spacer(Modifier.height(22.dp))
         }
 
         Spacer(Modifier.height(36.dp))
-
-        // === 重新開始(沙盒核心:換個選擇,這一週就不一樣)===
-        if (WorkplaceState.completedDays.isNotEmpty()) {
-            val allDone = WorkplaceState.completedDays.size >= week.size
-            StaggeredAppear(delayMillis = 600) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                ) {
-                    if (allDone) {
-                        Text("第一週走完了。",
-                            color = InkBlack, fontWeight = FontWeight.Black, fontSize = 15.sp)
-                        Spacer(Modifier.height(4.dp))
-                        Text("換個選擇,這一週會不一樣。",
-                            color = InkGray400, fontSize = 12.sp)
-                        Spacer(Modifier.height(12.dp))
-                    }
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50))
-                            .background(if (allDone) BrandDeepOrange else PaperWhite)
-                            .then(
-                                if (allDone) Modifier
-                                else Modifier.border(1.dp, InkGray300, RoundedCornerShape(50)),
-                            )
-                            .pressScale { WorkplaceState.reset() }
-                            .padding(horizontal = 22.dp, vertical = 11.dp),
-                    ) {
-                        Text("重新開始這一週",
-                            color = if (allDone) PaperWhite else InkGray400,
-                            fontWeight = FontWeight.Black, fontSize = 13.sp)
-                    }
-                }
-            }
-            Spacer(Modifier.height(28.dp))
-        }
 
         // === 產業選擇(次要,移至頁尾)===
         IndustrySelector(selected = industry, onSelect = { industry = it })
@@ -209,7 +189,6 @@ fun WorkplaceSandboxScreen(navController: NavHostController) {
 private fun PathNodeBlock(
     day: PathDay,
     isCurrent: Boolean,
-    isDone: Boolean = false,
     onClick: (() -> Unit)?,
 ) {
     val scope = rememberCoroutineScope()
@@ -294,22 +273,6 @@ private fun PathNodeBlock(
                 ) {
                     Icon(day.icon, contentDescription = null,
                         tint = iconTint, modifier = Modifier.size(28.dp))
-                }
-                // 完成徽章:綠底白勾,蓋右上角
-                if (isDone) {
-                    Box(
-                        Modifier
-                            .size(24.dp)
-                            .align(Alignment.TopEnd)
-                            .offset(x = 2.dp, y = (-2).dp)
-                            .clip(CircleShape)
-                            .background(AccentGreen)
-                            .border(2.dp, PaperWhite, CircleShape),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(Icons.Outlined.Check, contentDescription = "完成",
-                            tint = PaperWhite, modifier = Modifier.size(14.dp))
-                    }
                 }
             }
             Spacer(Modifier.height(8.dp))
