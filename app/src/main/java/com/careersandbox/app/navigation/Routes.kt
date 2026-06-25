@@ -16,6 +16,7 @@ object Routes {
     const val WORKPLACE_MEETING = "workplace_meeting"
     const val WORKPLACE_LUNCH = "workplace_lunch"
     const val WORKPLACE_REVIEW = "workplace_review"
+    const val NOVA_CHAT = "nova_chat"
     const val PROFILE = "profile"
 
     const val EXPERIENCE_LIST = "experience_list"

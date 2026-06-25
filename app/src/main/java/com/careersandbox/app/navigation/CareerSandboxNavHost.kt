@@ -30,6 +30,7 @@ import com.careersandbox.app.ui.screens.profile.SettingsPrivacyScreen
 import com.careersandbox.app.ui.screens.profile.SettingsProfileScreen
 import com.careersandbox.app.ui.screens.resume.*
 import com.careersandbox.app.ui.screens.workplace.WorkplaceChatScreen
+import com.careersandbox.app.ui.screens.workplace.NovaChatScreen
 import com.careersandbox.app.ui.screens.workplace.WorkplaceMeetingScreen
 import com.careersandbox.app.ui.screens.workplace.WorkplaceLunchScreen
 import com.careersandbox.app.ui.screens.workplace.WorkplaceEmailScreen
@@ -104,6 +105,7 @@ fun CareerSandboxNavHost(
         composable(Routes.WORKPLACE_MEETING) { WorkplaceMeetingScreen(navController) }
         composable(Routes.WORKPLACE_LUNCH) { WorkplaceLunchScreen(navController) }
         composable(Routes.WORKPLACE_EMAIL) { WorkplaceEmailScreen(navController) }
+        composable(Routes.NOVA_CHAT) { NovaChatScreen(navController) }
         composable(Routes.WORKPLACE_REVIEW) { WorkplaceReviewScreen(navController) }
         composable(Routes.PROFILE) { ProfileScreen(navController) }
 
