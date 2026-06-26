@@ -29,6 +29,7 @@ import com.careersandbox.app.ui.screens.profile.SettingsNotificationsScreen
 import com.careersandbox.app.ui.screens.profile.SettingsPrivacyScreen
 import com.careersandbox.app.ui.screens.profile.SettingsProfileScreen
 import com.careersandbox.app.ui.screens.resume.*
+import com.careersandbox.app.ui.screens.workplace.NovaBackFrame
 import com.careersandbox.app.ui.screens.workplace.Day1OneOnOneScreen
 import com.careersandbox.app.ui.screens.workplace.Day2EmailScreen
 import com.careersandbox.app.ui.screens.workplace.Day3MeetingScreen
@@ -116,16 +117,16 @@ fun CareerSandboxNavHost(
         composable(Routes.WORKPLACE_LUNCH) { Day4LunchScreen(navController) }
         composable(Routes.WORKPLACE_EMAIL) { Day2EmailScreen(navController) }
         composable(Routes.NOVA_CHAT) { NovaChatScreen(navController) }
-        composable(Routes.NOVA_CHAT_LIST) { NovaChatListScreen(navController) }
-        composable(Routes.NOVA_MAIL_INBOX) { NovaMailInboxScreen(navController) }
+        composable(Routes.NOVA_CHAT_LIST) { NovaBackFrame(navController) { NovaChatListScreen(navController) } }
+        composable(Routes.NOVA_MAIL_INBOX) { NovaBackFrame(navController) { NovaMailInboxScreen(navController) } }
         composable(Routes.NOVA_MAIL_OPEN) { NovaMailOpenScreen(navController) }
         composable(Routes.NOVA_LOCK) { NovaLockScreen(navController) }
-        composable(Routes.NOVA_CALENDAR) { NovaCalendarScreen(navController) }
+        composable(Routes.NOVA_CALENDAR) { NovaBackFrame(navController) { NovaCalendarScreen(navController) } }
         composable(Routes.NOVA_TEAM) { NovaTeamScreen(navController) }
         composable(Routes.NOVA_MEET) { NovaMeetScreen(navController) }
         composable(Routes.NOVA_DOC) { NovaDocScreen(navController) }
-        composable(Routes.NOVA_GRAM) { NovaGramScreen(navController) }
-        composable(Routes.NOVA_DASHBOARD) { NovaDashboardScreen(navController) }
+        composable(Routes.NOVA_GRAM) { NovaBackFrame(navController) { NovaGramScreen(navController) } }
+        composable(Routes.NOVA_DASHBOARD) { NovaBackFrame(navController) { NovaDashboardScreen(navController) } }
         composable(Routes.WORKPLACE_REVIEW) { Day5ReviewScreen(navController) }
         composable(Routes.PROFILE) { ProfileScreen(navController) }
 
