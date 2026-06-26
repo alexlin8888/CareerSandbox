@@ -156,13 +156,20 @@ fun Day4LunchScreen(navController: NavHostController) {
 /* ---------- 小芳的 NovaGram 限動（對齊 band_2 限動畫面）---------- */
 @Composable
 private fun NovaGramStory(onClose: () -> Unit, onLunch: () -> Unit) {
-    Box(
-        Modifier.fillMaxSize().background(
-            Brush.verticalGradient(
-                listOf(Color(0xFFF0B36B), Color(0xFFE08A4A), Color(0xFFC56B33)),
+    Box(Modifier.fillMaxSize()) {
+        Image(
+            painter = painterResource(R.drawable.story_fang),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+        )
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.verticalGradient(
+                    listOf(Color(0x4D000000), Color(0x1A000000), Color(0xB3000000)),
+                ),
             ),
-        ),
-    ) {
+        )
         Column(Modifier.fillMaxSize().padding(start = 14.dp, end = 14.dp, top = 52.dp)) {
             // 進度條
             Box(Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)).background(Color(0x55FFFFFF))) {
