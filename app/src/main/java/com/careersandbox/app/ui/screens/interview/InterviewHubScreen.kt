@@ -382,6 +382,8 @@ private fun AvatarGrowthCard() {
         Triple("應變", 64, -1),
         Triple("自信", 80, 5),
     )
+    val power = 74
+    val rank = rankOf(power)
     Column(
         modifier = Modifier
             .padding(horizontal = 20.dp)
@@ -390,8 +392,7 @@ private fun AvatarGrowthCard() {
             .background(BrandPeach.copy(alpha = 0.4f))
             .padding(18.dp),
     ) {
-        val power = 74
-        val rank = rankOf(power)
+        // 英雄列：段位徽章 + 面試力
         Row(verticalAlignment = Alignment.CenterVertically) {
             ShieldBadge(rank.title)
             Spacer(Modifier.weight(1f))
@@ -400,13 +401,16 @@ private fun AvatarGrowthCard() {
                 Text("${rememberCountUp(power)}", color = InkBlack, fontSize = 44.sp, fontWeight = FontWeight.Black, lineHeight = 46.sp)
             }
         }
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(14.dp))
+        // 段位進度條（成長脊椎：看見旅程 + 下一階目標）
+        RankProgressBar(power)
+        Spacer(Modifier.height(14.dp))
+        // 能力雷達 + 河狸
         Box(Modifier.fillMaxWidth().height(176.dp)) {
             HexRadar(
                 values = abilities.map { it.second },
                 modifier = Modifier.align(Alignment.CenterStart).padding(start = 14.dp).size(156.dp),
             )
-            // 河狸去框,破框站在卡緣
             Image(
                 painter = painterResource(rank.beaver),
                 contentDescription = null,
@@ -422,11 +426,91 @@ private fun AvatarGrowthCard() {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             abilities.drop(3).forEach { (l, v, d) -> StatCell(l, v, d) }
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(14.dp))
+        // 下一階解鎖
+        NextUnlockCallout(power)
+    }
+}
+
+/* 段位門檻：新手 0-59 ・ 新星 60-74 ・ 好手 75-84 ・ 大師 85-100 */
+private val RANK_TIERS = listOf(0, 60, 75, 85)
+private val RANK_NAMES = listOf("新手", "新星", "好手", "大師")
+private fun rankIndexOf(power: Int): Int = RANK_TIERS.indexOfLast { power >= it }.coerceIn(0, 3)
+
+@Composable
+private fun RankProgressBar(power: Int) {
+    val idx = rankIndexOf(power)
+    val nextThreshold = if (idx < 3) RANK_TIERS[idx + 1] else 100
+    val toNext = (nextThreshold - power).coerceAtLeast(0)
+    val nextName = if (idx < 3) RANK_NAMES[idx + 1] else "頂峰"
+
+    var appear by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { appear = true }
+    val fill by animateFloatAsState(
+        targetValue = if (appear) power / 100f else 0f,
+        animationSpec = tween(900),
+        label = "rankFill",
+    )
+
+    Column(Modifier.fillMaxWidth()) {
+        BoxWithConstraints(Modifier.fillMaxWidth().height(16.dp)) {
+            val full = maxWidth
+            Box(Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)).background(PaperWhite.copy(alpha = 0.7f)))
+            Box(
+                Modifier.fillMaxHeight().width(full * fill).clip(RoundedCornerShape(8.dp))
+                    .background(Brush.horizontalGradient(listOf(BrandAmber, BrandOrange, BrandDeepOrange))),
+            )
+            // 段位分界
+            listOf(0.60f, 0.75f, 0.85f).forEach { f ->
+                Box(
+                    Modifier.fillMaxHeight().width(2.dp).offset(x = full * f)
+                        .background(InkCharcoal.copy(alpha = 0.22f)),
+                )
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            RANK_NAMES.forEachIndexed { i, n ->
+                Text(
+                    n,
+                    color = if (i == idx) BrandDeepOrange else InkGray500,
+                    fontSize = 11.sp,
+                    fontWeight = if (i == idx) FontWeight.Black else FontWeight.Medium,
+                )
+            }
+        }
+        Spacer(Modifier.height(8.dp))
         Text(
-            "上次練習 +6 ・ 距下一段位還差 26",
-            color = BrandDeepOrange, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
+            if (idx < 3) "再 $toNext 分晉升 $nextName" else "已達頂峰段位",
+            color = InkCharcoal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
         )
+    }
+}
+
+@Composable
+private fun NextUnlockCallout(power: Int) {
+    val idx = rankIndexOf(power)
+    val reward = when (idx) {
+        0 -> "面試官會開始追問你的回答細節"
+        1 -> "解鎖群組面試動態 ・ 即戰力深度提問"
+        2 -> "解鎖高壓情境題 ・ 跨部門協作評估"
+        else -> "已達頂峰，挑戰刷新自己的最高分"
+    }
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+            .background(BrandAmber.copy(alpha = 0.30f)).padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.width(4.dp).height(34.dp).clip(RoundedCornerShape(2.dp)).background(BrandDeepOrange))
+        Spacer(Modifier.width(12.dp))
+        Column {
+            Text(
+                if (idx < 3) "下一階解鎖" else "頂峰",
+                color = BrandDeepOrange, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(reward, color = InkCharcoal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, lineHeight = 16.sp)
+        }
     }
 }
 
