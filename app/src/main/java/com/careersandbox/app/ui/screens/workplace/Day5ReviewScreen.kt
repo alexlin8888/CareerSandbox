@@ -42,14 +42,9 @@ fun Day5ReviewScreen(navController: NavHostController) {
         "night" -> NightEnding(onEnd = { navController.popBackStack() })
         else -> {
             val mt = WorkplaceState.managerTrust.value
-            val portrait = when {
-                mt >= 5 -> R.drawable.ken_soft
-                mt <= 2 -> R.drawable.ken_stern
-                else -> R.drawable.ken_neutral
-            }
             SandboxDecisionScene(
                 speaker = "Ken",
-                portrait = portrait,
+                portrait = faceKenBase(mt),
                 narration = "第一週,結束了。坐下——我跟你說說我看到的。",
                 sceneLabel = "週五 · 回顧",
                 bgRes = R.drawable.bg_scene_office,

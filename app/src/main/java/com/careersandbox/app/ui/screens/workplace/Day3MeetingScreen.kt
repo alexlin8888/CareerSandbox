@@ -24,6 +24,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.RepChange
@@ -54,6 +56,8 @@ fun Day3MeetingScreen(navController: NavHostController) {
     var capIdx by remember { mutableIntStateOf(0) }
     var beat by remember { mutableIntStateOf(0) }
     var repPop by remember { mutableStateOf<RepChange?>(null) }
+    var reaction by remember { mutableStateOf<Int?>(null) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(repPop) {
         if (repPop != null) { kotlinx.coroutines.delay(1900); repPop = null }
@@ -120,16 +124,10 @@ fun Day3MeetingScreen(navController: NavHostController) {
         )
         else -> {
             val mt = WorkplaceState.managerTrust.value
-            val portrait = when {
-                beat == 0 -> R.drawable.ken_neutral
-                mt >= 5 -> R.drawable.ken_soft
-                mt <= 2 -> R.drawable.ken_stern
-                else -> R.drawable.ken_neutral
-            }
             val current = beats[beat]
             SandboxDecisionScene(
                 speaker = "Ken",
-                portrait = portrait,
+                portrait = reaction ?: faceKenBase(mt),
                 narration = current.narration,
                 choices = current.choices,
                 bgRes = R.drawable.bg_scene_meeting,
@@ -140,7 +138,12 @@ fun Day3MeetingScreen(navController: NavHostController) {
                         repPop = WorkplaceState.apply(c.repMeter, c.repDelta, c.repReason, day = 3)
                     }
                     c.flag?.let { WorkplaceState.setFlag(it) }
-                    if (beat < beats.lastIndex) beat++ else phase = "done"
+                    reaction = faceKenReact(c.repDelta, WorkplaceState.managerTrust.value)
+                    scope.launch {
+                        kotlinx.coroutines.delay(1150)
+                        reaction = null
+                        if (beat < beats.lastIndex) beat++ else phase = "done"
+                    }
                 },
             )
         }
@@ -198,13 +201,18 @@ private fun MeetingPanel(caption: Caption, isLast: Boolean, onNext: () -> Unit, 
                 }
             }
 
-            // 字幕條
-            Box(
+            // 字幕條(含點擊提示,避免疊字)
+            Column(
                 Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp)
                     .clip(RoundedCornerShape(12.dp)).background(Color(0xFF161C28))
                     .padding(horizontal = 16.dp, vertical = 12.dp),
             ) {
                 Text("${caption.who}：${caption.line}", color = Color.White, fontSize = 13.sp, lineHeight = 19.sp)
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    if (isLast) "輪到你了 — 點一下繼續 ›" else "點一下繼續 ›",
+                    color = Color(0x80FFFFFF), fontSize = 11.sp, fontWeight = FontWeight.Medium,
+                )
             }
 
             // 控制列
@@ -220,16 +228,6 @@ private fun MeetingPanel(caption: Caption, isLast: Boolean, onNext: () -> Unit, 
                 Spacer(Modifier.weight(1f))
                 CtrlBtn(Icons.Filled.CallEnd, Color(0xFFEF4444))
             }
-        }
-
-        // 點擊提示
-        Box(
-            Modifier.align(Alignment.BottomCenter).padding(bottom = 90.dp),
-        ) {
-            Text(
-                if (isLast) "輪到你了 — 點一下" else "點一下繼續",
-                color = Color(0x99FFFFFF), fontSize = 12.sp, fontWeight = FontWeight.Medium,
-            )
         }
     }
 }

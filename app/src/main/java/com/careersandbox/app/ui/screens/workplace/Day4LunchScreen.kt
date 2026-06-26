@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,14 +23,18 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.RepChange
@@ -49,6 +54,8 @@ fun Day4LunchScreen(navController: NavHostController) {
     var phase by remember { mutableStateOf("story") } // story | lunch | done
     var beat by remember { mutableIntStateOf(0) }
     var repPop by remember { mutableStateOf<RepChange?>(null) }
+    var reaction by remember { mutableStateOf<Int?>(null) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(repPop) {
         if (repPop != null) { kotlinx.coroutines.delay(1900); repPop = null }
@@ -107,7 +114,7 @@ fun Day4LunchScreen(navController: NavHostController) {
             val b = beats[beat]
             SandboxDecisionScene(
                 speaker = b.speaker,
-                portrait = b.portrait,
+                portrait = reaction ?: b.portrait,
                 narration = b.narration,
                 choices = b.choices,
                 sceneLabel = "午餐時間",
@@ -119,7 +126,12 @@ fun Day4LunchScreen(navController: NavHostController) {
                         repPop = WorkplaceState.apply(c.repMeter, c.repDelta, c.repReason, day = 4)
                     }
                     c.flag?.let { WorkplaceState.setFlag(it) }
-                    if (beat < beats.lastIndex) beat++ else phase = "done"
+                    reaction = if (b.speaker == "阿哲") faceAkai(c.repDelta) else faceFang(c.repDelta)
+                    scope.launch {
+                        kotlinx.coroutines.delay(1150)
+                        reaction = null
+                        if (beat < beats.lastIndex) beat++ else phase = "done"
+                    }
                 },
             )
         }
@@ -144,10 +156,13 @@ private fun NovaGramStory(onClose: () -> Unit, onLunch: () -> Unit) {
             Spacer(Modifier.height(12.dp))
             // header
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier.size(36.dp).clip(CircleShape).background(Color(0xFFB85C3A)),
-                    contentAlignment = Alignment.Center,
-                ) { Text("芳", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold) }
+                Image(
+                    painter = painterResource(R.drawable.fang_neutral),
+                    contentDescription = "小芳",
+                    contentScale = ContentScale.Crop,
+                    alignment = Alignment.TopCenter,
+                    modifier = Modifier.size(36.dp).clip(CircleShape).background(Color(0xFFEED9C4)),
+                )
                 Spacer(Modifier.width(9.dp))
                 Text("小芳", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.width(6.dp))

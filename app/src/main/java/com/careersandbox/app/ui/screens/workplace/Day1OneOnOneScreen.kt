@@ -12,6 +12,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -20,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.RepChange
@@ -38,6 +40,8 @@ fun Day1OneOnOneScreen(navController: NavHostController) {
     var beat by remember { mutableIntStateOf(0) }
     var done by remember { mutableStateOf(false) }
     var repPop by remember { mutableStateOf<RepChange?>(null) }
+    var reaction by remember { mutableStateOf<Int?>(null) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(repPop) {
         if (repPop != null) { kotlinx.coroutines.delay(1900); repPop = null }
@@ -79,14 +83,8 @@ fun Day1OneOnOneScreen(navController: NavHostController) {
         ),
     )
 
-    // Ken 表情:依當前主管信任值
+    // Ken 表情:反應優先,否則依累積主管信任
     val mt = WorkplaceState.managerTrust.value
-    val portrait = when {
-        beat == 0 -> R.drawable.ken_neutral
-        mt >= 5 -> R.drawable.ken_soft
-        mt <= 2 -> R.drawable.ken_stern
-        else -> R.drawable.ken_neutral
-    }
 
     if (done) {
         Day1Ending(onBack = { navController.popBackStack() })
@@ -96,10 +94,10 @@ fun Day1OneOnOneScreen(navController: NavHostController) {
     val current = beats[beat]
     SandboxDecisionScene(
         speaker = "Ken",
-        portrait = portrait,
+        portrait = reaction ?: faceKenBase(mt),
         narration = current.narration,
         choices = current.choices,
-            bgRes = R.drawable.bg_scene_1on1,
+        bgRes = R.drawable.bg_scene_1on1,
         repPop = repPop,
         onBack = { navController.popBackStack() },
         onChoose = { c ->
@@ -107,7 +105,12 @@ fun Day1OneOnOneScreen(navController: NavHostController) {
                 repPop = WorkplaceState.apply(c.repMeter, c.repDelta, c.repReason, day = 1)
             }
             c.flag?.let { WorkplaceState.setFlag(it) }
-            if (beat < beats.lastIndex) beat++ else done = true
+            reaction = faceKenReact(c.repDelta, WorkplaceState.managerTrust.value)
+            scope.launch {
+                kotlinx.coroutines.delay(1150)
+                reaction = null
+                if (beat < beats.lastIndex) beat++ else done = true
+            }
         },
     )
 }
