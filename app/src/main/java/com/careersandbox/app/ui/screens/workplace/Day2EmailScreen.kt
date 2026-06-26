@@ -19,6 +19,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.data.mock.RepChange
+import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.WorkplaceState
 
 /* =====================================================================
@@ -52,6 +54,8 @@ private data class Day2Mail(
 
 @Composable
 fun Day2EmailScreen(navController: NavHostController) {
+    val audioCtx = LocalContext.current
+    LaunchedEffect(Unit) { SoundManager.playBgm(audioCtx, R.raw.bgm_neutral) }
     var idx by remember { mutableIntStateOf(0) }
     var done by remember { mutableStateOf(false) }
     var repPop by remember { mutableStateOf<RepChange?>(null) }

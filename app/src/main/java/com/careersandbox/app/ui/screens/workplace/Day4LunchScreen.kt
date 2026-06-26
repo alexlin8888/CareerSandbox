@@ -23,6 +23,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,6 +52,8 @@ private data class D4Beat(val speaker: String, val portrait: Int, val narration:
 
 @Composable
 fun Day4LunchScreen(navController: NavHostController) {
+    val audioCtx = LocalContext.current
+    LaunchedEffect(Unit) { SoundManager.playBgm(audioCtx, R.raw.bgm_warm) }
     var phase by remember { mutableStateOf("story") } // story | lunch | done
     var beat by remember { mutableIntStateOf(0) }
     var repPop by remember { mutableStateOf<RepChange?>(null) }

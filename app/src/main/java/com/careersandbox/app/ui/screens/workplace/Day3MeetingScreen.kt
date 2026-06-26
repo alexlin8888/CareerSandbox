@@ -24,6 +24,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,6 +53,8 @@ private data class D3Beat(val narration: String, val choices: List<DecisionChoic
 
 @Composable
 fun Day3MeetingScreen(navController: NavHostController) {
+    val audioCtx = LocalContext.current
+    LaunchedEffect(Unit) { SoundManager.playBgm(audioCtx, R.raw.bgm_tense) }
     var phase by remember { mutableStateOf("meeting") } // meeting | decision | done
     var capIdx by remember { mutableIntStateOf(0) }
     var beat by remember { mutableIntStateOf(0) }

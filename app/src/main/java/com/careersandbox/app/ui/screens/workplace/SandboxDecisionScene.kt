@@ -25,6 +25,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.careersandbox.app.data.mock.RepChange
 import com.careersandbox.app.ui.components.pressScale
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.VolumeOff
+import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material3.Icon
+import androidx.compose.ui.platform.LocalContext
+import com.careersandbox.app.R
 
 /* =====================================================================
    SandboxDecisionScene —— 插畫決策場景(1:1 還原 Claude Design「決策場景 v2」)
@@ -59,6 +65,7 @@ fun SandboxDecisionScene(
     bgRes: Int? = null,
     repPop: RepChange? = null,
 ) {
+    val ctx = LocalContext.current
     Box(Modifier.fillMaxSize()) {
         // ===== 背景層:有實景圖就用圖(疊暈影+下方加深),否則用程式畫的暖色房間 =====
         if (bgRes != null) {
@@ -137,6 +144,19 @@ fun SandboxDecisionScene(
                 Spacer(Modifier.weight(1f))
                 Box(
                     Modifier.size(44.dp).clip(CircleShape).background(Color(0x6B281C12))
+                        .pressScale { SoundManager.toggleMute(ctx) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        if (SoundManager.muted) Icons.Filled.VolumeOff else Icons.Filled.VolumeUp,
+                        contentDescription = "靜音",
+                        tint = PaperWhite,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+                Spacer(Modifier.width(10.dp))
+                Box(
+                    Modifier.size(44.dp).clip(CircleShape).background(Color(0x6B281C12))
                         .pressScale { onBack() },
                     contentAlignment = Alignment.Center,
                 ) {
@@ -188,7 +208,7 @@ fun SandboxDecisionScene(
                 Row(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
                         .background(PaperWhite)
-                        .pressScale { onChoose(c) }
+                        .pressScale { SoundManager.sfx(R.raw.sfx_tap); onChoose(c) }
                         .padding(18.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
