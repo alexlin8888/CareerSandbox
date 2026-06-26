@@ -25,6 +25,15 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.WorkplaceState
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.roundToInt
 
 /* =====================================================================
    Day 5 · 週五：週五回顧（決策 + 績效儀表板 + 尾聲）
@@ -123,6 +132,9 @@ private fun ReviewBoard(onHome: () -> Unit) {
             Text("第一週 · 結算", color = Color(0xFFF2531C), fontSize = 13.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
             Spacer(Modifier.height(6.dp))
             Text("你是個什麼樣的同事", color = Color(0xFF281C12), fontSize = 26.sp, fontWeight = FontWeight.Black)
+            Spacer(Modifier.height(20.dp))
+
+            WeekHeroCard(mt, pb, pi)
             Spacer(Modifier.height(20.dp))
 
             MeterBar5("主管信任", mt, Color(0xFFB85C3A))
@@ -232,6 +244,78 @@ private fun NightEnding(onEnd: () -> Unit) {
                     .background(Color(0x22FFFFFF)).clickable { onEnd() },
                 contentAlignment = Alignment.Center,
             ) { Text("結束這一週", color = Color(0xFFFFF8F3), fontWeight = FontWeight.Black, fontSize = 15.sp) }
+        }
+    }
+}
+
+/* ---------- 結算 hero：三軸雷達 + 綜合分 ---------- */
+@Composable
+private fun WeekHeroCard(mt: Int, pb: Int, pi: Int) {
+    val total = (mt + pb + pi).coerceIn(0, 30)
+    val overall = (total / 30f * 100).roundToInt()
+    val tier = when {
+        overall >= 70 -> "穩健"
+        overall >= 45 -> "及格"
+        else -> "吃力"
+    }
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color(0xFFFCEFE6))
+            .padding(18.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        WeekRadar(mt, pb, pi, Modifier.size(128.dp))
+        Spacer(Modifier.width(18.dp))
+        Column {
+            Text("第一週綜合", color = Color(0xFF6B7280), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(2.dp))
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text("$overall", color = Color(0xFF281C12), fontSize = 46.sp, fontWeight = FontWeight.Black, lineHeight = 48.sp)
+                Text(" / 100", color = Color(0xFF9CA3AF), fontSize = 14.sp, modifier = Modifier.padding(bottom = 8.dp))
+            }
+            Spacer(Modifier.height(6.dp))
+            Box(
+                Modifier.clip(RoundedCornerShape(8.dp)).background(Color(0xFFF2531C))
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+            ) { Text(tier, color = Color(0xFFFFF8F3), fontSize = 13.sp, fontWeight = FontWeight.Black) }
+        }
+    }
+}
+
+@Composable
+private fun WeekRadar(mt: Int, pb: Int, pi: Int, modifier: Modifier = Modifier) {
+    var appear by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { appear = true }
+    val grow by animateFloatAsState(targetValue = if (appear) 1f else 0f, animationSpec = tween(800), label = "weekRadar")
+    val vals = listOf(mt.coerceIn(0, 10), pb.coerceIn(0, 10), pi.coerceIn(0, 10))
+    val dotColors = listOf(Color(0xFFB85C3A), Color(0xFFE0922A), Color(0xFF2E9E6B))
+    Canvas(modifier) {
+        val cx = size.width / 2f
+        val cy = size.height / 2f
+        val maxR = minOf(cx, cy) * 0.82f
+        val angles = listOf(-90.0, 30.0, 150.0).map { Math.toRadians(it) }
+        fun pt(r: Float, i: Int) = Offset(cx + r * cos(angles[i]).toFloat(), cy + r * sin(angles[i]).toFloat())
+        listOf(0.25f, 0.5f, 0.75f, 1.0f).forEach { ring ->
+            val p = Path()
+            for (i in 0..2) {
+                val o = pt(maxR * ring, i)
+                if (i == 0) p.moveTo(o.x, o.y) else p.lineTo(o.x, o.y)
+            }
+            p.close()
+            drawPath(p, Color(0x14281C12), style = Stroke(width = 1.dp.toPx()))
+        }
+        for (i in 0..2) {
+            drawLine(Color(0x14281C12), Offset(cx, cy), pt(maxR, i), strokeWidth = 1.dp.toPx())
+        }
+        val vp = Path()
+        for (i in 0..2) {
+            val o = pt(maxR * (vals[i] / 10f) * grow, i)
+            if (i == 0) vp.moveTo(o.x, o.y) else vp.lineTo(o.x, o.y)
+        }
+        vp.close()
+        drawPath(vp, Color(0x33F2531C))
+        drawPath(vp, Color(0xFFF2531C), style = Stroke(width = 2.dp.toPx()))
+        for (i in 0..2) {
+            drawCircle(dotColors[i], radius = 4.dp.toPx(), center = pt(maxR * (vals[i] / 10f) * grow, i))
         }
     }
 }
