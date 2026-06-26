@@ -39,7 +39,6 @@ import com.careersandbox.app.ui.screens.workplace.NovaChatScreen
 import com.careersandbox.app.ui.screens.workplace.NovaChatListScreen
 import com.careersandbox.app.ui.screens.workplace.NovaMailInboxScreen
 import com.careersandbox.app.ui.screens.workplace.NovaMailOpenScreen
-import com.careersandbox.app.ui.screens.workplace.NovaLockScreen
 import com.careersandbox.app.ui.screens.workplace.NovaCalendarScreen
 import com.careersandbox.app.ui.screens.workplace.NovaTeamScreen
 import com.careersandbox.app.ui.screens.workplace.NovaMeetScreen
@@ -120,7 +119,6 @@ fun CareerSandboxNavHost(
         composable(Routes.NOVA_CHAT_LIST) { NovaBackFrame(navController) { NovaChatListScreen(navController) } }
         composable(Routes.NOVA_MAIL_INBOX) { NovaBackFrame(navController) { NovaMailInboxScreen(navController) } }
         composable(Routes.NOVA_MAIL_OPEN) { NovaMailOpenScreen(navController) }
-        composable(Routes.NOVA_LOCK) { NovaLockScreen(navController) }
         composable(Routes.NOVA_CALENDAR) { NovaBackFrame(navController) { NovaCalendarScreen(navController) } }
         composable(Routes.NOVA_TEAM) { NovaTeamScreen(navController) }
         composable(Routes.NOVA_MEET) { NovaMeetScreen(navController) }
