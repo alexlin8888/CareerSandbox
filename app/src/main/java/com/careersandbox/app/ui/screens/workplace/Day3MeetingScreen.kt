@@ -132,6 +132,7 @@ fun Day3MeetingScreen(navController: NavHostController) {
                 portrait = portrait,
                 narration = current.narration,
                 choices = current.choices,
+                bgRes = R.drawable.bg_scene_meeting,
                 repPop = repPop,
                 onBack = { navController.popBackStack() },
                 onChoose = { c ->

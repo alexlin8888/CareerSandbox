@@ -111,6 +111,7 @@ fun Day4LunchScreen(navController: NavHostController) {
                 narration = b.narration,
                 choices = b.choices,
                 sceneLabel = "午餐時間",
+                bgRes = R.drawable.bg_scene_cafe,
                 repPop = repPop,
                 onBack = { navController.popBackStack() },
                 onChoose = { c ->

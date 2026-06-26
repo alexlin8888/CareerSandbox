@@ -56,45 +56,69 @@ fun SandboxDecisionScene(
     onChoose: (DecisionChoice) -> Unit,
     onBack: () -> Unit,
     sceneLabel: String = "決策時刻",
+    bgRes: Int? = null,
     repPop: RepChange? = null,
 ) {
-    Box(
-        Modifier
-            .fillMaxSize()
-            .drawBehind {
-                // 暖色牆面底漸層
-                drawRect(
-                    Brush.verticalGradient(
-                        0f to Color(0xFFF6D9B8), 0.38f to Color(0xFFEFC59C),
-                        0.70f to Color(0xFFE2A878), 1f to Color(0xFFC98B5E),
-                    ),
-                )
-                // 左上窗光
-                drawRect(
-                    Brush.radialGradient(
-                        listOf(Color(0xD9FFEFD2), Color(0x00FFEFD2)),
-                        center = Offset(size.width * 0.24f, size.height * 0.16f),
-                        radius = size.minDimension * 0.78f,
-                    ),
-                )
-                // 右上暖光
-                drawRect(
-                    Brush.radialGradient(
-                        listOf(Color(0x59FFB627), Color(0x00FFB627)),
-                        center = Offset(size.width * 0.92f, size.height * 0.20f),
-                        radius = size.minDimension * 0.6f,
-                    ),
-                )
-                // 暈影:讓下方 UI 讀得清楚
-                drawRect(
-                    Brush.radialGradient(
-                        listOf(Color(0x00000000), Color(0x473C1E0C)),
-                        center = Offset(size.width * 0.5f, size.height * 0.30f),
-                        radius = size.maxDimension * 0.92f,
-                    ),
-                )
-            },
-    ) {
+    Box(Modifier.fillMaxSize()) {
+        // ===== 背景層:有實景圖就用圖(疊暈影+下方加深),否則用程式畫的暖色房間 =====
+        if (bgRes != null) {
+            Image(
+                painter = painterResource(bgRes),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+            Box(
+                Modifier.fillMaxSize().drawBehind {
+                    drawRect(
+                        Brush.radialGradient(
+                            listOf(Color(0x00000000), Color(0x553C1E0C)),
+                            center = Offset(size.width * 0.5f, size.height * 0.32f),
+                            radius = size.maxDimension * 0.88f,
+                        ),
+                    )
+                    drawRect(
+                        Brush.verticalGradient(0.45f to Color(0x00000000), 1f to Color(0x73201008)),
+                    )
+                },
+            )
+        } else {
+            Box(
+                Modifier.fillMaxSize().drawBehind {
+                    // 暖色牆面底漸層
+                    drawRect(
+                        Brush.verticalGradient(
+                            0f to Color(0xFFF6D9B8), 0.38f to Color(0xFFEFC59C),
+                            0.70f to Color(0xFFE2A878), 1f to Color(0xFFC98B5E),
+                        ),
+                    )
+                    // 左上窗光
+                    drawRect(
+                        Brush.radialGradient(
+                            listOf(Color(0xD9FFEFD2), Color(0x00FFEFD2)),
+                            center = Offset(size.width * 0.24f, size.height * 0.16f),
+                            radius = size.minDimension * 0.78f,
+                        ),
+                    )
+                    // 右上暖光
+                    drawRect(
+                        Brush.radialGradient(
+                            listOf(Color(0x59FFB627), Color(0x00FFB627)),
+                            center = Offset(size.width * 0.92f, size.height * 0.20f),
+                            radius = size.minDimension * 0.6f,
+                        ),
+                    )
+                    // 暈影
+                    drawRect(
+                        Brush.radialGradient(
+                            listOf(Color(0x00000000), Color(0x473C1E0C)),
+                            center = Offset(size.width * 0.5f, size.height * 0.30f),
+                            radius = size.maxDimension * 0.92f,
+                        ),
+                    )
+                },
+            )
+        }
         Column(
             Modifier.fillMaxSize().padding(start = 22.dp, end = 22.dp, top = 56.dp, bottom = 32.dp),
         ) {

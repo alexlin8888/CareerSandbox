@@ -52,6 +52,7 @@ fun Day5ReviewScreen(navController: NavHostController) {
                 portrait = portrait,
                 narration = "第一週,結束了。坐下——我跟你說說我看到的。",
                 sceneLabel = "週五 · 回顧",
+                bgRes = R.drawable.bg_scene_office,
                 choices = listOf(
                     DecisionChoice("A", "我想先聽您的。", "主管信任", 0, ""),
                     DecisionChoice("B", "我知道有些地方我可以更好。", "主管信任", 0, ""),

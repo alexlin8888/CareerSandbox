@@ -99,6 +99,7 @@ fun Day1OneOnOneScreen(navController: NavHostController) {
         portrait = portrait,
         narration = current.narration,
         choices = current.choices,
+            bgRes = R.drawable.bg_scene_1on1,
         repPop = repPop,
         onBack = { navController.popBackStack() },
         onChoose = { c ->
