@@ -42,6 +42,7 @@ fun Day1OneOnOneScreen(navController: NavHostController) {
     LaunchedEffect(Unit) { SoundManager.playBgm(audioCtx, R.raw.bgm_warm) }
     var beat by remember { mutableIntStateOf(0) }
     var done by remember { mutableStateOf(false) }
+    var unlocked by remember { mutableStateOf(false) }
     var repPop by remember { mutableStateOf<RepChange?>(null) }
     var reaction by remember { mutableStateOf<Int?>(null) }
     val scope = rememberCoroutineScope()
@@ -88,6 +89,11 @@ fun Day1OneOnOneScreen(navController: NavHostController) {
 
     // Ken 表情:反應優先,否則依累積主管信任
     val mt = WorkplaceState.managerTrust.value
+
+    if (!unlocked) {
+        SandboxLockScreen(onUnlock = { unlocked = true })
+        return
+    }
 
     if (done) {
         Day1Ending(onBack = { navController.popBackStack() })
