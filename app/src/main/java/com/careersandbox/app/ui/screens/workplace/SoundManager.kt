@@ -53,7 +53,7 @@ object SoundManager {
         currentBgm = resId
         bgm = MediaPlayer.create(context.applicationContext, resId)?.apply {
             isLooping = true
-            setVolume(0.55f, 0.55f)
+            setVolume(1.0f, 1.0f)
             if (!muted) start()
         }
     }
