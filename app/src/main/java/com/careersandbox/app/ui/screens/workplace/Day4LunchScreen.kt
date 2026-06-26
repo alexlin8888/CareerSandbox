@@ -58,6 +58,7 @@ fun Day4LunchScreen(navController: NavHostController) {
     var beat by remember { mutableIntStateOf(0) }
     var repPop by remember { mutableStateOf<RepChange?>(null) }
     var reaction by remember { mutableStateOf<Int?>(null) }
+    var taskStarted by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(repPop) {
@@ -106,6 +107,17 @@ fun Day4LunchScreen(navController: NavHostController) {
             ),
         ),
     )
+
+    if (!taskStarted) {
+        WorkplaceHome(
+            navController = navController,
+            taskTitle = "和同事吃午餐",
+            taskSubtitle = "中午，茶水間集合",
+            dateLabel = "6月26日 星期四",
+            onStartTask = { taskStarted = true },
+        )
+        return
+    }
 
     when (phase) {
         "done" -> Day4Ending(onBack = { navController.popBackStack() })

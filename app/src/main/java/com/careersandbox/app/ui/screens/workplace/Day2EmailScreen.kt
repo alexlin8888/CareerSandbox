@@ -59,6 +59,7 @@ fun Day2EmailScreen(navController: NavHostController) {
     var idx by remember { mutableIntStateOf(0) }
     var done by remember { mutableStateOf(false) }
     var repPop by remember { mutableStateOf<RepChange?>(null) }
+    var taskStarted by remember { mutableStateOf(false) }
 
     LaunchedEffect(repPop) {
         if (repPop != null) { kotlinx.coroutines.delay(1900); repPop = null }
@@ -122,6 +123,17 @@ fun Day2EmailScreen(navController: NavHostController) {
             ),
         ),
     )
+
+    if (!taskStarted) {
+        WorkplaceHome(
+            navController = navController,
+            taskTitle = "處理今天的信",
+            taskSubtitle = "收件匣有幾封等你回",
+            dateLabel = "6月24日 星期二",
+            onStartTask = { taskStarted = true },
+        )
+        return
+    }
 
     if (done) {
         Day2Ending(onBack = { navController.popBackStack() })

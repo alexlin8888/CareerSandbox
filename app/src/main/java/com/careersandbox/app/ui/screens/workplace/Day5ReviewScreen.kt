@@ -40,6 +40,18 @@ fun Day5ReviewScreen(navController: NavHostController) {
     val audioCtx = LocalContext.current
     LaunchedEffect(Unit) { SoundManager.playBgm(audioCtx, R.raw.bgm_night) }
     var phase by remember { mutableStateOf("oneonone") } // oneonone | board | night
+    var taskStarted by remember { mutableStateOf(false) }
+
+    if (!taskStarted) {
+        WorkplaceHome(
+            navController = navController,
+            taskTitle = "週五回顧",
+            taskSubtitle = "下班前，Ken 找你結算這週",
+            dateLabel = "6月27日 星期五",
+            onStartTask = { taskStarted = true },
+        )
+        return
+    }
 
     when (phase) {
         "board" -> ReviewBoard(onHome = { phase = "night" })

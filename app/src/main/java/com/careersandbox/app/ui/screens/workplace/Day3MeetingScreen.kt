@@ -60,6 +60,7 @@ fun Day3MeetingScreen(navController: NavHostController) {
     var beat by remember { mutableIntStateOf(0) }
     var repPop by remember { mutableStateOf<RepChange?>(null) }
     var reaction by remember { mutableStateOf<Int?>(null) }
+    var taskStarted by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(repPop) {
@@ -116,6 +117,17 @@ fun Day3MeetingScreen(navController: NavHostController) {
             ),
         ),
     )
+
+    if (!taskStarted) {
+        WorkplaceHome(
+            navController = navController,
+            taskTitle = "產品進度會議",
+            taskSubtitle = "14:30 會議室 B，跨部門對齊",
+            dateLabel = "6月25日 星期三",
+            onStartTask = { taskStarted = true },
+        )
+        return
+    }
 
     when (phase) {
         "done" -> Day3Ending(onBack = { navController.popBackStack() })
