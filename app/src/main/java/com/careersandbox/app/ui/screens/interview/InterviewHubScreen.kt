@@ -172,7 +172,7 @@ private fun PlanCards(navController: NavHostController) {
             tagBg = BrandYellow,
             tagFg = InkCharcoal,
             cardBg = SolidColor(BrandDeepOrange),
-            illustrationRes = R.drawable.undraw_video_call_i5de,
+            illustrationRes = R.drawable.undraw_interview_yz52,
             onClick = { navController.navigate(Routes.INTERVIEW_SETUP_INDIVIDUAL) },
         )
 
@@ -200,7 +200,7 @@ private fun PlanCards(navController: NavHostController) {
             tagBg = AccentGreen,
             tagFg = PaperWhite,
             cardBg = SolidColor(BrandOrange),
-            illustrationRes = R.drawable.beaver_present,
+            illustrationRes = R.drawable.undraw_video_call_i5de,
             onClick = { navController.navigate(Routes.INTERVIEW_VIDEO) },
         )
     }
