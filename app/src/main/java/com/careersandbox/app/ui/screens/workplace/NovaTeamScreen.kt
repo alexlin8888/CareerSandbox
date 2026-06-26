@@ -64,8 +64,8 @@ fun NovaTeamScreen(navController: NavHostController) {
             }
             Spacer(Modifier.height(16.dp))
 
-            // ----- 阿凱 -----
-            TeamMessage(R.drawable.colleague_akai_frustrated, "阿凱", "上午 10:32", "金流 bug 還沒解，race condition 卡住了") {
+            // ----- 阿哲 -----
+            TeamMessage(R.drawable.colleague_akai_frustrated, "阿哲", "上午 10:32", "金流 bug 還沒解，race condition 卡住了") {
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     ReactionPill("2")

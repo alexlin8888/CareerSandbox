@@ -38,7 +38,7 @@ private data class LockNotif(
 )
 
 private val lockNotifs = listOf(
-    LockNotif("NovaChat", "現在", "#product", "阿凱、Vivian 等 3 人傳送了 12 則新訊息", BrandOrange, 0),
+    LockNotif("NovaChat", "現在", "#product", "阿哲、Vivian 等 3 人傳送了 12 則新訊息", BrandOrange, 0),
     LockNotif("NovaMail · Ken", "5 分鐘前", "分帳的事", "聽說分帳功能有狀況。今天 5 點前…", Color(0xFF3B82F6), 1),
     LockNotif("行事曆", "10 分前", "14:00 讀分帳 spec", "專注時段", Color(0xFFEF4444), 2),
 )

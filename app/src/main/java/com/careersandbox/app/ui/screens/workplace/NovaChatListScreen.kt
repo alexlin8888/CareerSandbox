@@ -45,9 +45,9 @@ private data class NovaChatRow(
 )
 
 private val novaChatRows = listOf(
-    NovaChatRow("阿凱", "下週一上線不可能，至少再兩週。", "14:01", "2", true, true, false, res = R.drawable.colleague_quiet),
+    NovaChatRow("阿哲", "下週一上線不可能，至少再兩週。", "14:01", "2", true, true, false, res = R.drawable.colleague_quiet),
     NovaChatRow("Vivian", "客戶不能跳票", "13:58", "1", true, true, false, res = R.drawable.colleague_vivian),
-    NovaChatRow("產品群組 (8)", "[阿凱] 我先 push 一版，大家測一下", "13:30", "9", false, false, false, group = true, bg = Color(0xFFFFE0B2)),
+    NovaChatRow("產品群組 (8)", "[阿哲] 我先 push 一版，大家測一下", "13:30", "9", false, false, false, group = true, bg = Color(0xFFFFE0B2)),
     NovaChatRow("Ken", "看一下你信箱", "13:45", "", true, false, false, res = R.drawable.ken_neutral),
     NovaChatRow("NovaPay 公告", "【系統維護】今晚 23:00 起例行維護", "11:05", "", false, false, true, letter = "公", bg = Color(0xFF6B7280)),
     NovaChatRow("媽", "記得吃飯，不要又熬夜", "昨天", "", false, false, false, letter = "媽", bg = Color(0xFFB85C3A)),

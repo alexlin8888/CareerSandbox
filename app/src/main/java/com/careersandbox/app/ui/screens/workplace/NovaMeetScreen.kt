@@ -68,7 +68,7 @@ fun NovaMeetScreen(navController: NavHostController) {
             Row(Modifier.weight(1f).fillMaxWidth()) {
                 MeetTile(Modifier.weight(1f), R.drawable.ken_neutral, "Ken", tileBg, host = true)
                 Spacer(Modifier.width(10.dp))
-                MeetTile(Modifier.weight(1f), R.drawable.colleague_akai_calm, "阿凱", tileBg)
+                MeetTile(Modifier.weight(1f), R.drawable.colleague_akai_calm, "阿哲", tileBg)
             }
             Spacer(Modifier.height(10.dp))
             Row(Modifier.weight(1f).fillMaxWidth()) {

@@ -77,7 +77,7 @@ fun NovaMailOpenScreen(navController: NavHostController) {
                         Text("<ken@novapay.com>", color = InkGray500, fontSize = 12.sp)
                     }
                     Spacer(Modifier.height(2.dp))
-                    Text("寄給 我、Vivian、阿凱", color = InkGray500, fontSize = 12.sp)
+                    Text("寄給 我、Vivian、阿哲", color = InkGray500, fontSize = 12.sp)
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text("14:04", color = InkGray400, fontSize = 11.sp)
