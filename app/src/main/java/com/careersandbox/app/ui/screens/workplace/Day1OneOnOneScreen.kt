@@ -39,7 +39,7 @@ private data class D1Beat(val narration: String, val choices: List<DecisionChoic
 @Composable
 fun Day1OneOnOneScreen(navController: NavHostController) {
     val audioCtx = LocalContext.current
-    LaunchedEffect(Unit) { SoundManager.playBgm(audioCtx, R.raw.bgm_warm) }
+    LaunchedEffect(Unit) { WorkplaceState.currentDay.value = 1; SoundManager.playBgm(audioCtx, R.raw.bgm_warm) }
     var beat by remember { mutableIntStateOf(0) }
     var done by remember { mutableStateOf(false) }
     var unlocked by remember { mutableStateOf(false) }
@@ -54,36 +54,36 @@ fun Day1OneOnOneScreen(navController: NavHostController) {
 
     val beats = listOf(
         D1Beat(
-            "坐吧。分帳那個功能,工程說月底上不了,bug 還沒解。你是這功能的 PM——你的判斷是什麼?",
+            "你才坐到位子上，螢幕還沒插電，前一個人留下的咖啡漬乾在桌角。小芳端著馬克杯經過，壓低聲音：「欸，你前面那個，做不到三個月就走了喔，加油。」說完笑了一下，那個笑你讀不懂。\n\n然後 Ken 叫你進去。「坐。」他盯著螢幕，沒抬頭，「資管的，會寫 code 嗎？」你還沒答完，他把資料夾推過來：「分帳的功能，卡很久了。客戶催、業務催，工程一直說還沒好。你這禮拜先搞懂。禮拜三產品會議，我要聽你講你的判斷。」你想說你才第一天。看他的表情，你把這句吞回去。",
             listOf(
-                DecisionChoice("A", "我得先跟工程確認 bug 的範圍,今天給你一個方向。",
-                    "主管信任", 1, "先確認再表態,穩", "d1_listen"),
-                DecisionChoice("B", "月底沒問題,我會盯著上。",
-                    "專業形象", 2, "有魄力但你還不懂技術風險", "d1_overpromise"),
-                DecisionChoice("C", "這看公司優先順序——您要先保 demo 還是先保品質?",
-                    "主管信任", -2, "Ken 要你的判斷,不是把球丟回來", "d1_passback"),
+                DecisionChoice("A", "好，我這兩天先把分帳的前因後果摸清楚，禮拜三給您一個版本。",
+                    "主管信任", 1, "Ken 沒回應，但點了一下頭", "d1_listen"),
+                DecisionChoice("B", "月底沒問題，我會盯著上。",
+                    "專業形象", 2, "Ken 挑了一下眉，沒說話", "d1_overpromise"),
+                DecisionChoice("C", "這要看公司的優先順序——您要先保 demo 還是先保品質？",
+                    "主管信任", -2, "「我在問你。」Ken 把問題丟回來", "d1_passback"),
             ),
         ),
         D1Beat(
-            "假設真的來不及。工程要兩週,業務已經跟客戶說月底。這個夾縫,你會怎麼拆?",
+            "「假設真的來不及。」Ken 在筆記本上寫了個字。「工程要兩週，業務已經跟客戶說月底。這個夾縫，你會怎麼拆？」",
             listOf(
-                DecisionChoice("A", "先讓基本版上、進階版下一版——客戶看得到東西,風險也鎖得住。",
-                    "專業形象", 2, "分階段:真實世界的好解", "d1_phase"),
-                DecisionChoice("B", "壓工程加班,月底硬上。",
-                    "同事情誼", -1, "用工程的肝填洞,他們會記得", "d1_crunch"),
-                DecisionChoice("C", "我想先聽工程和業務各自的版本,明天會議再定。",
-                    "主管信任", 2, "對齊優先,但慢一步", "d1_align"),
+                DecisionChoice("A", "基本版先上、進階版下一版。客戶看得到東西，風險也鎖得住。",
+                    "專業形象", 2, "Ken 寫字的手停了一下", "d1_phase"),
+                DecisionChoice("B", "壓工程加班，月底硬上。",
+                    "同事情誼", -1, "這個加班，是工程在扛", "d1_crunch"),
+                DecisionChoice("C", "我想先聽工程跟業務各自的版本，明天會議再定。",
+                    "主管信任", 2, "Ken：「可以。別拖太久。」", "d1_align"),
             ),
         ),
         D1Beat(
-            "第一週,別自己硬扛。有什麼需要我頂的,現在說。",
+            "Ken 站起來。「第一週，別自己硬扛。有什麼要我頂的，現在說。」他停了一下，「喔，還有。這裡的事，不管誰跟你講的，都 cc 我一份。我不喜歡驚喜。」",
             listOf(
-                DecisionChoice("A", "我想要工程的 bug 清單和業務的客戶承諾,today 之內。",
-                    "主管信任", 1, "開口要資源,清楚", "d1_ask"),
-                DecisionChoice("B", "目前沒有,我自己先摸清楚。",
-                    "主管信任", 1, "硬扛——能幹,但也獨", "d1_solo"),
-                DecisionChoice("C", "能不能幫我跟業務說,先別再對客戶加碼承諾?",
-                    "同事情誼", 1, "請主管擋一下,聰明", "d1_shield"),
+                DecisionChoice("A", "我需要工程的 bug 清單跟業務的客戶承諾，今天之內。",
+                    "主管信任", 1, "Ken 點頭，這個你問對了", "d1_ask"),
+                DecisionChoice("B", "目前沒有，我自己先摸清楚。",
+                    "主管信任", 1, "Ken：「嗯。」", "d1_solo"),
+                DecisionChoice("C", "能不能幫我跟業務說，先別再對客戶加碼承諾？",
+                    "同事情誼", 1, "Ken 笑了一下：「這個你懂。」", "d1_shield"),
             ),
         ),
     )
@@ -150,10 +150,10 @@ private fun Day1Ending(onBack: () -> Unit) {
             Text("週一 · 1on1 結束", color = Color(0xFFFFB627), fontSize = 13.sp,
                 fontWeight = FontWeight.Black, letterSpacing = 2.sp)
             Spacer(Modifier.height(12.dp))
-            Text("你今天說的每句話,Ken 都記著。", color = Color(0xFFFFF8F3),
+            Text("沒有人教你。但所有人都在等你。", color = Color(0xFFFFF8F3),
                 fontSize = 17.sp, fontWeight = FontWeight.Bold, lineHeight = 26.sp)
             Spacer(Modifier.height(6.dp))
-            Text("痕跡,週五揭曉。", color = Color(0xB3FFF8F3), fontSize = 14.sp)
+            Text("第一週，才第一天。", color = Color(0xB3FFF8F3), fontSize = 14.sp)
             Spacer(Modifier.height(32.dp))
             Box(
                 Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(16.dp))

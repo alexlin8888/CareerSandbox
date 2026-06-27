@@ -47,7 +47,7 @@ private data class Consequence(val who: String, val text: String, val accent: Co
 @Composable
 fun Day5ReviewScreen(navController: NavHostController) {
     val audioCtx = LocalContext.current
-    LaunchedEffect(Unit) { SoundManager.playBgm(audioCtx, R.raw.bgm_night) }
+    LaunchedEffect(Unit) { WorkplaceState.currentDay.value = 5; SoundManager.playBgm(audioCtx, R.raw.bgm_night) }
     var phase by remember { mutableStateOf("oneonone") } // oneonone | board | night
     var taskStarted by remember { mutableStateOf(false) }
 
@@ -70,12 +70,12 @@ fun Day5ReviewScreen(navController: NavHostController) {
             SandboxDecisionScene(
                 speaker = "Ken",
                 portrait = faceKenBase(mt),
-                narration = "第一週,結束了。坐下——我跟你說說我看到的。",
+                narration = "禮拜五下午五點半。Ken 走過你的位子，沒坐下。「分帳那個，你這禮拜…」他停頓了一下。「…還可以。下禮拜繼續。」\n\n「還可以」三個字。你不知道自己在期待什麼更多的。但你發現，你有點在意。",
                 sceneLabel = "週五 · 回顧",
                 bgRes = R.drawable.bg_scene_office,
                 choices = listOf(
-                    DecisionChoice("A", "我想先聽您的。", "主管信任", 0, ""),
-                    DecisionChoice("B", "我知道有些地方我可以更好。", "主管信任", 0, ""),
+                    DecisionChoice("A", "謝謝。下禮拜我把完整版的範圍排出來。", "主管信任", 0, ""),
+                    DecisionChoice("B", "我知道有些地方，我可以做得更好。", "主管信任", 0, ""),
                     DecisionChoice("C", "這週…我盡力了。", "主管信任", 0, ""),
                 ),
                 onBack = { navController.popBackStack() },
@@ -208,9 +208,9 @@ private fun ConsequenceCard(c: Consequence) {
 private fun NightEnding(onEnd: () -> Unit) {
     val total = WorkplaceState.managerTrust.value + WorkplaceState.peerBond.value + WorkplaceState.proImage.value
     val close = when {
-        total >= 18 -> "你站住了第一週。但站住,不等於輕鬆——你只是還沒倒下。"
-        total >= 12 -> "說不上好,說不上壞。週末很長,夠你喘一口氣。"
-        else -> "這週,你沒站穩。沒關係——第一週,本來就這樣。"
+        total >= 18 -> "你站住了第一週。但站住，不等於輕鬆——你只是還沒倒下。"
+        total >= 12 -> "說不上好，說不上壞。週末很長，夠你喘一口氣。"
+        else -> "這週你沒站穩。沒關係——第一週，本來就這樣。"
     }
     Box(
         Modifier.fillMaxSize().background(
@@ -232,12 +232,12 @@ private fun NightEnding(onEnd: () -> Unit) {
             ) {
                 Text("媽", color = Color(0xFFE0A04A), fontSize = 12.sp, fontWeight = FontWeight.Black)
                 Spacer(Modifier.height(8.dp))
-                Text("辛苦了。第一週都這樣,別以為只有你累。週末回來一趟,我燉了湯。",
+                Text("下班了嗎？我燉了湯，冰冰箱，明天記得熱來喝。\n\n早點睡，明天還是要醒來。",
                     color = Color(0xFFFFF8F3), fontSize = 15.sp, lineHeight = 25.sp)
             }
 
             Spacer(Modifier.weight(1f))
-            Text("明天,還是要醒來。", color = Color(0xB3FFF8F3), fontSize = 15.sp, fontWeight = FontWeight.Medium)
+            Text("明天的鬧鐘還是會在七點響。但至少今天，有人燉了湯。", color = Color(0xB3FFF8F3), fontSize = 15.sp, fontWeight = FontWeight.Medium)
             Spacer(Modifier.height(20.dp))
             Box(
                 Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(16.dp))

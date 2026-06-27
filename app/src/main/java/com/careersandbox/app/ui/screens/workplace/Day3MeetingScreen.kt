@@ -54,7 +54,7 @@ private data class D3Beat(val narration: String, val choices: List<DecisionChoic
 @Composable
 fun Day3MeetingScreen(navController: NavHostController) {
     val audioCtx = LocalContext.current
-    LaunchedEffect(Unit) { SoundManager.playBgm(audioCtx, R.raw.bgm_tense) }
+    LaunchedEffect(Unit) { WorkplaceState.currentDay.value = 3; SoundManager.playBgm(audioCtx, R.raw.bgm_tense) }
     var phase by remember { mutableStateOf("meeting") } // meeting | decision | done
     var capIdx by remember { mutableIntStateOf(0) }
     var beat by remember { mutableIntStateOf(0) }
@@ -68,52 +68,56 @@ fun Day3MeetingScreen(navController: NavHostController) {
     }
 
     val captions = listOf(
-        Caption("Vivian", "客戶那邊我已經說月底了,這個一定要上。"),
-        Caption("阿哲", "測試才跑六成,race condition 沒解。我不簽。"),
-        Caption("Ken", "那我們先聽聽 PM 這邊的判斷。"),
+        Caption("Vivian", "客戶那邊我已經說月底了，這個一定要上。"),
+        Caption("阿哲", "測試才跑六成，race condition 沒解。我不簽。"),
+        Caption("Ken", "先聽聽 PM 的判斷。"),
     )
 
     val beats = listOf(
         D3Beat(
-            "Vivian 說客戶等不了,阿哲說品質沒到。會議室一下子安靜了——你怎麼看?",
+            "Vivian 先開口，語速很快：「客戶真的等不了了，這個月底一定要上，我已經跟他們講了。」阿哲沒抬頭，聲音不大：「…這版品質沒到。現在上，會出事。」會議室安靜了兩秒。Ken 轉頭看你：「你呢？你看了一個禮拜。你怎麼看？」你才來五天。",
+            buildList {
+                add(DecisionChoice("A", "我想先看 bug 的實際範圍跟測試覆蓋率，再判斷能不能上。",
+                    "專業形象", 2, "", "d3_data"))
+                add(DecisionChoice("B", "先上，邊上邊修，出問題再 hotfix。",
+                    "同事情誼", -1, "阿哲喝了一口水，沒說話", "d3_shipfast"))
+                add(DecisionChoice("C", "我站工程，品質沒到就不該上。",
+                    "同事情誼", 1, "你選了一邊。Ken 的表情沒變", "d3_sided_eng"))
+                if (WorkplaceState.hasFlag("intel_d3_doc") && WorkplaceState.hasFlag("intel_d3_chat")) {
+                    add(DecisionChoice("D", "排程要調。工程在文件裡標了風險，阿哲的負荷我也看到了。我建議砍掉次要範圍、延一週，把金流做穩。",
+                        "主管信任", 3, "Ken 看了你一眼，跟剛剛不太一樣", "d3_informed"))
+                }
+            },
+        ),
+        D3Beat(
+            "Ken 在筆記本上寫了個字：「假設月底還是得交點東西。這個功能，你會怎麼拆？」",
             listOf(
-                DecisionChoice("A", "我想先看 bug 的實際範圍和測試覆蓋,再決定能不能上。",
-                    "專業形象", 2, "先看數據再判斷,穩", "d3_data"),
-                DecisionChoice("B", "先上,邊上邊修,出問題再 hotfix。",
-                    "同事情誼", -1, "把風險丟給工程", "d3_shipfast"),
-                DecisionChoice("C", "我站工程,品質沒到就不該上。",
-                    "同事情誼", 1, "選邊站,少了你的判斷", "d3_sided_eng"),
+                DecisionChoice("A", "基本版先上、進階版下一版。客戶看得到東西，風險也鎖得住。",
+                    "專業形象", 2, "Ken 寫字的手停了一下", "d3_phase"),
+                DecisionChoice("B", "壓工程加班，月底全上。",
+                    "同事情誼", -2, "阿哲的保溫瓶蓋，轉開又轉緊", "d3_burned_team"),
+                DecisionChoice("C", "這超出我能定的，Ken 你決定吧。",
+                    "主管信任", -2, "Ken 沒接話，又寫了個字", "d3_passed_buck"),
             ),
         ),
         D3Beat(
-            "假設月底還是得交點東西出去。這個功能,你會怎麼拆?",
+            "Vivian 已經對客戶把月底講死了。她看著你，眼神裡有種「拜託」。Ken 沒表態，把這題留給你。",
             listOf(
-                DecisionChoice("A", "基本版先上、進階版下一版——客戶看得到,風險也鎖得住。",
-                    "專業形象", 2, "分階段:真實世界的漂亮解", "d3_phase"),
-                DecisionChoice("B", "壓工程加班,月底全上。",
-                    "同事情誼", -2, "燒工程的肝,他們會記得", "d3_burned_team"),
-                DecisionChoice("C", "這超出我能定的,Ken 你決定吧。",
-                    "主管信任", -2, "把判斷推回主管", "d3_passed_buck"),
+                DecisionChoice("A", "我幫你跟客戶談。月底交基本版 demo、完整版兩週後，我陪你一起講。",
+                    "同事情誼", 2, "Vivian 鬆了一口氣，肩膀垮下來", "d3_backed_vivian"),
+                DecisionChoice("B", "那是你對客戶的承諾，你自己處理。",
+                    "同事情誼", -2, "Vivian 把筆電闔上了", "d3_left_vivian"),
             ),
         ),
         D3Beat(
-            "Vivian 已經對客戶把月底講死了。她現在很需要一個能對客戶交代的說法。",
+            "Ken 站起來，又停住：「好。最後——你還想補什麼嗎？」這是他給你，最後一個定義自己的機會。",
             listOf(
-                DecisionChoice("A", "我幫你跟客戶說:月底交基本版 demo、完整版兩週後,我陪你一起談。",
-                    "同事情誼", 2, "挺 Vivian,她記著這份情", "d3_backed_vivian"),
-                DecisionChoice("B", "那是你對客戶的承諾,你自己處理。",
-                    "同事情誼", -2, "各掃門前雪,Vivian 寒了心", "d3_left_vivian"),
-            ),
-        ),
-        D3Beat(
-            "Ken:好。最後,你要不要再補一句?",
-            listOf(
-                DecisionChoice("A", "我的判斷不一定全對,我會盯著上線數據,有狀況馬上調。",
-                    "主管信任", 2, "認限度又負責,加分", "d3_own"),
+                DecisionChoice("A", "我的判斷不一定全對。上線之後我會盯數據，有狀況馬上調。",
+                    "主管信任", 2, "Ken 點頭", "d3_own"),
                 DecisionChoice("B", "這都是團隊一起的功勞。",
-                    "主管信任", 1, "得體", "d3_credit"),
-                DecisionChoice("C", "抱歉我經驗不夠,可能講得不對…",
-                    "專業形象", -1, "自我否定過頭", "d3_selfdoubt"),
+                    "主管信任", 1, "", "d3_credit"),
+                DecisionChoice("C", "抱歉我經驗還不夠，可能講得不對…",
+                    "專業形象", -1, "Ken 沒接話。會議室的人開始收東西", "d3_selfdoubt"),
             ),
         ),
     )
@@ -313,10 +317,10 @@ private fun Day3Ending(onBack: () -> Unit) {
             Text("週三 · 會議散了", color = Color(0xFFFFB627), fontSize = 13.sp,
                 fontWeight = FontWeight.Black, letterSpacing = 2.sp)
             Spacer(Modifier.height(12.dp))
-            Text("你站上了火線,也表了態。沒有人完全滿意——這很正常。", color = Color(0xFFFFF8F3),
+            Text("散會。沒有人贏。你坐在原位，剛剛那十五分鐘，你好像第一次真的「在」這間公司裡。", color = Color(0xFFFFF8F3),
                 fontSize = 17.sp, fontWeight = FontWeight.Bold, lineHeight = 26.sp)
             Spacer(Modifier.height(6.dp))
-            Text("今天怎麼接住人,週五會回來找你。", color = Color(0xB3FFF8F3), fontSize = 14.sp)
+            Text("不一定是好事。", color = Color(0xB3FFF8F3), fontSize = 14.sp)
             Spacer(Modifier.height(32.dp))
             Box(
                 Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(16.dp))

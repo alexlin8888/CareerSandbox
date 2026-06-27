@@ -53,7 +53,7 @@ private data class D4Beat(val speaker: String, val portrait: Int, val narration:
 @Composable
 fun Day4LunchScreen(navController: NavHostController) {
     val audioCtx = LocalContext.current
-    LaunchedEffect(Unit) { SoundManager.playBgm(audioCtx, R.raw.bgm_warm) }
+    LaunchedEffect(Unit) { WorkplaceState.currentDay.value = 4; SoundManager.playBgm(audioCtx, R.raw.bgm_warm) }
     var phase by remember { mutableStateOf("story") } // story | lunch | done
     var beat by remember { mutableIntStateOf(0) }
     var repPop by remember { mutableStateOf<RepChange?>(null) }
@@ -67,41 +67,45 @@ fun Day4LunchScreen(navController: NavHostController) {
 
     val beats = listOf(
         D4Beat("小芳", R.drawable.fang_neutral,
-            "你坐這。欸——聽說公司要改組,還要空降一個主管。你聽說了嗎?",
+            "小芳端著餐盤坐到你旁邊：「你坐這。欸——你聽說了嗎？公司要改組，聽說還要空降一個主管。」她邊扒飯邊看你。",
             listOf(
-                DecisionChoice("A", "真的假的?跟我說說。",
-                    "同事情誼", 1, "聊開了,但你也下場了", "d4_gossip"),
-                DecisionChoice("B", "我才剛來,這我真的不清楚。",
+                DecisionChoice("A", "真的假的？跟我說說。",
+                    "同事情誼", 1, "小芳眼睛一亮，往你這邊靠過來", "d4_gossip"),
+                DecisionChoice("B", "我才剛來，這我真不清楚。",
                     "同事情誼", 0, ""),
-                DecisionChoice("C", "誒,先吃啦,菜要涼了。",
+                DecisionChoice("C", "先吃啦，菜要涼了。",
                     "同事情誼", 0, ""),
             ),
         ),
         D4Beat("小芳", R.drawable.fang_neutral,
-            "那你覺得 Ken 怎樣?老實說,沒關係,就我們兩個。",
-            listOf(
-                DecisionChoice("A", "他給的方向算清楚,我還在適應他的節奏。",
-                    "主管信任", 1, "就事論事,得體", "d4_diplomatic"),
-                DecisionChoice("B", "說真的,他開會把我推上火線那下,我有點傻眼。",
-                    "同事情誼", 1, "交了心——但茶水間沒有秘密", "d4_badmouth"),
-                DecisionChoice("C", "我還在觀察,不好說。",
-                    "同事情誼", 0, ""),
-            ),
+            "「那你覺得 Ken 怎樣？」小芳夾了一口菜，「老實說，沒關係，就我們兩個。」「就我們兩個」這種話，你不知道為什麼，聽起來總是不太安全。",
+            buildList {
+                add(DecisionChoice("A", "他給的方向算清楚，我還在適應他的節奏。",
+                    "主管信任", 1, "", "d4_diplomatic"))
+                add(DecisionChoice("B", "說真的，他開會把我推上火線那下，我有點傻眼。",
+                    "同事情誼", 1, "小芳笑著點頭。你不知道她要記在哪", "d4_badmouth"))
+                add(DecisionChoice("C", "我還在觀察，不好說。",
+                    "同事情誼", 0, ""))
+                if (WorkplaceState.hasFlag("intel_d4_gram")) {
+                    add(DecisionChoice("D", "我知道茶水間的話傳得快。對 Ken 我沒什麼好說的——方向算清楚，我還在抓他節奏。",
+                        "專業形象", 2, "小芳愣了半秒，笑了：「你這新人不簡單喔。」", "d4_savvy"))
+                }
+            },
         ),
         D4Beat("阿哲", R.drawable.colleague_akai_calm,
-            "（阿哲也在桌上）我週末寫了個小工具,自動把那種 race condition 的 log 撈出來標紅…欸你應該沒興趣啦。",
+            "阿哲本來低頭吃飯，突然開口：「我週末寫了個小工具，自動把那種 race condition 的 log 撈出來標紅…欸，你應該沒興趣啦。」他講「你應該沒興趣」的時候，其實有點希望你有興趣。",
             listOf(
-                DecisionChoice("A", "有興趣啊,你怎麼判斷哪些是真的衝突?",
-                    "同事情誼", 2, "真心接住,阿哲記著了", "lunch_bonded_akai"),
-                DecisionChoice("B", "喔喔,聽起來很厲害。",
-                    "同事情誼", 0, "客套帶過"),
+                DecisionChoice("A", "有興趣啊，你怎麼判斷哪些是真的衝突？",
+                    "同事情誼", 2, "阿哲抬起頭，一講講了快五分鐘", "lunch_bonded_akai"),
+                DecisionChoice("B", "喔喔，聽起來很厲害。",
+                    "同事情誼", 0, "阿哲「嗯」了一聲，繼續扒飯"),
             ),
         ),
         D4Beat("小芳", R.drawable.fang_pleased,
-            "新人嘛,我提醒你一句:這裡熱絡可以,但別太快掏心。茶水間,沒有秘密。",
+            "吃完，小芳用牙籤剔著牙，看似隨口：「新人嘛，我提醒你一句。這裡熱絡可以，但別太快掏心。茶水間，沒有秘密。」你愣了一下。回想剛剛那頓飯，每句話，好像都被誰記在某個地方。",
             listOf(
-                DecisionChoice("A", "謝謝芳姐,我記住了。",
-                    "同事情誼", 1, "前輩的善意,收下", "d4_heed"),
+                DecisionChoice("A", "謝謝芳姐，我記住了。",
+                    "同事情誼", 1, "", "d4_heed"),
                 DecisionChoice("B", "我會拿捏的。",
                     "同事情誼", 0, ""),
             ),
@@ -242,10 +246,10 @@ private fun Day4Ending(onBack: () -> Unit) {
             Text("週四 · 午餐結束", color = Color(0xFFFFB627), fontSize = 13.sp,
                 fontWeight = FontWeight.Black, letterSpacing = 2.sp)
             Spacer(Modifier.height(12.dp))
-            Text("一頓飯,半是交情半是試探。你說的、沒說的,都被記下了。", color = Color(0xFFFFF8F3),
+            Text("回工位的路上，你經過茶水間。裡面兩個人壓低聲音講話，看到你，停了。", color = Color(0xFFFFF8F3),
                 fontSize = 17.sp, fontWeight = FontWeight.Bold, lineHeight = 26.sp)
             Spacer(Modifier.height(6.dp))
-            Text("剩最後一天。", color = Color(0xB3FFF8F3), fontSize = 14.sp)
+            Text("這間公司最安靜的地方，其實是最吵的。", color = Color(0xB3FFF8F3), fontSize = 14.sp)
             Spacer(Modifier.height(32.dp))
             Box(
                 Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(16.dp))

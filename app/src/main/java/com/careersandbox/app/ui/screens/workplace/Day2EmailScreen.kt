@@ -55,7 +55,7 @@ private data class Day2Mail(
 @Composable
 fun Day2EmailScreen(navController: NavHostController) {
     val audioCtx = LocalContext.current
-    LaunchedEffect(Unit) { SoundManager.playBgm(audioCtx, R.raw.bgm_neutral) }
+    LaunchedEffect(Unit) { WorkplaceState.currentDay.value = 2; SoundManager.playBgm(audioCtx, R.raw.bgm_neutral) }
     var idx by remember { mutableIntStateOf(0) }
     var done by remember { mutableStateOf(false) }
     var repPop by remember { mutableStateOf<RepChange?>(null) }
@@ -70,56 +70,60 @@ fun Day2EmailScreen(navController: NavHostController) {
         Day2Mail(
             "Ken", "ken@novapay.com", "K", Color(0xFF1A73E8),
             "分帳的事", "收件匣", red,
-            "今天 5 點前,給我一個能對客戶交代的版本。不用完美,但要能講。\n\n— Ken",
-            listOf(
-                DecisionChoice("A", "現在回:整理工程和業務的說法,5 點前給您。",
-                    "專業形象", 1, "回得清楚", "d2_reply_ken"),
-                DecisionChoice("B", "標記稍後,先看別的。",
-                    "專業形象", -1, "主管的信擺著不回"),
-            ),
+            "今天 5 點前，給我一個能對客戶交代的版本。不用完美，但要能講。\n\n— K",
+            buildList {
+                add(DecisionChoice("A", "現在回：整理工程跟業務的說法，5 點前給您。",
+                    "專業形象", 1, "", "d2_reply_ken"))
+                add(DecisionChoice("B", "標記稍後，先看別的。",
+                    "專業形象", -1, "主管的信，就這樣擺著"))
+                if (WorkplaceState.hasFlag("intel_d2_mail")) {
+                    add(DecisionChoice("C", "我查過往來信，客戶上週已經同意分階段。5 點前給您 demo 版的範圍，完整版排下個迭代。",
+                        "主管信任", 2, "Ken 回了一個字：好", "d2_informed"))
+                }
+            },
         ),
         Day2Mail(
             "阿哲", "jhe@novapay.com", "哲", Color(0xFF12B5A5),
             "Re: 分帳 bug 進度", "工作", Color(0xFFF59E0B),
-            "race condition 我還在追,別逼我給假的日期。下午會議我會說明。\n\n— 阿哲",
+            "race condition 我還在追，別逼我給假的日期。下午會議我會說明。\n\n— 阿哲",
             listOf(
-                DecisionChoice("A", "回他:了解,我不催日期,會議上一起看。",
-                    "同事情誼", 1, "尊重工程,加分", "d2_respect_eng"),
-                DecisionChoice("B", "回他:客戶等不了,今天給我一個日期。",
-                    "同事情誼", -1, "逼假日期,工程記仇", "d2_push_eng"),
+                DecisionChoice("A", "回他：了解，我不催日期，會議上一起看。",
+                    "同事情誼", 1, "", "d2_respect_eng"),
+                DecisionChoice("B", "回他：客戶等不了，今天給我一個日期。",
+                    "同事情誼", -1, "他已讀，沒回", "d2_push_eng"),
             ),
         ),
         Day2Mail(
             "Vivian", "vivian@novapay.com", "V", Color(0xFFEC4899),
             "客戶問 API 匯出規格", "收件匣", red,
-            "客戶問資料匯出的 API 規格,這部分我看不懂…幫忙看一下該找誰?急。",
+            "客戶問資料匯出的 API 規格，這part我真的看不懂…幫忙看一下要找誰？很急拜託拜託🙏",
             listOf(
-                DecisionChoice("A", "幫她轉對人:這要問工程,我 tag 阿哲給你。",
-                    "專業形象", 1, "找對人,專業"),
-                DecisionChoice("B", "丟回給她:這你自己問工程吧。",
-                    "同事情誼", -1, "把球硬塞回去,Vivian 記著", "d2_dump_vivian"),
+                DecisionChoice("A", "這要問工程，我幫你 tag 阿哲。",
+                    "專業形象", 1, ""),
+                DecisionChoice("B", "這你自己問工程吧。",
+                    "同事情誼", -1, "她隔了很久才回一個「…好」", "d2_dump_vivian"),
                 DecisionChoice("C", "自己掰一個規格回她。",
-                    "專業形象", -1, "不懂裝懂,危險"),
+                    "專業形象", -1, "這規格對不對，你其實不確定"),
             ),
         ),
         Day2Mail(
             "系統通知", "noreply@novapay.com", "!", Color(0xFFEF4444),
             "【緊急】後台帳號已鎖定", "工作", Color(0xFFF59E0B),
-            "你的後台帳號因三次密碼錯誤已鎖定。客戶資料目前無法調出,demo 相關查詢受影響。",
+            "你的後台帳號因連續三次密碼錯誤已鎖定。客戶資料目前無法調出，相關查詢受影響。\n\n要解鎖，得去求 IT，或者問阿哲——那個你今天可能剛得罪的人。",
             listOf(
-                DecisionChoice("A", "現在處理:立刻找工程解鎖。",
-                    "專業形象", 2, "抓到真急件"),
-                DecisionChoice("B", "先標記,等手上的弄完再看。",
-                    "專業形象", -2, "漏接真急件", "d2_miss_urgent"),
+                DecisionChoice("A", "拉下臉，去問阿哲幫忙解。",
+                    "專業形象", 2, "你抓到了真正要緊的那封"),
+                DecisionChoice("B", "先標記，等手上的弄完再看。",
+                    "專業形象", -2, "客戶資料還是調不出來", "d2_miss_urgent"),
             ),
         ),
         Day2Mail(
             "媽", "mom@home", "媽", Color(0xFFE0A04A),
             "Fwd: 久坐傷身,記得起來走走", "收件匣", red,
-            "看到這篇想到你。中午有沒有好好吃飯?不要又一杯咖啡撐一天。",
+            "看到這篇想到你。中午有沒有好好吃飯？不要又一杯咖啡撐一天。",
             listOf(
-                DecisionChoice("A", "回個貼圖:好啦我會吃,媽。", "同事情誼", 0, ""),
-                DecisionChoice("B", "晚點再回,先把信清完。", "同事情誼", 0, ""),
+                DecisionChoice("A", "回個貼圖：好啦我會吃，媽。", "同事情誼", 0, ""),
+                DecisionChoice("B", "晚點再回，先把信清完。", "同事情誼", 0, ""),
             ),
         ),
     )
@@ -271,10 +275,10 @@ private fun Day2Ending(onBack: () -> Unit) {
             Text("週二 · 信箱清空", color = Color(0xFFFFB627), fontSize = 13.sp,
                 fontWeight = FontWeight.Black, letterSpacing = 2.sp)
             Spacer(Modifier.height(12.dp))
-            Text("一整天都在滅火。桌面乾淨了,但你也累了。", color = Color(0xFFFFF8F3),
+            Text("五點的鬧鐘響了。回完的、沒回完的、回了但不確定對不對的。", color = Color(0xFFFFF8F3),
                 fontSize = 17.sp, fontWeight = FontWeight.Bold, lineHeight = 26.sp)
             Spacer(Modifier.height(6.dp))
-            Text("明天的會議,不會太安靜。", color = Color(0xB3FFF8F3), fontSize = 14.sp)
+            Text("明天，還有明天的信。", color = Color(0xB3FFF8F3), fontSize = 14.sp)
             Spacer(Modifier.height(32.dp))
             Box(
                 Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(16.dp))
