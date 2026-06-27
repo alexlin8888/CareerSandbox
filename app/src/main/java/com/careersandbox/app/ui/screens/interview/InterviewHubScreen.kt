@@ -15,6 +15,9 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -66,6 +69,16 @@ fun InterviewHubScreen(navController: NavHostController) {
 
             // === #1 快速練習(低門檻入口,與正式 mock 區分)===
             StaggeredAppear(delayMillis = 170) { QuickPracticeCard(navController) }
+
+            Spacer(Modifier.height(20.dp))
+
+            // === 本週練習(連續天數)===
+            StaggeredAppear(delayMillis = 200) { WeeklyStreak() }
+
+            Spacer(Modifier.height(20.dp))
+
+            // === 能力輪廓(收合,點開詳細)===
+            StaggeredAppear(delayMillis = 225) { AbilityProfileEntry() }
 
             Spacer(Modifier.height(32.dp))
 
@@ -372,17 +385,20 @@ private fun HistoryRow(r: InterviewRecord, onClick: () -> Unit) {
 /* ===================== #6 Avatar 成長卡 ===================== */
 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+/* 面試六維能力(暫為示範資料,日後接後端) */
+private val INTERVIEW_ABILITIES = listOf(
+    Triple("內容深度", 78, 4),
+    Triple("邏輯清晰", 82, 2),
+    Triple("表達流暢", 71, 6),
+    Triple("互動", 68, 3),
+    Triple("應變", 64, -1),
+    Triple("自信", 80, 5),
+)
+private const val INTERVIEW_POWER = 74
+
 @Composable
 private fun AvatarGrowthCard() {
-    val abilities = listOf(
-        Triple("內容深度", 78, 4),
-        Triple("邏輯清晰", 82, 2),
-        Triple("表達流暢", 71, 6),
-        Triple("互動", 68, 3),
-        Triple("應變", 64, -1),
-        Triple("自信", 80, 5),
-    )
-    val power = 74
+    val power = INTERVIEW_POWER
     val rank = rankOf(power)
     Column(
         modifier = Modifier
@@ -392,9 +408,16 @@ private fun AvatarGrowthCard() {
             .background(BrandPeach.copy(alpha = 0.4f))
             .padding(18.dp),
     ) {
-        // 英雄列：段位徽章 + 面試力
+        // 英雄列：段位徽章 + 段位河狸 + 面試力
         Row(verticalAlignment = Alignment.CenterVertically) {
             ShieldBadge(rank.title)
+            Spacer(Modifier.width(10.dp))
+            Image(
+                painter = painterResource(rank.beaver),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.size(56.dp),
+            )
             Spacer(Modifier.weight(1f))
             Column(horizontalAlignment = Alignment.End) {
                 Text("面試力", color = InkGray700, fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -402,33 +425,113 @@ private fun AvatarGrowthCard() {
             }
         }
         Spacer(Modifier.height(14.dp))
-        // 段位進度條（成長脊椎：看見旅程 + 下一階目標）
+        // 段位進度條（自帶「再 X 分晉升 Y」）
         RankProgressBar(power)
-        Spacer(Modifier.height(14.dp))
-        // 能力雷達 + 河狸
-        Box(Modifier.fillMaxWidth().height(176.dp)) {
-            HexRadar(
-                values = abilities.map { it.second },
-                modifier = Modifier.align(Alignment.CenterStart).padding(start = 14.dp).size(156.dp),
+    }
+}
+
+/* ===================== 本週練習(連續天數)===================== */
+
+@Composable
+private fun WeeklyStreak() {
+    val days = listOf("一", "二", "三", "四", "五", "六", "日")
+    val doneCount = 4   // 一~四 已完成
+    val todayIdx = 4    // 五 = 今天
+    Column(Modifier.padding(horizontal = 20.dp).fillMaxWidth()) {
+        Text("本週練習", color = InkBlack, fontSize = 13.sp, fontWeight = FontWeight.Black)
+        Spacer(Modifier.height(12.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            days.forEachIndexed { i, d ->
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    val nodeModifier = when {
+                        i < doneCount -> Modifier.size(34.dp).clip(RoundedCornerShape(12.dp))
+                            .background(Brush.linearGradient(listOf(BrandAmber, BrandOrange)))
+                        i == todayIdx -> Modifier.size(34.dp).clip(RoundedCornerShape(12.dp))
+                            .background(PaperWhite).border(2.dp, BrandOrange, RoundedCornerShape(12.dp))
+                        else -> Modifier.size(34.dp).clip(RoundedCornerShape(12.dp))
+                            .border(1.5.dp, InkGray200, RoundedCornerShape(12.dp))
+                    }
+                    Box(nodeModifier)
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        d,
+                        color = if (i == todayIdx) BrandDeepOrange else InkGray500,
+                        fontSize = 11.sp,
+                        fontWeight = if (i == todayIdx) FontWeight.Black else FontWeight.Medium,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/* ===================== 能力輪廓(收合,點開展開詳細)===================== */
+
+@Composable
+private fun AbilityProfileEntry() {
+    val abilities = INTERVIEW_ABILITIES
+    val power = INTERVIEW_POWER
+    val strongest = abilities.maxByOrNull { it.second } ?: abilities.first()
+    val weakest = abilities.minByOrNull { it.second } ?: abilities.first()
+    var expanded by remember { mutableStateOf(false) }
+    Column(Modifier.padding(horizontal = 20.dp).fillMaxWidth()) {
+        // 收合列
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(InkGray100)
+                .clickable { expanded = !expanded }
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("能力輪廓", color = InkBlack, fontSize = 14.sp, fontWeight = FontWeight.Black)
+                Spacer(Modifier.height(3.dp))
+                Text(
+                    "最強 ${strongest.first} ${strongest.second} ・ 最弱 ${weakest.first} ${weakest.second}",
+                    color = InkGray500, fontSize = 12.sp,
+                )
+            }
+            Text(
+                if (expanded) "收合" else "查看詳細 ›",
+                color = BrandDeepOrange, fontSize = 12.sp, fontWeight = FontWeight.Bold,
             )
-            Image(
-                painter = painterResource(rank.beaver),
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.align(Alignment.BottomEnd).size(132.dp).offset(x = 10.dp, y = 10.dp),
-            )
         }
-        Spacer(Modifier.height(10.dp))
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            abilities.take(3).forEach { (l, v, d) -> StatCell(l, v, d) }
+        // 點開：雷達 + 六維 + 下一階解鎖
+        AnimatedVisibility(visible = expanded) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(BrandPeach.copy(alpha = 0.4f))
+                    .padding(16.dp),
+            ) {
+                Box(Modifier.fillMaxWidth().height(176.dp)) {
+                    HexRadar(
+                        values = abilities.map { it.second },
+                        modifier = Modifier.align(Alignment.CenterStart).padding(start = 14.dp).size(156.dp),
+                    )
+                    Image(
+                        painter = painterResource(rankOf(power).beaver),
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.align(Alignment.BottomEnd).size(132.dp).offset(x = 10.dp, y = 10.dp),
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    abilities.take(3).forEach { (l, v, d) -> StatCell(l, v, d) }
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    abilities.drop(3).forEach { (l, v, d) -> StatCell(l, v, d) }
+                }
+                Spacer(Modifier.height(14.dp))
+                NextUnlockCallout(power)
+            }
         }
-        Spacer(Modifier.height(8.dp))
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            abilities.drop(3).forEach { (l, v, d) -> StatCell(l, v, d) }
-        }
-        Spacer(Modifier.height(14.dp))
-        // 下一階解鎖
-        NextUnlockCallout(power)
     }
 }
 
