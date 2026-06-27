@@ -509,8 +509,9 @@ private fun TabBar(tabs: List<String>, activeIndex: Int, onTabSelected: (Int) ->
 }
 
 /**
- * 能力雷達圖(計畫要求的「能力雷達圖」)
- * 6 軸對應 6 個能力,多邊形面積 = 能力輪廓。進場時從中心展開。
+ * 能力玫瑰圖(南丁格爾玫瑰)
+ * 6 片花瓣對應 6 個能力,花瓣長度 = 現有分數;虛線小圈 = 目標,缺口大者標紅。
+ * 進場時所有花瓣由內往外按比例一起展開。
  */
 @Composable
 private fun CapabilityRadar(capabilities: List<Capability>, animateProgress: Boolean) {
@@ -534,44 +535,70 @@ private fun CapabilityRadar(capabilities: List<Capability>, animateProgress: Boo
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val cx = size.width / 2f
                 val cy = size.height / 2f
-                val radius = size.minDimension / 2f * 0.60f
-                fun axisAngle(i: Int): Double = -Math.PI / 2 + 2 * Math.PI * i / n
-                fun point(i: Int, r: Float): Offset {
-                    val a = axisAngle(i)
+                val rOuter = size.minDimension / 2f * 0.60f
+                val rInner = rOuter * 0.13f
+                fun polar(angDeg: Double, r: Float): Offset {
+                    val a = Math.toRadians(angDeg)
                     return Offset(cx + (r * kotlin.math.cos(a)).toFloat(), cy + (r * kotlin.math.sin(a)).toFloat())
                 }
-                fun polygon(ratio: (Int) -> Float): Path {
-                    val p = Path()
-                    for (i in 0 until n) {
-                        val pt = point(i, radius * ratio(i))
-                        if (i == 0) p.moveTo(pt.x, pt.y) else p.lineTo(pt.x, pt.y)
-                    }
-                    p.close()
-                    return p
-                }
-                // 背景同心多邊形 + 軸線(淺灰)
-                for (ring in 1..4) {
-                    drawPath(polygon { ring / 4f }, color = InkGray100, style = Stroke(width = 1f))
-                }
-                for (i in 0 until n) {
-                    drawLine(InkGray100, start = Offset(cx, cy), end = point(i, radius), strokeWidth = 1f)
-                }
-                val cur = { i: Int -> (capabilities[i].score / 100f) * anim }
-                val tgt = { i: Int -> (capabilities[i].target / 100f) * anim }
-                // 目標需求:灰色虛線外框(無填色,當基準線)
-                drawPath(
-                    polygon(tgt),
-                    color = InkGray400,
-                    style = Stroke(width = 2f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f), 0f)),
+                // 中心黃光暈
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(BrandYellow.copy(alpha = 0.35f), BrandYellow.copy(alpha = 0f)),
+                        center = Offset(cx, cy), radius = rOuter * 0.5f,
+                    ),
+                    radius = rOuter * 0.5f, center = Offset(cx, cy),
                 )
-                // 現有能力:橘色填色 + 描邊(明確內包)
-                drawPath(polygon(cur), color = BrandOrange.copy(alpha = 0.22f))
-                drawPath(polygon(cur), color = BrandDeepOrange, style = Stroke(width = 3f))
-                // 頂點:現有橘點;目標點(缺口大標紅、否則灰)
-                for (i in 0 until n) {
-                    drawCircle(BrandDeepOrange, radius = 4f, center = point(i, radius * cur(i)))
-                    val gapBig = (capabilities[i].target - capabilities[i].score) >= gapThreshold
-                    drawCircle(if (gapBig) AccentRed else InkGray400, radius = 3.5f, center = point(i, radius * tgt(i)))
+                // 格線(5 圈,做分層)
+                for (ring in 1..5) {
+                    drawCircle(
+                        color = InkCharcoal.copy(alpha = 0.12f),
+                        radius = rInner + (rOuter - rInner) * ring / 5f,
+                        center = Offset(cx, cy),
+                        style = Stroke(width = 1f),
+                    )
+                }
+                val gapDeg = 3.0
+                val half = 180.0 / n
+                // 花瓣:每維一片環形扇區,半徑 = 現有分數比例(全部一起由內往外展開)
+                capabilities.forEachIndexed { i, cap ->
+                    val ang = -90.0 + i * (360.0 / n)
+                    val a0 = ang - half + gapDeg
+                    val a1 = ang + half - gapDeg
+                    val r = rInner + (rOuter - rInner) * (cap.score / 100f) * anim
+                    if (r > rInner + 0.5f) {
+                        val gapBig = (cap.target - cap.score) >= gapThreshold
+                        val o0 = polar(a0, r)
+                        val i1 = polar(a1, rInner)
+                        val petal = Path().apply {
+                            moveTo(o0.x, o0.y)
+                            arcTo(Rect(cx - r, cy - r, cx + r, cy + r), a0.toFloat(), (a1 - a0).toFloat(), false)
+                            lineTo(i1.x, i1.y)
+                            arcTo(Rect(cx - rInner, cy - rInner, cx + rInner, cy + rInner), a1.toFloat(), (a0 - a1).toFloat(), false)
+                            close()
+                        }
+                        val fill = Brush.radialGradient(
+                            colors = if (gapBig) listOf(BrandYellow, BrandOrange)
+                            else listOf(Color(0xFFFFF4B0), BrandAmber),
+                            center = Offset(cx, cy), radius = rOuter,
+                        )
+                        drawPath(petal, brush = fill)
+                        drawPath(petal, color = PaperWhite, style = Stroke(width = 1f))
+                    }
+                }
+                // 中心圓(淡黃)
+                drawCircle(Color(0xFFFFFAD8), radius = rInner, center = Offset(cx, cy))
+                // 目標:虛線小圈(缺口大者橘、否則灰)
+                capabilities.forEachIndexed { i, cap ->
+                    val ang = -90.0 + i * (360.0 / n)
+                    val tr = rInner + (rOuter - rInner) * (cap.target / 100f) * anim
+                    val gapBig = (cap.target - cap.score) >= gapThreshold
+                    drawCircle(
+                        color = if (gapBig) BrandDeepOrange else InkGray400,
+                        radius = 3.5f,
+                        center = polar(ang, tr),
+                        style = Stroke(width = 1.5f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(2f, 2f), 0f)),
+                    )
                 }
             }
             // 軸標籤:缺口大者標紅加粗
@@ -591,7 +618,7 @@ private fun CapabilityRadar(capabilities: List<Capability>, animateProgress: Boo
         }
         Spacer(Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            LegendItem(color = BrandDeepOrange, label = "現有能力", filled = true)
+            LegendItem(color = BrandAmber, label = "現有能力", filled = true)
             LegendItem(color = InkGray400, label = "目標需求", filled = false)
             LegendItem(color = AccentRed, label = "待補強", filled = true)
         }
