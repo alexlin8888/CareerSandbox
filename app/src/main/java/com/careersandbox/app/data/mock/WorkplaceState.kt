@@ -33,6 +33,9 @@ object WorkplaceState {
     // 目前在第幾天(讓共用的 app 顯示當天情報)
     var currentDay = mutableStateOf(0)
 
+    // 已完成的天(hub 進度打勾、自動前進當前天用)
+    val completedDays = mutableStateListOf<Int>()
+
     /** 場景呼叫:加減某條計量,記錄原因,回傳給 UI 彈窗 */
     fun apply(meter: String, delta: Int, reason: String, day: Int): RepChange {
         val state = when (meter) {
@@ -51,6 +54,13 @@ object WorkplaceState {
     }
 
     fun hasFlag(flag: String): Boolean = flag in flags
+
+    /** 標記某天完成(玩完夜晚過場時呼叫) */
+    fun completeDay(day: Int) {
+        if (day !in completedDays) completedDays.add(day)
+    }
+
+    fun isDayDone(day: Int): Boolean = day in completedDays
 
     /** 動態人設:依三條數值給一句「你在這間公司是什麼樣的人」 */
     fun persona(): String {
@@ -73,6 +83,7 @@ object WorkplaceState {
         peerBond.value = 3
         proImage.value = 3
         flags.clear()
+        completedDays.clear()
         currentDay.value = 0
         log.clear()
     }
