@@ -44,6 +44,7 @@ fun Day1OneOnOneScreen(navController: NavHostController) {
     var beat by remember { mutableIntStateOf(0) }
     var done by remember { mutableStateOf(false) }
     var unlocked by rememberSaveable { mutableStateOf(false) }
+    var agendaSeen by rememberSaveable { mutableStateOf(false) }
     var taskStarted by remember { mutableStateOf(false) }
     var repPop by remember { mutableStateOf<RepChange?>(null) }
     var reaction by remember { mutableStateOf<Int?>(null) }
@@ -94,6 +95,11 @@ fun Day1OneOnOneScreen(navController: NavHostController) {
 
     if (!unlocked) {
         SandboxLockScreen(onUnlock = { unlocked = true })
+        return
+    }
+
+    if (!agendaSeen) {
+        DayAgendaScreen(day = 1, onStart = { agendaSeen = true })
         return
     }
 
