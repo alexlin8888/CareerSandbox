@@ -1,9 +1,5 @@
 package com.careersandbox.app.ui.screens.workplace
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -15,7 +11,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -30,7 +25,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.careersandbox.app.data.mock.RepChange
 import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.WorkplaceState
 
@@ -41,111 +35,13 @@ import com.careersandbox.app.data.mock.WorkplaceState
    真急件各有旗標。對齊你 Claude Design 的「郵件場景」版面。
    ===================================================================== */
 
-private data class Day2Mail(
-    val sender: String,
-    val email: String,
-    val avatarLetter: String,
-    val avatarColor: Color,
-    val subject: String,
-    val folder: String,
-    val folderColor: Color,
-    val body: String,
-    val choices: List<DecisionChoice>,
-)
-
 @Composable
 fun Day2EmailScreen(navController: NavHostController) {
     val audioCtx = LocalContext.current
     LaunchedEffect(Unit) { WorkplaceState.currentDay.value = 2; WorkplaceState.beginAppPhase(2); SoundManager.playBgm(audioCtx, R.raw.bgm_neutral) }
-    var idx by remember { mutableIntStateOf(0) }
     var done by remember { mutableStateOf(false) }
-    var repPop by remember { mutableStateOf<RepChange?>(null) }
     var agendaSeen by rememberSaveable { mutableStateOf(false) }
     var taskStarted by remember { mutableStateOf(false) }
-
-    LaunchedEffect(repPop) {
-        if (repPop != null) { kotlinx.coroutines.delay(1900); repPop = null }
-    }
-
-    val red = Color(0xFFEA4335)
-    // 回收 Day1 的選擇：昨天你怎麼對阿哲 / Vivian，今天信裡讀得出來
-    val zheBody = when {
-        WorkplaceState.hasFlag("d1_press_zhe") ->
-            "race condition 我還在追。你昨天不是說我在『留 buffer』嗎？那你來追。下午會議我會『說明』。\n\n— 阿哲"
-        WorkplaceState.hasFlag("d1_trust_zhe") ->
-            "race condition 我還在追，謝謝你昨天沒急著逼我。下午會議我會完整說明，你放心。\n\n— 阿哲"
-        else ->
-            "race condition 我還在追，別逼我給假的日期。下午會議我會說明。\n\n— 阿哲"
-    }
-    val vivianBody = when {
-        WorkplaceState.hasFlag("d1_vivian_throw") ->
-            "客戶問資料匯出的 API 規格，這part我真的看不懂…我知道你大概覺得 demo 是我自己挖的洞。但還是想問，要找誰比較好？拜託🙏"
-        WorkplaceState.hasFlag("d1_vivian_bridge") ->
-            "客戶問資料匯出的 API 規格，這part我看不懂…昨天謝謝你幫我擋著，這次想先問問你要找誰？🙏"
-        else ->
-            "客戶問資料匯出的 API 規格，這part我真的看不懂…幫忙看一下要找誰？很急拜託拜託🙏"
-    }
-    val mails = listOf(
-        Day2Mail(
-            "Ken", "ken@novapay.com", "K", Color(0xFF1A73E8),
-            "分帳的事", "收件匣", red,
-            "今天 5 點前，給我一個能對客戶交代的版本。不用完美，但要能講。\n\n— K",
-            buildList {
-                add(DecisionChoice("A", "現在回：整理工程跟業務的說法，5 點前給您。",
-                    "專業形象", 1, "", "d2_reply_ken"))
-                add(DecisionChoice("B", "標記稍後，先看別的。",
-                    "專業形象", -1, "主管的信，就這樣擺著"))
-                if (WorkplaceState.hasFlag("intel_d2_mail")) {
-                    add(DecisionChoice("C", "我查過往來信，客戶上週已經同意分階段。5 點前給您 demo 版的範圍，完整版排下個迭代。",
-                        "主管信任", 2, "Ken 回了一個字：好", "d2_informed"))
-                }
-            },
-        ),
-        Day2Mail(
-            "阿哲", "jhe@novapay.com", "哲", Color(0xFF12B5A5),
-            "Re: 分帳 bug 進度", "工作", Color(0xFFF59E0B),
-            zheBody,
-            listOf(
-                DecisionChoice("A", "回他：了解，我不催日期，會議上一起看。",
-                    "同事情誼", 1, "", "d2_respect_eng"),
-                DecisionChoice("B", "回他：客戶等不了，今天給我一個日期。",
-                    "同事情誼", -1, "他已讀，沒回", "d2_push_eng"),
-            ),
-        ),
-        Day2Mail(
-            "Vivian", "vivian@novapay.com", "V", Color(0xFFEC4899),
-            "客戶問 API 匯出規格", "收件匣", red,
-            vivianBody,
-            listOf(
-                DecisionChoice("A", "這要問工程，我幫你 tag 阿哲。",
-                    "專業形象", 1, ""),
-                DecisionChoice("B", "這你自己問工程吧。",
-                    "同事情誼", -1, "她隔了很久才回一個「…好」", "d2_dump_vivian"),
-                DecisionChoice("C", "自己掰一個規格回她。",
-                    "專業形象", -1, "這規格對不對，你其實不確定"),
-            ),
-        ),
-        Day2Mail(
-            "系統通知", "noreply@novapay.com", "!", Color(0xFFEF4444),
-            "【緊急】後台帳號已鎖定", "工作", Color(0xFFF59E0B),
-            "你的後台帳號因連續三次密碼錯誤已鎖定。客戶資料目前無法調出，相關查詢受影響。\n\n要解鎖，得去求 IT，或者問阿哲——那個你今天可能剛得罪的人。",
-            listOf(
-                DecisionChoice("A", "拉下臉，去問阿哲幫忙解。",
-                    "專業形象", 2, "你抓到了真正要緊的那封"),
-                DecisionChoice("B", "先標記，等手上的弄完再看。",
-                    "專業形象", -2, "客戶資料還是調不出來", "d2_miss_urgent"),
-            ),
-        ),
-        Day2Mail(
-            "媽", "mom@home", "媽", Color(0xFFE0A04A),
-            "Fwd: 久坐傷身,記得起來走走", "收件匣", red,
-            "看到這篇想到你。中午有沒有好好吃飯？不要又一杯咖啡撐一天。",
-            listOf(
-                DecisionChoice("A", "回個貼圖：好啦我會吃，媽。", "同事情誼", 0, ""),
-                DecisionChoice("B", "晚點再回，先把信清完。", "同事情誼", 0, ""),
-            ),
-        ),
-    )
 
     if (!agendaSeen) {
         DayAgendaScreen(day = 2, onStart = { agendaSeen = true })

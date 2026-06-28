@@ -1,9 +1,5 @@
 package com.careersandbox.app.ui.screens.workplace
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Image
@@ -19,13 +15,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,10 +30,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.launch
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
-import com.careersandbox.app.data.mock.RepChange
 import com.careersandbox.app.data.mock.WorkplaceState
 
 /* =====================================================================
@@ -49,70 +41,14 @@ import com.careersandbox.app.data.mock.WorkplaceState
    是在保護自己」,你太快掏心反被當理所當然。這天表面輕鬆,底下全是試探。
    ===================================================================== */
 
-private data class D4Beat(val speaker: String, val portrait: Int, val narration: String, val choices: List<DecisionChoice>)
 
 @Composable
 fun Day4LunchScreen(navController: NavHostController) {
     val audioCtx = LocalContext.current
     LaunchedEffect(Unit) { WorkplaceState.currentDay.value = 4; WorkplaceState.beginAppPhase(4); SoundManager.playBgm(audioCtx, R.raw.bgm_warm) }
     var phase by remember { mutableStateOf("story") } // story | lunch | done
-    var beat by remember { mutableIntStateOf(0) }
-    var repPop by remember { mutableStateOf<RepChange?>(null) }
-    var reaction by remember { mutableStateOf<Int?>(null) }
     var agendaSeen by rememberSaveable { mutableStateOf(false) }
     var taskStarted by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-
-    LaunchedEffect(repPop) {
-        if (repPop != null) { kotlinx.coroutines.delay(1900); repPop = null }
-    }
-
-    val beats = listOf(
-        D4Beat("小芳", R.drawable.fang_neutral,
-            "小芳端著餐盤坐到你旁邊：「你坐這。欸——你聽說了嗎？公司要改組，聽說還要空降一個主管。」她邊扒飯邊看你。",
-            listOf(
-                DecisionChoice("A", "真的假的？跟我說說。",
-                    "同事情誼", 1, "小芳眼睛一亮，往你這邊靠過來", "d4_gossip"),
-                DecisionChoice("B", "我才剛來，這我真不清楚。",
-                    "同事情誼", 0, ""),
-                DecisionChoice("C", "先吃啦，菜要涼了。",
-                    "同事情誼", 0, ""),
-            ),
-        ),
-        D4Beat("小芳", R.drawable.fang_neutral,
-            "「那你覺得 Ken 怎樣？」小芳夾了一口菜，「老實說，沒關係，就我們兩個。」「就我們兩個」這種話，你不知道為什麼，聽起來總是不太安全。",
-            buildList {
-                add(DecisionChoice("A", "他給的方向算清楚，我還在適應他的節奏。",
-                    "主管信任", 1, "", "d4_diplomatic"))
-                add(DecisionChoice("B", "說真的，他開會把我推上火線那下，我有點傻眼。",
-                    "同事情誼", 1, "小芳笑著點頭。你不知道她要記在哪", "d4_badmouth"))
-                add(DecisionChoice("C", "我還在觀察，不好說。",
-                    "同事情誼", 0, ""))
-                if (WorkplaceState.hasFlag("intel_d4_gram")) {
-                    add(DecisionChoice("D", "我知道茶水間的話傳得快。對 Ken 我沒什麼好說的——方向算清楚，我還在抓他節奏。",
-                        "專業形象", 2, "小芳愣了半秒，笑了：「你這新人不簡單喔。」", "d4_savvy"))
-                }
-            },
-        ),
-        D4Beat("阿哲", R.drawable.colleague_akai_calm,
-            "阿哲本來低頭吃飯，突然開口：「我週末寫了個小工具，自動把那種 race condition 的 log 撈出來標紅…欸，你應該沒興趣啦。」他講「你應該沒興趣」的時候，其實有點希望你有興趣。",
-            listOf(
-                DecisionChoice("A", "有興趣啊，你怎麼判斷哪些是真的衝突？",
-                    "同事情誼", 2, "阿哲抬起頭，一講講了快五分鐘", "lunch_bonded_akai"),
-                DecisionChoice("B", "喔喔，聽起來很厲害。",
-                    "同事情誼", 0, "阿哲「嗯」了一聲，繼續扒飯"),
-            ),
-        ),
-        D4Beat("小芳", R.drawable.fang_pleased,
-            "吃完，小芳用牙籤剔著牙，看似隨口：「新人嘛，我提醒你一句。這裡熱絡可以，但別太快掏心。茶水間，沒有秘密。」你愣了一下。回想剛剛那頓飯，每句話，好像都被誰記在某個地方。",
-            listOf(
-                DecisionChoice("A", "謝謝芳姐，我記住了。",
-                    "同事情誼", 1, "", "d4_heed"),
-                DecisionChoice("B", "我會拿捏的。",
-                    "同事情誼", 0, ""),
-            ),
-        ),
-    )
 
     if (!agendaSeen) {
         DayAgendaScreen(day = 4, onStart = { agendaSeen = true })

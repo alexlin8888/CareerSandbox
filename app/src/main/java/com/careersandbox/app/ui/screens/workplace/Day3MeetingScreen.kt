@@ -1,9 +1,5 @@
 package com.careersandbox.app.ui.screens.workplace
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -26,7 +22,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,10 +30,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.launch
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
-import com.careersandbox.app.data.mock.RepChange
 import com.careersandbox.app.data.mock.WorkplaceState
 
 /* =====================================================================
@@ -50,7 +43,6 @@ import com.careersandbox.app.data.mock.WorkplaceState
    ===================================================================== */
 
 private data class Caption(val who: String, val line: String)
-private data class D3Beat(val narration: String, val choices: List<DecisionChoice>)
 
 @Composable
 fun Day3MeetingScreen(navController: NavHostController) {
@@ -58,81 +50,13 @@ fun Day3MeetingScreen(navController: NavHostController) {
     LaunchedEffect(Unit) { WorkplaceState.currentDay.value = 3; WorkplaceState.beginAppPhase(3); SoundManager.playBgm(audioCtx, R.raw.bgm_tense) }
     var phase by remember { mutableStateOf("meeting") } // meeting | decision | done
     var capIdx by remember { mutableIntStateOf(0) }
-    var beat by remember { mutableIntStateOf(0) }
-    var repPop by remember { mutableStateOf<RepChange?>(null) }
-    var reaction by remember { mutableStateOf<Int?>(null) }
     var agendaSeen by rememberSaveable { mutableStateOf(false) }
     var taskStarted by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-
-    LaunchedEffect(repPop) {
-        if (repPop != null) { kotlinx.coroutines.delay(1900); repPop = null }
-    }
 
     val captions = listOf(
         Caption("Vivian", "客戶那邊我已經說月底了，這個一定要上。"),
         Caption("阿哲", "測試才跑六成，race condition 沒解。我不簽。"),
         Caption("Ken", "先聽聽 PM 的判斷。"),
-    )
-
-    val beats = listOf(
-        D3Beat(
-            "Vivian 先開口，語速很快：「客戶真的等不了了，這個月底一定要上，我已經跟他們講了。」阿哲沒抬頭，聲音不大：「…這版品質沒到。現在上，會出事。」會議室安靜了兩秒。Ken 轉頭看你：「你呢？你看了一個禮拜。你怎麼看？」你才來五天。",
-            buildList {
-                add(DecisionChoice("A", "我想先看 bug 的實際範圍跟測試覆蓋率，再判斷能不能上。",
-                    "專業形象", 2, "", "d3_data"))
-                add(DecisionChoice("B", "先上，邊上邊修，出問題再 hotfix。",
-                    "同事情誼", -1, "阿哲喝了一口水，沒說話", "d3_shipfast"))
-                add(DecisionChoice("C", "我站工程，品質沒到就不該上。",
-                    "同事情誼", 1, "你選了一邊。Ken 的表情沒變", "d3_sided_eng"))
-                if (WorkplaceState.hasFlag("intel_d3_doc") && WorkplaceState.hasFlag("intel_d3_chat")) {
-                    add(DecisionChoice("D", "排程要調。工程在文件裡標了風險，阿哲的負荷我也看到了。我建議砍掉次要範圍、延一週，把金流做穩。",
-                        "主管信任", 3, "Ken 看了你一眼，跟剛剛不太一樣", "d3_informed"))
-                }
-            },
-        ),
-        D3Beat(
-            "會議室安靜下來。三條路攤在桌上，你看著看著，發現一件事——沒有一條是乾淨的。\n\n硬上，阿哲的 race condition 沒解，出事是他的名字在 commit 上。延期，Vivian 上週跟客戶拍的胸脯就跳票，她得自己去吞。砍範圍，客戶要的東西少一半，這張單可能就飛了。\n\nKen 看著你：「我知道每條路都有人受傷。說——你要對不起誰？」",
-            listOf(
-                DecisionChoice("A", "對不起阿哲。先上，我跟他一起盯，出事我扛。",
-                    "同事情誼", -2, "阿哲沒看你。他知道「一起盯」通常只是嘴上說說。", "d3_sacrifice_eng"),
-                DecisionChoice("B", "對不起 Ken 的月底。延期，我陪 Vivian 去跟客戶解釋，不讓她一個人吞。",
-                    "主管信任", -2, "Ken 在筆記本上又寫了一個字。Vivian 沒說話，但她記得是誰陪她去的。", "d3_sacrifice_vivian"),
-                DecisionChoice("C", "對不起客戶。砍範圍，先交能交代的，飛了的單我們一起認。",
-                    "同事情誼", -1, "Ken 點頭：「成熟。」但 Vivian 別過頭——那張單，有她的業績。", "d3_sacrifice_client"),
-            ),
-        ),
-        D3Beat(
-            "Ken 在筆記本上寫了個字：「假設月底還是得交點東西。這個功能，你會怎麼拆？」",
-            listOf(
-                DecisionChoice("A", "基本版先上、進階版下一版。客戶看得到東西，風險也鎖得住。",
-                    "專業形象", 2, "Ken 寫字的手停了一下", "d3_phase"),
-                DecisionChoice("B", "壓工程加班，月底全上。",
-                    "同事情誼", -2, "阿哲的保溫瓶蓋，轉開又轉緊", "d3_burned_team"),
-                DecisionChoice("C", "這超出我能定的，Ken 你決定吧。",
-                    "主管信任", -2, "Ken 沒接話，又寫了個字", "d3_passed_buck"),
-            ),
-        ),
-        D3Beat(
-            "Vivian 已經對客戶把月底講死了。她看著你，眼神裡有種「拜託」。Ken 沒表態，把這題留給你。",
-            listOf(
-                DecisionChoice("A", "我幫你跟客戶談。月底交基本版 demo、完整版兩週後，我陪你一起講。",
-                    "同事情誼", 2, "Vivian 鬆了一口氣，肩膀垮下來", "d3_backed_vivian"),
-                DecisionChoice("B", "那是你對客戶的承諾，你自己處理。",
-                    "同事情誼", -2, "Vivian 把筆電闔上了", "d3_left_vivian"),
-            ),
-        ),
-        D3Beat(
-            "Ken 站起來，又停住：「好。最後——你還想補什麼嗎？」這是他給你，最後一個定義自己的機會。",
-            listOf(
-                DecisionChoice("A", "我的判斷不一定全對。上線之後我會盯數據，有狀況馬上調。",
-                    "主管信任", 2, "Ken 點頭", "d3_own"),
-                DecisionChoice("B", "這都是團隊一起的功勞。",
-                    "主管信任", 1, "", "d3_credit"),
-                DecisionChoice("C", "抱歉我經驗還不夠，可能講得不對…",
-                    "專業形象", -1, "Ken 沒接話。會議室的人開始收東西", "d3_selfdoubt"),
-            ),
-        ),
     )
 
     if (!agendaSeen) {
