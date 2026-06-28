@@ -169,14 +169,14 @@ fun SandboxDecisionScene(
 
             Spacer(Modifier.height(24.dp))
 
-            // ===== 角色立繪(置中,地面陰影)=====
+            // ===== 角色立繪(置中,地面陰影,固定高度確保各角色一致)=====
             Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                 Box(contentAlignment = Alignment.BottomCenter) {
                     Image(
                         painter = painterResource(portrait),
                         contentDescription = speaker,
                         contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxHeight(0.92f),
+                        modifier = Modifier.heightIn(max = 300.dp).fillMaxHeight(),
                     )
                 }
             }
@@ -208,7 +208,7 @@ fun SandboxDecisionScene(
                 Row(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
                         .background(PaperWhite)
-                        .pressScale { SoundManager.sfx(R.raw.sfx_tap); onChoose(c) }
+                        .pressScale { SoundManager.sfx(R.raw.sfx_confirm); onChoose(c) }
                         .padding(18.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {

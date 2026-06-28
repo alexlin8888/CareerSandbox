@@ -6,10 +6,12 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.careersandbox.app.ui.screens.competition.CompetitionDetailScreen
 import com.careersandbox.app.ui.screens.competition.CompetitionListScreen
@@ -46,6 +48,7 @@ import com.careersandbox.app.ui.screens.workplace.NovaDocScreen
 import com.careersandbox.app.ui.screens.workplace.NovaGramScreen
 import com.careersandbox.app.ui.screens.workplace.NovaDashboardScreen
 import com.careersandbox.app.ui.screens.workplace.WorkplaceSandboxScreen
+import com.careersandbox.app.ui.screens.workplace.SoundManager
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -53,6 +56,14 @@ fun CareerSandboxNavHost(
     navController: NavHostController,
     startDestination: String = Routes.SPLASH,
 ) {
+    // 離開沙盒(目前路由非 workplace/nova/night 前綴)時停掉場景 BGM,避免回首頁仍在播
+    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+    LaunchedEffect(currentRoute) {
+        val inSandbox = currentRoute?.let {
+            it.startsWith("workplace") || it.startsWith("nova") || it.startsWith("night")
+        } ?: false
+        if (!inSandbox) SoundManager.stopBgm()
+    }
     NavHost(
         navController = navController,
         startDestination = startDestination,
