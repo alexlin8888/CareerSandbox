@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.careersandbox.app.data.mock.WorkplaceState
 
 /* =====================================================================
    績效儀表板 —— 入職第一週的三項計量與綜合趨勢回顧
@@ -39,6 +40,28 @@ private val DashGreen = Color(0xFF06994E)
 @Composable
 fun NovaDashboardScreen(navController: NavHostController) {
     val scroll = rememberScrollState()
+
+    // 接真實遊玩數值(三計量 0-10 → 百分比),不再寫死
+    val mtP = WorkplaceState.managerTrust.value * 10
+    val pbP = WorkplaceState.peerBond.value * 10
+    val piP = WorkplaceState.proImage.value * 10
+    fun dText(p: Int) = if (p >= 60) "▲ 不錯" else if (p >= 30) "— 持平" else "▼ 待加強"
+    fun dCol(p: Int) = if (p >= 60) DashGreen else if (p >= 30) Color(0xFFC47F17) else Color(0xFFC0532B)
+    // 本週關鍵決定:反映 Day3 排程那拍實際選了什麼
+    val keyDecision = when {
+        WorkplaceState.hasFlag("d3_sacrifice_eng") -> "硬上排程，工程加班補"
+        WorkplaceState.hasFlag("d3_sacrifice_vivian") -> "延一週，穩住品質"
+        WorkplaceState.hasFlag("d3_sacrifice_client") -> "縮減範圍、先上基本版"
+        else -> "在排程壓力下做了取捨"
+    }
+    // 整體等第:三計量總分(0-30)
+    val total = mtP + pbP + piP
+    val grade = when {
+        total >= 240 -> "A"
+        total >= 180 -> "B"
+        total >= 120 -> "C"
+        else -> "D"
+    }
 
     Column(Modifier.fillMaxSize().background(PaperCream).verticalScroll(scroll)) {
 
@@ -61,9 +84,9 @@ fun NovaDashboardScreen(navController: NavHostController) {
         ) {
             // ===== 三計量環 =====
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                MetricCard("主管信任", 67, Color(0xFFF3E3DA), DashOrange, "▲ +2", DashGreen, Modifier.weight(1f))
-                MetricCard("同事情誼", 50, Color(0xFFF5ECD9), DashAmber, "— 持平", Color(0xFFC47F17), Modifier.weight(1f))
-                MetricCard("專業形象", 83, Color(0xFFDFF0EC), Color(0xFF5BB6A6), "▲ +3", DashGreen, Modifier.weight(1f))
+                MetricCard("主管信任", mtP, Color(0xFFF3E3DA), DashOrange, dText(mtP), dCol(mtP), Modifier.weight(1f))
+                MetricCard("同事情誼", pbP, Color(0xFFF5ECD9), DashAmber, dText(pbP), dCol(pbP), Modifier.weight(1f))
+                MetricCard("專業形象", piP, Color(0xFFDFF0EC), Color(0xFF5BB6A6), dText(piP), dCol(piP), Modifier.weight(1f))
             }
 
             // ===== 綜合趨勢 =====
@@ -95,13 +118,13 @@ fun NovaDashboardScreen(navController: NavHostController) {
                 Column(Modifier.weight(1f)) {
                     Text("本週關鍵決定", color = Color(0xA6FFF8F3), fontSize = 12.sp)
                     Spacer(Modifier.height(3.dp))
-                    Text("縮減範圍、先上基本版", color = PaperCream, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(keyDecision, color = PaperCream, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 }
                 Spacer(Modifier.width(12.dp))
                 Box(
                     Modifier.size(42.dp).clip(CircleShape).background(Color(0x2EFFB627)),
                     contentAlignment = Alignment.Center,
-                ) { Text("A", color = DashAmber, fontSize = 22.sp, fontWeight = FontWeight.Black) }
+                ) { Text(grade, color = DashAmber, fontSize = 22.sp, fontWeight = FontWeight.Black) }
             }
         }
     }

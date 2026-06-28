@@ -18,6 +18,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import com.careersandbox.app.data.mock.WorkplaceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,6 +50,7 @@ private val DocFaint = Color(0xFFEDEDED)
 @Composable
 fun NovaDocScreen(navController: NavHostController) {
     val scroll = rememberScrollState()
+    LaunchedEffect(Unit) { WorkplaceState.setFlag("intel_d3_doc") }   // 讀風險文件＝掌握工程標註的風險(Day3 進階選項用)
 
     Column(Modifier.fillMaxSize().background(PaperWhite)) {
 

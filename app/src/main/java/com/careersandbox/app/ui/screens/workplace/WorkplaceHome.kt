@@ -73,7 +73,7 @@ fun WorkplaceHome(
         HomeApp("dashboard", "週報", Icons.Filled.BarChart, Color(0xFF2E9E6B), Routes.NOVA_DASHBOARD),
     )
 
-    val unlocked = relevantKeys.isNotEmpty() && relevantKeys.all { WorkplaceState.isAppVisited(it) }
+    val unlocked = relevantKeys.isNotEmpty() && relevantKeys.all { WorkplaceState.isAppDone(it) }
 
     Box(Modifier.fillMaxSize()) {
         Image(
@@ -114,11 +114,11 @@ fun WorkplaceHome(
                 ) {
                     row.forEach { app ->
                         val relevant = app.key in relevantKeys
-                        val visited = WorkplaceState.isAppVisited(app.key)
-                        val unread = unreadCounts[app.key] ?: 0
-                        val showDot = relevant && unread > 0 && !visited
-                        // 郵件/訊息要點進內容(開一封信/一個對話)才算完成;其餘 app 開了就算
+                        val done = WorkplaceState.isAppDone(app.key)
+                        // 郵件/訊息要點進內容(逐封讀)才算完成;其餘 app 開了就算
                         val drillIn = app.key == "mail" || app.key == "chat"
+                        val unread = if (drillIn) WorkplaceState.unreadCount(app.key) else (unreadCounts[app.key] ?: 0)
+                        val showDot = relevant && unread > 0 && !done
 
                         val colMod = if (relevant) {
                             Modifier.weight(1f).clickable {

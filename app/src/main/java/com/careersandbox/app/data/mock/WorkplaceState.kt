@@ -71,12 +71,36 @@ object WorkplaceState {
         if (appPhaseDay != day) {
             appPhaseDay = day
             visitedApps.clear()
+            readItems.clear()
         }
     }
 
     fun visitApp(key: String) { if (key !in visitedApps) visitedApps.add(key) }
 
     fun isAppVisited(key: String): Boolean = key in visitedApps
+
+    // ===== 逐封已讀追蹤(信件/訊息逐封,而非開一封就算全部完成)=====
+    val readItems = mutableStateListOf<String>()   // "mail:ken" / "chat:zhe"
+    fun markItemRead(key: String) { if (key !in readItems) readItems.add(key) }
+    fun isItemRead(key: String): Boolean = key in readItems
+
+    // Nova 內容裡「開始未讀、需要看過」的工作項目(對應紅點數與完成判定)
+    private val mailMustRead = listOf("ken", "vivian", "ci")
+    private val chatMustRead = listOf("zhe", "vivian", "group")
+
+    /** 某 app 還沒讀的工作項目數:mail/chat 逐項計算,其餘回 0(沿用 visited) */
+    fun unreadCount(app: String): Int = when (app) {
+        "mail" -> mailMustRead.count { "mail:$it" !in readItems }
+        "chat" -> chatMustRead.count { "chat:$it" !in readItems }
+        else -> 0
+    }
+
+    /** 某 app 是否翻完:mail/chat 要把該讀的都讀過;其餘沿用 isAppVisited */
+    fun isAppDone(app: String): Boolean = when (app) {
+        "mail" -> mailMustRead.all { "mail:$it" in readItems }
+        "chat" -> chatMustRead.all { "chat:$it" in readItems }
+        else -> isAppVisited(app)
+    }
 
     /** 動態人設:依三條數值給一句「你在這間公司是什麼樣的人」 */
     fun persona(): String {
@@ -104,5 +128,6 @@ object WorkplaceState {
         log.clear()
         visitedApps.clear()
         appPhaseDay = 0
+        readItems.clear()
     }
 }

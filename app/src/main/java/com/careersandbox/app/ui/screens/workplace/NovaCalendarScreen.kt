@@ -1,6 +1,7 @@
 package com.careersandbox.app.ui.screens.workplace
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -11,6 +12,10 @@ import androidx.compose.material.icons.outlined.Inbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,14 +37,20 @@ private data class CalEvent(
     val sub: String,
     val bar: Color,
     val current: Boolean = false,
+    val note: String = "",
 )
 
 private val calEvents = listOf(
-    CalEvent("與 Ken 的 1on1", "09:00–09:30 · 會議室 A", AccentBlue),
-    CalEvent("Sprint 站會", "11:00–11:15 · 線上", AccentGreen),
-    CalEvent("午餐 · 小芳", "12:00", BrandAmber),
-    CalEvent("讀分帳 spec", "14:00–15:30 · 專注時段", BrandOrange, current = true),
-    CalEvent("回 Vivian", "16:00 · 客戶需求", Color(0xFF8B5CF6)),
+    CalEvent("與 Ken 的 1on1", "09:00–09:30 · 會議室 A", AccentBlue,
+        note = "帶上分帳問題的初步判斷，Ken 會問你怎麼看。"),
+    CalEvent("Sprint 站會", "11:00–11:15 · 線上", AccentGreen,
+        note = "簡短同步進度；阿哲可能會提排程風險。"),
+    CalEvent("午餐 · 小芳", "12:00", BrandAmber,
+        note = "認識同事的好機會，別整頓飯都在講工作。"),
+    CalEvent("讀分帳 spec", "14:00–15:30 · 專注時段", BrandOrange, current = true,
+        note = "今天的重點：把分帳邏輯讀透，下午要做判斷。"),
+    CalEvent("回 Vivian", "16:00 · 客戶需求", Color(0xFF8B5CF6),
+        note = "客戶 demo 在催，回覆前先確認工程實際可行的範圍。"),
 )
 
 private data class WeekDay(val label: String, val num: String, val selected: Boolean)
@@ -95,6 +106,7 @@ fun NovaCalendarScreen(navController: NavHostController) {
         // ===== Agenda 事件 =====
         Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll).padding(vertical = 8.dp)) {
             calEvents.forEach { e ->
+                var expanded by remember(e.title) { mutableStateOf(false) }
                 if (e.current) {
                     // 現在時間紅線
                     Row(
@@ -115,7 +127,8 @@ fun NovaCalendarScreen(navController: NavHostController) {
                         modifier = Modifier.weight(1f)
                             .clip(RoundedCornerShape(10.dp))
                             .background(if (e.current) Color(0xFFFFF1E6) else PaperOff)
-                            .heightIn(min = 58.dp),
+                            .heightIn(min = 58.dp)
+                            .clickable { expanded = !expanded },
                     ) {
                         Row(Modifier.fillMaxSize()) {
                             Box(Modifier.width(4.dp).fillMaxHeight().background(e.bar))
@@ -123,6 +136,10 @@ fun NovaCalendarScreen(navController: NavHostController) {
                                 Text(e.title, color = InkBlack, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                                 Spacer(Modifier.height(4.dp))
                                 Text(e.sub, color = InkGray500, fontSize = 12.sp)
+                                if (expanded && e.note.isNotEmpty()) {
+                                    Spacer(Modifier.height(7.dp))
+                                    Text(e.note, color = InkGray700, fontSize = 12.sp, lineHeight = 17.sp)
+                                }
                             }
                         }
                     }

@@ -120,7 +120,10 @@ private val chatThreads: Map<String, ChatThread> = mapOf(
 fun NovaChatScreen(navController: NavHostController, chatId: String = "zhe") {
     val thread = chatThreads[chatId] ?: chatThreads.getValue("zhe")
     val script = thread.script
-    LaunchedEffect(Unit) { WorkplaceState.visitApp("chat") }   // 開對話＝完成訊息任務(清紅點)
+    LaunchedEffect(chatId) {
+        WorkplaceState.markItemRead("chat:$chatId")   // 讀這個對話＝標記該則已讀(逐則追蹤)
+        if (chatId == "zhe") WorkplaceState.setFlag("intel_d3_chat")   // 讀阿哲對話＝看到他的負荷(Day3 進階選項用)
+    }
     var shown by remember { mutableStateOf(0) }
     val scroll = rememberScrollState()
     val lastOutIdx = remember(script) { script.indexOfLast { !it.incoming } }

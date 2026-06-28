@@ -1,6 +1,7 @@
 package com.careersandbox.app.ui.screens.workplace
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -8,12 +9,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite as FilledFavorite
 import androidx.compose.material.icons.outlined.Comment
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.Send
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
+import com.careersandbox.app.data.mock.WorkplaceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,6 +46,7 @@ private data class GramPost(val img: Int, val caption: String, val likes: String
 @Composable
 fun NovaGramScreen(navController: NavHostController) {
     val scroll = rememberScrollState()
+    LaunchedEffect(Unit) { WorkplaceState.setFlag("intel_d4_gram") }   // 看內部動態＝掌握「改組」風聲(Day4 進階選項用)
     val posts = listOf(
         GramPost(R.drawable.feed_1, "加班後的小確幸，夜市犒賞自己", "42"),
         GramPost(R.drawable.feed_2, "新辦公室第一週，假裝自己很從容", "88"),
@@ -104,6 +113,8 @@ private fun GramStat(num: String, label: String) {
 
 @Composable
 private fun GramPostCard(p: GramPost) {
+    var liked by remember { mutableStateOf(false) }
+    val likeCount = (p.likes.toIntOrNull() ?: 0) + if (liked) 1 else 0
     Column(Modifier.fillMaxWidth().padding(top = 14.dp)) {
         Image(
             painter = painterResource(p.img),
@@ -115,13 +126,18 @@ private fun GramPostCard(p: GramPost) {
             Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(Icons.Outlined.Favorite, contentDescription = null, tint = Color(0xFF1F1916), modifier = Modifier.size(24.dp))
+            Icon(
+                if (liked) FilledFavorite else Icons.Outlined.Favorite,
+                contentDescription = "讚",
+                tint = if (liked) Color(0xFFE0245E) else Color(0xFF1F1916),
+                modifier = Modifier.size(24.dp).clickable { liked = !liked },
+            )
             Spacer(Modifier.width(14.dp))
             Icon(Icons.Outlined.Comment, contentDescription = null, tint = Color(0xFF1F1916), modifier = Modifier.size(22.dp))
             Spacer(Modifier.width(14.dp))
             Icon(Icons.Outlined.Send, contentDescription = null, tint = Color(0xFF1F1916), modifier = Modifier.size(22.dp))
         }
-        Text("${p.likes} 個讚", color = Color(0xFF1F1916), fontSize = 13.sp, fontWeight = FontWeight.Bold,
+        Text("$likeCount 個讚", color = Color(0xFF1F1916), fontSize = 13.sp, fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(start = 16.dp, top = 7.dp))
         Text(p.caption, color = Color(0xFF374151), fontSize = 14.sp, lineHeight = 19.sp,
             modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 2.dp))

@@ -117,7 +117,10 @@ private val mailContents: Map<String, MailContent> = mapOf(
 @Composable
 fun NovaMailOpenScreen(navController: NavHostController, mailId: String = "ken") {
     val d = mailContents[mailId] ?: mailContents.getValue("ken")
-    LaunchedEffect(Unit) { WorkplaceState.visitApp("mail") }   // 開信＝完成郵件任務(清紅點)
+    LaunchedEffect(mailId) {
+        WorkplaceState.markItemRead("mail:$mailId")   // 讀這封＝標記該封已讀(逐封追蹤)
+        if (mailId == "vivian") WorkplaceState.setFlag("intel_d2_mail")   // 讀客戶 demo 那封＝掌握「客戶已同意分階段」情報(Day2 進階選項用)
+    }
     val scroll = rememberScrollState()
     var replying by remember { mutableStateOf(false) }
     var sent by remember { mutableStateOf(false) }
