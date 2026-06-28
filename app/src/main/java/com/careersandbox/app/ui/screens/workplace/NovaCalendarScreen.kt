@@ -25,41 +25,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.ui.theme.*
+import com.careersandbox.app.data.mock.WorkplaceState
+import com.careersandbox.app.data.mock.SandboxContentEngineProvider
 
 /* =====================================================================
    行事曆 日檢視 —— Day3 衝刺週
    採 agenda（事件清單）版型，避免時間格絕對定位；列高放寬、副標兩行可容。
    現在時間紅線標於當前事件（讀分帳 spec）。
    ===================================================================== */
-
-private data class CalEvent(
-    val title: String,
-    val sub: String,
-    val bar: Color,
-    val current: Boolean = false,
-    val note: String = "",
-)
-
-private val calEvents = listOf(
-    CalEvent("與 Ken 的 1on1", "09:00–09:30 · 會議室 A", AccentBlue,
-        note = "帶上分帳問題的初步判斷，Ken 會問你怎麼看。"),
-    CalEvent("Sprint 站會", "11:00–11:15 · 線上", AccentGreen,
-        note = "簡短同步進度；阿哲可能會提排程風險。"),
-    CalEvent("午餐 · 小芳", "12:00", BrandAmber,
-        note = "認識同事的好機會，別整頓飯都在講工作。"),
-    CalEvent("讀分帳 spec", "14:00–15:30 · 專注時段", BrandOrange, current = true,
-        note = "今天的重點：把分帳邏輯讀透，下午要做判斷。"),
-    CalEvent("回 Vivian", "16:00 · 客戶需求", Color(0xFF8B5CF6),
-        note = "客戶 demo 在催，回覆前先確認工程實際可行的範圍。"),
-)
-
-private data class WeekDay(val label: String, val num: String, val selected: Boolean)
-
-private val weekDays = listOf(
-    WeekDay("日", "22", false), WeekDay("一", "23", true), WeekDay("二", "24", false),
-    WeekDay("三", "25", false), WeekDay("四", "26", false), WeekDay("五", "27", false),
-    WeekDay("六", "28", false),
-)
 
 @Composable
 fun NovaCalendarScreen(navController: NavHostController) {
@@ -73,7 +46,7 @@ fun NovaCalendarScreen(navController: NavHostController) {
 
         // ===== 週列 =====
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)) {
-            weekDays.forEach { d ->
+            SandboxContentEngineProvider.engine.calendarWeek(WorkplaceState.currentDay.value).forEach { d ->
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(d.label, color = InkGray400, fontSize = 11.sp)
                     Spacer(Modifier.height(6.dp))
@@ -105,7 +78,7 @@ fun NovaCalendarScreen(navController: NavHostController) {
 
         // ===== Agenda 事件 =====
         Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll).padding(vertical = 8.dp)) {
-            calEvents.forEach { e ->
+            SandboxContentEngineProvider.engine.calendarEvents(WorkplaceState.currentDay.value).forEach { e ->
                 var expanded by remember(e.title) { mutableStateOf(false) }
                 if (e.current) {
                     // 現在時間紅線

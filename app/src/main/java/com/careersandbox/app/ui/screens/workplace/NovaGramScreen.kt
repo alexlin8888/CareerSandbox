@@ -22,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
 import com.careersandbox.app.data.mock.WorkplaceState
+import com.careersandbox.app.data.mock.SandboxContentEngineProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,17 +42,12 @@ import com.careersandbox.app.R
    與 Day4 的小芳限動區隔(那是別人的 story,這是你的個人頁)。
    ===================================================================== */
 
-private data class GramPost(val img: Int, val caption: String, val likes: String)
 
 @Composable
 fun NovaGramScreen(navController: NavHostController) {
     val scroll = rememberScrollState()
     LaunchedEffect(Unit) { WorkplaceState.setFlag("intel_d4_gram") }   // 看內部動態＝掌握「改組」風聲(Day4 進階選項用)
-    val posts = listOf(
-        GramPost(R.drawable.feed_1, "加班後的小確幸，夜市犒賞自己", "42"),
-        GramPost(R.drawable.feed_2, "新辦公室第一週，假裝自己很從容", "88"),
-        GramPost(R.drawable.feed_3, "週末上山把腦袋清空，下週再戰", "126"),
-    )
+    val posts = SandboxContentEngineProvider.engine.gramPosts(WorkplaceState.peerBond.value)
 
     Column(Modifier.fillMaxSize().background(Color.White).verticalScroll(scroll)) {
         // ===== 封面 =====

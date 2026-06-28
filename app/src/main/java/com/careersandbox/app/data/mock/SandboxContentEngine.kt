@@ -2,6 +2,10 @@ package com.careersandbox.app.data.mock
 
 import androidx.compose.ui.graphics.Color
 import com.careersandbox.app.R
+import com.careersandbox.app.ui.theme.AccentBlue
+import com.careersandbox.app.ui.theme.AccentGreen
+import com.careersandbox.app.ui.theme.BrandAmber
+import com.careersandbox.app.ui.theme.BrandOrange
 
 /* =====================================================================
    模型驅動沙盒 —— 內容引擎(混合架構的「表層內容」)
@@ -86,11 +90,29 @@ data class ChatThread(
     val script: List<ChatMsg>,
 )
 
+/** 行事曆事件(欄位對齊原 NovaCalendar 的 CalEvent,渲染碼不變) */
+data class CalEvent(
+    val title: String,
+    val sub: String,
+    val bar: Color,
+    val current: Boolean = false,
+    val note: String = "",
+)
+
+/** 週列一格(欄位對齊原 NovaCalendar 的 WeekDay) */
+data class WeekDay(val label: String, val num: String, val selected: Boolean)
+
+/** 內部社群貼文(欄位對齊原 NovaGram 的 GramPost) */
+data class GramPost(val img: Int, val caption: String, val likes: String)
+
 interface SandboxContentEngine {
     fun inbox(day: Int, flags: List<String>, mt: Int, pb: Int, pi: Int): List<MailRow>
     fun mailBody(id: String, day: Int, flags: List<String>, mt: Int, pb: Int, pi: Int): MailBody?
     fun chatRows(day: Int, flags: List<String>, mt: Int, pb: Int, pi: Int): List<ChatRow>
     fun chatThread(id: String, day: Int, flags: List<String>, mt: Int, pb: Int, pi: Int): ChatThread?
+    fun calendarEvents(day: Int): List<CalEvent>
+    fun calendarWeek(day: Int): List<WeekDay>
+    fun gramPosts(pb: Int): List<GramPost>
 }
 
 object SandboxContentEngineProvider {
@@ -321,4 +343,85 @@ object MockSandboxContentEngine : SandboxContentEngine {
         ChatRow("notice", "NovaPay 公告", "【系統維護】今晚 23:00 起例行維護", "11:05", "", false, false, true, letter = "公", bg = Color(0xFF6B7280)),
         ChatRow("mom", "媽", "記得吃飯,不要又熬夜", "昨天", "", false, false, false, letter = "媽", bg = Color(0xFFB85C3A)),
     )
+
+    // ===================== 行事曆(NovaCalendar):依「第幾天」顯示當天行程 =====================
+    private val purple = Color(0xFF8B5CF6)
+    private val red = Color(0xFFEF4444)
+
+    override fun calendarWeek(day: Int): List<WeekDay> {
+        val sel = (if (day < 1) 1 else if (day > 5) 5 else day) + 22   // Day1→23 … Day5→27
+        val nums = listOf("22", "23", "24", "25", "26", "27", "28")
+        val labels = listOf("日", "一", "二", "三", "四", "五", "六")
+        return nums.indices.map { WeekDay(labels[it], nums[it], nums[it].toInt() == sel) }
+    }
+
+    override fun calendarEvents(day: Int): List<CalEvent> = when (if (day < 1) 1 else day) {
+        2 -> listOf(
+            CalEvent("清理信箱", "09:30 · 收件匣", BrandOrange, current = true,
+                note = "今天信會炸;先分優先序,別被最吵的那封綁架。"),
+            CalEvent("與 Vivian 對 demo", "11:00 · 客戶案", purple,
+                note = "確認 demo 真正要展示什麼,別當場開天窗。"),
+            CalEvent("Sprint 站會", "11:30–11:45 · 線上", AccentGreen,
+                note = "同步昨天決議造成的影響。"),
+            CalEvent("看 CI 失敗", "14:00 · wallet-team", red,
+                note = "build #4821 掛了,先確認是不是擋上線的關鍵。"),
+        )
+        3 -> listOf(
+            CalEvent("會前準備", "09:30 · 整理立場", AccentBlue,
+                note = "想清楚你要主張什麼,別到會議室才想。"),
+            CalEvent("跨部門排程會議", "10:30–11:30 · 大會議室", BrandOrange, current = true,
+                note = "今天的硬仗:排程要調,每條路都有人受傷。"),
+            CalEvent("Sprint 站會", "13:30 · 線上", AccentGreen,
+                note = "把會議決議同步給團隊。"),
+            CalEvent("更新分帳 spec", "15:00 · 文件", purple,
+                note = "把今天定的範圍寫回文件。"),
+        )
+        4 -> listOf(
+            CalEvent("Sprint 站會", "11:00 · 線上", AccentGreen,
+                note = "進度同步。"),
+            CalEvent("團隊午餐", "12:00 · 三樓交誼廳", BrandAmber, current = true,
+                note = "HR 辦的聚餐,放鬆一下,順便修補關係。"),
+            CalEvent("阿哲的工具分享", "15:00 · 茶水間", AccentBlue,
+                note = "他週末寫的東西;捧個場,關係會不一樣。"),
+        )
+        5 -> listOf(
+            CalEvent("週報整理", "10:00 · 個人", AccentBlue,
+                note = "把這週做的整理一下,等下 Ken 會問。"),
+            CalEvent("與 Ken 週回顧", "16:00 · 會議室 A", BrandOrange, current = true,
+                note = "第一週收尾;誠實看自己哪裡好、哪裡會重來。"),
+            CalEvent("週五收工", "18:00", BrandAmber,
+                note = "撐過第一週了。"),
+        )
+        else -> listOf(
+            CalEvent("與 Ken 的 1on1", "09:00–09:30 · 會議室 A", AccentBlue,
+                note = "帶上分帳問題的初步判斷,Ken 會問你怎麼看。"),
+            CalEvent("Sprint 站會", "11:00–11:15 · 線上", AccentGreen,
+                note = "簡短同步進度;阿哲可能會提排程風險。"),
+            CalEvent("午餐 · 小芳", "12:00", BrandAmber,
+                note = "認識同事的好機會,別整頓飯都在講工作。"),
+            CalEvent("讀分帳 spec", "14:00–15:30 · 專注時段", BrandOrange, current = true,
+                note = "今天的重點:把分帳邏輯讀透,下午要做判斷。"),
+            CalEvent("回 Vivian", "16:00 · 客戶需求", purple,
+                note = "客戶 demo 在催,回覆前先確認工程實際可行的範圍。"),
+        )
+    }
+
+    // ===================== 內部社群(NovaGram):依「同事情誼」顯示團隊氣氛 =====================
+    override fun gramPosts(pb: Int): List<GramPost> = when (tier(pb)) {
+        -1 -> listOf(
+            GramPost(R.drawable.feed_1, "又是一個人加班,辦公室只剩我的鍵盤聲", "12"),
+            GramPost(R.drawable.feed_2, "新環境第一週,還在找誰能說上話", "31"),
+            GramPost(R.drawable.feed_3, "週末上山,把一週的悶氣都丟在山上", "54"),
+        )
+        1 -> listOf(
+            GramPost(R.drawable.feed_1, "加班後同事揪夜市,原來大家都不容易", "96"),
+            GramPost(R.drawable.feed_2, "新辦公室第一週,還好遇到一群願意罩的人", "152"),
+            GramPost(R.drawable.feed_3, "週末上山充電,下週跟夥伴繼續拚", "188"),
+        )
+        else -> listOf(
+            GramPost(R.drawable.feed_1, "加班後的小確幸,夜市犒賞自己", "42"),
+            GramPost(R.drawable.feed_2, "新辦公室第一週,假裝自己很從容", "88"),
+            GramPost(R.drawable.feed_3, "週末上山把腦袋清空,下週再戰", "126"),
+        )
+    }
 }
