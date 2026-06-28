@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.careersandbox.app.data.mock.RepChange
+import com.careersandbox.app.data.mock.WorkplaceState
 import com.careersandbox.app.ui.components.pressScale
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.VolumeOff
@@ -64,8 +66,10 @@ fun SandboxDecisionScene(
     sceneLabel: String = "決策時刻",
     bgRes: Int? = null,
     repPop: RepChange? = null,
+    callback: String? = null,
 ) {
     val ctx = LocalContext.current
+    LaunchedEffect(Unit) { SoundManager.sfx(R.raw.sfx_notify) }   // 決策登場提示音(進場時一次)
     Box(Modifier.fillMaxSize()) {
         // ===== 背景層:有實景圖就用圖(疊暈影+下方加深),否則用程式畫的暖色房間 =====
         if (bgRes != null) {
@@ -127,8 +131,16 @@ fun SandboxDecisionScene(
             )
         }
         Column(
-            Modifier.fillMaxSize().padding(start = 22.dp, end = 22.dp, top = 56.dp, bottom = 32.dp),
+            Modifier.fillMaxSize().padding(start = 22.dp, end = 22.dp, top = 46.dp, bottom = 32.dp),
         ) {
+            // ===== 常駐聲望 HUD(三條計量全程可見)=====
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                MeterPill("主管信任", WorkplaceState.managerTrust.value, Amber, Modifier.weight(1f))
+                MeterPill("同事情誼", WorkplaceState.peerBond.value, WarmOrange, Modifier.weight(1f))
+                MeterPill("專業形象", WorkplaceState.proImage.value, Color(0xFF10B981), Modifier.weight(1f))
+            }
+            Spacer(Modifier.height(12.dp))
+
             // ===== 頂部:決策時刻 + 暫停 =====
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Row(
@@ -182,6 +194,22 @@ fun SandboxDecisionScene(
             }
 
             Spacer(Modifier.height(8.dp))
+
+            // ===== 後果回收(過去選擇/剛翻到的內容影響當下)=====
+            if (callback != null) {
+                Row(
+                    Modifier.fillMaxWidth().height(IntrinsicSize.Min)
+                        .clip(RoundedCornerShape(10.dp)).background(Color(0x52281C12)),
+                ) {
+                    Box(Modifier.width(3.dp).fillMaxHeight().background(Amber))
+                    Text(
+                        callback,
+                        color = Color(0xFFFFF3E4), fontSize = 12.sp, lineHeight = 18.sp,
+                        modifier = Modifier.padding(horizontal = 11.dp, vertical = 9.dp),
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+            }
 
             // ===== 對話框(amber 名牌 + 旁白)=====
             Box {
@@ -253,6 +281,30 @@ fun SandboxDecisionScene(
                     }
                 }
             }
+        }
+    }
+}
+
+/* ---------- 常駐 HUD 的單條計量 ---------- */
+@Composable
+private fun MeterPill(label: String, value: Int, color: Color, modifier: Modifier) {
+    Column(
+        modifier.clip(RoundedCornerShape(11.dp)).background(Color(0x6B281C12))
+            .padding(horizontal = 9.dp, vertical = 6.dp),
+    ) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(label, color = Color(0xFFE9D9C8), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            Text("$value", color = PaperWhite, fontSize = 11.sp, fontWeight = FontWeight.Black)
+        }
+        Spacer(Modifier.height(5.dp))
+        Box(
+            Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(999.dp))
+                .background(Color(0x2EFFFFFF)),
+        ) {
+            Box(
+                Modifier.fillMaxWidth((value / 10f).coerceIn(0f, 1f)).fillMaxHeight()
+                    .clip(RoundedCornerShape(999.dp)).background(color),
+            )
         }
     }
 }

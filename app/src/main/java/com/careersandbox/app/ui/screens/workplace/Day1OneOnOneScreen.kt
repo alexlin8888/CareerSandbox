@@ -124,6 +124,12 @@ fun Day1OneOnOneScreen(navController: NavHostController) {
         choices = current.choices,
         bgRes = R.drawable.bg_scene_1on1,
         repPop = repPop,
+        callback = when {
+            beat == 1 && WorkplaceState.hasFlag("d1_overpromise") -> "你剛才跟 Ken 拍胸脯說月底沒問題——這句他記住了。"
+            beat == 1 && WorkplaceState.hasFlag("d1_passback") -> "你剛把問題丟回給 Ken，現在他要你自己給答案。"
+            beat == 2 && WorkplaceState.hasFlag("d1_crunch") -> "你上一題選了壓工程加班——這個決定，是工程在扛。"
+            else -> null
+        },
         onBack = { navController.popBackStack() },
         onChoose = { c ->
             if (c.repDelta != 0) {
