@@ -134,7 +134,12 @@ fun CareerSandboxNavHost(
         composable(Routes.RESUME_PROFILE) { ResumeProfileScreen(navController) }
         composable(Routes.RESUME_UPLOAD_PROCESSING) { ResumeUploadProcessingScreen(navController) }
         composable(Routes.CAREER_EXPLORATION) { CareerExplorationScreen(navController) }
-        composable(Routes.LEARNING_PATH) { LearningPathScreen(navController) }
+        composable(
+            route = "${Routes.LEARNING_PATH}?plan={plan}",
+            arguments = listOf(navArgument("plan") { type = NavType.StringType; defaultValue = "0" }),
+        ) { entry ->
+            LearningPathScreen(navController, startInPlan = entry.arguments?.getString("plan") == "1")
+        }
         composable(Routes.FIT_ANALYSIS) { FitAnalysisScreen(navController) }
 
         composable(Routes.COMPETITION_LIST) { CompetitionListScreen(navController) }

@@ -110,8 +110,8 @@ private val demoProjects = listOf(
 /* ===================================================================== */
 
 @Composable
-fun LearningPathScreen(navController: NavHostController) {
-    var mode by remember { mutableStateOf(LpMode.FORM) }
+fun LearningPathScreen(navController: NavHostController, startInPlan: Boolean = false) {
+    var mode by remember { mutableStateOf(if (startInPlan) LpMode.PLAN else LpMode.FORM) }
     when (mode) {
         LpMode.FORM -> LpForm(navController, onGenerate = { mode = LpMode.PLAN })
         LpMode.PLAN -> LpPlan(navController, onEditForm = { mode = LpMode.FORM })

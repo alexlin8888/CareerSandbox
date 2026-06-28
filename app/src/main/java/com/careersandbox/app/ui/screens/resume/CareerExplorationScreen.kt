@@ -292,16 +292,21 @@ fun CareerExplorationScreen(navController: NavHostController) {
                     Spacer(Modifier.height(20.dp))
 
                     AnimatedSection(visible = visible, delayMs = 500) {
-                        Box(
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(56.dp)
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(BrandOrange)
-                                .pressScale { navController.navigate(Routes.LEARNING_PATH) },
-                            contentAlignment = Alignment.Center,
+                                .background(Brush.linearGradient(listOf(BrandOrange, BrandDeepOrange)))
+                                .pressScale { navController.navigate("${Routes.LEARNING_PATH}?plan=1") }
+                                .padding(vertical = 15.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
-                            Text("打開學習路徑", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                            Text("✦ 一鍵生成每日計畫", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                            Spacer(Modifier.height(3.dp))
+                            Text(
+                                "把這三步自動展開成每天可執行的學習任務",
+                                color = PaperWhite.copy(alpha = 0.92f), fontSize = 11.sp,
+                            )
                         }
                     }
                     Spacer(Modifier.height(10.dp))
