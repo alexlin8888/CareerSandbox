@@ -68,6 +68,23 @@ fun Day2EmailScreen(navController: NavHostController) {
     }
 
     val red = Color(0xFFEA4335)
+    // 回收 Day1 的選擇：昨天你怎麼對阿哲 / Vivian，今天信裡讀得出來
+    val zheBody = when {
+        WorkplaceState.hasFlag("d1_press_zhe") ->
+            "race condition 我還在追。你昨天不是說我在『留 buffer』嗎？那你來追。下午會議我會『說明』。\n\n— 阿哲"
+        WorkplaceState.hasFlag("d1_trust_zhe") ->
+            "race condition 我還在追，謝謝你昨天沒急著逼我。下午會議我會完整說明，你放心。\n\n— 阿哲"
+        else ->
+            "race condition 我還在追，別逼我給假的日期。下午會議我會說明。\n\n— 阿哲"
+    }
+    val vivianBody = when {
+        WorkplaceState.hasFlag("d1_vivian_throw") ->
+            "客戶問資料匯出的 API 規格，這part我真的看不懂…我知道你大概覺得 demo 是我自己挖的洞。但還是想問，要找誰比較好？拜託🙏"
+        WorkplaceState.hasFlag("d1_vivian_bridge") ->
+            "客戶問資料匯出的 API 規格，這part我看不懂…昨天謝謝你幫我擋著，這次想先問問你要找誰？🙏"
+        else ->
+            "客戶問資料匯出的 API 規格，這part我真的看不懂…幫忙看一下要找誰？很急拜託拜託🙏"
+    }
     val mails = listOf(
         Day2Mail(
             "Ken", "ken@novapay.com", "K", Color(0xFF1A73E8),
@@ -87,7 +104,7 @@ fun Day2EmailScreen(navController: NavHostController) {
         Day2Mail(
             "阿哲", "jhe@novapay.com", "哲", Color(0xFF12B5A5),
             "Re: 分帳 bug 進度", "工作", Color(0xFFF59E0B),
-            "race condition 我還在追，別逼我給假的日期。下午會議我會說明。\n\n— 阿哲",
+            zheBody,
             listOf(
                 DecisionChoice("A", "回他：了解，我不催日期，會議上一起看。",
                     "同事情誼", 1, "", "d2_respect_eng"),
@@ -98,7 +115,7 @@ fun Day2EmailScreen(navController: NavHostController) {
         Day2Mail(
             "Vivian", "vivian@novapay.com", "V", Color(0xFFEC4899),
             "客戶問 API 匯出規格", "收件匣", red,
-            "客戶問資料匯出的 API 規格，這part我真的看不懂…幫忙看一下要找誰？很急拜託拜託🙏",
+            vivianBody,
             listOf(
                 DecisionChoice("A", "這要問工程，我幫你 tag 阿哲。",
                     "專業形象", 1, ""),
