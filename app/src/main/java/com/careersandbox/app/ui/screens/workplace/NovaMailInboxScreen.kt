@@ -26,41 +26,13 @@ import com.careersandbox.app.R
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.data.mock.WorkplaceState
+import com.careersandbox.app.data.mock.SandboxContentEngineProvider
 import com.careersandbox.app.ui.theme.*
 
 /* =====================================================================
    NovaMail 收件匣 —— Day3 Ken 的決議信進來
    通用郵件清單語言：星號 / 重要菱形 / 附件 / 標籤；未讀粗體、已讀灰。
    ===================================================================== */
-
-private data class NovaMailRow(
-    val id: String,
-    val sender: String,
-    val subject: String,
-    val prev: String,
-    val time: String,
-    val unread: Boolean,
-    val star: Boolean,
-    val imp: Boolean,
-    val attach: Boolean,
-    val res: Int? = null,
-    val letter: String = "",
-    val avBg: Color = Color(0xFFCBD5E1),
-    val label: String = "",
-    val labelBg: Color = Color.Transparent,
-    val labelCol: Color = Color.Transparent,
-)
-
-private val novaMailRows = listOf(
-    NovaMailRow("ken", "Ken", "分帳的事", "聽說分帳功能有狀況。今天 5 點前…", "14:04", true, true, true, true, res = R.drawable.ken_neutral),
-    NovaMailRow("vivian", "Vivian", "客戶下週要 demo", "他們董事會已經排好時間了…", "13:50", true, false, true, false, res = R.drawable.colleague_vivian),
-    NovaMailRow("ci", "CI 建置通知", "[wallet] build #4821 失敗", "pipeline failed at integration-test…", "10:32", true, false, false, false,
-        letter = "CI", avBg = Color(0xFF64748B), label = "工作", labelBg = Color(0xFFFCE8E6), labelCol = Color(0xFFC5392D)),
-    NovaMailRow("hr", "NovaPay HR", "本週五團隊午餐", "記得回覆出席與飲食偏好…", "11:20", false, false, false, false,
-        letter = "HR", avBg = Color(0xFF3B82F6)),
-    NovaMailRow("promo", "雲端服務電子報", "限時優惠：年費 5 折", "升級 Pro 享更多儲存空間…", "昨天", false, false, false, false,
-        letter = "雲", avBg = Color(0xFF10B981), label = "促銷內容", labelBg = Color(0xFFE6F4EA), labelCol = Color(0xFF1E8E5A)),
-)
 
 @Composable
 fun NovaMailInboxScreen(navController: NavHostController) {
@@ -97,7 +69,7 @@ fun NovaMailInboxScreen(navController: NavHostController) {
 
             // ===== 郵件列表 =====
             Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll)) {
-                novaMailRows.forEach { m ->
+                SandboxContentEngineProvider.engine.inbox(WorkplaceState.currentDay.value, WorkplaceState.flags.toList(), WorkplaceState.managerTrust.value, WorkplaceState.peerBond.value, WorkplaceState.proImage.value).forEach { m ->
                     val unread = m.unread && !WorkplaceState.isItemRead("mail:${m.id}")   // 讀過該封就不再顯示未讀樣式
                     Row(
                         modifier = Modifier.fillMaxWidth()
