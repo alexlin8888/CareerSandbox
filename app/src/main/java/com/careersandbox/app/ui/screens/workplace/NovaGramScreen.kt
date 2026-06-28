@@ -9,9 +9,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite as FilledFavorite
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.outlined.Comment
-import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.Send
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -127,7 +127,7 @@ private fun GramPostCard(p: GramPost) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                if (liked) FilledFavorite else Icons.Outlined.Favorite,
+                if (liked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                 contentDescription = "讚",
                 tint = if (liked) Color(0xFFE0245E) else Color(0xFF1F1916),
                 modifier = Modifier.size(24.dp).clickable { liked = !liked },
