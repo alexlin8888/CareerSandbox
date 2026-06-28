@@ -47,17 +47,20 @@ private data class Consequence(val who: String, val text: String, val accent: Co
 @Composable
 fun Day5ReviewScreen(navController: NavHostController) {
     val audioCtx = LocalContext.current
-    LaunchedEffect(Unit) { WorkplaceState.currentDay.value = 5; SoundManager.playBgm(audioCtx, R.raw.bgm_night) }
+    LaunchedEffect(Unit) { WorkplaceState.currentDay.value = 5; WorkplaceState.beginAppPhase(5); SoundManager.playBgm(audioCtx, R.raw.bgm_night) }
     var phase by remember { mutableStateOf("oneonone") } // oneonone | board | night
     var taskStarted by remember { mutableStateOf(false) }
 
     if (!taskStarted) {
         WorkplaceHome(
             navController = navController,
-            taskTitle = "週五回顧",
-            taskSubtitle = "下班前，Ken 找你結算這週",
-            dateLabel = "6月27日 星期五",
-            onStartTask = { taskStarted = true },
+            dayLabel = "週五 · DAY 5",
+            objective = "週五了。看「週報」這週的數字、翻「團隊」看自己現在的位置，誠實面對這週你變成什麼樣的人，再去找 Ken。",
+            relevantKeys = setOf("dashboard", "team"),
+            unreadCounts = mapOf("dashboard" to 1, "team" to 1),
+            decisionLabel = "去找 Ken 結算",
+            decisionHint = "看完 週報 · 團隊 再過去",
+            onDecision = { taskStarted = true },
         )
         return
     }

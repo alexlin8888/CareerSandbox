@@ -54,7 +54,7 @@ private data class D3Beat(val narration: String, val choices: List<DecisionChoic
 @Composable
 fun Day3MeetingScreen(navController: NavHostController) {
     val audioCtx = LocalContext.current
-    LaunchedEffect(Unit) { WorkplaceState.currentDay.value = 3; SoundManager.playBgm(audioCtx, R.raw.bgm_tense) }
+    LaunchedEffect(Unit) { WorkplaceState.currentDay.value = 3; WorkplaceState.beginAppPhase(3); SoundManager.playBgm(audioCtx, R.raw.bgm_tense) }
     var phase by remember { mutableStateOf("meeting") } // meeting | decision | done
     var capIdx by remember { mutableIntStateOf(0) }
     var beat by remember { mutableIntStateOf(0) }
@@ -125,10 +125,13 @@ fun Day3MeetingScreen(navController: NavHostController) {
     if (!taskStarted) {
         WorkplaceHome(
             navController = navController,
-            taskTitle = "產品進度會議",
-            taskSubtitle = "14:30 會議室 B，跨部門對齊",
-            dateLabel = "6月25日 星期三",
-            onStartTask = { taskStarted = true },
+            dayLabel = "週三 · DAY 3",
+            objective = "今天跨部門會議定生死。會前先看「行事曆」確認議程、翻「決議」上次結論、開「會議」看誰會在，準備好你的版本。",
+            relevantKeys = setOf("calendar", "doc", "meet"),
+            unreadCounts = mapOf("calendar" to 1, "doc" to 2, "meet" to 1),
+            decisionLabel = "進會議室",
+            decisionHint = "看完 行事曆 · 決議 · 會議 再進去",
+            onDecision = { taskStarted = true },
         )
         return
     }

@@ -55,7 +55,7 @@ private data class Day2Mail(
 @Composable
 fun Day2EmailScreen(navController: NavHostController) {
     val audioCtx = LocalContext.current
-    LaunchedEffect(Unit) { WorkplaceState.currentDay.value = 2; SoundManager.playBgm(audioCtx, R.raw.bgm_neutral) }
+    LaunchedEffect(Unit) { WorkplaceState.currentDay.value = 2; WorkplaceState.beginAppPhase(2); SoundManager.playBgm(audioCtx, R.raw.bgm_neutral) }
     var idx by remember { mutableIntStateOf(0) }
     var done by remember { mutableStateOf(false) }
     var repPop by remember { mutableStateOf<RepChange?>(null) }
@@ -131,10 +131,13 @@ fun Day2EmailScreen(navController: NavHostController) {
     if (!taskStarted) {
         WorkplaceHome(
             navController = navController,
-            taskTitle = "處理今天的信",
-            taskSubtitle = "收件匣有幾封等你回",
-            dateLabel = "6月24日 星期二",
-            onStartTask = { taskStarted = true },
+            dayLabel = "週二 · DAY 2",
+            objective = "信箱炸了。先把「郵件」看完、分清楚哪封急哪封能等，「訊息」也有人在敲你，再決定怎麼回業務跟工程。",
+            relevantKeys = setOf("mail", "chat"),
+            unreadCounts = mapOf("mail" to 5, "chat" to 2),
+            decisionLabel = "回信、做決定",
+            decisionHint = "看完 郵件 · 訊息 再決定",
+            onDecision = { taskStarted = true },
         )
         return
     }

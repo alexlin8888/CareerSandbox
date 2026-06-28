@@ -53,7 +53,7 @@ private data class D4Beat(val speaker: String, val portrait: Int, val narration:
 @Composable
 fun Day4LunchScreen(navController: NavHostController) {
     val audioCtx = LocalContext.current
-    LaunchedEffect(Unit) { WorkplaceState.currentDay.value = 4; SoundManager.playBgm(audioCtx, R.raw.bgm_warm) }
+    LaunchedEffect(Unit) { WorkplaceState.currentDay.value = 4; WorkplaceState.beginAppPhase(4); SoundManager.playBgm(audioCtx, R.raw.bgm_warm) }
     var phase by remember { mutableStateOf("story") } // story | lunch | done
     var beat by remember { mutableIntStateOf(0) }
     var repPop by remember { mutableStateOf<RepChange?>(null) }
@@ -115,10 +115,13 @@ fun Day4LunchScreen(navController: NavHostController) {
     if (!taskStarted) {
         WorkplaceHome(
             navController = navController,
-            taskTitle = "和同事吃午餐",
-            taskSubtitle = "中午，茶水間集合",
-            dateLabel = "6月26日 星期四",
-            onStartTask = { taskStarted = true },
+            dayLabel = "週四 · DAY 4",
+            objective = "午餐前，小芳發了限動。看看「動態」她貼了什麼、「訊息」群組在約什麼，再決定中午怎麼接。",
+            relevantKeys = setOf("gram", "chat"),
+            unreadCounts = mapOf("gram" to 1, "chat" to 2),
+            decisionLabel = "去吃午餐",
+            decisionHint = "看完 動態 · 訊息 再過去",
+            onDecision = { taskStarted = true },
         )
         return
     }

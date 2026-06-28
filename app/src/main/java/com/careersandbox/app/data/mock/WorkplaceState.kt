@@ -62,6 +62,22 @@ object WorkplaceState {
 
     fun isDayDone(day: Int): Boolean = day in completedDays
 
+    // ===== 翻 app 機制(紅點引導)：本階段已翻過哪些 app =====
+    val visitedApps = mutableStateListOf<String>()
+    private var appPhaseDay = 0   // 哪一天的翻 app 階段(回桌面 recompose 時不誤清)
+
+    /** 進入某天翻 app 階段：只在換天時清掉已翻記錄(進 app 再回桌面不會清) */
+    fun beginAppPhase(day: Int) {
+        if (appPhaseDay != day) {
+            appPhaseDay = day
+            visitedApps.clear()
+        }
+    }
+
+    fun visitApp(key: String) { if (key !in visitedApps) visitedApps.add(key) }
+
+    fun isAppVisited(key: String): Boolean = key in visitedApps
+
     /** 動態人設:依三條數值給一句「你在這間公司是什麼樣的人」 */
     fun persona(): String {
         val t = managerTrust.value
@@ -86,5 +102,7 @@ object WorkplaceState {
         completedDays.clear()
         currentDay.value = 0
         log.clear()
+        visitedApps.clear()
+        appPhaseDay = 0
     }
 }

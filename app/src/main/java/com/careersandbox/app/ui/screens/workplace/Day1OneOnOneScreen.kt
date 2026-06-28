@@ -11,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.rememberCoroutineScope
@@ -39,10 +40,10 @@ private data class D1Beat(val narration: String, val choices: List<DecisionChoic
 @Composable
 fun Day1OneOnOneScreen(navController: NavHostController) {
     val audioCtx = LocalContext.current
-    LaunchedEffect(Unit) { WorkplaceState.currentDay.value = 1; SoundManager.playBgm(audioCtx, R.raw.bgm_warm) }
+    LaunchedEffect(Unit) { WorkplaceState.currentDay.value = 1; WorkplaceState.beginAppPhase(1); SoundManager.playBgm(audioCtx, R.raw.bgm_warm) }
     var beat by remember { mutableIntStateOf(0) }
     var done by remember { mutableStateOf(false) }
-    var unlocked by remember { mutableStateOf(false) }
+    var unlocked by rememberSaveable { mutableStateOf(false) }
     var taskStarted by remember { mutableStateOf(false) }
     var repPop by remember { mutableStateOf<RepChange?>(null) }
     var reaction by remember { mutableStateOf<Int?>(null) }
@@ -99,9 +100,13 @@ fun Day1OneOnOneScreen(navController: NavHostController) {
     if (!taskStarted) {
         WorkplaceHome(
             navController = navController,
-            taskTitle = "與 Ken 的一對一",
-            taskSubtitle = "走進辦公室，開始第一天",
-            onStartTask = { taskStarted = true },
+            dayLabel = "週一 · DAY 1",
+            objective = "到職第一天。Ken 待會要找你談分帳。先看看「訊息」跟「郵件」——前一個人留下什麼、誰在傳什麼，心裡有個底再進去。",
+            relevantKeys = setOf("chat", "mail"),
+            unreadCounts = mapOf("chat" to 1, "mail" to 3),
+            decisionLabel = "進辦公室見 Ken",
+            decisionHint = "看完 訊息 · 郵件 再進去",
+            onDecision = { taskStarted = true },
         )
         return
     }
