@@ -129,7 +129,12 @@ fun CareerSandboxNavHost(
         composable(Routes.NOVA_CHAT) { NovaChatScreen(navController) }
         composable(Routes.NOVA_CHAT_LIST) { NovaBackFrame(navController) { NovaChatListScreen(navController) } }
         composable(Routes.NOVA_MAIL_INBOX) { NovaBackFrame(navController) { NovaMailInboxScreen(navController) } }
-        composable(Routes.NOVA_MAIL_OPEN) { NovaMailOpenScreen(navController) }
+        composable(
+            route = "${Routes.NOVA_MAIL_OPEN}?id={id}",
+            arguments = listOf(navArgument("id") { type = NavType.StringType; defaultValue = "ken" }),
+        ) { entry ->
+            NovaMailOpenScreen(navController, mailId = entry.arguments?.getString("id") ?: "ken")
+        }
         composable(Routes.NOVA_CALENDAR) { NovaBackFrame(navController) { NovaCalendarScreen(navController) } }
         composable(Routes.NOVA_TEAM) { NovaTeamScreen(navController) }
         composable(Routes.NOVA_MEET) { NovaMeetScreen(navController) }
