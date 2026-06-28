@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
@@ -23,13 +25,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
+import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 import kotlinx.coroutines.delay
 
@@ -59,6 +64,8 @@ fun NovaChatScreen(navController: NavHostController) {
     var shown by remember { mutableStateOf(0) }
     val scroll = rememberScrollState()
     val lastOutIdx = remember { novaChatScript.indexOfLast { !it.incoming } }
+    var draft by remember { mutableStateOf("") }
+    val extraMsgs = remember { mutableStateListOf<ChatMsg>() }
 
     // 訊息逐則出現（對方訊息前先「輸入中」一下）
     LaunchedEffect(Unit) {
@@ -68,6 +75,7 @@ fun NovaChatScreen(navController: NavHostController) {
         }
     }
     LaunchedEffect(shown) { scroll.animateScrollTo(scroll.maxValue) }
+    LaunchedEffect(extraMsgs.size) { scroll.animateScrollTo(scroll.maxValue) }
 
     val typing = shown < novaChatScript.size && novaChatScript[shown].incoming
 
@@ -125,9 +133,29 @@ fun NovaChatScreen(navController: NavHostController) {
                 Spacer(Modifier.height(8.dp))
             }
             if (typing) TypingBubble()
+            extraMsgs.forEach { m ->
+                ChatBubble(m, showRead = false)
+                Spacer(Modifier.height(8.dp))
+            }
         }
 
-        // ===== 輸入列 =====
+        // ===== 快速回覆 chip =====
+        Row(
+            Modifier.fillMaxWidth().background(PaperWhite)
+                .horizontalScroll(rememberScrollState())
+                .padding(start = 12.dp, end = 12.dp, top = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            listOf("我去跟業務確認排程", "先別硬上，把 bug 清完再說", "需要我幫你頂一下嗎？").forEach { q ->
+                Box(
+                    Modifier.clip(RoundedCornerShape(50)).background(PaperOff)
+                        .pressScale { extraMsgs.add(ChatMsg("你", q, "14:03", false)) }
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                ) { Text(q, color = InkSlate, fontSize = 12.sp, maxLines = 1) }
+            }
+        }
+
+        // ===== 輸入列(可互動：打字 / 送出附上你的泡泡)=====
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -144,10 +172,25 @@ fun NovaChatScreen(navController: NavHostController) {
                     .clip(RoundedCornerShape(50))
                     .background(PaperOff)
                     .padding(horizontal = 16.dp, vertical = 11.dp),
-            ) { Text("輸入訊息", color = InkGray500, fontSize = 13.sp) }
+            ) {
+                BasicTextField(
+                    value = draft,
+                    onValueChange = { draft = it },
+                    textStyle = TextStyle(color = InkBlack, fontSize = 13.sp),
+                    cursorBrush = SolidColor(BrandOrange),
+                    modifier = Modifier.fillMaxWidth(),
+                    decorationBox = { inner ->
+                        if (draft.isEmpty()) Text("輸入訊息", color = InkGray500, fontSize = 13.sp)
+                        inner()
+                    },
+                )
+            }
             Spacer(Modifier.width(10.dp))
+            val canSend = draft.isNotBlank()
             Box(
-                modifier = Modifier.size(38.dp).clip(CircleShape).background(BrandOrange),
+                modifier = Modifier.size(38.dp).clip(CircleShape)
+                    .background(if (canSend) BrandOrange else InkGray200)
+                    .pressScale { if (canSend) { extraMsgs.add(ChatMsg("你", draft.trim(), "14:03", false)); draft = "" } },
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(Icons.Outlined.ChevronRight, contentDescription = null,

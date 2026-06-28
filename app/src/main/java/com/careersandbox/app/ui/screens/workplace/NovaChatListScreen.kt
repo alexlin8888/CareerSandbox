@@ -23,6 +23,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
+import com.careersandbox.app.navigation.Routes
+import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 
 /* =====================================================================
@@ -90,7 +92,9 @@ fun NovaChatListScreen(navController: NavHostController) {
         Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll)) {
             novaChatRows.forEach { row ->
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 9.dp),
+                    modifier = Modifier.fillMaxWidth()
+                        .pressScale { navController.navigate(Routes.NOVA_CHAT) }
+                        .padding(horizontal = 16.dp, vertical = 9.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box {
