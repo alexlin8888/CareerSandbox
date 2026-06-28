@@ -149,6 +149,13 @@ fun Day4LunchScreen(navController: NavHostController) {
                 sceneLabel = "午餐時間",
                 bgRes = R.drawable.bg_scene_cafe,
                 repPop = repPop,
+                callback = when {
+                    b.speaker == "阿哲" && (WorkplaceState.hasFlag("d1_press_zhe") || WorkplaceState.hasFlag("d2_push_eng")) -> "上次會議你跟阿哲的空氣還沒散。他現在主動講週末寫的工具——這是他在遞橄欖枝。"
+                    b.speaker == "阿哲" && (WorkplaceState.hasFlag("d1_trust_zhe") || WorkplaceState.hasFlag("d2_respect_eng")) -> "這禮拜你對阿哲不算差。他願意跟你聊他週末做的東西，很自然。"
+                    beat == 1 && WorkplaceState.hasFlag("d1_overpromise") -> "小芳問你怎麼看 Ken。你想起週一脫口的「月底沒問題」——現在你更懂那句話的份量了。"
+                    beat == 1 && (WorkplaceState.hasFlag("d2_dump_vivian") || WorkplaceState.hasFlag("d1_vivian_throw")) -> "茶水間的話傳得快。你把 Vivian 推開的那些，小芳搞不好也聽說了。"
+                    else -> null
+                },
                 onBack = { navController.popBackStack() },
                 onChoose = { c ->
                     if (c.repDelta != 0) {
