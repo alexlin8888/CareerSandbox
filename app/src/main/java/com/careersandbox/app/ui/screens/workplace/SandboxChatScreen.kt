@@ -76,10 +76,12 @@ private fun npcMeta(npcId: String, day: Int): NpcMeta = when (npcId) {
 }
 
 @Composable
-fun SandboxChatScreen(
+fun SandboxConversation(
     navController: NavHostController,
-    npcId: String = "zhe",
-    day: Int = 3,
+    npcId: String,
+    day: Int,
+    opening: String? = null,
+    onConcluded: () -> Unit,
 ) {
     val meta = remember(npcId) { npcMeta(npcId, day) }
     val sessionId = remember { "sandbox-$npcId-$day" }
@@ -92,7 +94,7 @@ fun SandboxChatScreen(
 
     // 開場白(NPC 先說一句,引導玩家自由回覆)
     LaunchedEffect(Unit) {
-        if (bubbles.isEmpty()) bubbles.add(ChatBubble(false, meta.opening))
+        if (bubbles.isEmpty()) bubbles.add(ChatBubble(false, opening ?: meta.opening))
     }
     // 訊息變動 / 思考狀態 → 自動捲到底
     LaunchedEffect(bubbles.size, thinking) { scroll.animateScrollTo(scroll.maxValue) }
@@ -187,11 +189,11 @@ fun SandboxChatScreen(
                 Spacer(Modifier.height(6.dp))
                 Box(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-                        .background(BrandDeepOrange).pressScale { navController.popBackStack() }
+                        .background(BrandDeepOrange).pressScale { onConcluded() }
                         .padding(vertical = 14.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("這段對話告一段落 · 回到沙盒", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                    Text("結束這場對話 · 繼續", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 14.sp)
                 }
             }
         }
@@ -232,6 +234,21 @@ fun SandboxChatScreen(
             }
         }
     }
+}
+
+/** 獨立路由版(demo / 直接進入):聊完返回上一頁 */
+@Composable
+fun SandboxChatScreen(
+    navController: NavHostController,
+    npcId: String = "zhe",
+    day: Int = 3,
+) {
+    SandboxConversation(
+        navController = navController,
+        npcId = npcId,
+        day = day,
+        onConcluded = { navController.popBackStack() },
+    )
 }
 
 @Composable
