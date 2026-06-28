@@ -26,36 +26,13 @@ import com.careersandbox.app.R
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.data.mock.WorkplaceState
+import com.careersandbox.app.data.mock.SandboxContentEngineProvider
 import com.careersandbox.app.ui.theme.*
 
 /* =====================================================================
    NovaChat 聊天列表 —— Day2 訊息總覽
    主角吃既有立繪；群組/公告/媽用通用色塊頭像。系統列由系統提供，不自畫。
    ===================================================================== */
-
-private data class NovaChatRow(
-    val id: String,
-    val name: String,
-    val prev: String,
-    val time: String,
-    val unread: String,
-    val online: Boolean,
-    val pin: Boolean,
-    val mute: Boolean,
-    val res: Int? = null,
-    val letter: String = "",
-    val bg: Color = Color(0xFFCBD5E1),
-    val group: Boolean = false,
-)
-
-private val novaChatRows = listOf(
-    NovaChatRow("zhe", "阿哲", "下週一上線不可能，至少再兩週。", "14:01", "2", true, true, false, res = R.drawable.colleague_quiet),
-    NovaChatRow("vivian", "Vivian", "客戶不能跳票", "13:58", "1", true, true, false, res = R.drawable.colleague_vivian),
-    NovaChatRow("group", "產品群組 (8)", "[阿哲] 我先 push 一版，大家測一下", "13:30", "9", false, false, false, group = true, bg = Color(0xFFFFE0B2)),
-    NovaChatRow("ken", "Ken", "看一下你信箱", "13:45", "", true, false, false, res = R.drawable.ken_neutral),
-    NovaChatRow("notice", "NovaPay 公告", "【系統維護】今晚 23:00 起例行維護", "11:05", "", false, false, true, letter = "公", bg = Color(0xFF6B7280)),
-    NovaChatRow("mom", "媽", "記得吃飯，不要又熬夜", "昨天", "", false, false, false, letter = "媽", bg = Color(0xFFB85C3A)),
-)
 
 @Composable
 fun NovaChatListScreen(navController: NavHostController) {
@@ -92,7 +69,7 @@ fun NovaChatListScreen(navController: NavHostController) {
 
         // ===== 列表 =====
         Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll)) {
-            novaChatRows.forEach { row ->
+            SandboxContentEngineProvider.engine.chatRows(WorkplaceState.currentDay.value, WorkplaceState.flags.toList(), WorkplaceState.managerTrust.value, WorkplaceState.peerBond.value, WorkplaceState.proImage.value).forEach { row ->
                 Row(
                     modifier = Modifier.fillMaxWidth()
                         .pressScale { navController.navigate("${Routes.NOVA_CHAT}?id=${row.id}") }

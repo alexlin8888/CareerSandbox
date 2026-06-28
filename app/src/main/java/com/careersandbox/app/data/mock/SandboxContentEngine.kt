@@ -52,9 +52,45 @@ data class MailBody(
     val presets: List<String>,
 )
 
+/** LINE 清單一列(欄位對齊原 NovaChatList 的 NovaChatRow,渲染碼不變) */
+data class ChatRow(
+    val id: String,
+    val name: String,
+    val prev: String,
+    val time: String,
+    val unread: String,
+    val online: Boolean,
+    val pin: Boolean,
+    val mute: Boolean,
+    val res: Int? = null,
+    val letter: String = "",
+    val bg: Color = Color(0xFFCBD5E1),
+    val group: Boolean = false,
+)
+
+/** LINE 單則訊息(欄位對齊原 NovaChat 的 ChatMsg) */
+data class ChatMsg(
+    val sender: String,
+    val text: String,
+    val time: String,
+    val incoming: Boolean,
+)
+
+/** LINE 對話(欄位對齊原 NovaChat 的 ChatThread) */
+data class ChatThread(
+    val name: String,
+    val avatar: Int?,
+    val avatarLetter: String,
+    val avatarBg: Color,
+    val status: String,
+    val script: List<ChatMsg>,
+)
+
 interface SandboxContentEngine {
     fun inbox(day: Int, flags: List<String>, mt: Int, pb: Int, pi: Int): List<MailRow>
     fun mailBody(id: String, day: Int, flags: List<String>, mt: Int, pb: Int, pi: Int): MailBody?
+    fun chatRows(day: Int, flags: List<String>, mt: Int, pb: Int, pi: Int): List<ChatRow>
+    fun chatThread(id: String, day: Int, flags: List<String>, mt: Int, pb: Int, pi: Int): ChatThread?
 }
 
 object SandboxContentEngineProvider {
@@ -165,5 +201,124 @@ object MockSandboxContentEngine : SandboxContentEngine {
             letter = "HR", avBg = Color(0xFF3B82F6)),
         MailRow("promo", "雲端服務電子報", "限時優惠:年費 5 折", "升級 Pro 享更多儲存空間…", "昨天", false, false, false, false,
             letter = "雲", avBg = Color(0xFF10B981), label = "促銷內容", labelBg = Color(0xFFE6F4EA), labelCol = Color(0xFF1E8E5A)),
+    )
+
+    // ===================== LINE(NovaChat)內容,同樣依計量變 =====================
+
+    // 阿哲(zhe):看「同事情誼」——你把他推開→他封閉;建立交情→他願意一起扛
+    private fun zheThread(pb: Int): ChatThread {
+        val script = when (tier(pb)) {
+            -1 -> listOf(
+                ChatMsg("阿哲", "分帳金流串接卡關,有 bug 一直測不完。", "14:00", true),
+                ChatMsg("阿哲", "下週一上線不可能,至少再兩週。", "14:01", true),
+                ChatMsg("你", "這麼嚴重?", "14:01", false),
+                ChatMsg("阿哲", "嗯。我自己處理,有結果再跟你說。", "14:03", true),
+            )
+            1 -> listOf(
+                ChatMsg("阿哲", "早,分帳金流串接卡關,有個 bug 一直測不完。", "14:00", true),
+                ChatMsg("阿哲", "下週一上線真的有風險,但我想跟你一起看怎麼壓時間。", "14:01", true),
+                ChatMsg("你", "好,我們一起看。業務那邊我會說明。", "14:01", false),
+                ChatMsg("阿哲", "謝啦,我把 bug 清單整理給你,我們對一下優先序。", "14:02", true),
+            )
+            else -> listOf(
+                ChatMsg("阿哲", "早,分帳功能金流串接卡關,有個 bug 一直測不完。", "14:00", true),
+                ChatMsg("阿哲", "下週一上線不可能,至少再兩週。", "14:01", true),
+                ChatMsg("你", "這麼嚴重?業務那邊知道了嗎", "14:01", false),
+                ChatMsg("你", "Vivian 一直催,她說客戶不能跳票", "14:01", false),
+                ChatMsg("阿哲", "我先看一下狀況,等等回你。", "14:02", true),
+            )
+        }
+        return ChatThread("阿哲", R.drawable.colleague_quiet, "", Color(0xFFCBD5E1), "工程組長 · 線上", script)
+    }
+    private fun zhePrev(pb: Int) = when (tier(pb)) {
+        -1 -> "我自己處理,有結果再說。"
+        1 -> "我把 bug 清單整理給你,一起對。"
+        else -> "下週一上線不可能,至少再兩週。"
+    }
+
+    // Vivian:看「同事情誼」
+    private fun vivianThread(pb: Int): ChatThread {
+        val script = when (tier(pb)) {
+            -1 -> listOf(
+                ChatMsg("Vivian", "分帳 demo 下週三客戶要看,時間我先答應了。", "13:55", true),
+                ChatMsg("Vivian", "工程說要延。你那邊能生個能跑的版本嗎?", "13:56", true),
+                ChatMsg("你", "我去問阿哲。", "13:57", false),
+                ChatMsg("Vivian", "好,那就麻煩你了。", "13:58", true),
+            )
+            else -> listOf(
+                ChatMsg("Vivian", "分帳的 demo 下週三客戶要看,時間我先答應了。", "13:55", true),
+                ChatMsg("Vivian", "工程說要延,但這場真的不能跳票 🙏", "13:56", true),
+                ChatMsg("你", "我了解,我去跟阿哲確認能不能先生一個 demo 版本", "13:57", false),
+                ChatMsg("Vivian", if (tier(pb) == 1) "拜託你了!有你頂著我安心多了 😭" else "拜託你了!有你頂著我安心多了", "13:58", true),
+            )
+        }
+        return ChatThread("Vivian", R.drawable.colleague_vivian, "", Color(0xFFCBD5E1), "業務 · 線上", script)
+    }
+    private fun vivianChatPrev(pb: Int) = if (tier(pb) == -1) "那就麻煩你了。" else "客戶不能跳票"
+
+    // Ken:看「主管信任」
+    private fun kenThread(mt: Int): ChatThread {
+        val script = when (tier(mt)) {
+            -1 -> listOf(
+                ChatMsg("Ken", "看一下你信箱,分帳的事我寄給你了。", "13:45", true),
+                ChatMsg("Ken", "5 點前給我建議,別拖,理由寫清楚。", "13:45", true),
+                ChatMsg("你", "收到。", "13:46", false),
+            )
+            1 -> listOf(
+                ChatMsg("Ken", "看一下你信箱,分帳的事我寄給你了。", "13:45", true),
+                ChatMsg("Ken", "你看完回我就好,不急,我相信你的判斷。", "13:45", true),
+                ChatMsg("你", "收到,我看完馬上回您。", "13:46", false),
+            )
+            else -> listOf(
+                ChatMsg("Ken", "看一下你信箱,分帳的事我寄給你了。", "13:45", true),
+                ChatMsg("Ken", "5 點前給我建議,記得寫清楚理由。", "13:45", true),
+                ChatMsg("你", "收到,我看完馬上回您。", "13:46", false),
+            )
+        }
+        return ChatThread("Ken", R.drawable.ken_neutral, "", Color(0xFFCBD5E1), "你的主管 · 線上", script)
+    }
+    private fun kenChatPrev(mt: Int) = when (tier(mt)) {
+        -1 -> "5 點前給我建議,別拖。"
+        1 -> "你看完回我就好,不急。"
+        else -> "看一下你信箱"
+    }
+
+    // 固定對話(群組/公告/家人)
+    private fun staticThread(id: String): ChatThread? = when (id) {
+        "group" -> ChatThread("產品群組 (8)", null, "群", Color(0xFFF59E0B), "8 位成員",
+            listOf(
+                ChatMsg("阿哲", "阿哲:我先 push 一版分帳修正,大家測一下。", "13:28", true),
+                ChatMsg("Vivian", "Vivian:客戶下週要 demo,範圍能先確認嗎?", "13:29", true),
+                ChatMsg("Ken", "Ken:今天 5 點前我要一份建議,誰整理?", "13:30", true),
+                ChatMsg("你", "我來整理,等等貼到決議。", "13:31", false),
+            ))
+        "notice" -> ChatThread("NovaPay 公告", null, "公", Color(0xFF6B7280), "官方帳號",
+            listOf(
+                ChatMsg("NovaPay 公告", "【系統維護】今晚 23:00 起例行維護,預計 30 分鐘。", "11:05", true),
+                ChatMsg("NovaPay 公告", "維護期間部分服務暫停,造成不便敬請見諒。", "11:05", true),
+            ))
+        "mom" -> ChatThread("媽", null, "媽", Color(0xFFB85C3A), "家人",
+            listOf(
+                ChatMsg("媽", "記得吃飯,不要又熬夜。", "昨天", true),
+                ChatMsg("媽", "工作再忙也要顧身體啊。", "昨天", true),
+                ChatMsg("你", "知道啦,我會早點睡。", "昨天", false),
+            ))
+        else -> null
+    }
+
+    override fun chatThread(id: String, day: Int, flags: List<String>, mt: Int, pb: Int, pi: Int): ChatThread? = when (id) {
+        "zhe" -> zheThread(pb)
+        "vivian" -> vivianThread(pb)
+        "ken" -> kenThread(mt)
+        else -> staticThread(id)
+    }
+
+    override fun chatRows(day: Int, flags: List<String>, mt: Int, pb: Int, pi: Int): List<ChatRow> = listOf(
+        ChatRow("zhe", "阿哲", zhePrev(pb), "14:01", "2", true, true, false, res = R.drawable.colleague_quiet),
+        ChatRow("vivian", "Vivian", vivianChatPrev(pb), "13:58", "1", true, true, false, res = R.drawable.colleague_vivian),
+        ChatRow("group", "產品群組 (8)", "[阿哲] 我先 push 一版,大家測一下", "13:30", "9", false, false, false, group = true, bg = Color(0xFFFFE0B2)),
+        ChatRow("ken", "Ken", kenChatPrev(mt), "13:45", "", true, false, false, res = R.drawable.ken_neutral),
+        ChatRow("notice", "NovaPay 公告", "【系統維護】今晚 23:00 起例行維護", "11:05", "", false, false, true, letter = "公", bg = Color(0xFF6B7280)),
+        ChatRow("mom", "媽", "記得吃飯,不要又熬夜", "昨天", "", false, false, false, letter = "媽", bg = Color(0xFFB85C3A)),
     )
 }

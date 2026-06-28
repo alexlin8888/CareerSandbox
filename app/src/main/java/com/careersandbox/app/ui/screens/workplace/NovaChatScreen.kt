@@ -36,6 +36,8 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.WorkplaceState
+import com.careersandbox.app.data.mock.ChatMsg
+import com.careersandbox.app.data.mock.SandboxContentEngineProvider
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 import kotlinx.coroutines.delay
@@ -46,79 +48,10 @@ import kotlinx.coroutines.delay
    擬真靠通用 UI 語言（頭像/泡泡/時間戳/已讀/輸入中），非品牌 logo。
    ===================================================================== */
 
-private data class ChatMsg(
-    val sender: String,
-    val text: String,
-    val time: String,
-    val incoming: Boolean,   // true=對方(阿哲)，false=你
-)
-
-private data class ChatThread(
-    val name: String,
-    val avatar: Int?,
-    val avatarLetter: String,
-    val avatarBg: Color,
-    val status: String,
-    val script: List<ChatMsg>,
-)
-
-private val chatThreads: Map<String, ChatThread> = mapOf(
-    "zhe" to ChatThread(
-        "阿哲", R.drawable.colleague_quiet, "", Color(0xFFCBD5E1), "工程組長 · 線上",
-        listOf(
-            ChatMsg("阿哲", "早，分帳功能金流串接卡關，有個 bug 一直測不完。", "14:00", true),
-            ChatMsg("阿哲", "下週一上線不可能，至少再兩週。", "14:01", true),
-            ChatMsg("你", "這麼嚴重？業務那邊知道了嗎", "14:01", false),
-            ChatMsg("你", "Vivian 一直催，她說客戶不能跳票", "14:01", false),
-            ChatMsg("阿哲", "我先看一下狀況，等等回你。", "14:02", true),
-        ),
-    ),
-    "vivian" to ChatThread(
-        "Vivian", R.drawable.colleague_vivian, "", Color(0xFFCBD5E1), "業務 · 線上",
-        listOf(
-            ChatMsg("Vivian", "分帳的 demo 下週三客戶要看，時間我先答應了。", "13:55", true),
-            ChatMsg("Vivian", "工程說要延，但這場真的不能跳票 🙏", "13:56", true),
-            ChatMsg("你", "我了解，我去跟阿哲確認能不能先生一個 demo 版本", "13:57", false),
-            ChatMsg("Vivian", "拜託你了！有你頂著我安心多了", "13:58", true),
-        ),
-    ),
-    "group" to ChatThread(
-        "產品群組 (8)", null, "群", Color(0xFFF59E0B), "8 位成員",
-        listOf(
-            ChatMsg("阿哲", "阿哲：我先 push 一版分帳修正，大家測一下。", "13:28", true),
-            ChatMsg("Vivian", "Vivian：客戶下週要 demo，範圍能先確認嗎？", "13:29", true),
-            ChatMsg("Ken", "Ken：今天 5 點前我要一份建議，誰整理？", "13:30", true),
-            ChatMsg("你", "我來整理，等等貼到決議。", "13:31", false),
-        ),
-    ),
-    "ken" to ChatThread(
-        "Ken", R.drawable.ken_neutral, "", Color(0xFFCBD5E1), "你的主管 · 線上",
-        listOf(
-            ChatMsg("Ken", "看一下你信箱，分帳的事我寄給你了。", "13:45", true),
-            ChatMsg("Ken", "5 點前給我建議，記得寫清楚理由。", "13:45", true),
-            ChatMsg("你", "收到，我看完馬上回您。", "13:46", false),
-        ),
-    ),
-    "notice" to ChatThread(
-        "NovaPay 公告", null, "公", Color(0xFF6B7280), "官方帳號",
-        listOf(
-            ChatMsg("NovaPay 公告", "【系統維護】今晚 23:00 起例行維護，預計 30 分鐘。", "11:05", true),
-            ChatMsg("NovaPay 公告", "維護期間部分服務暫停，造成不便敬請見諒。", "11:05", true),
-        ),
-    ),
-    "mom" to ChatThread(
-        "媽", null, "媽", Color(0xFFB85C3A), "家人",
-        listOf(
-            ChatMsg("媽", "記得吃飯，不要又熬夜。", "昨天", true),
-            ChatMsg("媽", "工作再忙也要顧身體啊。", "昨天", true),
-            ChatMsg("你", "知道啦，我會早點睡。", "昨天", false),
-        ),
-    ),
-)
-
 @Composable
 fun NovaChatScreen(navController: NavHostController, chatId: String = "zhe") {
-    val thread = chatThreads[chatId] ?: chatThreads.getValue("zhe")
+    val thread = SandboxContentEngineProvider.engine.chatThread(chatId, WorkplaceState.currentDay.value, WorkplaceState.flags.toList(), WorkplaceState.managerTrust.value, WorkplaceState.peerBond.value, WorkplaceState.proImage.value)
+        ?: SandboxContentEngineProvider.engine.chatThread("zhe", WorkplaceState.currentDay.value, WorkplaceState.flags.toList(), WorkplaceState.managerTrust.value, WorkplaceState.peerBond.value, WorkplaceState.proImage.value)!!
     val script = thread.script
     LaunchedEffect(chatId) {
         WorkplaceState.markItemRead("chat:$chatId")   // 讀這個對話＝標記該則已讀(逐則追蹤)
