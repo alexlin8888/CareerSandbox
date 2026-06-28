@@ -161,6 +161,16 @@ fun Day3MeetingScreen(navController: NavHostController) {
                 choices = current.choices,
                 bgRes = R.drawable.bg_scene_meeting,
                 repPop = repPop,
+                callback = when {
+                    beat == 0 && WorkplaceState.hasFlag("d1_overpromise") -> "你週一跟 Ken 說過「月底沒問題」。現在整個會議室，等你兌現那句話。"
+                    beat == 0 && WorkplaceState.hasFlag("d2_push_eng") -> "你昨天在信裡逼阿哲交日期。他現在坐在對面，沒看你。"
+                    beat == 1 && WorkplaceState.hasFlag("d1_press_zhe") -> "從週一你說他在「留 buffer」到現在——阿哲那張臉，你終於讀得懂了。"
+                    beat == 1 && WorkplaceState.hasFlag("d2_respect_eng") -> "你昨天說會議上一起看、沒催他。阿哲記得——他主動把資料攤開了。"
+                    beat == 2 && (WorkplaceState.hasFlag("d1_vivian_throw") || WorkplaceState.hasFlag("d2_dump_vivian")) -> "你把 Vivian 推開過。現在輪到要她替你跟客戶圓場——她記得是怎麼走到這一步的。"
+                    beat == 2 && WorkplaceState.hasFlag("d1_vivian_bridge") -> "你之前幫 Vivian 擋過。她現在願意聽你的——這是你一週前種下的。"
+                    beat == 3 && WorkplaceState.hasFlag("d2_miss_urgent") -> "昨天那封鎖帳號的信你沒及時看，今天有人在會議上補了一刀。"
+                    else -> null
+                },
                 onBack = { navController.popBackStack() },
                 onChoose = { c ->
                     if (c.repDelta != 0) {
