@@ -6,12 +6,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.careersandbox.app.ui.screens.competition.CompetitionDetailScreen
 import com.careersandbox.app.ui.screens.competition.CompetitionListScreen
@@ -33,6 +31,7 @@ import com.careersandbox.app.ui.screens.profile.SettingsProfileScreen
 import com.careersandbox.app.ui.screens.resume.*
 import com.careersandbox.app.ui.screens.workplace.NovaBackFrame
 import com.careersandbox.app.ui.screens.workplace.Day1OneOnOneScreen
+import com.careersandbox.app.ui.screens.workplace.SandboxChatScreen
 import com.careersandbox.app.ui.screens.workplace.Day2EmailScreen
 import com.careersandbox.app.ui.screens.workplace.Day3MeetingScreen
 import com.careersandbox.app.ui.screens.workplace.Day4LunchScreen
@@ -48,7 +47,6 @@ import com.careersandbox.app.ui.screens.workplace.NovaDocScreen
 import com.careersandbox.app.ui.screens.workplace.NovaGramScreen
 import com.careersandbox.app.ui.screens.workplace.NovaDashboardScreen
 import com.careersandbox.app.ui.screens.workplace.WorkplaceSandboxScreen
-import com.careersandbox.app.ui.screens.workplace.SoundManager
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -56,14 +54,6 @@ fun CareerSandboxNavHost(
     navController: NavHostController,
     startDestination: String = Routes.SPLASH,
 ) {
-    // 離開沙盒(目前路由非 workplace/nova/night 前綴)時停掉場景 BGM,避免回首頁仍在播
-    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
-    LaunchedEffect(currentRoute) {
-        val inSandbox = currentRoute?.let {
-            it.startsWith("workplace") || it.startsWith("nova") || it.startsWith("night")
-        } ?: false
-        if (!inSandbox) SoundManager.stopBgm()
-    }
     NavHost(
         navController = navController,
         startDestination = startDestination,
@@ -122,24 +112,15 @@ fun CareerSandboxNavHost(
         composable(Routes.RESUME_ARCH_INTRO) { ResumeArchIntroScreen(navController) }
         composable(Routes.INTERVIEW_HUB) { InterviewHubScreen(navController) }
         composable(Routes.WORKPLACE_SANDBOX) { WorkplaceSandboxScreen(navController) }
+        composable(Routes.SANDBOX_CHAT) { SandboxChatScreen(navController) }
         composable(Routes.WORKPLACE_CHAT) { Day1OneOnOneScreen(navController) }
         composable(Routes.WORKPLACE_MEETING) { Day3MeetingScreen(navController) }
         composable(Routes.WORKPLACE_LUNCH) { Day4LunchScreen(navController) }
         composable(Routes.WORKPLACE_EMAIL) { Day2EmailScreen(navController) }
-        composable(
-            route = "${Routes.NOVA_CHAT}?id={id}",
-            arguments = listOf(navArgument("id") { type = NavType.StringType; defaultValue = "zhe" }),
-        ) { entry ->
-            NovaChatScreen(navController, chatId = entry.arguments?.getString("id") ?: "zhe")
-        }
+        composable(Routes.NOVA_CHAT) { NovaChatScreen(navController) }
         composable(Routes.NOVA_CHAT_LIST) { NovaBackFrame(navController) { NovaChatListScreen(navController) } }
         composable(Routes.NOVA_MAIL_INBOX) { NovaBackFrame(navController) { NovaMailInboxScreen(navController) } }
-        composable(
-            route = "${Routes.NOVA_MAIL_OPEN}?id={id}",
-            arguments = listOf(navArgument("id") { type = NavType.StringType; defaultValue = "ken" }),
-        ) { entry ->
-            NovaMailOpenScreen(navController, mailId = entry.arguments?.getString("id") ?: "ken")
-        }
+        composable(Routes.NOVA_MAIL_OPEN) { NovaMailOpenScreen(navController) }
         composable(Routes.NOVA_CALENDAR) { NovaBackFrame(navController) { NovaCalendarScreen(navController) } }
         composable(Routes.NOVA_TEAM) { NovaTeamScreen(navController) }
         composable(Routes.NOVA_MEET) { NovaMeetScreen(navController) }
@@ -155,12 +136,7 @@ fun CareerSandboxNavHost(
         composable(Routes.RESUME_PROFILE) { ResumeProfileScreen(navController) }
         composable(Routes.RESUME_UPLOAD_PROCESSING) { ResumeUploadProcessingScreen(navController) }
         composable(Routes.CAREER_EXPLORATION) { CareerExplorationScreen(navController) }
-        composable(
-            route = "${Routes.LEARNING_PATH}?plan={plan}",
-            arguments = listOf(navArgument("plan") { type = NavType.StringType; defaultValue = "0" }),
-        ) { entry ->
-            LearningPathScreen(navController, startInPlan = entry.arguments?.getString("plan") == "1")
-        }
+        composable(Routes.LEARNING_PATH) { LearningPathScreen(navController) }
         composable(Routes.FIT_ANALYSIS) { FitAnalysisScreen(navController) }
 
         composable(Routes.COMPETITION_LIST) { CompetitionListScreen(navController) }

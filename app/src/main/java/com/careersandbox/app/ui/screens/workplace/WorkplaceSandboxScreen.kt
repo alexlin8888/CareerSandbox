@@ -150,7 +150,32 @@ fun WorkplaceSandboxScreen(navController: NavHostController) {
         // === 職場聲望儀表板(貫穿五天的主線)===
         StaggeredAppear(delayMillis = 80) { ReputationDashboard() }
 
-        Spacer(Modifier.height(30.dp))
+        Spacer(Modifier.height(18.dp))
+
+        // === AI 自由對話入口(模型驅動,前端先用 mock 跑通迴圈)===
+        StaggeredAppear(delayMillis = 100) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(BrandDeepOrange)
+                    .pressScale { navController.navigate(Routes.SANDBOX_CHAT) }
+                    .padding(horizontal = 18.dp, vertical = 14.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("試試 AI 自由對話", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 15.sp)
+                        Spacer(Modifier.height(2.dp))
+                        Text("直接打字跟阿哲聊(Day 3)·NPC 即時回應、計量會動",
+                            color = PaperWhite.copy(alpha = 0.85f), fontSize = 11.sp)
+                    }
+                    Text("→", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 20.sp)
+                }
+            }
+        }
+
+        Spacer(Modifier.height(20.dp))
 
         // === zigzag 路徑 ===
         week.forEachIndexed { idx, day ->
