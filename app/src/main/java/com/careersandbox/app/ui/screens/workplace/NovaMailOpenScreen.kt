@@ -20,6 +20,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
+import com.careersandbox.app.data.mock.WorkplaceState
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 
@@ -115,6 +117,7 @@ private val mailContents: Map<String, MailContent> = mapOf(
 @Composable
 fun NovaMailOpenScreen(navController: NavHostController, mailId: String = "ken") {
     val d = mailContents[mailId] ?: mailContents.getValue("ken")
+    LaunchedEffect(Unit) { WorkplaceState.visitApp("mail") }   // 開信＝完成郵件任務(清紅點)
     val scroll = rememberScrollState()
     var replying by remember { mutableStateOf(false) }
     var sent by remember { mutableStateOf(false) }

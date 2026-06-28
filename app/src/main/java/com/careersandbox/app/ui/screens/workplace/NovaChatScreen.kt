@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
+import com.careersandbox.app.data.mock.WorkplaceState
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 import kotlinx.coroutines.delay
@@ -119,6 +120,7 @@ private val chatThreads: Map<String, ChatThread> = mapOf(
 fun NovaChatScreen(navController: NavHostController, chatId: String = "zhe") {
     val thread = chatThreads[chatId] ?: chatThreads.getValue("zhe")
     val script = thread.script
+    LaunchedEffect(Unit) { WorkplaceState.visitApp("chat") }   // 開對話＝完成訊息任務(清紅點)
     var shown by remember { mutableStateOf(0) }
     val scroll = rememberScrollState()
     val lastOutIdx = remember(script) { script.indexOfLast { !it.incoming } }

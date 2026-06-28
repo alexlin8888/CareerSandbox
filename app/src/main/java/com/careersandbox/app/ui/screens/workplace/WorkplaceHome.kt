@@ -117,10 +117,12 @@ fun WorkplaceHome(
                         val visited = WorkplaceState.isAppVisited(app.key)
                         val unread = unreadCounts[app.key] ?: 0
                         val showDot = relevant && unread > 0 && !visited
+                        // 郵件/訊息要點進內容(開一封信/一個對話)才算完成;其餘 app 開了就算
+                        val drillIn = app.key == "mail" || app.key == "chat"
 
                         val colMod = if (relevant) {
                             Modifier.weight(1f).clickable {
-                                WorkplaceState.visitApp(app.key)
+                                if (!drillIn) WorkplaceState.visitApp(app.key)
                                 navController.navigate(app.route)
                             }
                         } else {
