@@ -92,6 +92,17 @@ fun Day3MeetingScreen(navController: NavHostController) {
             },
         ),
         D3Beat(
+            "會議室安靜下來。三條路攤在桌上，你看著看著，發現一件事——沒有一條是乾淨的。\n\n硬上，阿哲的 race condition 沒解，出事是他的名字在 commit 上。延期，Vivian 上週跟客戶拍的胸脯就跳票，她得自己去吞。砍範圍，客戶要的東西少一半，這張單可能就飛了。\n\nKen 看著你：「我知道每條路都有人受傷。說——你要對不起誰？」",
+            listOf(
+                DecisionChoice("A", "對不起阿哲。先上，我跟他一起盯，出事我扛。",
+                    "同事情誼", -2, "阿哲沒看你。他知道「一起盯」通常只是嘴上說說。", "d3_sacrifice_eng"),
+                DecisionChoice("B", "對不起 Ken 的月底。延期，我陪 Vivian 去跟客戶解釋，不讓她一個人吞。",
+                    "主管信任", -2, "Ken 在筆記本上又寫了一個字。Vivian 沒說話，但她記得是誰陪她去的。", "d3_sacrifice_vivian"),
+                DecisionChoice("C", "對不起客戶。砍範圍，先交能交代的，飛了的單我們一起認。",
+                    "同事情誼", -1, "Ken 點頭：「成熟。」但 Vivian 別過頭——那張單，有她的業績。", "d3_sacrifice_client"),
+            ),
+        ),
+        D3Beat(
             "Ken 在筆記本上寫了個字：「假設月底還是得交點東西。這個功能，你會怎麼拆？」",
             listOf(
                 DecisionChoice("A", "基本版先上、進階版下一版。客戶看得到東西，風險也鎖得住。",
@@ -164,11 +175,12 @@ fun Day3MeetingScreen(navController: NavHostController) {
                 callback = when {
                     beat == 0 && WorkplaceState.hasFlag("d1_overpromise") -> "你週一跟 Ken 說過「月底沒問題」。現在整個會議室，等你兌現那句話。"
                     beat == 0 && WorkplaceState.hasFlag("d2_push_eng") -> "你昨天在信裡逼阿哲交日期。他現在坐在對面，沒看你。"
-                    beat == 1 && WorkplaceState.hasFlag("d1_press_zhe") -> "從週一你說他在「留 buffer」到現在——阿哲那張臉，你終於讀得懂了。"
-                    beat == 1 && WorkplaceState.hasFlag("d2_respect_eng") -> "你昨天說會議上一起看、沒催他。阿哲記得——他主動把資料攤開了。"
-                    beat == 2 && (WorkplaceState.hasFlag("d1_vivian_throw") || WorkplaceState.hasFlag("d2_dump_vivian")) -> "你把 Vivian 推開過。現在輪到要她替你跟客戶圓場——她記得是怎麼走到這一步的。"
-                    beat == 2 && WorkplaceState.hasFlag("d1_vivian_bridge") -> "你之前幫 Vivian 擋過。她現在願意聽你的——這是你一週前種下的。"
-                    beat == 3 && WorkplaceState.hasFlag("d2_miss_urgent") -> "昨天那封鎖帳號的信你沒及時看，今天有人在會議上補了一刀。"
+                    beat == 1 && (WorkplaceState.hasFlag("d1_overpromise") || WorkplaceState.hasFlag("d2_push_eng")) -> "走到「要選誰受傷」這一步，不是今天才開始的。前面幾天的每個決定，都把路收窄了一點。"
+                    beat == 2 && WorkplaceState.hasFlag("d1_press_zhe") -> "從週一你說他在「留 buffer」到現在——阿哲那張臉，你終於讀得懂了。"
+                    beat == 2 && WorkplaceState.hasFlag("d2_respect_eng") -> "你昨天說會議上一起看、沒催他。阿哲記得——他主動把資料攤開了。"
+                    beat == 3 && (WorkplaceState.hasFlag("d1_vivian_throw") || WorkplaceState.hasFlag("d2_dump_vivian")) -> "你把 Vivian 推開過。現在輪到要她替你跟客戶圓場——她記得是怎麼走到這一步的。"
+                    beat == 3 && WorkplaceState.hasFlag("d1_vivian_bridge") -> "你之前幫 Vivian 擋過。她現在願意聽你的——這是你一週前種下的。"
+                    beat == 4 && WorkplaceState.hasFlag("d2_miss_urgent") -> "昨天那封鎖帳號的信你沒及時看，今天有人在會議上補了一刀。"
                     else -> null
                 },
                 onBack = { navController.popBackStack() },

@@ -222,11 +222,34 @@ private fun ConsequenceCard(c: Consequence) {
 /* ---------- 夜 · 尾聲（媽收束,落低谷不回升）---------- */
 @Composable
 private fun NightEnding(onEnd: () -> Unit) {
-    val total = WorkplaceState.managerTrust.value + WorkplaceState.peerBond.value + WorkplaceState.proImage.value
-    val close = when {
-        total >= 18 -> "你站住了第一週。但站住，不等於輕鬆——你只是還沒倒下。"
-        total >= 12 -> "說不上好，說不上壞。週末很長，夠你喘一口氣。"
-        else -> "這週你沒站穩。沒關係——第一週，本來就這樣。"
+    val mt = WorkplaceState.managerTrust.value
+    val pb = WorkplaceState.peerBond.value
+    val pi = WorkplaceState.proImage.value
+    val total = mt + pb + pi
+    val sacrificed = WorkplaceState.hasFlag("d3_sacrifice_eng") ||
+        WorkplaceState.hasFlag("d3_sacrifice_vivian") || WorkplaceState.hasFlag("d3_sacrifice_client")
+    // 依整週路徑(人情 vs 績效的取捨)分出不同收場,而非只看總分
+    val (endTitle, endBody, endTail) = when {
+        pb <= 3 && (mt + pi) >= 12 -> Triple(
+            "踩著別人往上爬",
+            "你這禮拜的數字很漂亮。Ken 記住了你,你的判斷也站得住腳。\n\n只是——走廊上有幾個人,已經不太跟你打招呼了。你贏了這一週,卻好像弄丟了什麼。",
+            "下禮拜你還是會準時上工。只是不知道,還有幾個人願意跟你同一組。")
+        pb >= 6 && total >= 15 -> Triple(
+            "你找到了一點平衡",
+            "你沒有每一題都贏。但你發現一件事——你把人放在前面的那幾次,他們都記得。\n\n技術會讓你被看見;但讓你想留下來、也讓別人想留你下來的,是人。",
+            "下禮拜的鬧鐘一樣七點響。但你知道,辦公室裡有幾個人,是站在你這邊的。")
+        total < 9 -> Triple(
+            "勉強撐過的第一週",
+            "這週你沒站穩。有些話收不回,有些洞補不上。\n\n但你撐到了週五,沒有逃。第一週能做到這樣,已經不算輸。",
+            "週末很長,夠你喘一口氣。週一,再重新開始。")
+        sacrificed -> Triple(
+            "守住了線,也弄丟了人",
+            "你守住了一些不該退的線。但你也記得,這禮拜有人因為你的選擇受了傷。\n\n你對得起這份工作。只是不一定,對得起每一個人。這兩件事,沒辦法總是兩全。",
+            "他們會記得你的決定。你也會。這就是把事情做完,要付的其中一種代價。")
+        else -> Triple(
+            "說不上好,說不上壞",
+            "不算亮眼,也沒有搞砸。你說不上來這算不算及格。\n\n但你開始懂了一些事——這裡沒有標準答案,只有你願不願意為自己的選擇負責。",
+            "週末很長。把工作的事先放下,明天再說。")
     }
     Box(
         Modifier.fillMaxSize().background(
@@ -237,8 +260,10 @@ private fun NightEnding(onEnd: () -> Unit) {
             Modifier.fillMaxSize().padding(start = 30.dp, end = 30.dp, top = 90.dp, bottom = 30.dp),
         ) {
             Text("週五 · 夜", color = Color(0xFFFFB627), fontSize = 13.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
-            Spacer(Modifier.height(20.dp))
-            Text(close, color = Color(0xFFFFF8F3), fontSize = 19.sp, fontWeight = FontWeight.Bold, lineHeight = 30.sp)
+            Spacer(Modifier.height(14.dp))
+            Text(endTitle, color = Color(0xFFFFB627), fontSize = 25.sp, fontWeight = FontWeight.Black, lineHeight = 32.sp)
+            Spacer(Modifier.height(16.dp))
+            Text(endBody, color = Color(0xFFFFF8F3), fontSize = 17.sp, fontWeight = FontWeight.Medium, lineHeight = 28.sp)
 
             Spacer(Modifier.height(30.dp))
             // 媽的訊息
@@ -253,7 +278,7 @@ private fun NightEnding(onEnd: () -> Unit) {
             }
 
             Spacer(Modifier.weight(1f))
-            Text("明天的鬧鐘還是會在七點響。但至少今天，有人燉了湯。", color = Color(0xB3FFF8F3), fontSize = 15.sp, fontWeight = FontWeight.Medium)
+            Text(endTail, color = Color(0xB3FFF8F3), fontSize = 15.sp, fontWeight = FontWeight.Medium, lineHeight = 23.sp)
             Spacer(Modifier.height(20.dp))
             Box(
                 Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(16.dp))
