@@ -181,14 +181,14 @@ fun SandboxDecisionScene(
 
             Spacer(Modifier.height(24.dp))
 
-            // ===== 角色立繪(置中,地面陰影,固定高度確保各角色一致)=====
+            // ===== 角色立繪(置中,地面陰影,固定高度確保各角色一致、不隨旁白長度縮放)=====
             Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                 Box(contentAlignment = Alignment.BottomCenter) {
                     Image(
                         painter = painterResource(portrait),
                         contentDescription = speaker,
                         contentScale = ContentScale.Fit,
-                        modifier = Modifier.heightIn(max = 300.dp).fillMaxHeight(),
+                        modifier = Modifier.height(220.dp),
                     )
                 }
             }

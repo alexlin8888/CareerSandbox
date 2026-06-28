@@ -535,69 +535,67 @@ private fun CapabilityRadar(capabilities: List<Capability>, animateProgress: Boo
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val cx = size.width / 2f
                 val cy = size.height / 2f
-                val rOuter = size.minDimension / 2f * 0.60f
-                val rInner = rOuter * 0.13f
+                val rMax = size.minDimension / 2f * 0.60f
                 fun polar(angDeg: Double, r: Float): Offset {
                     val a = Math.toRadians(angDeg)
                     return Offset(cx + (r * kotlin.math.cos(a)).toFloat(), cy + (r * kotlin.math.sin(a)).toFloat())
                 }
-                // 中心黃光暈
+                fun axisAngle(i: Int) = -90.0 + i * (360.0 / n)
+                // 中心暖光暈
                 drawCircle(
                     brush = Brush.radialGradient(
-                        colors = listOf(BrandYellow.copy(alpha = 0.35f), BrandYellow.copy(alpha = 0f)),
-                        center = Offset(cx, cy), radius = rOuter * 0.5f,
+                        colors = listOf(BrandYellow.copy(alpha = 0.28f), BrandYellow.copy(alpha = 0f)),
+                        center = Offset(cx, cy), radius = rMax * 0.7f,
                     ),
-                    radius = rOuter * 0.5f, center = Offset(cx, cy),
+                    radius = rMax * 0.7f, center = Offset(cx, cy),
                 )
-                // 格線(5 圈,做分層)
+                // 多邊形格線(5 層)+ 各軸輻射線
                 for (ring in 1..5) {
-                    drawCircle(
-                        color = InkCharcoal.copy(alpha = 0.12f),
-                        radius = rInner + (rOuter - rInner) * ring / 5f,
-                        center = Offset(cx, cy),
-                        style = Stroke(width = 1f),
-                    )
-                }
-                val gapDeg = 3.0
-                val half = 180.0 / n
-                // 花瓣:每維一片環形扇區,半徑 = 現有分數比例(全部一起由內往外展開)
-                capabilities.forEachIndexed { i, cap ->
-                    val ang = -90.0 + i * (360.0 / n)
-                    val a0 = ang - half + gapDeg
-                    val a1 = ang + half - gapDeg
-                    val r = rInner + (rOuter - rInner) * (cap.score / 100f) * anim
-                    if (r > rInner + 0.5f) {
-                        val gapBig = (cap.target - cap.score) >= gapThreshold
-                        val o0 = polar(a0, r)
-                        val i1 = polar(a1, rInner)
-                        val petal = Path().apply {
-                            moveTo(o0.x, o0.y)
-                            arcTo(Rect(cx - r, cy - r, cx + r, cy + r), a0.toFloat(), (a1 - a0).toFloat(), false)
-                            lineTo(i1.x, i1.y)
-                            arcTo(Rect(cx - rInner, cy - rInner, cx + rInner, cy + rInner), a1.toFloat(), (a0 - a1).toFloat(), false)
-                            close()
-                        }
-                        val fill = Brush.radialGradient(
-                            colors = if (gapBig) listOf(BrandYellow, BrandOrange)
-                            else listOf(Color(0xFFFFF4B0), BrandAmber),
-                            center = Offset(cx, cy), radius = rOuter,
-                        )
-                        drawPath(petal, brush = fill)
-                        drawPath(petal, color = PaperWhite, style = Stroke(width = 1f))
+                    val rr = rMax * ring / 5f
+                    val ringPath = Path()
+                    for (i in 0 until n) {
+                        val p = polar(axisAngle(i), rr)
+                        if (i == 0) ringPath.moveTo(p.x, p.y) else ringPath.lineTo(p.x, p.y)
                     }
+                    ringPath.close()
+                    drawPath(ringPath, color = InkCharcoal.copy(alpha = 0.10f), style = Stroke(width = 1f))
                 }
-                // 中心圓(淡黃)
-                drawCircle(Color(0xFFFFFAD8), radius = rInner, center = Offset(cx, cy))
-                // 目標:虛線小圈(缺口大者橘、否則灰)
+                for (i in 0 until n) {
+                    drawLine(InkCharcoal.copy(alpha = 0.10f), Offset(cx, cy), polar(axisAngle(i), rMax), strokeWidth = 1f)
+                }
+                // 目標需求:灰色虛線多邊形外框(它與現有之間的空白＝能力缺口,呼應差異集)
+                val targetPath = Path()
                 capabilities.forEachIndexed { i, cap ->
-                    val ang = -90.0 + i * (360.0 / n)
-                    val tr = rInner + (rOuter - rInner) * (cap.target / 100f) * anim
+                    val p = polar(axisAngle(i), rMax * (cap.target / 100f) * anim)
+                    if (i == 0) targetPath.moveTo(p.x, p.y) else targetPath.lineTo(p.x, p.y)
+                }
+                targetPath.close()
+                drawPath(
+                    targetPath, color = InkGray400,
+                    style = Stroke(width = 1.6.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(7f, 5f), 0f)),
+                )
+                // 現有能力:橘色半透明填色多邊形 + 實線外框
+                val curPath = Path()
+                capabilities.forEachIndexed { i, cap ->
+                    val p = polar(axisAngle(i), rMax * (cap.score / 100f) * anim)
+                    if (i == 0) curPath.moveTo(p.x, p.y) else curPath.lineTo(p.x, p.y)
+                }
+                curPath.close()
+                drawPath(
+                    curPath,
+                    brush = Brush.radialGradient(
+                        colors = listOf(BrandAmber.copy(alpha = 0.55f), BrandOrange.copy(alpha = 0.30f)),
+                        center = Offset(cx, cy), radius = rMax,
+                    ),
+                )
+                drawPath(curPath, color = BrandOrange, style = Stroke(width = 2.dp.toPx()))
+                // 各軸現有分數的端點(缺口大者標紅)
+                capabilities.forEachIndexed { i, cap ->
                     val gapBig = (cap.target - cap.score) >= gapThreshold
                     drawCircle(
-                        color = if (gapBig) BrandDeepOrange else InkGray400,
-                        radius = 3.5f,
-                        center = polar(ang, tr),
-                        style = Stroke(width = 1.5f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(2f, 2f), 0f)),
+                        color = if (gapBig) AccentRed else BrandDeepOrange,
+                        radius = 4f,
+                        center = polar(axisAngle(i), rMax * (cap.score / 100f) * anim),
                     )
                 }
             }

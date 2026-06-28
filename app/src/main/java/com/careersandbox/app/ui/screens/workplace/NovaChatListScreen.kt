@@ -25,6 +25,7 @@ import androidx.navigation.NavHostController
 import com.careersandbox.app.R
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.pressScale
+import com.careersandbox.app.data.mock.WorkplaceState
 import com.careersandbox.app.ui.theme.*
 
 /* =====================================================================
@@ -127,7 +128,7 @@ fun NovaChatListScreen(navController: NavHostController) {
                     Column(horizontalAlignment = Alignment.End) {
                         Text(row.time, color = InkGray400, fontSize = 11.sp)
                         Spacer(Modifier.height(6.dp))
-                        if (row.unread.isNotEmpty()) {
+                        if (row.unread.isNotEmpty() && !WorkplaceState.isItemRead("chat:${row.id}")) {
                             Box(
                                 Modifier.defaultMinSize(minWidth = 20.dp).clip(CircleShape).background(BrandOrange)
                                     .padding(horizontal = 6.dp, vertical = 2.dp),

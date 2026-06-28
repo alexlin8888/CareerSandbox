@@ -25,6 +25,7 @@ import androidx.navigation.NavHostController
 import com.careersandbox.app.R
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.pressScale
+import com.careersandbox.app.data.mock.WorkplaceState
 import com.careersandbox.app.ui.theme.*
 
 /* =====================================================================
@@ -97,6 +98,7 @@ fun NovaMailInboxScreen(navController: NavHostController) {
             // ===== 郵件列表 =====
             Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll)) {
                 novaMailRows.forEach { m ->
+                    val unread = m.unread && !WorkplaceState.isItemRead("mail:${m.id}")   // 讀過該封就不再顯示未讀樣式
                     Row(
                         modifier = Modifier.fillMaxWidth()
                             .pressScale { navController.navigate("${Routes.NOVA_MAIL_OPEN}?id=${m.id}") }
@@ -109,18 +111,18 @@ fun NovaMailInboxScreen(navController: NavHostController) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
                                     m.sender, modifier = Modifier.weight(1f),
-                                    color = if (m.unread) InkBlack else InkGray500,
-                                    fontWeight = if (m.unread) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (unread) InkBlack else InkGray500,
+                                    fontWeight = if (unread) FontWeight.Bold else FontWeight.Normal,
                                     fontSize = 14.sp, maxLines = 1,
                                 )
                                 if (m.imp) { NovaDiamond(BrandAmber, 9.dp); Spacer(Modifier.width(4.dp)) }
-                                Text(m.time, color = if (m.unread) BrandDeepOrange else InkGray400, fontSize = 11.sp,
-                                    fontWeight = if (m.unread) FontWeight.SemiBold else FontWeight.Normal)
+                                Text(m.time, color = if (unread) BrandDeepOrange else InkGray400, fontSize = 11.sp,
+                                    fontWeight = if (unread) FontWeight.SemiBold else FontWeight.Normal)
                             }
                             Spacer(Modifier.height(2.dp))
                             Text(
-                                m.subject, color = if (m.unread) InkBlack else InkGray700,
-                                fontWeight = if (m.unread) FontWeight.SemiBold else FontWeight.Normal,
+                                m.subject, color = if (unread) InkBlack else InkGray700,
+                                fontWeight = if (unread) FontWeight.SemiBold else FontWeight.Normal,
                                 fontSize = 13.sp, maxLines = 1,
                             )
                             Spacer(Modifier.height(2.dp))

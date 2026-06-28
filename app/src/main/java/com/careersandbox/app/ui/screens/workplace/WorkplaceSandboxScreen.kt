@@ -76,6 +76,10 @@ fun WorkplaceSandboxScreen(navController: NavHostController) {
         PathDay(5, "週五回顧", Icons.Outlined.EmojiEvents, Routes.WORKPLACE_REVIEW, -56, NodeKind.CHEST),
     )
 
+    // 目前進度 = 第一個還沒完成的天(全完成則停在最後一關);河狸坐在這一關旁
+    val currentIdx = week.indexOfFirst { !WorkplaceState.isDayDone(it.dayNo) }
+        .let { if (it < 0) week.lastIndex else it }
+
     Box(Modifier.fillMaxSize().background(PaperOff)) {
         SandboxBackdrop()
         Column(
@@ -153,7 +157,7 @@ fun WorkplaceSandboxScreen(navController: NavHostController) {
             StaggeredAppear(delayMillis = 120 + idx * 90) {
                 PathNodeBlock(
                     day = day,
-                    isCurrent = idx == 0,
+                    isCurrent = idx == currentIdx,
                     onClick = day.route?.let { r -> { navController.navigate(r) } },
                 )
             }
