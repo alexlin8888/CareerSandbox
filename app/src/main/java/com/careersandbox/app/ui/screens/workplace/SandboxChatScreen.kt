@@ -1,7 +1,6 @@
 package com.careersandbox.app.ui.screens.workplace
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,12 +14,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.Send
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,8 +33,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -52,9 +48,9 @@ import com.careersandbox.app.ui.theme.*
 import kotlinx.coroutines.launch
 
 /* =====================================================================
-   模型驅動對話頁(混合架構的前端殼)
-   玩家自由打字 → 送進 SandboxChatEngine(現為 mock,之後接後端)→
-   渲染 NPC 回應 + 套用計量變化。前端不寫死劇情內文,內文是這次遊玩產生的。
+   模型驅動對話頁(混合架構前端殼)
+   機制:NPC 一句話 + 模型生成的三個選項 → 玩家選一個 → 模型評分(計量動)+ 回應 + 下一輪三選項。
+   仍是三選一,但選項是這次遊玩生成的,不是寫死。前端只渲染 engine 產出。
    ===================================================================== */
 
 private data class ChatBubble(
@@ -67,7 +63,7 @@ private data class NpcMeta(val name: String, val avatar: Int, val opening: Strin
 
 private fun npcMeta(npcId: String, day: Int): NpcMeta = when (npcId) {
     "ken" -> NpcMeta("Ken", R.drawable.ken_neutral,
-        "坐吧。第一週還順利嗎?分帳這案子,我想先聽聽你的想法。")
+        "坐吧。第一週還順利嗎?分帳這案子,我想先聽聽你的想法——你會怎麼接?")
     "zhe" -> NpcMeta("阿哲", R.drawable.colleague_quiet,
         "欸,排程的事你怎麼看?兩週內上線我是覺得有風險啦。")
     "vivian" -> NpcMeta("Vivian", R.drawable.colleague_vivian,
@@ -88,59 +84,61 @@ fun SandboxConversation(
     val meta = remember(npcId) { npcMeta(npcId, day) }
     val sessionId = remember { "sandbox-$npcId-$day" }
     val bubbles = remember { mutableStateListOf<ChatBubble>() }
-    var input by remember { mutableStateOf("") }
+    var choices by remember { mutableStateOf<List<String>>(emptyList()) }
     var thinking by remember { mutableStateOf(false) }
     var concluded by remember { mutableStateOf(false) }
     val scroll = rememberScrollState()
     val scope = rememberCoroutineScope()
 
-    // 開場白(NPC 先說一句,引導玩家自由回覆)
+    fun buildReq(pickText: String) = SandboxTurnRequest(
+        sessionId = sessionId,
+        day = day,
+        npcId = npcId,
+        playerMessage = pickText,
+        managerTrust = WorkplaceState.managerTrust.value,
+        peerBond = WorkplaceState.peerBond.value,
+        proImage = WorkplaceState.proImage.value,
+        flags = WorkplaceState.flags.toList(),
+        history = bubbles.map { SandboxLine(it.fromPlayer, it.text) },
+    )
+
+    // 開場:放 NPC 開場白 → 跟 engine 要第一輪三選項
     LaunchedEffect(Unit) {
-        if (bubbles.isEmpty()) bubbles.add(ChatBubble(false, opening ?: meta.opening))
+        bubbles.add(ChatBubble(false, opening ?: meta.opening))
+        thinking = true
+        val resp = SandboxChatEngineProvider.engine.reply(buildReq(""))
+        choices = resp.choices
+        thinking = false
     }
-    // 訊息變動 / 思考狀態 → 自動捲到底
     LaunchedEffect(bubbles.size, thinking) { scroll.animateScrollTo(scroll.maxValue) }
 
-    fun send() {
-        val text = input.trim()
-        if (text.isEmpty() || thinking || concluded) return
-        bubbles.add(ChatBubble(true, text))
-        input = ""
+    fun pick(choiceText: String) {
+        if (thinking || concluded) return
+        bubbles.add(ChatBubble(true, choiceText))
+        choices = emptyList()
         thinking = true
         SoundManager.sfx(R.raw.sfx_tap)
         scope.launch {
-            val resp = SandboxChatEngineProvider.engine.reply(
-                SandboxTurnRequest(
-                    sessionId = sessionId,
-                    day = day,
-                    npcId = npcId,
-                    playerMessage = text,
-                    managerTrust = WorkplaceState.managerTrust.value,
-                    peerBond = WorkplaceState.peerBond.value,
-                    proImage = WorkplaceState.proImage.value,
-                    flags = WorkplaceState.flags.toList(),
-                    history = bubbles.map { SandboxLine(it.fromPlayer, it.text) },
-                ),
-            )
-            // 套用模型回傳的計量變化(delta=0 的不動,只當顯示用)
+            val resp = SandboxChatEngineProvider.engine.reply(buildReq(choiceText))
             resp.meterDeltas.forEach { d ->
                 if (d.delta != 0) WorkplaceState.apply(d.meter, d.delta, d.reason, day)
             }
             resp.newFlags.forEach { WorkplaceState.setFlag(it) }
-            bubbles.add(ChatBubble(false, resp.npcMessage, resp.meterDeltas))
+            if (resp.npcMessage.isNotBlank()) bubbles.add(ChatBubble(false, resp.npcMessage, resp.meterDeltas))
+            choices = resp.choices
             thinking = false
             if (resp.concluded) concluded = true
         }
     }
 
     Column(Modifier.fillMaxSize().background(PaperOff)) {
-        // ===== 頂列:返回 + 對象名 + 模型驅動標記 =====
+        // ===== 頂列 =====
         Row(
             Modifier.fillMaxWidth().background(PaperWhite).padding(horizontal = 12.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
-                Modifier.size(36.dp).clip(RoundedCornerShape(50)).pressScale { navController.popBackStack() },
+                Modifier.size(36.dp).clip(CircleShape).pressScale { navController.popBackStack() },
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(Icons.Outlined.ArrowBack, contentDescription = "返回", tint = InkGray700, modifier = Modifier.size(22.dp))
@@ -150,7 +148,7 @@ fun SandboxConversation(
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(meta.name, color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                Text(if (thinking) "輸入中…" else "Day $day · 即時對話", color = InkGray400, fontSize = 11.sp)
+                Text(if (thinking) "思考中…" else "Day $day · 即時對話", color = InkGray400, fontSize = 11.sp)
             }
             Box(
                 Modifier.clip(RoundedCornerShape(50)).background(BrandAmber.copy(alpha = 0.18f))
@@ -160,7 +158,7 @@ fun SandboxConversation(
             }
         }
 
-        // ===== 計量 HUD(隨對話即時變動)=====
+        // ===== 計量 HUD =====
         Row(
             Modifier.fillMaxWidth().background(PaperWhite).padding(horizontal = 14.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -200,39 +198,30 @@ fun SandboxConversation(
             }
         }
 
-        // ===== 輸入列(自由打字)=====
-        Row(
-            Modifier.fillMaxWidth().background(PaperWhite).padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                Modifier.weight(1f).clip(RoundedCornerShape(22.dp)).background(PaperWarm)
-                    .padding(horizontal = 16.dp, vertical = 11.dp),
-                contentAlignment = Alignment.CenterStart,
+        // ===== 三個生成選項(選一個)=====
+        if (!concluded && !thinking && choices.isNotEmpty()) {
+            Column(
+                Modifier.fillMaxWidth().background(PaperWhite).padding(horizontal = 14.dp, vertical = 12.dp),
             ) {
-                if (input.isEmpty()) {
-                    Text(
-                        if (concluded) "對話已結束" else "回覆 ${meta.name}…",
-                        color = InkGray400, fontSize = 14.sp,
-                    )
+                Text("你會怎麼回?", color = InkGray500, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(8.dp))
+                choices.forEachIndexed { i, opt ->
+                    Row(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(PaperWarm)
+                            .pressScale { pick(opt) }.padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(
+                            Modifier.size(26.dp).clip(CircleShape).background(BrandOrange.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(('A' + i).toString(), color = BrandDeepOrange, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Text(opt, color = InkBlack, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.weight(1f))
+                    }
+                    if (i < choices.lastIndex) Spacer(Modifier.height(8.dp))
                 }
-                BasicTextField(
-                    value = input,
-                    onValueChange = { if (!concluded) input = it },
-                    textStyle = TextStyle(color = InkBlack, fontSize = 14.sp),
-                    cursorBrush = SolidColor(BrandOrange),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            Spacer(Modifier.width(10.dp))
-            val canSend = input.isNotBlank() && !thinking && !concluded
-            Box(
-                Modifier.size(44.dp).clip(RoundedCornerShape(50))
-                    .background(if (canSend) BrandOrange else InkGray200)
-                    .then(if (canSend) Modifier.clickable { send() } else Modifier),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Outlined.Send, contentDescription = "送出", tint = PaperWhite, modifier = Modifier.size(20.dp))
             }
         }
     }
@@ -277,7 +266,6 @@ private fun NpcBubble(meta: NpcMeta, b: ChatBubble) {
             ) {
                 Text(b.text, color = InkBlack, fontSize = 14.sp, lineHeight = 20.sp)
             }
-            // 該回合的計量變化(模型評分結果,顯示讓玩家看到因果)
             val shown = b.deltas.filter { it.delta != 0 }
             if (shown.isNotEmpty()) {
                 Spacer(Modifier.height(5.dp))
