@@ -12,6 +12,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
@@ -49,7 +50,13 @@ fun Day5ReviewScreen(navController: NavHostController) {
     val audioCtx = LocalContext.current
     LaunchedEffect(Unit) { WorkplaceState.currentDay.value = 5; WorkplaceState.beginAppPhase(5); SoundManager.playBgm(audioCtx, R.raw.bgm_night) }
     var phase by remember { mutableStateOf("oneonone") } // oneonone | board | night
+    var agendaSeen by rememberSaveable { mutableStateOf(false) }
     var taskStarted by remember { mutableStateOf(false) }
+
+    if (!agendaSeen) {
+        DayAgendaScreen(day = 5, onStart = { agendaSeen = true })
+        return
+    }
 
     if (!taskStarted) {
         WorkplaceHome(

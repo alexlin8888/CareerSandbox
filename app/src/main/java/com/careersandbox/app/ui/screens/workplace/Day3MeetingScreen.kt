@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.rememberCoroutineScope
@@ -60,6 +61,7 @@ fun Day3MeetingScreen(navController: NavHostController) {
     var beat by remember { mutableIntStateOf(0) }
     var repPop by remember { mutableStateOf<RepChange?>(null) }
     var reaction by remember { mutableStateOf<Int?>(null) }
+    var agendaSeen by rememberSaveable { mutableStateOf(false) }
     var taskStarted by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
@@ -121,6 +123,11 @@ fun Day3MeetingScreen(navController: NavHostController) {
             ),
         ),
     )
+
+    if (!agendaSeen) {
+        DayAgendaScreen(day = 3, onStart = { agendaSeen = true })
+        return
+    }
 
     if (!taskStarted) {
         WorkplaceHome(

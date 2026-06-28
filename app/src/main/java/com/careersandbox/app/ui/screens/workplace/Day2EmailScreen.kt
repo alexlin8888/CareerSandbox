@@ -18,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
@@ -59,6 +60,7 @@ fun Day2EmailScreen(navController: NavHostController) {
     var idx by remember { mutableIntStateOf(0) }
     var done by remember { mutableStateOf(false) }
     var repPop by remember { mutableStateOf<RepChange?>(null) }
+    var agendaSeen by rememberSaveable { mutableStateOf(false) }
     var taskStarted by remember { mutableStateOf(false) }
 
     LaunchedEffect(repPop) {
@@ -127,6 +129,11 @@ fun Day2EmailScreen(navController: NavHostController) {
             ),
         ),
     )
+
+    if (!agendaSeen) {
+        DayAgendaScreen(day = 2, onStart = { agendaSeen = true })
+        return
+    }
 
     if (!taskStarted) {
         WorkplaceHome(
