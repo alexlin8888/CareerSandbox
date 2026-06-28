@@ -443,15 +443,30 @@ private fun WeeklyStreak() {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             days.forEachIndexed { i, d ->
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    val nodeModifier = when {
-                        i < doneCount -> Modifier.size(34.dp).clip(RoundedCornerShape(12.dp))
-                            .background(Brush.linearGradient(listOf(BrandAmber, BrandOrange)))
-                        i == todayIdx -> Modifier.size(34.dp).clip(RoundedCornerShape(12.dp))
-                            .background(PaperWhite).border(2.dp, BrandOrange, RoundedCornerShape(12.dp))
-                        else -> Modifier.size(34.dp).clip(RoundedCornerShape(12.dp))
-                            .border(1.5.dp, InkGray200, RoundedCornerShape(12.dp))
+                    val state = when {
+                        i < doneCount -> 0   // 已完成
+                        i == todayIdx -> 1   // 今天
+                        else -> 2            // 未來
                     }
-                    Box(nodeModifier)
+                    // 完成/今天=點燃火焰, 今天額外加一圈橘色光環, 未來=熄滅火焰(半透明)
+                    Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) {
+                        if (state == 1) {
+                            Box(
+                                Modifier.size(36.dp).clip(CircleShape)
+                                    .border(2.dp, BrandOrange, CircleShape),
+                            )
+                        }
+                        Image(
+                            painter = painterResource(
+                                if (state == 2) R.drawable.flame_unlit else R.drawable.flame_lit,
+                            ),
+                            contentDescription = null,
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .size(if (state == 1) 32.dp else 30.dp)
+                                .alpha(if (state == 2) 0.4f else 1f),
+                        )
+                    }
                     Spacer(Modifier.height(6.dp))
                     Text(
                         d,
@@ -498,7 +513,7 @@ private fun AbilityProfileEntry() {
                 color = BrandDeepOrange, fontSize = 12.sp, fontWeight = FontWeight.Bold,
             )
         }
-        // 點開：雷達 + 六維 + 下一階解鎖
+        // 點開：河狸對話框 + 能力排行長條 + 下一階解鎖
         AnimatedVisibility(visible = expanded) {
             Column(
                 modifier = Modifier
@@ -508,29 +523,96 @@ private fun AbilityProfileEntry() {
                     .background(BrandPeach.copy(alpha = 0.4f))
                     .padding(16.dp),
             ) {
-                Box(Modifier.fillMaxWidth().height(176.dp)) {
-                    HexRadar(
-                        values = abilities.map { it.second },
-                        modifier = Modifier.align(Alignment.CenterStart).padding(start = 14.dp).size(156.dp),
-                    )
+                val sorted = abilities.sortedByDescending { it.second }
+                val mostImproved = abilities.maxByOrNull { it.third } ?: abilities.first()
+                // 河狸講話 + 對話框
+                Row(verticalAlignment = Alignment.Top) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(PaperWhite)
+                            .padding(horizontal = 13.dp, vertical = 11.dp),
+                    ) {
+                        Text(
+                            text = buildAnnotatedString {
+                                withStyle(SpanStyle(color = BrandDeepOrange, fontWeight = FontWeight.Black)) { append(mostImproved.first) }
+                                append(" +${mostImproved.third} 進步最多!就差 ")
+                                withStyle(SpanStyle(color = BrandDeepOrange, fontWeight = FontWeight.Black)) { append(weakest.first) }
+                                append(",下一階一起補。")
+                            },
+                            color = InkGray700, fontSize = 12.sp, lineHeight = 18.sp, fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                    Spacer(Modifier.width(9.dp))
                     Image(
                         painter = painterResource(rankOf(power).beaver),
                         contentDescription = null,
                         contentScale = ContentScale.Fit,
-                        modifier = Modifier.align(Alignment.BottomEnd).size(132.dp).offset(x = 10.dp, y = 10.dp),
+                        modifier = Modifier.size(64.dp),
                     )
                 }
-                Spacer(Modifier.height(10.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    abilities.take(3).forEach { (l, v, d) -> StatCell(l, v, d) }
-                }
-                Spacer(Modifier.height(8.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    abilities.drop(3).forEach { (l, v, d) -> StatCell(l, v, d) }
+                Spacer(Modifier.height(14.dp))
+                // 能力排行長條(強→弱)
+                sorted.forEachIndexed { idx, (label, value, delta) ->
+                    AbilityBar(label = label, value = value, delta = delta, isWeak = label == weakest.first)
+                    if (idx < sorted.size - 1) Spacer(Modifier.height(11.dp))
                 }
                 Spacer(Modifier.height(14.dp))
                 NextUnlockCallout(power)
             }
+        }
+    }
+}
+
+/* ===================== 小元件:能力長條 ===================== */
+
+@Composable
+private fun AbilityBar(label: String, value: Int, delta: Int, isWeak: Boolean) {
+    var appear by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { appear = true }
+    val fill by animateFloatAsState(
+        targetValue = if (appear) value / 100f else 0f,
+        animationSpec = tween(800),
+        label = "abFill",
+    )
+    Column(Modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+            Text(
+                label,
+                color = if (isWeak) BrandDeepOrange else InkBlack,
+                fontSize = 13.sp, fontWeight = FontWeight.Bold,
+            )
+            if (isWeak) {
+                Spacer(Modifier.width(6.dp))
+                Box(
+                    Modifier.clip(RoundedCornerShape(4.dp)).background(BrandDeepOrange)
+                        .padding(horizontal = 6.dp, vertical = 1.dp),
+                ) {
+                    Text("要補", color = PaperWhite, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                }
+            }
+            Spacer(Modifier.weight(1f))
+            Text("${rememberCountUp(value)}", color = InkBlack, fontSize = 15.sp, fontWeight = FontWeight.Black)
+            Spacer(Modifier.width(3.dp))
+            Text(
+                if (delta >= 0) "+$delta" else "$delta",
+                color = if (delta >= 0) AccentGreen else AccentRed,
+                fontSize = 11.sp, fontWeight = FontWeight.Black,
+                modifier = Modifier.padding(bottom = 1.dp),
+            )
+        }
+        Spacer(Modifier.height(5.dp))
+        Box(Modifier.fillMaxWidth().height(7.dp).clip(RoundedCornerShape(50)).background(PaperWhite)) {
+            Box(
+                Modifier.fillMaxWidth(fill).fillMaxHeight().clip(RoundedCornerShape(50))
+                    .background(
+                        Brush.horizontalGradient(
+                            if (isWeak) listOf(Color(0xFFFCA98A), BrandDeepOrange)
+                            else listOf(BrandAmber, BrandOrange),
+                        ),
+                    ),
+            )
         }
     }
 }
@@ -620,10 +702,10 @@ private fun NextUnlockCallout(power: Int) {
 private data class InterviewRank(val title: String, val beaver: Int)
 
 private fun rankOf(score: Int): InterviewRank = when {
-    score >= 85 -> InterviewRank("面試大師 I", R.drawable.beaver_trophy)
-    score >= 75 -> InterviewRank("面試好手 II", R.drawable.beaver_celebrate)
-    score >= 60 -> InterviewRank("面試新星 IV", R.drawable.beaver_flex)
-    else -> InterviewRank("面試新手 V", R.drawable.beaver_climb)
+    score >= 85 -> InterviewRank("面試大師 I", R.drawable.beaver_rank_master)
+    score >= 75 -> InterviewRank("面試好手 II", R.drawable.beaver_rank_expert)
+    score >= 60 -> InterviewRank("面試新星 IV", R.drawable.beaver_rank_star)
+    else -> InterviewRank("面試新手 V", R.drawable.beaver_rank_novice)
 }
 
 @Composable
