@@ -139,38 +139,16 @@ fun Day4LunchScreen(navController: NavHostController) {
             onClose = { navController.popBackStack() },
             onLunch = { phase = "lunch" },
         )
-        else -> {
-            val b = beats[beat]
-            SandboxDecisionScene(
-                speaker = b.speaker,
-                portrait = reaction ?: b.portrait,
-                narration = b.narration,
-                choices = b.choices,
-                sceneLabel = "午餐時間",
-                bgRes = R.drawable.bg_scene_cafe,
-                repPop = repPop,
-                callback = when {
-                    b.speaker == "阿哲" && (WorkplaceState.hasFlag("d1_press_zhe") || WorkplaceState.hasFlag("d2_push_eng")) -> "上次會議你跟阿哲的空氣還沒散。他現在主動講週末寫的工具——這是他在遞橄欖枝。"
-                    b.speaker == "阿哲" && (WorkplaceState.hasFlag("d1_trust_zhe") || WorkplaceState.hasFlag("d2_respect_eng")) -> "這禮拜你對阿哲不算差。他願意跟你聊他週末做的東西，很自然。"
-                    beat == 1 && WorkplaceState.hasFlag("d1_overpromise") -> "小芳問你怎麼看 Ken。你想起週一脫口的「月底沒問題」——現在你更懂那句話的份量了。"
-                    beat == 1 && (WorkplaceState.hasFlag("d2_dump_vivian") || WorkplaceState.hasFlag("d1_vivian_throw")) -> "茶水間的話傳得快。你把 Vivian 推開的那些，小芳搞不好也聽說了。"
-                    else -> null
-                },
-                onBack = { navController.popBackStack() },
-                onChoose = { c ->
-                    if (c.repDelta != 0) {
-                        repPop = WorkplaceState.apply(c.repMeter, c.repDelta, c.repReason, day = 4)
-                    }
-                    c.flag?.let { WorkplaceState.setFlag(it) }
-                    reaction = if (b.speaker == "阿哲") faceAkai(c.repDelta) else faceFang(c.repDelta)
-                    scope.launch {
-                        kotlinx.coroutines.delay(1150)
-                        reaction = null
-                        if (beat < beats.lastIndex) beat++ else phase = "done"
-                    }
-                },
-            )
-        }
+        else -> SandboxConversation(
+            navController = navController,
+            npcId = "fang",
+            day = 4,
+            opening = "走啦吃飯!第一週撐下來啦。怎樣,這裡的人會不會很難搞?有什麼想問的儘管問。",
+            onConcluded = {
+                WorkplaceState.completeDay(4)
+                phase = "done"
+            },
+        )
     }
 }
 

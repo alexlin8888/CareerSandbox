@@ -75,29 +75,16 @@ fun Day5ReviewScreen(navController: NavHostController) {
     when (phase) {
         "board" -> ReviewBoard(onHome = { phase = "night" })
         "night" -> NightEnding(onEnd = { navController.popBackStack() })
-        else -> {
-            val mt = WorkplaceState.managerTrust.value
-            SandboxDecisionScene(
-                speaker = "Ken",
-                portrait = faceKenBase(mt),
-                narration = "禮拜五下午五點半。Ken 走過你的位子，沒坐下。「分帳那個，你這禮拜…」他停頓了一下。「…還可以。下禮拜繼續。」\n\n「還可以」三個字。你不知道自己在期待什麼更多的。但你發現，你有點在意。",
-                sceneLabel = "週五 · 回顧",
-                bgRes = R.drawable.bg_scene_office,
-                callback = when {
-                    WorkplaceState.hasFlag("d1_overpromise") -> "你週一脫口的「月底沒問題」，最後是團隊幫你圓的。Ken 沒提，但你們都知道。"
-                    WorkplaceState.peerBond.value <= 2 -> "你守住了一些東西，也弄丟了一些人。走廊上那幾個不再跟你打招呼的，你心裡有數。"
-                    WorkplaceState.peerBond.value >= 6 -> "這禮拜你沒只顧自己往上爬。有幾個人，會記得你是怎麼對他們的。"
-                    else -> null
-                },
-                choices = listOf(
-                    DecisionChoice("A", "謝謝。下禮拜我把完整版的範圍排出來。", "主管信任", 0, ""),
-                    DecisionChoice("B", "我知道有些地方，我可以做得更好。", "主管信任", 0, ""),
-                    DecisionChoice("C", "這週…我盡力了。", "主管信任", 0, ""),
-                ),
-                onBack = { navController.popBackStack() },
-                onChoose = { phase = "board" },
-            )
-        }
+        else -> SandboxConversation(
+            navController = navController,
+            npcId = "ken",
+            day = 5,
+            opening = "禮拜五下午五點半。「分帳那個,你這禮拜……還可以。」我想聽你自己怎麼看這一週——哪裡做得好,哪裡你會重來?",
+            onConcluded = {
+                WorkplaceState.completeDay(5)
+                phase = "board"
+            },
+        )
     }
 }
 

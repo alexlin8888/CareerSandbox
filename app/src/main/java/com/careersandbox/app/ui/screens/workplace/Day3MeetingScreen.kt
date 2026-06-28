@@ -162,42 +162,16 @@ fun Day3MeetingScreen(navController: NavHostController) {
             onNext = { if (capIdx < captions.lastIndex) capIdx++ else phase = "decision" },
             onBack = { navController.popBackStack() },
         )
-        else -> {
-            val mt = WorkplaceState.managerTrust.value
-            val current = beats[beat]
-            SandboxDecisionScene(
-                speaker = "Ken",
-                portrait = reaction ?: faceKenBase(mt),
-                narration = current.narration,
-                choices = current.choices,
-                bgRes = R.drawable.bg_scene_meeting,
-                repPop = repPop,
-                callback = when {
-                    beat == 0 && WorkplaceState.hasFlag("d1_overpromise") -> "你週一跟 Ken 說過「月底沒問題」。現在整個會議室，等你兌現那句話。"
-                    beat == 0 && WorkplaceState.hasFlag("d2_push_eng") -> "你昨天在信裡逼阿哲交日期。他現在坐在對面，沒看你。"
-                    beat == 1 && (WorkplaceState.hasFlag("d1_overpromise") || WorkplaceState.hasFlag("d2_push_eng")) -> "走到「要選誰受傷」這一步，不是今天才開始的。前面幾天的每個決定，都把路收窄了一點。"
-                    beat == 2 && WorkplaceState.hasFlag("d1_press_zhe") -> "從週一你說他在「留 buffer」到現在——阿哲那張臉，你終於讀得懂了。"
-                    beat == 2 && WorkplaceState.hasFlag("d2_respect_eng") -> "你昨天說會議上一起看、沒催他。阿哲記得——他主動把資料攤開了。"
-                    beat == 3 && (WorkplaceState.hasFlag("d1_vivian_throw") || WorkplaceState.hasFlag("d2_dump_vivian")) -> "你把 Vivian 推開過。現在輪到要她替你跟客戶圓場——她記得是怎麼走到這一步的。"
-                    beat == 3 && WorkplaceState.hasFlag("d1_vivian_bridge") -> "你之前幫 Vivian 擋過。她現在願意聽你的——這是你一週前種下的。"
-                    beat == 4 && WorkplaceState.hasFlag("d2_miss_urgent") -> "昨天那封鎖帳號的信你沒及時看，今天有人在會議上補了一刀。"
-                    else -> null
-                },
-                onBack = { navController.popBackStack() },
-                onChoose = { c ->
-                    if (c.repDelta != 0) {
-                        repPop = WorkplaceState.apply(c.repMeter, c.repDelta, c.repReason, day = 3)
-                    }
-                    c.flag?.let { WorkplaceState.setFlag(it) }
-                    reaction = faceKenReact(c.repDelta, WorkplaceState.managerTrust.value)
-                    scope.launch {
-                        kotlinx.coroutines.delay(1150)
-                        reaction = null
-                        if (beat < beats.lastIndex) beat++ else phase = "done"
-                    }
-                },
-            )
-        }
+        else -> SandboxConversation(
+            navController = navController,
+            npcId = "ken",
+            day = 3,
+            opening = "會議室裡大家都看著你。排程這件事——工程說兩週、業務答應月底,客戶在等。你打算怎麼收?",
+            onConcluded = {
+                WorkplaceState.completeDay(3)
+                phase = "done"
+            },
+        )
     }
 }
 

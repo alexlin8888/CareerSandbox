@@ -171,123 +171,17 @@ fun Day2EmailScreen(navController: NavHostController) {
         return
     }
 
-    val m = mails[idx]
-    Box(Modifier.fillMaxSize().background(Color.White)) {
-        Column(Modifier.fillMaxSize()) {
-            // ===== 頂部動作列 =====
-            Row(
-                Modifier.fillMaxWidth().padding(start = 8.dp, end = 14.dp, top = 52.dp, bottom = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    Modifier.size(42.dp).clip(CircleShape).clickable { navController.popBackStack() },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("←", color = Color(0xFF444444), fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                }
-                Spacer(Modifier.weight(1f))
-                Text("${idx + 1} / ${mails.size}", color = Color(0xFF80868B), fontSize = 13.sp, fontWeight = FontWeight.Bold)
-            }
+    SandboxConversation(
+        navController = navController,
+        npcId = "vivian",
+        day = 2,
+        opening = "欸,你信箱應該炸了吧?客戶一直在追 demo、CI 又紅了、Ken 也在問。我們得趕快對一下——你打算先處理哪個?",
+        onConcluded = {
+            WorkplaceState.completeDay(2)
+            done = true
+        },
+    )
 
-            // ===== 信件內容(可捲)=====
-            Column(
-                Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())
-                    .padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 8.dp),
-            ) {
-                Text(m.subject, color = Color(0xFF202124), fontSize = 24.sp, fontWeight = FontWeight.Bold, lineHeight = 31.sp)
-                Spacer(Modifier.height(12.dp))
-                Row(
-                    Modifier.clip(RoundedCornerShape(6.dp)).background(m.folderColor.copy(alpha = 0.10f))
-                        .padding(horizontal = 12.dp, vertical = 5.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(Modifier.size(8.dp).clip(RoundedCornerShape(2.dp)).background(m.folderColor))
-                    Spacer(Modifier.width(6.dp))
-                    Text(m.folder, color = m.folderColor, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                }
-                Spacer(Modifier.height(20.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        Modifier.size(42.dp).clip(CircleShape).background(m.avatarColor),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(m.avatarLetter, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Medium)
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(m.sender, color = Color(0xFF202124), fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                            Spacer(Modifier.width(6.dp))
-                            Text("<${m.email}>", color = Color(0xFF80868B), fontSize = 13.sp)
-                        }
-                        Text("寄給 我", color = Color(0xFF80868B), fontSize = 13.sp)
-                    }
-                }
-                Spacer(Modifier.height(20.dp))
-                Text(m.body, color = Color(0xFF202124), fontSize = 15.sp, lineHeight = 25.sp)
-            }
-
-            // ===== 處理選項 =====
-            Column(
-                Modifier.fillMaxWidth().background(Color(0xFFF7F7F5))
-                    .padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 24.dp),
-            ) {
-                Text("怎麼處理這封?", color = Color(0xFF6B7280), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(10.dp))
-                m.choices.forEach { c ->
-                    Row(
-                        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color.White)
-                            .clickable {
-                                if (c.repDelta != 0) {
-                                    repPop = WorkplaceState.apply(c.repMeter, c.repDelta, c.repReason, day = 2)
-                                }
-                                c.flag?.let { WorkplaceState.setFlag(it) }
-                                if (idx < mails.lastIndex) idx++ else done = true
-                            }
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Box(
-                            Modifier.size(28.dp).clip(CircleShape).background(Color(0x1FF2531C)),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(c.letter, color = Color(0xFFF2531C), fontSize = 13.sp, fontWeight = FontWeight.Black)
-                        }
-                        Spacer(Modifier.width(12.dp))
-                        Text(c.label, color = Color(0xFF202124), fontSize = 14.sp, fontWeight = FontWeight.Medium, lineHeight = 20.sp)
-                    }
-                    Spacer(Modifier.height(8.dp))
-                }
-            }
-        }
-
-        // ===== 計量彈窗 =====
-        AnimatedVisibility(
-            visible = repPop != null,
-            enter = fadeIn() + slideInVertically { -it / 2 },
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = 100.dp),
-        ) {
-            repPop?.let { rc ->
-                val up = rc.delta > 0
-                Row(
-                    Modifier.clip(RoundedCornerShape(999.dp)).background(Color(0xFF281C12))
-                        .padding(horizontal = 18.dp, vertical = 11.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(rc.meter, color = Color(0xFFFFF8F3), fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.width(8.dp))
-                    Text((if (up) "+" else "") + rc.delta,
-                        color = if (up) Color(0xFF10B981) else Color(0xFFEF4444),
-                        fontSize = 14.sp, fontWeight = FontWeight.Black)
-                    if (rc.reason.isNotBlank()) {
-                        Spacer(Modifier.width(10.dp))
-                        Text(rc.reason, color = Color(0xB3FFF8F3), fontSize = 12.sp)
-                    }
-                }
-            }
-        }
-    }
 }
 
 @Composable

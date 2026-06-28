@@ -72,6 +72,8 @@ private fun npcMeta(npcId: String, day: Int): NpcMeta = when (npcId) {
         "欸,排程的事你怎麼看?兩週內上線我是覺得有風險啦。")
     "vivian" -> NpcMeta("Vivian", R.drawable.colleague_vivian,
         "客戶下週要 demo,時間壓得有點緊,想跟你討論一下。")
+    "fang" -> NpcMeta("小芳", R.drawable.fang_neutral,
+        "走啦吃飯!第一週撐下來啦,有什麼想問的儘管問。")
     else -> NpcMeta("同事", R.drawable.colleague_quiet, "嗨,聊一下?")
 }
 
