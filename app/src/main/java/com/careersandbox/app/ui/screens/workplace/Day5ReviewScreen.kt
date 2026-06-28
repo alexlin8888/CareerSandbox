@@ -83,6 +83,12 @@ fun Day5ReviewScreen(navController: NavHostController) {
                 narration = "禮拜五下午五點半。Ken 走過你的位子，沒坐下。「分帳那個，你這禮拜…」他停頓了一下。「…還可以。下禮拜繼續。」\n\n「還可以」三個字。你不知道自己在期待什麼更多的。但你發現，你有點在意。",
                 sceneLabel = "週五 · 回顧",
                 bgRes = R.drawable.bg_scene_office,
+                callback = when {
+                    WorkplaceState.hasFlag("d1_overpromise") -> "你週一脫口的「月底沒問題」，最後是團隊幫你圓的。Ken 沒提，但你們都知道。"
+                    WorkplaceState.peerBond.value <= 2 -> "你守住了一些東西，也弄丟了一些人。走廊上那幾個不再跟你打招呼的，你心裡有數。"
+                    WorkplaceState.peerBond.value >= 6 -> "這禮拜你沒只顧自己往上爬。有幾個人，會記得你是怎麼對他們的。"
+                    else -> null
+                },
                 choices = listOf(
                     DecisionChoice("A", "謝謝。下禮拜我把完整版的範圍排出來。", "主管信任", 0, ""),
                     DecisionChoice("B", "我知道有些地方，我可以做得更好。", "主管信任", 0, ""),
@@ -107,13 +113,13 @@ private fun ReviewBoard(onHome: () -> Unit) {
 
     // 逐角色後果(讀整週旗標)
     val vivian = when {
-        has("d3_backed_vivian") -> Consequence("Vivian", "她跟你有了交情。客戶那案她自己扛下來,還說欠你一個。", green)
-        has("d3_left_vivian") -> Consequence("Vivian", "你們只剩公事。下次她需要人,不會先想到你。", red)
+        has("d3_backed_vivian") || has("d1_vivian_bridge") -> Consequence("Vivian", "她跟你有了交情。客戶那案她自己扛下來,還說欠你一個。", green)
+        has("d3_left_vivian") || has("d1_vivian_throw") || has("d2_dump_vivian") -> Consequence("Vivian", "你把她推開過不只一次。下次她需要人,不會先想到你。", red)
         else -> Consequence("Vivian", "你跟 Vivian 不算近,也沒結怨。", gray)
     }
     val akai = when {
-        has("lunch_bonded_akai") -> Consequence("阿哲", "他傳訊息給你:下週有個小案子,算你一個。", green)
-        has("d3_burned_team") || has("d2_push_eng") -> Consequence("阿哲", "他沒抱怨,但也不再主動找你了。", red)
+        has("lunch_bonded_akai") || has("d1_trust_zhe") -> Consequence("阿哲", "他傳訊息給你:下週有個小案子,算你一個。", green)
+        has("d3_burned_team") || has("d2_push_eng") || has("d1_press_zhe") -> Consequence("阿哲", "從週一你說他「留 buffer」,到後來逼日期——他沒抱怨,但也不再主動找你了。", red)
         else -> Consequence("阿哲", "你跟阿哲還在客氣的距離。", gray)
     }
     val ken = when {
