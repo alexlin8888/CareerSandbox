@@ -25,6 +25,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -51,33 +52,90 @@ private data class ChatMsg(
     val incoming: Boolean,   // true=對方(阿哲)，false=你
 )
 
-private val novaChatScript = listOf(
-    ChatMsg("阿哲", "早，分帳功能金流串接卡關,有個 bug 一直測不完。", "14:00", true),
-    ChatMsg("阿哲", "下週一上線不可能,至少再兩週。", "14:01", true),
-    ChatMsg("你", "這麼嚴重？業務那邊知道了嗎", "14:01", false),
-    ChatMsg("你", "Vivian 一直催,她說客戶不能跳票", "14:01", false),
-    ChatMsg("阿哲", "我先看一下狀況,等等回你。", "14:02", true),
+private data class ChatThread(
+    val name: String,
+    val avatar: Int?,
+    val avatarLetter: String,
+    val avatarBg: Color,
+    val status: String,
+    val script: List<ChatMsg>,
+)
+
+private val chatThreads: Map<String, ChatThread> = mapOf(
+    "zhe" to ChatThread(
+        "阿哲", R.drawable.colleague_quiet, "", Color(0xFFCBD5E1), "工程組長 · 線上",
+        listOf(
+            ChatMsg("阿哲", "早，分帳功能金流串接卡關，有個 bug 一直測不完。", "14:00", true),
+            ChatMsg("阿哲", "下週一上線不可能，至少再兩週。", "14:01", true),
+            ChatMsg("你", "這麼嚴重？業務那邊知道了嗎", "14:01", false),
+            ChatMsg("你", "Vivian 一直催，她說客戶不能跳票", "14:01", false),
+            ChatMsg("阿哲", "我先看一下狀況，等等回你。", "14:02", true),
+        ),
+    ),
+    "vivian" to ChatThread(
+        "Vivian", R.drawable.colleague_vivian, "", Color(0xFFCBD5E1), "業務 · 線上",
+        listOf(
+            ChatMsg("Vivian", "分帳的 demo 下週三客戶要看，時間我先答應了。", "13:55", true),
+            ChatMsg("Vivian", "工程說要延，但這場真的不能跳票 🙏", "13:56", true),
+            ChatMsg("你", "我了解，我去跟阿哲確認能不能先生一個 demo 版本", "13:57", false),
+            ChatMsg("Vivian", "拜託你了！有你頂著我安心多了", "13:58", true),
+        ),
+    ),
+    "group" to ChatThread(
+        "產品群組 (8)", null, "群", Color(0xFFF59E0B), "8 位成員",
+        listOf(
+            ChatMsg("阿哲", "阿哲：我先 push 一版分帳修正，大家測一下。", "13:28", true),
+            ChatMsg("Vivian", "Vivian：客戶下週要 demo，範圍能先確認嗎？", "13:29", true),
+            ChatMsg("Ken", "Ken：今天 5 點前我要一份建議，誰整理？", "13:30", true),
+            ChatMsg("你", "我來整理，等等貼到決議。", "13:31", false),
+        ),
+    ),
+    "ken" to ChatThread(
+        "Ken", R.drawable.ken_neutral, "", Color(0xFFCBD5E1), "你的主管 · 線上",
+        listOf(
+            ChatMsg("Ken", "看一下你信箱，分帳的事我寄給你了。", "13:45", true),
+            ChatMsg("Ken", "5 點前給我建議，記得寫清楚理由。", "13:45", true),
+            ChatMsg("你", "收到，我看完馬上回您。", "13:46", false),
+        ),
+    ),
+    "notice" to ChatThread(
+        "NovaPay 公告", null, "公", Color(0xFF6B7280), "官方帳號",
+        listOf(
+            ChatMsg("NovaPay 公告", "【系統維護】今晚 23:00 起例行維護，預計 30 分鐘。", "11:05", true),
+            ChatMsg("NovaPay 公告", "維護期間部分服務暫停，造成不便敬請見諒。", "11:05", true),
+        ),
+    ),
+    "mom" to ChatThread(
+        "媽", null, "媽", Color(0xFFB85C3A), "家人",
+        listOf(
+            ChatMsg("媽", "記得吃飯，不要又熬夜。", "昨天", true),
+            ChatMsg("媽", "工作再忙也要顧身體啊。", "昨天", true),
+            ChatMsg("你", "知道啦，我會早點睡。", "昨天", false),
+        ),
+    ),
 )
 
 @Composable
-fun NovaChatScreen(navController: NavHostController) {
+fun NovaChatScreen(navController: NavHostController, chatId: String = "zhe") {
+    val thread = chatThreads[chatId] ?: chatThreads.getValue("zhe")
+    val script = thread.script
     var shown by remember { mutableStateOf(0) }
     val scroll = rememberScrollState()
-    val lastOutIdx = remember { novaChatScript.indexOfLast { !it.incoming } }
+    val lastOutIdx = remember(script) { script.indexOfLast { !it.incoming } }
     var draft by remember { mutableStateOf("") }
     val extraMsgs = remember { mutableStateListOf<ChatMsg>() }
 
     // 訊息逐則出現（對方訊息前先「輸入中」一下）
     LaunchedEffect(Unit) {
-        while (shown < novaChatScript.size) {
-            delay(if (novaChatScript[shown].incoming) 1200L else 650L)
+        while (shown < script.size) {
+            delay(if (script[shown].incoming) 1200L else 650L)
             shown++
         }
     }
     LaunchedEffect(shown) { scroll.animateScrollTo(scroll.maxValue) }
     LaunchedEffect(extraMsgs.size) { scroll.animateScrollTo(scroll.maxValue) }
 
-    val typing = shown < novaChatScript.size && novaChatScript[shown].incoming
+    val typing = shown < script.size && script[shown].incoming
 
     Column(Modifier.fillMaxSize().background(PaperOff)) {
 
@@ -92,19 +150,14 @@ fun NovaChatScreen(navController: NavHostController) {
             IconButton(onClick = { navController.popBackStack() }) {
                 Icon(Icons.Outlined.ArrowBack, contentDescription = null, tint = InkBlack)
             }
-            Image(
-                painter = painterResource(R.drawable.colleague_quiet),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.size(40.dp).clip(CircleShape).background(PaperOff),
-            )
+            NovaCircleAvatar(size = 40.dp, res = thread.avatar, letter = thread.avatarLetter, bg = thread.avatarBg)
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
-                Text("阿哲", color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(thread.name, color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(6.dp).clip(CircleShape).background(AccentGreen))
                     Spacer(Modifier.width(4.dp))
-                    Text("工程組長 · 線上", color = InkGray500, fontSize = 11.sp)
+                    Text(thread.status, color = InkGray500, fontSize = 11.sp)
                 }
             }
         }
@@ -128,13 +181,15 @@ fun NovaChatScreen(navController: NavHostController) {
             }
             Spacer(Modifier.height(12.dp))
 
-            novaChatScript.take(shown).forEachIndexed { i, m ->
-                ChatBubble(m, showRead = (i == lastOutIdx))
+            script.take(shown).forEachIndexed { i, m ->
+                ChatBubble(m, showRead = (i == lastOutIdx),
+                    avatarRes = thread.avatar, avatarLetter = thread.avatarLetter, avatarBg = thread.avatarBg)
                 Spacer(Modifier.height(8.dp))
             }
-            if (typing) TypingBubble()
+            if (typing) TypingBubble(thread.avatar, thread.avatarLetter, thread.avatarBg)
             extraMsgs.forEach { m ->
-                ChatBubble(m, showRead = false)
+                ChatBubble(m, showRead = false,
+                    avatarRes = thread.avatar, avatarLetter = thread.avatarLetter, avatarBg = thread.avatarBg)
                 Spacer(Modifier.height(8.dp))
             }
         }
@@ -201,19 +256,14 @@ fun NovaChatScreen(navController: NavHostController) {
 }
 
 @Composable
-private fun ChatBubble(m: ChatMsg, showRead: Boolean) {
+private fun ChatBubble(m: ChatMsg, showRead: Boolean, avatarRes: Int?, avatarLetter: String, avatarBg: Color) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = if (m.incoming) Alignment.Start else Alignment.End,
     ) {
         Row(verticalAlignment = Alignment.Bottom) {
             if (m.incoming) {
-                Image(
-                    painter = painterResource(R.drawable.colleague_quiet),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.size(28.dp).clip(CircleShape).background(PaperWhite),
-                )
+                NovaCircleAvatar(size = 28.dp, res = avatarRes, letter = avatarLetter, bg = avatarBg)
                 Spacer(Modifier.width(6.dp))
             }
             Box(
@@ -251,14 +301,9 @@ private fun ChatBubble(m: ChatMsg, showRead: Boolean) {
 }
 
 @Composable
-private fun TypingBubble() {
+private fun TypingBubble(avatarRes: Int?, avatarLetter: String, avatarBg: Color) {
     Row(verticalAlignment = Alignment.Bottom) {
-        Image(
-            painter = painterResource(R.drawable.colleague_quiet),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.size(28.dp).clip(CircleShape).background(PaperWhite),
-        )
+        NovaCircleAvatar(size = 28.dp, res = avatarRes, letter = avatarLetter, bg = avatarBg)
         Spacer(Modifier.width(6.dp))
         Box(
             modifier = Modifier
