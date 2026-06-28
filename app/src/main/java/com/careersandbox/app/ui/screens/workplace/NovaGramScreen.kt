@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
 import com.careersandbox.app.data.mock.WorkplaceState
 import com.careersandbox.app.data.mock.SandboxContentEngineProvider
+import com.careersandbox.app.data.mock.GramPost
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
