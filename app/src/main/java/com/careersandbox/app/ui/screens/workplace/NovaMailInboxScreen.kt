@@ -23,6 +23,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
+import com.careersandbox.app.navigation.Routes
+import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 
 /* =====================================================================
@@ -95,7 +97,9 @@ fun NovaMailInboxScreen(navController: NavHostController) {
             Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll)) {
                 novaMailRows.forEach { m ->
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 11.dp),
+                        modifier = Modifier.fillMaxWidth()
+                            .pressScale { navController.navigate(Routes.NOVA_MAIL_OPEN) }
+                            .padding(horizontal = 16.dp, vertical = 11.dp),
                         verticalAlignment = Alignment.Top,
                     ) {
                         NovaCircleAvatar(size = 42.dp, res = m.res, letter = m.letter, bg = m.avBg)
