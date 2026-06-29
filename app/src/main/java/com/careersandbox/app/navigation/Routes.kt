@@ -50,6 +50,7 @@ object Routes {
     const val INTERVIEW_VIDEO = "interview_video"
     const val INTERVIEW_LIVE_GROUP = "interview_live_group"
     const val INTERVIEW_LIVE_PANEL = "interview_live_panel"
+    const val INTERVIEW_PANEL_REDESIGN = "interview_panel_redesign"
     const val INTERVIEW_REPORT = "interview_report"
     const val INTERVIEW_HISTORY = "interview_history"
 
