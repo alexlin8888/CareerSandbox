@@ -21,6 +21,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -141,6 +144,8 @@ fun FitAnalysisScreen(navController: NavHostController) {
 
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { visible = true }
+    var radarVisible by remember { mutableStateOf(false) }   // 雷達滑入視窗才觸發動畫
+    val screenHpx = with(LocalDensity.current) { LocalConfiguration.current.screenHeightDp.dp.toPx() }
 
     Box(modifier = Modifier.fillMaxSize().background(PaperWarm)) {
         Column(
@@ -179,7 +184,13 @@ fun FitAnalysisScreen(navController: NavHostController) {
                         // === 能力分布:雷達 + bar ===
                         Text("能力輪廓", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 18.sp)
                         Spacer(Modifier.height(12.dp))
-                        CapabilityRadar(capabilities = capabilities, animateProgress = visible)
+                        Box(
+                            Modifier.fillMaxWidth().onGloballyPositioned { c ->
+                                if (!radarVisible && c.positionInWindow().y < screenHpx * 0.82f) radarVisible = true
+                            },
+                        ) {
+                            CapabilityRadar(capabilities = capabilities, animateProgress = radarVisible)
+                        }
                         Spacer(Modifier.height(20.dp))
                         Column(verticalArrangement = Arrangement.spacedBy(13.dp)) {
                             capabilities.forEach { cap -> CapabilityRow(cap) }

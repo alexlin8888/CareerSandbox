@@ -55,7 +55,8 @@ fun NovaMailOpenScreen(navController: NavHostController, mailId: String = "ken")
         if (mailId == "vivian") WorkplaceState.setFlag("intel_d2_mail")   // 讀客戶 demo 那封＝掌握「客戶已同意分階段」情報(Day2 進階選項用)
     }
     val scroll = rememberScrollState()
-    var replying by remember { mutableStateOf(false) }
+    var mode by remember { mutableStateOf("none") }   // none / reply / forward
+    var recipient by remember { mutableStateOf("") }   // 轉寄收件人
     var sent by remember { mutableStateOf(false) }
     var draft by remember { mutableStateOf("") }
 
@@ -147,13 +148,19 @@ fun NovaMailOpenScreen(navController: NavHostController, mailId: String = "ken")
                     Icon(Icons.Filled.Check, null, tint = Color(0xFF1E8E5A), modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("回覆已送出", color = Color(0xFF1E8E5A), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text(
+                            if (mode == "forward") "已轉寄給 ${recipient.ifBlank { "（未填）" }}" else "回覆已送出",
+                            color = Color(0xFF1E8E5A), fontWeight = FontWeight.Bold, fontSize = 14.sp,
+                        )
                         Spacer(Modifier.height(2.dp))
-                        Text(draft, color = InkGray700, fontSize = 12.sp, lineHeight = 17.sp, maxLines = 3)
+                        Text(
+                            if (mode == "forward") "「${d.subject}」已轉寄" else draft,
+                            color = InkGray700, fontSize = 12.sp, lineHeight = 17.sp, maxLines = 3,
+                        )
                     }
                 }
             }
-            replying -> {
+            mode == "reply" -> {
                 Column(
                     Modifier.fillMaxWidth().background(PaperWhite)
                         .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -204,6 +211,77 @@ fun NovaMailOpenScreen(navController: NavHostController, mailId: String = "ken")
                     Text("demo：之後由模型端依信件內容生成更自然的回覆", color = InkGray400, fontSize = 10.sp)
                 }
             }
+            mode == "forward" -> {
+                Column(
+                    Modifier.fillMaxWidth().background(PaperWhite)
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                ) {
+                    Text("轉寄這封信", color = InkGray500, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                    Spacer(Modifier.height(9.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("收件人", color = InkGray500, fontSize = 12.sp)
+                        Spacer(Modifier.width(10.dp))
+                        Box(
+                            Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(PaperOff)
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                        ) {
+                            BasicTextField(
+                                value = recipient,
+                                onValueChange = { recipient = it },
+                                textStyle = TextStyle(color = InkBlack, fontSize = 13.sp),
+                                cursorBrush = SolidColor(BrandOrange),
+                                modifier = Modifier.fillMaxWidth(),
+                                decorationBox = { inner ->
+                                    if (recipient.isEmpty()) Text("輸入同事姓名或 email…", color = InkGray400, fontSize = 13.sp)
+                                    inner()
+                                },
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Column(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(PaperOff).padding(12.dp),
+                    ) {
+                        Text("———— 轉寄的內容 ————", color = InkGray400, fontSize = 11.sp)
+                        Spacer(Modifier.height(6.dp))
+                        Text("${d.sender}：${d.subject}", color = InkSlate, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                        Spacer(Modifier.height(4.dp))
+                        Text(d.body, color = InkGray700, fontSize = 12.sp, lineHeight = 18.sp, maxLines = 4)
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            Modifier.weight(1f).clip(RoundedCornerShape(22.dp)).background(PaperOff)
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                        ) {
+                            BasicTextField(
+                                value = draft,
+                                onValueChange = { draft = it },
+                                textStyle = TextStyle(color = InkBlack, fontSize = 13.sp, lineHeight = 19.sp),
+                                cursorBrush = SolidColor(BrandOrange),
+                                modifier = Modifier.fillMaxWidth(),
+                                decorationBox = { inner ->
+                                    if (draft.isEmpty()) Text("附一句話（可留空）…", color = InkGray400, fontSize = 13.sp)
+                                    inner()
+                                },
+                            )
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        val canSend = recipient.isNotBlank()
+                        Box(
+                            Modifier.size(44.dp).clip(CircleShape)
+                                .background(if (canSend) BrandOrange else InkGray200)
+                                .pressScale { if (canSend) { sent = true } }
+                                .padding(11.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(Icons.Filled.Send, null, tint = PaperWhite, modifier = Modifier.size(18.dp))
+                        }
+                    }
+                    Spacer(Modifier.height(7.dp))
+                    Text("demo：實際寄送由後端處理", color = InkGray400, fontSize = 10.sp)
+                }
+            }
             else -> {
                 Row(
                     modifier = Modifier.fillMaxWidth().background(PaperWhite)
@@ -213,12 +291,12 @@ fun NovaMailOpenScreen(navController: NavHostController, mailId: String = "ken")
                 ) {
                     Box(
                         Modifier.weight(1f).clip(RoundedCornerShape(50)).background(BrandOrange)
-                            .pressScale { replying = true }.padding(vertical = 12.dp),
+                            .pressScale { mode = "reply" }.padding(vertical = 12.dp),
                         contentAlignment = Alignment.Center,
                     ) { Text("回覆", color = PaperWhite, fontWeight = FontWeight.SemiBold, fontSize = 14.sp) }
                     Box(
                         Modifier.weight(1f).clip(RoundedCornerShape(50)).background(PaperOff)
-                            .pressScale { replying = true }.padding(vertical = 12.dp),
+                            .pressScale { mode = "forward" }.padding(vertical = 12.dp),
                         contentAlignment = Alignment.Center,
                     ) { Text("轉寄", color = InkGray700, fontWeight = FontWeight.Medium, fontSize = 14.sp) }
                     Box(
