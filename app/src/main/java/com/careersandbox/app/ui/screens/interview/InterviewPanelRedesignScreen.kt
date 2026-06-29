@@ -16,10 +16,12 @@ import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,16 +35,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
+import com.careersandbox.app.data.mock.InterviewEngineProvider
+import com.careersandbox.app.data.mock.InterviewQuestionRequest
+import com.careersandbox.app.data.mock.InterviewScoreRequest
 import com.careersandbox.app.ui.theme.*
+import kotlinx.coroutines.launch
 
 /* =====================================================================
-   場景式 Panel 面試(方向 A;沙盒場景背景 + 沙盒角色立繪 + 表情隨回答變 + 語音作答 + 上傳作品)
-   - 背景:bg_scene_meeting(沿用沙盒跨部門會議場景,風格一致)+ 暖黑暈影。
-   - 主考官:直接用沙盒角色(Ken 用人主管 / 阿哲 技術主管 / Vivian 業務代表),
-     因其有表情變體 → 可依回答換臉;且與沙盒同一套角色+場景,完全一致。
-     (若要改回 interviewer_hr/tech/lead 那套,需替它們補表情變體美術。)
-   - 表情:答完後依答案觸發反應(mock 啟發式:答得完整→點頭認可;太短→等你多說)。接後端後改用真評分。
-   - 作答用語音(RecognizerIntent,免權限);可上傳作品給主考官(GetContent,免權限);不打字。
+   場景式 Panel 面試(方向 A) — engine-driven
+   - 背景:bg_scene_meeting(沿用沙盒會議場景)+ 暖黑暈影,風格一致。
+   - 主考官:沙盒角色(Ken 用人主管 / 阿哲 技術主管 / Vivian 業務代表),有表情變體 → 可依評分換臉。
+   - 題目與評分走 InterviewEngineProvider.engine(mock↔remote):
+       nextQuestion 取題;scoreAnswer 回 reactionDelta → 驅動表情 + 名牌反應。
+     Mock 引擎瞬回(同題、同啟發式);後端就緒切 remote 後表情即依真評分變。
+   - 作答用語音(免權限);可上傳作品(免權限);不打字。
    ===================================================================== */
 
 private data class Seat(val name: String, val role: String, val accent: Color)
@@ -52,11 +58,6 @@ private val panel = listOf(
     Seat("阿哲", "技術主管", BrandOrange),
     Seat("Ken", "用人主管", BrandDeepOrange),
 )
-private val questions = listOf(
-    "先自我介紹一下,聊聊你最近最有成就感的一個專案。",
-    "測試才跑六成、race condition 還沒解,你會怎麼跟客戶說月底這個時程?",
-    "如果讓你加入我們團隊,你覺得第一個月能帶來什麼?",
-)
 
 // 依座位(角色)+ 反應強度回傳沙盒立繪;d>0 正面、d<0 負面、0 中性
 private fun faceFor(seat: Int, d: Int): Int = when (seat) {
@@ -65,35 +66,56 @@ private fun faceFor(seat: Int, d: Int): Int = when (seat) {
     else -> when { d >= 1 -> R.drawable.ken_happy; d <= -1 -> R.drawable.ken_concerned; else -> R.drawable.ken_neutral }
 }
 
-// mock 反應:答案越完整反應越好(接後端後改用真評分)
-private fun reactionDelta(answer: String): Int = when {
-    answer.isBlank() -> 0
-    answer.length >= 24 -> 1
-    answer.length >= 10 -> 0
-    else -> -1
-}
-private fun reactionText(d: Int): String = when {
-    d >= 1 -> "認可地點點頭"
-    d <= -1 -> "等你再多說一點"
-    else -> "若有所思地聽著"
-}
-
 @Composable
 fun InterviewPanelRedesignScreen(navController: NavHostController) {
     var idx by remember { mutableIntStateOf(0) }
     var answer by remember { mutableStateOf("") }
     var shared by remember { mutableStateOf(false) }
-    val finished = idx >= panel.size
+    var question by remember { mutableStateOf("") }
+    var loadingQ by remember { mutableStateOf(true) }
+    var reactionDelta by remember { mutableIntStateOf(0) }
+    var reactionText by remember { mutableStateOf("") }
+    var ended by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val sessionId = remember { "interview-" + System.currentTimeMillis() }
+
+    val finished = idx >= panel.size || ended
     val seat = idx.coerceIn(0, panel.size - 1)
     val asker = panel[seat]
-    val delta = if (answer.isBlank()) 0 else reactionDelta(answer)
+    val delta = if (answer.isBlank()) 0 else reactionDelta
+
+    // 換主考官就向引擎取下一題(mock 瞬回;remote 可能稍等)
+    LaunchedEffect(idx) {
+        if (idx < panel.size) {
+            loadingQ = true; answer = ""; reactionText = ""; reactionDelta = 0; shared = false
+            val s = idx
+            val resp = InterviewEngineProvider.engine.nextQuestion(
+                InterviewQuestionRequest(sessionId, s, panel[s].role, panel[s].name, s),
+            )
+            if (resp.concluded) ended = true else question = resp.question
+            loadingQ = false
+        }
+    }
+
+    fun submitAnswer(text: String) {
+        answer = text
+        val s = idx.coerceIn(0, panel.size - 1)
+        val q = question
+        scope.launch {
+            val r = InterviewEngineProvider.engine.scoreAnswer(
+                InterviewScoreRequest(sessionId, s, panel[s].role, q, text),
+            )
+            reactionDelta = r.reactionDelta
+            reactionText = r.reactionText
+        }
+    }
 
     val voiceLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) { result ->
         if (result.resultCode == android.app.Activity.RESULT_OK) {
             val text = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
-            if (!text.isNullOrBlank()) answer = text
+            if (!text.isNullOrBlank()) submitAnswer(text)
         }
     }
     fun startVoice() {
@@ -168,7 +190,7 @@ fun InterviewPanelRedesignScreen(navController: NavHostController) {
                 }
             }
 
-            // 立繪:依回答換表情
+            // 立繪:依評分換表情
             Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Image(
@@ -182,7 +204,7 @@ fun InterviewPanelRedesignScreen(navController: NavHostController) {
                         Modifier.clip(RoundedCornerShape(999.dp)).background(asker.accent).padding(horizontal = 13.dp, vertical = 5.dp),
                     ) {
                         Text(
-                            if (answer.isBlank()) "${asker.name} · ${asker.role}　發問中" else "${asker.name}（${reactionText(delta)}）",
+                            if (answer.isBlank() || reactionText.isBlank()) "${asker.name} · ${asker.role}　發問中" else "${asker.name}（$reactionText）",
                             color = Color(0xFF3A1505), fontSize = 11.sp, fontWeight = FontWeight.Bold,
                         )
                     }
@@ -194,7 +216,10 @@ fun InterviewPanelRedesignScreen(navController: NavHostController) {
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xDB241B12))
                         .padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 14.dp),
                 ) {
-                    Text(questions[idx], color = Color.White, fontSize = 14.sp, lineHeight = 22.sp)
+                    Text(
+                        if (loadingQ) "（思考下一題…）" else question,
+                        color = Color.White, fontSize = 14.sp, lineHeight = 22.sp,
+                    )
                 }
                 Box(
                     Modifier.align(Alignment.TopStart).offset(x = 14.dp, y = (-11).dp)
@@ -241,7 +266,7 @@ fun InterviewPanelRedesignScreen(navController: NavHostController) {
                 Box(
                     Modifier.clip(RoundedCornerShape(999.dp))
                         .background(if (answer.isNotBlank()) BrandOrange else Color(0x22FFFFFF))
-                        .clickable { idx += 1; answer = ""; shared = false }
+                        .clickable { idx += 1 }
                         .padding(horizontal = 20.dp, vertical = 12.dp),
                 ) {
                     Text(
