@@ -38,6 +38,7 @@ import com.careersandbox.app.data.mock.InterviewConfig
 import com.careersandbox.app.data.mock.MockInterviewProber
 import com.careersandbox.app.data.mock.InterviewSession
 import com.careersandbox.app.navigation.Routes
+import com.careersandbox.app.ui.components.rememberInPageVoice
 import com.careersandbox.app.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -203,22 +204,9 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
         }
     }
 
-    val voiceLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult(),
-    ) { result ->
-        if (result.resultCode == android.app.Activity.RESULT_OK) {
-            val text = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
-            if (!text.isNullOrBlank()) submitAnswer(text)
-        }
-    }
-    fun startVoice() {
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, if (lang == "English") "en-US" else "zh-TW")
-            putExtra(RecognizerIntent.EXTRA_PROMPT, t("請回答面試官的問題", "Answer the interviewer"))
-        }
-        try { voiceLauncher.launch(intent) } catch (e: Exception) { }
-    }
+    val voice = rememberInPageVoice(
+        languageTag = if (lang == "English") "en-US" else "zh-TW",
+    ) { transcript -> submitAnswer(transcript) }
     val fileLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent(),
     ) { uri -> if (uri != null) shared = true }
@@ -361,12 +349,12 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Box(
                                 Modifier.size(60.dp).clip(CircleShape)
-                                    .background(if (answer.isBlank()) BrandOrange else Color(0x33FFFFFF))
-                                    .clickable { if (answer.isBlank()) startVoice() },
+                                    .background(if (voice.isListening) BrandDeepOrange else if (answer.isBlank()) BrandOrange else Color(0x33FFFFFF))
+                                    .clickable { if (answer.isBlank() && !voice.isListening) voice.start() },
                                 contentAlignment = Alignment.Center,
                             ) { Icon(Icons.Filled.Mic, contentDescription = t("語音作答", "Speak"), tint = Color.White, modifier = Modifier.size(26.dp)) }
                             Spacer(Modifier.height(6.dp))
-                            Text(if (answer.isBlank()) t("點一下用說的", "Tap to speak") else t("思考中…", "Thinking…"), color = Color(0x99FFFFFF), fontSize = 11.sp)
+                            Text(if (voice.isListening) (t("聆聽中… ", "Listening… ") + voice.partialText) else if (answer.isBlank()) t("點一下用說的", "Tap to speak") else t("思考中…", "Thinking…"), color = Color(0x99FFFFFF), fontSize = 11.sp)
                         }
                     }
                 }
