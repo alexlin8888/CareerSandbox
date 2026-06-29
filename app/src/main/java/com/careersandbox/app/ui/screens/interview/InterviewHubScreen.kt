@@ -217,18 +217,6 @@ private fun PlanCards(navController: NavHostController) {
             onClick = { navController.navigate(Routes.INTERVIEW_VIDEO) },
         )
         // 面試頁改版預覽(WIP)
-        PlanCard(
-            number = "★",
-            title = "面試頁改版預覽",
-            eyebrow = "Panel · 設計提案",
-            description = "不靠圓框堆疊的兩種方向,\n場景式 vs 視訊格,可左右切換",
-            tagText = "WIP",
-            tagBg = AccentGreen,
-            tagFg = PaperWhite,
-            cardBg = SolidColor(InkCharcoal),
-            illustrationRes = R.drawable.undraw_video_call_i5de,
-            onClick = { navController.navigate(Routes.INTERVIEW_PANEL_REDESIGN) },
-        )
     }
 }
 
