@@ -1,431 +1,56 @@
 package com.careersandbox.app.ui.screens.interview
 
-import kotlin.math.sin
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.animation.core.*
+import android.content.Intent
+import android.speech.RecognizerIntent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import android.widget.Toast
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.InterviewConfig
-import com.careersandbox.app.data.mock.MockData
-import com.careersandbox.app.data.model.ChatMessage
+import com.careersandbox.app.data.mock.MockInterviewProber
 import com.careersandbox.app.navigation.Routes
-import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun InterviewLiveIndividualScreen(navController: NavHostController) {
-    val lang = InterviewConfig.language
-    fun t(zh: String, en: String) = if (lang == "English") en else zh
-    val messages = remember {
-        mutableStateListOf<ChatMessage>().apply {
-            addAll(if (lang == "English") englishOpeningScript else MockData.individualInterviewScript)
-        }
-    }
-    var input by remember { mutableStateOf("") }
-    val listState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
-    var isTyping by remember { mutableStateOf(false) }
-    var followUpIdx by remember { mutableIntStateOf(0) }
-    var reaction by remember { mutableStateOf<String?>(null) }
-    var elapsedSec by remember { mutableIntStateOf(0) }
-    var phase by remember { mutableStateOf("MAIN") }            // MAIN / REVERSE / CLOSING / DONE
-    var voiceMode by remember { mutableStateOf(false) }
-    var repeatFired by remember { mutableStateOf(false) }
-    var silenceFired by remember { mutableStateOf(false) }
-    var timeGlanced by remember { mutableStateOf(false) }
-    var lastProbe by remember { mutableStateOf("") }
-    var questionShownAt by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    var recording by remember { mutableStateOf(false) }
-    var recordSec by remember { mutableIntStateOf(0) }
-    var holdStartAt by remember { mutableLongStateOf(0L) }
-    val curInput by rememberUpdatedState(input)
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(1000); elapsedSec++
-            if (elapsedSec == 360 && !timeGlanced && phase == "MAIN") {
-                timeGlanced = true
-                messages.add(ChatMessage("ai${messages.size}", "面試官", t("(他看了一眼時間)", "(He glances at the clock.)"), isUser = false))
-            }
-        }
-    }
-    // 沉默壓力:面試官問完 20 秒沒動靜 — 每場只提醒一次
-    LaunchedEffect(messages.size, phase) {
-        if (phase != "MAIN" || silenceFired) return@LaunchedEffect
-        if (messages.lastOrNull()?.isUser != false) return@LaunchedEffect
-        delay(20000)
-        if (curInput.isBlank() && !recording && !silenceFired) {
-            silenceFired = true
-            messages.add(ChatMessage("ai${messages.size}", "面試官", t("不急,想清楚再說。", "Take your time. Think it through."), isUser = false))
-        }
-    }
-    LaunchedEffect(recording) {
-        if (recording) { var sct = 0; recordSec = 0; while (true) { delay(1000); sct++; recordSec = sct } }
-    }
-    val timerText = "${(elapsedSec / 60).toString().padStart(2, '0')}:${(elapsedSec % 60).toString().padStart(2, '0')}"
-    val probes = when {
-        lang == "English" -> englishProbes
-        InterviewConfig.type == "技術" -> probesTechType
-        InterviewConfig.type == "情境" -> probesCaseType
-        else -> listOf(
-            "嗯,了解。可以再給一個更具體的例子嗎?",
-            "那當時你怎麼衡量這個決定的影響?",
-            "如果重來一次,你會有什麼不同的做法?",
-            "這段經驗裡,你覺得自己最關鍵的貢獻是什麼?",
-        )
-    }
-
-    fun submitAnswer(visible: String, analyzed: String) {
-        if (isTyping || reaction != null || phase != "MAIN") return
-        messages.add(ChatMessage("u${messages.size}", "你", visible, isUser = true))
-        reaction = com.careersandbox.app.data.mock.MockInterviewProber.reaction()
-        scope.launch {
-            delay(800); reaction = null
-            isTyping = true; delay(1300)
-            val reply = when {
-                followUpIdx == 2 && !repeatFired -> {
-                    repeatFired = true
-                    t("(他翻了下筆記)剛剛那題,我再問一次:$lastProbe", "(He flips back a page.) Let me ask that one again: $lastProbe")
-                }
-                followUpIdx >= 4 -> {
-                    phase = "REVERSE"
-                    t("好,主要的問題就到這裡。最後,你有什麼想問我們的?", "Alright, that covers the main questions. One last thing: what would you like to ask us?")
-                }
-                else -> com.careersandbox.app.data.mock.MockInterviewProber.probe(analyzed, followUpIdx, probes).also { lastProbe = it }
-            }
-            messages.add(ChatMessage("ai${messages.size}", "面試官", reply, isUser = false))
-            questionShownAt = System.currentTimeMillis()
-            followUpIdx++
-            isTyping = false
-        }
-    }
-
-    fun pickReverse(opt: ReverseOption) {
-        if (phase != "REVERSE") return
-        phase = "CLOSING"
-        messages.add(ChatMessage("u${messages.size}", "你", opt.ask, isUser = true))
-        scope.launch {
-            delay(700); isTyping = true; delay(1300)
-            messages.add(ChatMessage("ai${messages.size}", "面試官", opt.answer, isUser = false))
-            isTyping = false; delay(900)
-            isTyping = true; delay(1100)
-            messages.add(ChatMessage("ai${messages.size}", "面試官", opt.closing, isUser = false))
-            isTyping = false
-            phase = "DONE"
-        }
-    }
-
-    LaunchedEffect(messages.size, isTyping, reaction) {
-        val target = if (isTyping || reaction != null) messages.size else messages.size - 1
-        if (target >= 0) listState.animateScrollToItem(target)
-    }
-
-    Scaffold(
-        containerColor = PaperOff,
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("個人面試 ・ Junior PM", style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold, color = InkBlack)
-                        Text(
-                            "${InterviewConfig.type}面試 ・ ${InterviewConfig.round} ・ ${InterviewConfig.difficulty}",
-                            style = MaterialTheme.typography.labelSmall, color = InkGray500,
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Outlined.Close, contentDescription = null, tint = InkBlack)
-                    }
-                },
-                actions = {
-                    // 計時器膠囊
-                    Box(
-                        Modifier
-                            .clip(RoundedCornerShape(50))
-                            .background(InkBlack)
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Outlined.Timer, contentDescription = null,
-                                tint = PaperWhite, modifier = Modifier.size(14.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text(timerText, style = MaterialTheme.typography.labelMedium,
-                                color = PaperWhite, fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    TextButton(onClick = { navController.navigate(Routes.INTERVIEW_REPORT) }) {
-                        Text("結束", color = BrandOrange, fontWeight = FontWeight.SemiBold)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = PaperOff),
-            )
-        },
-        bottomBar = {
-            when {
-                phase == "DONE" -> DoneBar { navController.navigate(Routes.INTERVIEW_REPORT) }
-                phase == "REVERSE" || phase == "CLOSING" ->
-                    ReverseBar(
-                        enabled = phase == "REVERSE",
-                        options = if (lang == "English") reverseOptionsEn else reverseOptions,
-                    ) { pickReverse(it) }
-                voiceMode -> VoiceBar(
-                    recording = recording,
-                    recordSec = recordSec,
-                    onKeyboard = { if (!recording) voiceMode = false },
-                    onPressStart = {
-                        if (!isTyping && reaction == null && phase == "MAIN") {
-                            holdStartAt = System.currentTimeMillis(); recording = true
-                        }
-                    },
-                    onPressEnd = {
-                        if (recording) {
-                            recording = false
-                            val dur = ((System.currentTimeMillis() - holdStartAt) / 1000).toInt()
-                            if (dur >= 1) {
-                                val think = ((holdStartAt - questionShownAt) / 1000).toInt().coerceAtLeast(0)
-                                submitAnswer("語音回答 ・ $dur 秒\n(開口前思考 $think 秒)", "")
-                            }
-                        }
-                    },
-                )
-                else -> BottomInputBar(input, { input = it }, onVoice = { voiceMode = true }) {
-                    if (input.isNotBlank() && !isTyping && reaction == null) {
-                        val said = input
-                        input = ""
-                        submitAnswer(said, said)
-                    }
-                }
-            }
-        }
-    ) { pad ->
-        Column(Modifier.padding(pad)) {
-            InterviewerHeader(onThinkTime = {
-                if (!isTyping && reaction == null) {
-                    isTyping = true
-                    scope.launch {
-                        delay(900)
-                        messages.add(ChatMessage("ai${messages.size}", "面試官",
-                            "沒問題,慢慢想。整理好再回答,我等你。", isUser = false))
-                        isTyping = false
-                    }
-                }
-            })
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                items(messages, key = { it.id }) { m ->
-                    Box(Modifier.animateItem()) { MessageBubble(m) }
-                }
-                reaction?.let { r ->
-                    item(key = "reaction") { ReactionBubble(r) }
-                }
-                if (isTyping) {
-                    item(key = "typing") { TypingBubble() }
-                }
-                item { Spacer(Modifier.height(8.dp)) }
-            }
-        }
-    }
-}
-
-@Composable
-private fun InterviewerHeader(onThinkTime: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Image(
-            painter = painterResource(R.drawable.interviewer_lead),
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.size(46.dp),
-        )
-        Spacer(Modifier.width(10.dp))
-        Column(Modifier.weight(1f)) {
-            Text("陳經理 ・ 用人主管", style = MaterialTheme.typography.titleSmall,
-                color = InkBlack, fontWeight = FontWeight.SemiBold)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(6.dp).clip(androidx.compose.foundation.shape.CircleShape).background(AccentGreen))
-                Spacer(Modifier.width(4.dp))
-                Text("正在聆聽你的回答", style = MaterialTheme.typography.labelSmall,
-                    color = InkGray500)
-            }
-        }
-        TextButton(onClick = onThinkTime) {
-            Icon(Icons.Outlined.Pause, contentDescription = null,
-                tint = InkGray500, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(4.dp))
-            Text("需要思考時間", style = MaterialTheme.typography.labelMedium, color = InkGray500)
-        }
-    }
-}
-
-@Composable
-fun MessageBubble(m: ChatMessage) {
-    Row(
-        Modifier.fillMaxWidth(),
-        horizontalArrangement = if (m.isUser) Arrangement.End else Arrangement.Start,
-    ) {
-        Box(
-            Modifier
-                .widthIn(max = 280.dp)
-                .clip(RoundedCornerShape(
-                    topStart = 18.dp, topEnd = 18.dp,
-                    bottomStart = if (m.isUser) 18.dp else 4.dp,
-                    bottomEnd = if (m.isUser) 4.dp else 18.dp,
-                ))
-                .background(if (m.isUser) InkBlack else MaterialTheme.colorScheme.surface)
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-        ) {
-            Column {
-                if (!m.isUser) {
-                    Text(m.speaker, style = MaterialTheme.typography.labelSmall,
-                        color = BrandOrange, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.height(2.dp))
-                }
-                Text(m.content,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (m.isUser) PaperWhite else InkBlack)
-            }
-        }
-    }
-}
-
-@Composable
-private fun BottomInputBar(input: String, onChange: (String) -> Unit, onVoice: () -> Unit, onSend: () -> Unit) {
-    Box(Modifier.fillMaxWidth().background(PaperOff).padding(12.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier
-                    .size(48.dp)
-                    .clip(androidx.compose.foundation.shape.CircleShape)
-                    .background(BrandPeach)
-                    .pressScale { onVoice() },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Outlined.Mic, contentDescription = null, tint = BrandDeepOrange)
-            }
-            Spacer(Modifier.width(8.dp))
-            OutlinedTextField(
-                value = input, onValueChange = onChange,
-                placeholder = { Text("輸入你的回答⋯", color = InkGray400) },
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(24.dp),
-                maxLines = 4,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = InkBlack, unfocusedBorderColor = InkGray200,
-                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                ),
-            )
-            Spacer(Modifier.width(8.dp))
-            Box(
-                Modifier
-                    .size(48.dp)
-                    .clip(androidx.compose.foundation.shape.CircleShape)
-                    .background(if (input.isBlank()) InkGray200 else InkBlack)
-                    .pressScale(enabled = input.isNotBlank()) { onSend() },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Outlined.Send, contentDescription = null,
-                    tint = if (input.isBlank()) InkGray400 else PaperWhite)
-            }
-        }
-    }
-}
-
-@Composable
-private fun TypingBubble() {
-    val t = rememberInfiniteTransition(label = "typing")
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
-        Row(
-            modifier = Modifier
-                .clip(
-                    RoundedCornerShape(
-                        topStart = 18.dp, topEnd = 18.dp, bottomStart = 4.dp, bottomEnd = 18.dp,
-                    )
-                )
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            repeat(3) { i ->
-                val a by t.animateFloat(
-                    initialValue = 0.3f,
-                    targetValue = 1f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(durationMillis = 500, delayMillis = i * 160),
-                        repeatMode = RepeatMode.Reverse,
-                    ),
-                    label = "dot",
-                )
-                Box(
-                    Modifier
-                        .padding(horizontal = 3.dp)
-                        .size(7.dp)
-                        .clip(CircleShape)
-                        .background(InkGray400.copy(alpha = a)),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ReactionBubble(text: String) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
-        Image(
-            painter = painterResource(R.drawable.interviewer_lead),
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.size(34.dp),
-        )
-        Spacer(Modifier.width(8.dp))
-        Box(
-            Modifier
-                .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 18.dp, bottomStart = 18.dp, bottomEnd = 18.dp))
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(horizontal = 14.dp, vertical = 8.dp),
-        ) {
-            Text(text, style = MaterialTheme.typography.bodySmall, color = InkGray500)
-        }
-    }
-}
-
-/* ===================== 反問環節 / 語音作答 / 收尾 ===================== */
+/* =====================================================================
+   1 對 1 面試(場景式,真流程)
+   - 場景:bg_scene_1on1(沿用沙盒一對一場景)+ 暖黑暈影,與沙盒一致。
+   - 面試官以沙盒角色 Ken 呈現(有表情變體 → 依回答換臉)。
+   - 階段機保留:MAIN(Prober 追問,第 2 次「請重講」,第 4 次轉)→ REVERSE(你點選反問)
+       → CLOSING(面試官回答+結語)→ DONE → INTERVIEW_REPORT。
+   - 探問池依 InterviewConfig.type / language 分流;Prober 為後端接點,接 LangGraph 時換掉即可。
+   - 作答用真語音轉文字(免權限)→ 逐字稿餵 Prober;反問環節用點選;不打字。
+   - 捨棄聊天版的靜默偵測/瞄時間微節拍(語音場景式不適用)。
+   ===================================================================== */
 
 private data class ReverseOption(val ask: String, val tag: String, val answer: String, val closing: String)
 
@@ -451,80 +76,6 @@ private val reverseOptions = listOf(
         closing = "今天就到這裡,等通知。",
     ),
 )
-
-@Composable
-private fun ReverseBar(enabled: Boolean, options: List<ReverseOption>, onPick: (ReverseOption) -> Unit) {
-    Column(Modifier.fillMaxWidth().background(PaperOff).padding(horizontal = 12.dp, vertical = 10.dp)) {
-        Text("你的反問", color = InkGray500, style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Black, letterSpacing = 2.sp)
-        Spacer(Modifier.height(8.dp))
-        options.forEach { opt ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 3.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surface)
-                    .pressScale(enabled = enabled) { onPick(opt) }
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(opt.ask, color = if (enabled) InkBlack else InkGray400,
-                    fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                Spacer(Modifier.width(8.dp))
-                Box(
-                    Modifier.clip(RoundedCornerShape(50)).background(BrandPeach.copy(alpha = 0.5f))
-                        .padding(horizontal = 8.dp, vertical = 3.dp),
-                ) {
-                    Text(opt.tag, color = BrandDeepOrange, fontSize = 10.sp, fontWeight = FontWeight.Black)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun DoneBar(onReport: () -> Unit) {
-    Box(Modifier.fillMaxWidth().background(PaperOff).padding(12.dp)) {
-        Box(
-            Modifier.fillMaxWidth().height(50.dp).clip(RoundedCornerShape(14.dp))
-                .background(InkBlack).pressScale(onClick = onReport),
-            contentAlignment = Alignment.Center,
-        ) { Text("面試結束 ・ 看完整報告", color = PaperWhite, fontWeight = FontWeight.Black) }
-    }
-}
-
-
-
-/* ===================== 語言與類型分流(之後由 LangGraph 題庫取代)===================== */
-
-private val englishOpeningScript = listOf(
-    ChatMessage("m1", "面試官",
-        "Let's start. Give me a one-minute introduction — who you are, and why this role.",
-        isInterviewer = true),
-)
-
-private val englishProbes = listOf(
-    "I see. Can you give me a more concrete example?",
-    "How did you measure the impact of that decision?",
-    "If you could do it again, what would you do differently?",
-    "What was your single most critical contribution there?",
-)
-
-private val probesTechType = listOf(
-    "講一個你寫過最複雜的查詢或程式邏輯,它解決什麼問題?",
-    "如果報表突然變慢十倍,你會從哪裡開始查?",
-    "你怎麼驗證自己的分析結果沒有錯?",
-    "最近自學了什麼工具或技術?怎麼學的?",
-)
-
-private val probesCaseType = listOf(
-    "上線前一天發現重大 bug,修好要兩天。你怎麼辦?",
-    "兩位主管同時給你衝突的指令,你怎麼處理?",
-    "資源被砍一半,目標不變,你先丟掉哪一塊?",
-    "使用者在社群罵爆你負責的功能,你的第一步是什麼?",
-)
-
 private val reverseOptionsEn = listOf(
     ReverseOption(
         ask = "What's the biggest challenge for the team in the next six months?", tag = "問挑戰",
@@ -547,3 +98,277 @@ private val reverseOptionsEn = listOf(
         closing = "That's it for today. We'll be in touch.",
     ),
 )
+
+private val probesDefault = listOf(
+    "嗯,了解。可以再給一個更具體的例子嗎?",
+    "那當時你怎麼衡量這個決定的影響?",
+    "如果重來一次,你會有什麼不同的做法?",
+    "這段經驗裡,你覺得自己最關鍵的貢獻是什麼?",
+)
+private val englishProbes = listOf(
+    "I see. Can you give me a more concrete example?",
+    "How did you measure the impact of that decision?",
+    "If you could do it again, what would you do differently?",
+    "What was your single most critical contribution there?",
+)
+private val probesTechType = listOf(
+    "講一個你寫過最複雜的查詢或程式邏輯,它解決什麼問題?",
+    "如果報表突然變慢十倍,你會從哪裡開始查?",
+    "你怎麼驗證自己的分析結果沒有錯?",
+    "最近自學了什麼工具或技術?怎麼學的?",
+)
+private val probesCaseType = listOf(
+    "上線前一天發現重大 bug,修好要兩天。你怎麼辦?",
+    "兩位主管同時給你衝突的指令,你怎麼處理?",
+    "資源被砍一半,目標不變,你先丟掉哪一塊?",
+    "使用者在社群罵爆你負責的功能,你的第一步是什麼?",
+)
+
+private fun faceFor(d: Int): Int = when {
+    d >= 1 -> R.drawable.ken_happy
+    d <= -1 -> R.drawable.ken_concerned
+    else -> R.drawable.ken_neutral
+}
+private fun deltaFor(answer: String): Int = when {
+    answer.isBlank() -> 0
+    answer.contains("不知道") || answer.contains("不確定") || answer.contains("沒想過") -> -1
+    answer.length >= 24 -> 1
+    answer.length >= 10 -> 0
+    else -> -1
+}
+
+@Composable
+fun InterviewLiveIndividualScreen(navController: NavHostController) {
+    val lang = InterviewConfig.language
+    fun t(zh: String, en: String) = if (lang == "English") en else zh
+
+    val openingQ = t("先請你做一個簡短的自我介紹,大約一分鐘。", "Let's start. Give me a one-minute introduction — who you are, and why this role.")
+    val probes = when {
+        lang == "English" -> englishProbes
+        InterviewConfig.type == "技術" -> probesTechType
+        InterviewConfig.type == "情境" -> probesCaseType
+        else -> probesDefault
+    }
+    val reverses = if (lang == "English") reverseOptionsEn else reverseOptions
+
+    var phase by remember { mutableStateOf("MAIN") }   // MAIN / REVERSE / CLOSING / DONE
+    var question by remember { mutableStateOf(openingQ) }
+    var answer by remember { mutableStateOf("") }
+    var reactingDelta by remember { mutableIntStateOf(0) }
+    var followUpIdx by remember { mutableIntStateOf(0) }
+    var lastProbe by remember { mutableStateOf("") }
+    var repeatFired by remember { mutableStateOf(false) }
+    var elapsedSec by remember { mutableIntStateOf(0) }
+    var shared by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) { while (true) { delay(1000); elapsedSec++ } }
+    val timerText = "${(elapsedSec / 60).toString().padStart(2, '0')}:${(elapsedSec % 60).toString().padStart(2, '0')}"
+    val role = InterviewConfig.customRole.ifBlank { "Junior PM" }
+
+    fun submitAnswer(transcript: String) {
+        if (phase != "MAIN" || transcript.isBlank() || answer.isNotBlank()) return
+        answer = transcript
+        reactingDelta = deltaFor(transcript)
+        scope.launch {
+            delay(1500)
+            val reply = when {
+                followUpIdx == 2 && !repeatFired -> {
+                    repeatFired = true
+                    t("(他翻了下筆記)剛剛那題,我再問一次:$lastProbe", "(He flips back a page.) Let me ask that one again: $lastProbe")
+                }
+                followUpIdx >= 4 -> {
+                    phase = "REVERSE"
+                    t("好,主要的問題就到這裡。最後,你有什麼想問我們的?", "Alright, that covers the main questions. One last thing: what would you like to ask us?")
+                }
+                else -> MockInterviewProber.probe(transcript, followUpIdx, probes).also { lastProbe = it }
+            }
+            question = reply
+            answer = ""
+            reactingDelta = 0
+            followUpIdx += 1
+        }
+    }
+
+    fun pickReverse(opt: ReverseOption) {
+        if (phase != "REVERSE") return
+        answer = opt.ask
+        phase = "CLOSING"
+        scope.launch {
+            delay(900); question = opt.answer
+            delay(1600); question = opt.closing
+            delay(1300); phase = "DONE"
+        }
+    }
+
+    val voiceLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val text = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+            if (!text.isNullOrBlank()) submitAnswer(text)
+        }
+    }
+    fun startVoice() {
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, if (lang == "English") "en-US" else "zh-TW")
+            putExtra(RecognizerIntent.EXTRA_PROMPT, t("請回答面試官的問題", "Answer the interviewer"))
+        }
+        try { voiceLauncher.launch(intent) } catch (e: Exception) { }
+    }
+    val fileLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent(),
+    ) { uri -> if (uri != null) shared = true }
+
+    Box(Modifier.fillMaxSize().background(Color(0xFF14100B))) {
+        Image(
+            painter = painterResource(R.drawable.bg_scene_1on1),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+        )
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.verticalGradient(
+                    0f to Color(0x59000000), 0.5f to Color(0xB3160F09), 1f to Color(0xF0140F0A),
+                ),
+            ),
+        )
+
+        Column(Modifier.fillMaxSize().padding(20.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(Color(0x22FFFFFF))
+                        .clickable { navController.popBackStack() },
+                    contentAlignment = Alignment.Center,
+                ) { Text("←", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold) }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(t("1 對 1 面試 · $role", "1-on-1 · $role"), color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        "${InterviewConfig.type} · ${InterviewConfig.round} · ${InterviewConfig.difficulty}",
+                        color = Color(0x99FFFFFF), fontSize = 11.sp,
+                    )
+                }
+                Row(
+                    Modifier.clip(RoundedCornerShape(999.dp)).background(Color(0x22FFFFFF)).padding(horizontal = 10.dp, vertical = 5.dp),
+                ) { Text(timerText, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
+                Spacer(Modifier.width(8.dp))
+                Box(
+                    Modifier.clip(RoundedCornerShape(999.dp)).background(BrandOrange)
+                        .clickable { navController.navigate(Routes.INTERVIEW_REPORT) }
+                        .padding(horizontal = 14.dp, vertical = 7.dp),
+                ) { Text(t("結束", "End"), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+            }
+            Spacer(Modifier.height(14.dp))
+
+            // 面試官立繪:依回答換表情
+            Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Image(
+                        painter = painterResource(faceFor(if (phase == "MAIN") reactingDelta else 0)),
+                        contentDescription = t("面試官", "Interviewer"),
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.height(184.dp),
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        Modifier.clip(RoundedCornerShape(999.dp)).background(BrandDeepOrange).padding(horizontal = 13.dp, vertical = 5.dp),
+                    ) {
+                        val tag = when {
+                            phase == "DONE" -> t("面試結束", "Interview complete")
+                            phase == "CLOSING" -> t("回應中…", "Responding…")
+                            phase == "REVERSE" -> t("換你提問", "Your turn to ask")
+                            answer.isNotBlank() -> t("面試官", "Interviewer") + "（" + (if (reactingDelta >= 1) t("認可地點點頭", "nods") else if (reactingDelta <= -1) t("等你再多說一點", "waiting for more") else t("若有所思", "considering")) + "）"
+                            else -> t("面試官　發問中", "Interviewer　asking")
+                        }
+                        Text(tag, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            // 對話框(面試官當前一句)
+            Column(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xDB241B12))
+                    .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 14.dp),
+            ) {
+                Text(question, color = Color.White, fontSize = 14.sp, lineHeight = 22.sp)
+            }
+
+            if (answer.isNotBlank()) {
+                Spacer(Modifier.height(10.dp))
+                Column(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color(0xFFFFF7EE)).padding(13.dp),
+                ) {
+                    Text(if (phase == "CLOSING") t("你的提問", "Your question") else t("你的回答（語音）", "Your answer (voice)"), color = Color(0xFF9A6A3A), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(4.dp))
+                    Text(answer, color = Color(0xFF1F2937), fontSize = 13.sp, lineHeight = 20.sp)
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // 底部依階段切換
+            when (phase) {
+                "REVERSE" -> {
+                    Text(t("你的反問", "Your question"), color = Color(0x99FFFFFF), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(6.dp))
+                    reverses.forEach { opt ->
+                        Row(
+                            Modifier.fillMaxWidth().padding(vertical = 3.dp)
+                                .clip(RoundedCornerShape(12.dp)).background(Color(0x1AFFFFFF))
+                                .clickable { pickReverse(opt) }
+                                .padding(horizontal = 12.dp, vertical = 11.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(opt.ask, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                            Spacer(Modifier.width(8.dp))
+                            Box(
+                                Modifier.clip(RoundedCornerShape(999.dp)).background(Color(0x33FFB627)).padding(horizontal = 8.dp, vertical = 3.dp),
+                            ) { Text(opt.tag, color = BrandAmber, fontSize = 10.sp, fontWeight = FontWeight.Black) }
+                        }
+                    }
+                }
+                "DONE" -> {
+                    Box(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(BrandOrange)
+                            .clickable { navController.navigate(Routes.INTERVIEW_REPORT) }
+                            .padding(vertical = 15.dp),
+                        contentAlignment = Alignment.Center,
+                    ) { Text(t("面試結束 · 看完整報告", "Done · View full report"), color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Black) }
+                }
+                "CLOSING" -> {
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Text(t("面試官回應中…", "Interviewer is responding…"), color = Color(0x73FFFFFF), fontSize = 12.sp)
+                    }
+                }
+                else -> {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            Modifier.clip(RoundedCornerShape(999.dp)).background(Color(0x14FFFFFF))
+                                .clickable { fileLauncher.launch("*/*") }.padding(horizontal = 11.dp, vertical = 7.dp),
+                        ) { Text(t("上傳作品", "Share work"), color = Color(0xCCFFFFFF), fontSize = 11.sp) }
+                        if (shared) {
+                            Spacer(Modifier.width(8.dp))
+                            Row(
+                                Modifier.clip(RoundedCornerShape(999.dp)).background(Color(0x2910B981)).padding(horizontal = 10.dp, vertical = 7.dp),
+                            ) { Text(t("作品已分享", "Shared"), color = Color(0xFF34D399), fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+                        }
+                        Spacer(Modifier.weight(1f))
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(
+                                Modifier.size(60.dp).clip(CircleShape)
+                                    .background(if (answer.isBlank()) BrandOrange else Color(0x33FFFFFF))
+                                    .clickable { if (answer.isBlank()) startVoice() },
+                                contentAlignment = Alignment.Center,
+                            ) { Icon(Icons.Filled.Mic, contentDescription = t("語音作答", "Speak"), tint = Color.White, modifier = Modifier.size(26.dp)) }
+                            Spacer(Modifier.height(6.dp))
+                            Text(if (answer.isBlank()) t("點一下用說的", "Tap to speak") else t("思考中…", "Thinking…"), color = Color(0x99FFFFFF), fontSize = 11.sp)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
