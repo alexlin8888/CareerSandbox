@@ -1,5 +1,9 @@
 package com.careersandbox.app.ui.screens.interview
 
+import android.content.Intent
+import android.speech.RecognizerIntent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
@@ -120,6 +124,24 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
         }
     }
 
+    // 真語音轉文字:叫系統語音輸入回逐字稿,餵 dispatch 做同儕路由(免 RECORD_AUDIO 權限)
+    val voiceLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val text = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+            if (!text.isNullOrBlank()) submitGroup(text, text)
+        }
+    }
+    fun startVoice() {
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "zh-TW")
+            putExtra(RecognizerIntent.EXTRA_PROMPT, "說出你的發言")
+        }
+        try { voiceLauncher.launch(intent) } catch (e: Exception) { }
+    }
+
     LaunchedEffect(messages.size, isTyping) {
         val target = if (isTyping) messages.size else messages.size - 1
         if (target >= 0) listState.animateScrollToItem(target)
@@ -203,7 +225,7 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
                     },
                 )
             } else {
-                GroupBottomBar(input, { input = it }, onVoice = { voiceMode = true }) {
+                GroupBottomBar(input, { input = it }, onVoice = { startVoice() }) {
                     if (input.isNotBlank() && !isTyping) {
                         val said = input
                         input = ""
