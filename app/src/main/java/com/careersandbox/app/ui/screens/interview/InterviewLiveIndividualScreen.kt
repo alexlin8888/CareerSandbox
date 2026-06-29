@@ -36,6 +36,7 @@ import androidx.navigation.NavHostController
 import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.InterviewConfig
 import com.careersandbox.app.data.mock.MockInterviewProber
+import com.careersandbox.app.data.mock.InterviewSession
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.theme.*
 import kotlinx.coroutines.delay
@@ -162,13 +163,14 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
     var shared by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) { while (true) { delay(1000); elapsedSec++ } }
+    LaunchedEffect(Unit) { InterviewSession.reset(); while (true) { delay(1000); elapsedSec++ } }
     val timerText = "${(elapsedSec / 60).toString().padStart(2, '0')}:${(elapsedSec % 60).toString().padStart(2, '0')}"
     val role = InterviewConfig.customRole.ifBlank { "Junior PM" }
 
     fun submitAnswer(transcript: String) {
         if (phase != "MAIN" || transcript.isBlank() || answer.isNotBlank()) return
         answer = transcript
+        InterviewSession.record(question, transcript)
         reactingDelta = deltaFor(transcript)
         scope.launch {
             delay(1500)

@@ -124,6 +124,8 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
         }
     }
 
+    LaunchedEffect(Unit) { com.careersandbox.app.data.mock.InterviewSession.reset() }
+
     // 真語音轉文字:叫系統語音輸入回逐字稿,餵 dispatch 做同儕路由(免 RECORD_AUDIO 權限)
     val voiceLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),

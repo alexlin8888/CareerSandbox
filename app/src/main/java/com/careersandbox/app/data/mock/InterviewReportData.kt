@@ -107,20 +107,32 @@ object MockInterviewReportProvider : InterviewReportProvider {
         SubScore("自信程度", 80),
     )
 
-    override fun questionFeedbacks(): List<QuestionFeedback> = listOf(
-        QuestionFeedback(
-            question = "請你做一個簡短的自我介紹。",
-            answer = "你好,我是中山資管系大三的 Alex,過去主要做過社團行銷和資料分析實習,想往產品經理發展。",
-            comment = "有清楚交代背景,但缺乏亮點。可以加 1-2 個具體成就。",
-            better = "我是中山資管大三的 Alex,把社團 IG 從 0 經營到 1200 追蹤,實習用 SQL 把週報效率提升 4 倍,接下來想把這些經驗帶到產品端。",
-        ),
-        QuestionFeedback(
-            question = "可以講一個你覺得做得不太好的決定嗎?",
-            answer = "我們曾經辦過一場聯名活動,前期沒有先測試小規模就直接全推,結果觸及只有預期的三成。",
-            comment = "誠實面對失誤是好的,但只講事實沒有反思。STAR 結構缺了 Result 的學習段落。",
-            better = "觸及只有預期三成,我覆盤後發現缺了「先小規模測試」這一步。下次再辦時我先用兩個小貼文測流量,結果觸及達標。",
-        ),
-    )
+    override fun questionFeedbacks(): List<QuestionFeedback> {
+        // 有現場逐字記錄就顯示你真正講的;評分/更好講法待後端產生
+        val turns = InterviewSession.turns
+        if (turns.isNotEmpty()) return turns.map {
+            QuestionFeedback(
+                it.question,
+                it.answer,
+                "逐字稿已記錄;教練點評待後端依 STAR 與量化程度產生。",
+                "(待後端產生更好的講法)",
+            )
+        }
+        return listOf(
+            QuestionFeedback(
+                question = "請你做一個簡短的自我介紹。",
+                answer = "你好,我是中山資管系大三的 Alex,過去主要做過社團行銷和資料分析實習,想往產品經理發展。",
+                comment = "有清楚交代背景,但缺乏亮點。可以加 1-2 個具體成就。",
+                better = "我是中山資管大三的 Alex,把社團 IG 從 0 經營到 1200 追蹤,實習用 SQL 把週報效率提升 4 倍,接下來想把這些經驗帶到產品端。",
+            ),
+            QuestionFeedback(
+                question = "可以講一個你覺得做得不太好的決定嗎?",
+                answer = "我們曾經辦過一場聯名活動,前期沒有先測試小規模就直接全推,結果觸及只有預期的三成。",
+                comment = "誠實面對失誤是好的,但只講事實沒有反思。STAR 結構缺了 Result 的學習段落。",
+                better = "觸及只有預期三成,我覆盤後發現缺了「先小規模測試」這一步。下次再辦時我先用兩個小貼文測流量,結果觸及達標。",
+            ),
+        )
+    }
 
     override fun starParts(): List<StarPart> = listOf(
         StarPart("S", "情境 Situation", true, "「我們辦過一場聯名活動」", "有交代背景"),
