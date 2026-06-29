@@ -1,485 +1,285 @@
 package com.careersandbox.app.ui.screens.interview
 
-import androidx.compose.animation.core.*
+import android.content.Intent
+import android.speech.RecognizerIntent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import android.widget.Toast
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
-import com.careersandbox.app.data.model.ChatMessage
+import com.careersandbox.app.data.mock.InterviewConfig
+import com.careersandbox.app.data.mock.MockPanelDispatcher
 import com.careersandbox.app.navigation.Routes
-import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private data class PanelInterviewer(val name: String, val drawable: Int)
+/* =====================================================================
+   主管 panel 面試(場景式,真流程)
+   - 場景:bg_scene_meeting(沿用沙盒跨部門會議場景)+ 暖黑暈影,與沙盒一致。
+   - 三位主管以沙盒角色呈現(有表情變體 → 可依回答換臉):
+       HR 主管 = Vivian / 技術主管 = 阿哲 / 用人主管 = Ken。
+   - 多代理路由用既有 MockPanelDispatcher(數據→技術、團隊→HR、成果→用人、不會→HR 接住),
+     真接 LangGraph dispatcher 時換掉 MockPanelDispatcher 即可,本頁不動。
+   - 作答用真語音轉文字(RecognizerIntent,免權限)→ 逐字稿餵 dispatch 做語意路由
+     (比舊 mock 語音傳空字串更準);可上傳作品;不打字。
+   - 表情依回答啟發式換(報告評分目前為 mock;接後端評分後可改吃真分數)。
+   - 結束 → 既有 INTERVIEW_REPORT(三維評分報告頁不動)。
+   ===================================================================== */
 
-private val panelInterviewers = listOf(
-    PanelInterviewer("HR 主管", R.drawable.interviewer_hr),
-    PanelInterviewer("技術主管", R.drawable.interviewer_tech),
-    PanelInterviewer("用人主管", R.drawable.interviewer_lead),
+private const val OPENING_Q =
+    "我們先從你開始。可以用一分鐘介紹一下自己,以及為什麼想加入我們嗎?"
+
+private data class PanelSeat(val who: String, val accent: Color)
+
+private val seats = listOf(
+    PanelSeat("HR 主管", BrandAmber),
+    PanelSeat("技術主管", BrandOrange),
+    PanelSeat("用人主管", BrandDeepOrange),
 )
 
-private val panelScript = listOf(
-    ChatMessage("p1", "HR 主管", "我們先從你開始。可以用一分鐘介紹一下自己,以及為什麼想加入我們嗎?", isInterviewer = true),
-    ChatMessage("p2", "你", "你好,我是中山資管系大三的 Alex,做過社團行銷和資料分析實習,想往產品經理發展。", isUser = true),
-    ChatMessage("p3", "技術主管", "你提到資料分析。實務上你最常用哪些工具?舉一個你用數據改變決策的例子。", isInterviewer = true),
-    ChatMessage("p4", "你", "我主要用 SQL 和 Excel。實習時把每週手動報表自動化,產出時間從兩小時縮到半小時。", isUser = true),
-    ChatMessage("p5", "用人主管", "不錯。如果讓你接一個你不熟的產品領域,你會怎麼在兩週內快速上手?", isInterviewer = true),
-)
+// 主管名 + 反應強度 → 沙盒立繪;d>0 正面、d<0 負面、0 中性
+private fun faceFor(who: String, d: Int): Int = when (who) {
+    "技術主管" -> if (d <= -1) R.drawable.colleague_akai_frustrated else R.drawable.colleague_akai_calm
+    "用人主管" -> when { d >= 1 -> R.drawable.ken_happy; d <= -1 -> R.drawable.ken_concerned; else -> R.drawable.ken_neutral }
+    else -> when { d >= 1 -> R.drawable.colleague_vivian_satisfied; d <= -1 -> R.drawable.colleague_vivian_displeased; else -> R.drawable.colleague_vivian }
+}
 
-@OptIn(ExperimentalMaterial3Api::class)
+private fun accentFor(who: String): Color = seats.firstOrNull { it.who == who }?.accent ?: BrandAmber
+
+// 反應啟發式(報告接後端評分後可改吃真分數)
+private fun deltaFor(answer: String): Int = when {
+    answer.isBlank() -> 0
+    answer.contains("不知道") || answer.contains("不確定") || answer.contains("沒想過") -> -1
+    answer.length >= 24 -> 1
+    answer.length >= 10 -> 0
+    else -> -1
+}
+private fun reactionText(d: Int): String = when {
+    d >= 1 -> "認可地點點頭"
+    d <= -1 -> "等你再多說一點"
+    else -> "若有所思地聽著"
+}
+
 @Composable
 fun InterviewLivePanelScreen(navController: NavHostController) {
-    val avatarMap = remember { panelInterviewers.associate { it.name to it.drawable } }
-    val messages = remember { mutableStateListOf<ChatMessage>().apply { addAll(panelScript) } }
-    var input by remember { mutableStateOf("") }
-    val listState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
-    var isTyping by remember { mutableStateOf(false) }
-    var typingSpeaker by remember { mutableStateOf("HR 主管") }
+    var currentAsker by remember { mutableStateOf("HR 主管") }
+    var question by remember { mutableStateOf(OPENING_Q) }
+    var answer by remember { mutableStateOf("") }
+    var reactingDelta by remember { mutableIntStateOf(0) }
     var followUpIdx by remember { mutableIntStateOf(0) }
-    var entered by remember { mutableStateOf(false) }
-    var reaction by remember { mutableStateOf<String?>(null) }
+    var shared by remember { mutableStateOf(false) }
     var elapsedSec by remember { mutableIntStateOf(0) }
+    val scope = rememberCoroutineScope()
+
     LaunchedEffect(Unit) { while (true) { delay(1000); elapsedSec++ } }
     val timerText = "${(elapsedSec / 60).toString().padStart(2, '0')}:${(elapsedSec % 60).toString().padStart(2, '0')}"
-    var voiceMode by remember { mutableStateOf(false) }
-    var recording by remember { mutableStateOf(false) }
-    var recordSec by remember { mutableIntStateOf(0) }
-    var holdStartAt by remember { mutableLongStateOf(0L) }
-    var questionShownAt by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(recording) {
-        if (recording) { var sct = 0; recordSec = 0; while (true) { delay(1000); sct++; recordSec = sct } }
-    }
+    val role = InterviewConfig.customRole.ifBlank { "Junior PM" }
 
-    fun submitPanel(visible: String, analyzed: String) {
-        if (isTyping || reaction != null) return
-        messages.add(ChatMessage("u${messages.size}", "你", visible, isUser = true))
-        val (who, line) = com.careersandbox.app.data.mock.MockPanelDispatcher.dispatch(analyzed, followUpIdx)
-        typingSpeaker = who
-        reaction = com.careersandbox.app.data.mock.MockPanelDispatcher.reaction()
+    fun submitAnswer(transcript: String) {
+        if (transcript.isBlank() || answer.isNotBlank()) return
+        answer = transcript
+        reactingDelta = deltaFor(transcript)
+        val (nextWho, nextQ) = MockPanelDispatcher.dispatch(transcript, followUpIdx)
         scope.launch {
-            delay(800)
-            reaction = null
-            isTyping = true
-            delay(1300)
-            messages.add(ChatMessage("p${messages.size}", who, line, isInterviewer = true))
-            questionShownAt = System.currentTimeMillis()
-            followUpIdx++
-            isTyping = false
+            delay(1700)
+            currentAsker = nextWho
+            question = nextQ
+            answer = ""
+            reactingDelta = 0
+            followUpIdx += 1
         }
     }
-    val currentAsker = if (isTyping || reaction != null) typingSpeaker
-        else (messages.lastOrNull { it.isInterviewer }?.speaker ?: "HR 主管")
 
-    LaunchedEffect(messages.size, isTyping, reaction) {
-        val target = if (isTyping || reaction != null) messages.size else messages.size - 1
-        if (target >= 0) listState.animateScrollToItem(target)
-    }
-
-    Scaffold(
-        containerColor = PaperOff,
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("主管 panel 面試 ・ Junior PM",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold, color = InkBlack)
-                        Text("三位主管輪流提問 ・ 中等難度",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = InkGray500)
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Outlined.Close, contentDescription = null, tint = InkBlack)
-                    }
-                },
-                actions = {
-                    Box(
-                        Modifier
-                            .clip(RoundedCornerShape(50))
-                            .background(InkBlack)
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Outlined.Timer, contentDescription = null,
-                                tint = PaperWhite, modifier = Modifier.size(14.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text(timerText, style = MaterialTheme.typography.labelMedium,
-                                color = PaperWhite, fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    TextButton(onClick = { navController.navigate(Routes.INTERVIEW_REPORT) }) {
-                        Text("結束", color = BrandOrange, fontWeight = FontWeight.SemiBold)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = PaperOff),
-            )
-        },
-        bottomBar = {
-            if (voiceMode) {
-                VoiceBar(
-                    recording = recording,
-                    recordSec = recordSec,
-                    onKeyboard = { if (!recording) voiceMode = false },
-                    onPressStart = {
-                        if (!isTyping && reaction == null) { holdStartAt = System.currentTimeMillis(); recording = true }
-                    },
-                    onPressEnd = {
-                        if (recording) {
-                            recording = false
-                            val dur = ((System.currentTimeMillis() - holdStartAt) / 1000).toInt()
-                            if (dur >= 1) {
-                                val think = ((holdStartAt - questionShownAt) / 1000).toInt().coerceAtLeast(0)
-                                submitPanel("語音回答 ・ $dur 秒\n(開口前思考 $think 秒)", "")
-                            }
-                        }
-                    },
-                )
-            } else {
-                PanelBottomBar(input, { input = it }, onVoice = { voiceMode = true }) {
-                    if (input.isNotBlank() && !isTyping && reaction == null) {
-                        val said = input
-                        input = ""
-                        submitPanel(said, said)
-                    }
-                }
-            }
-        }
-    ) { pad ->
-        if (!entered) {
-            PanelIntroOverlay(Modifier.padding(pad), panelInterviewers) { entered = true }
-        } else {
-        Column(Modifier.padding(pad)) {
-            PanelRow(panelInterviewers, currentAsker)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(Icons.Outlined.Info, contentDescription = null,
-                    tint = InkGray400, modifier = Modifier.size(14.dp))
-                Spacer(Modifier.width(6.dp))
-                Text("三位主管會輪流發問,回答時記得保持結構。",
-                    style = MaterialTheme.typography.labelSmall, color = InkGray500)
-            }
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                items(messages, key = { it.id }) { m ->
-                    Box(Modifier.animateItem()) { PanelMessageBubble(m) { avatarMap[it] } }
-                }
-                reaction?.let { r ->
-                    item(key = "reaction") { PanelReactionBubble(r, avatarMap[typingSpeaker]) }
-                }
-                if (isTyping) {
-                    item(key = "typing") { PanelTypingBubble(typingSpeaker, avatarMap[typingSpeaker]) }
-                }
-                item { Spacer(Modifier.height(8.dp)) }
-            }
-        }
+    val voiceLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val text = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+            if (!text.isNullOrBlank()) submitAnswer(text)
         }
     }
-}
-
-@Composable
-private fun PanelRow(interviewers: List<PanelInterviewer>, currentAsker: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        interviewers.forEach { iv ->
-            val isCurrent = iv.name == currentAsker
-            val avatarSize by animateDpAsState(
-                targetValue = if (isCurrent) 66.dp else 52.dp, label = "sz")
-            val avatarAlpha by animateFloatAsState(
-                targetValue = if (isCurrent) 1f else 0.45f, label = "al")
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(if (isCurrent) BrandPeach.copy(alpha = 0.55f) else Color(0x0A000000))
-                    .padding(vertical = 10.dp, horizontal = 4.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Image(
-                    painter = painterResource(iv.drawable),
-                    contentDescription = null,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.size(avatarSize).alpha(avatarAlpha),
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(iv.name,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (isCurrent) InkBlack else InkGray500,
-                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
-                    maxLines = 1)
-                if (isCurrent) {
-                    Spacer(Modifier.height(2.dp))
-                    Text("提問中",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = BrandOrange, fontWeight = FontWeight.SemiBold)
-                }
-            }
+    fun startVoice() {
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "zh-TW")
+            putExtra(RecognizerIntent.EXTRA_PROMPT, "請回答主考官的問題")
         }
+        try { voiceLauncher.launch(intent) } catch (e: Exception) { }
     }
-}
+    val fileLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent(),
+    ) { uri -> if (uri != null) shared = true }
 
-@Composable
-private fun PanelMessageBubble(m: ChatMessage, avatarOf: (String) -> Int?) {
-    Row(
-        Modifier.fillMaxWidth(),
-        horizontalArrangement = if (m.isUser) Arrangement.End else Arrangement.Start,
-    ) {
-        if (!m.isUser) {
-            val dr = avatarOf(m.speaker)
-            if (dr != null) {
-                Image(
-                    painter = painterResource(dr),
-                    contentDescription = null,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.size(36.dp),
-                )
-            } else {
-                Box(
-                    Modifier.size(36.dp).clip(CircleShape).background(BrandOrange),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(m.speaker.takeLast(1), color = PaperWhite,
-                        style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                }
-            }
-            Spacer(Modifier.width(8.dp))
-        }
+    Box(Modifier.fillMaxSize().background(Color(0xFF14100B))) {
+        Image(
+            painter = painterResource(R.drawable.bg_scene_meeting),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+        )
         Box(
-            Modifier
-                .widthIn(max = 280.dp)
-                .clip(RoundedCornerShape(
-                    topStart = 18.dp, topEnd = 18.dp,
-                    bottomStart = if (m.isUser) 18.dp else 4.dp,
-                    bottomEnd = if (m.isUser) 4.dp else 18.dp,
-                ))
-                .background(if (m.isUser) InkBlack else BrandPeach)
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-        ) {
-            Column {
-                if (!m.isUser) {
-                    Text(m.speaker, style = MaterialTheme.typography.labelSmall,
-                        color = BrandDeepOrange, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.height(2.dp))
-                }
-                Text(m.content,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (m.isUser) PaperWhite else BrandDeepOrange)
-            }
-        }
-    }
-}
-
-@Composable
-private fun PanelBottomBar(input: String, onChange: (String) -> Unit, onVoice: () -> Unit, onSend: () -> Unit) {
-    Box(Modifier.fillMaxWidth().background(PaperOff).padding(12.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(BrandPeach)
-                    .pressScale { onVoice() },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Outlined.Mic, contentDescription = null, tint = BrandDeepOrange)
-            }
-            Spacer(Modifier.width(8.dp))
-            OutlinedTextField(
-                value = input, onValueChange = onChange,
-                placeholder = { Text("輸入你的回答⋯", color = InkGray400) },
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(24.dp),
-                maxLines = 4,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = InkBlack, unfocusedBorderColor = InkGray200,
-                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+            Modifier.fillMaxSize().background(
+                Brush.verticalGradient(
+                    0f to Color(0x59000000), 0.5f to Color(0xB3160F09), 1f to Color(0xF0140F0A),
                 ),
-            )
-            Spacer(Modifier.width(8.dp))
-            Box(
-                Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(if (input.isBlank()) InkGray200 else InkBlack)
-                    .pressScale(enabled = input.isNotBlank()) { onSend() },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Outlined.Send, contentDescription = null,
-                    tint = if (input.isBlank()) InkGray400 else PaperWhite)
-            }
-        }
-    }
-}
+            ),
+        )
 
-@Composable
-private fun PanelTypingBubble(speaker: String, drawable: Int?) {
-    val t = rememberInfiniteTransition(label = "ptyping")
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
-        if (drawable != null) {
-            Image(
-                painter = painterResource(drawable),
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.size(36.dp),
-            )
-        } else {
-            Box(
-                Modifier.size(36.dp).clip(CircleShape).background(BrandOrange),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(speaker.takeLast(1), color = PaperWhite,
-                    style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-            }
-        }
-        Spacer(Modifier.width(8.dp))
-        Row(
-            modifier = Modifier
-                .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 18.dp, bottomStart = 18.dp, bottomEnd = 18.dp))
-                .background(BrandPeach)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            repeat(3) { i ->
-                val a by t.animateFloat(
-                    initialValue = 0.3f,
-                    targetValue = 1f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(durationMillis = 500, delayMillis = i * 160),
-                        repeatMode = RepeatMode.Reverse,
-                    ),
-                    label = "dot",
-                )
+        Column(Modifier.fillMaxSize().padding(20.dp)) {
+            // 頂列:返回 / 標題(吃 Config) / 計時 / 結束
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    Modifier
-                        .padding(horizontal = 3.dp)
-                        .size(7.dp)
-                        .clip(CircleShape)
-                        .background(BrandDeepOrange.copy(alpha = a)),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun PanelIntroOverlay(
-    modifier: Modifier = Modifier,
-    interviewers: List<PanelInterviewer>,
-    onDone: () -> Unit,
-) {
-    LaunchedEffect(Unit) {
-        delay(1900)
-        onDone()
-    }
-    val t = rememberInfiniteTransition(label = "breathe")
-    val scale by t.animateFloat(
-        initialValue = 0.94f,
-        targetValue = 1.06f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1400),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "s",
-    )
-    Box(
-        modifier = modifier.fillMaxSize().background(PaperOff),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                interviewers.forEach { iv ->
-                    Image(
-                        painter = painterResource(iv.drawable),
-                        contentDescription = null,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.size(82.dp).scale(scale),
+                    Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(Color(0x22FFFFFF))
+                        .clickable { navController.popBackStack() },
+                    contentAlignment = Alignment.Center,
+                ) { Text("←", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold) }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("主管 panel 面試 · $role", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        "三位主管輪流提問 · ${InterviewConfig.round} · ${InterviewConfig.difficulty}難度",
+                        color = Color(0x99FFFFFF), fontSize = 11.sp,
                     )
                 }
+                Row(
+                    Modifier.clip(RoundedCornerShape(999.dp)).background(Color(0x22FFFFFF)).padding(horizontal = 10.dp, vertical = 5.dp),
+                ) { Text(timerText, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
+                Spacer(Modifier.width(8.dp))
+                Box(
+                    Modifier.clip(RoundedCornerShape(999.dp)).background(BrandOrange)
+                        .clickable { navController.navigate(Routes.INTERVIEW_REPORT) }
+                        .padding(horizontal = 14.dp, vertical = 7.dp),
+                ) { Text("結束", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
             }
-            Spacer(Modifier.height(22.dp))
-            Text("三位主管已就座",
-                color = InkBlack,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Black)
-            Spacer(Modifier.height(6.dp))
-            Text("深呼吸,準備好了就開始。",
-                color = InkGray500,
-                style = MaterialTheme.typography.bodyMedium)
-            Spacer(Modifier.height(28.dp))
-            Box(
-                Modifier
-                    .clip(RoundedCornerShape(50))
-                    .background(BrandPeach.copy(alpha = 0.5f))
-                    .padding(horizontal = 14.dp, vertical = 6.dp),
-            ) {
-                Text("即將開始⋯",
-                    color = BrandDeepOrange,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold)
-            }
-        }
-    }
-}
+            Spacer(Modifier.height(14.dp))
 
-@Composable
-private fun PanelReactionBubble(text: String, drawable: Int?) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
-        if (drawable != null) {
-            Image(
-                painter = painterResource(drawable),
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.size(34.dp),
-            )
-            Spacer(Modifier.width(8.dp))
-        }
-        Box(
-            Modifier
-                .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 18.dp, bottomStart = 18.dp, bottomEnd = 18.dp))
-                .background(BrandPeach.copy(alpha = 0.5f))
-                .padding(horizontal = 14.dp, vertical = 8.dp),
-        ) {
-            Text(text, style = MaterialTheme.typography.bodySmall, color = BrandDeepOrange)
+            // 三位主管列(高亮目前發問者)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                seats.forEach { s ->
+                    val on = s.who == currentAsker
+                    Row(
+                        Modifier.weight(1f).clip(RoundedCornerShape(10.dp))
+                            .background(if (on) Color(0x33FFB627) else Color(0x14FFFFFF))
+                            .border(if (on) 1.dp else 0.dp, if (on) s.accent else Color.Transparent, RoundedCornerShape(10.dp))
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Image(
+                            painter = painterResource(faceFor(s.who, 0)),
+                            contentDescription = s.who,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.size(26.dp).clip(CircleShape),
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(s.who, color = if (on) s.accent else Color(0xB3FFFFFF), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            // 立繪:依回答換表情
+            Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Image(
+                        painter = painterResource(faceFor(currentAsker, reactingDelta)),
+                        contentDescription = currentAsker,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.height(176.dp),
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        Modifier.clip(RoundedCornerShape(999.dp)).background(accentFor(currentAsker)).padding(horizontal = 13.dp, vertical = 5.dp),
+                    ) {
+                        Text(
+                            if (answer.isBlank()) "$currentAsker　發問中" else "$currentAsker（${reactionText(reactingDelta)}）",
+                            color = Color(0xFF3A1505), fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
+            }
+
+            // 問題框 + 角色 pill
+            Box {
+                Column(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xDB241B12))
+                        .padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 14.dp),
+                ) {
+                    Text(question, color = Color.White, fontSize = 14.sp, lineHeight = 22.sp)
+                }
+                Box(
+                    Modifier.align(Alignment.TopStart).offset(x = 14.dp, y = (-11).dp)
+                        .clip(RoundedCornerShape(999.dp)).background(accentFor(currentAsker)).padding(horizontal = 11.dp, vertical = 3.dp),
+                ) { Text(currentAsker, color = Color(0xFF412402), fontSize = 11.sp, fontWeight = FontWeight.Black) }
+            }
+
+            if (answer.isNotBlank()) {
+                Spacer(Modifier.height(10.dp))
+                Column(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color(0xFFFFF7EE)).padding(13.dp),
+                ) {
+                    Text("你的回答（語音）", color = Color(0xFF9A6A3A), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(4.dp))
+                    Text(answer, color = Color(0xFF1F2937), fontSize = 13.sp, lineHeight = 20.sp)
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    Modifier.clip(RoundedCornerShape(999.dp)).background(Color(0x14FFFFFF))
+                        .clickable { fileLauncher.launch("*/*") }.padding(horizontal = 11.dp, vertical = 7.dp),
+                ) { Text("上傳作品給主考官", color = Color(0xCCFFFFFF), fontSize = 11.sp) }
+                if (shared) {
+                    Spacer(Modifier.width(8.dp))
+                    Row(
+                        Modifier.clip(RoundedCornerShape(999.dp)).background(Color(0x2910B981)).padding(horizontal = 10.dp, vertical = 7.dp),
+                    ) { Text("作品已分享", color = Color(0xFF34D399), fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(
+                        Modifier.size(60.dp).clip(CircleShape)
+                            .background(if (answer.isBlank()) BrandOrange else Color(0x33FFFFFF))
+                            .clickable { if (answer.isBlank()) startVoice() },
+                        contentAlignment = Alignment.Center,
+                    ) { Icon(Icons.Filled.Mic, contentDescription = "語音作答", tint = Color.White, modifier = Modifier.size(26.dp)) }
+                    Spacer(Modifier.height(6.dp))
+                    Text(if (answer.isBlank()) "點一下用說的回答" else "主管思考中…", color = Color(0x99FFFFFF), fontSize = 11.sp)
+                }
+                Spacer(Modifier.weight(1f))
+                Text("答完會自動換下一位主管", color = Color(0x73FFFFFF), fontSize = 11.sp)
+            }
         }
     }
 }
