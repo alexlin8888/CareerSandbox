@@ -108,6 +108,7 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
     fun submitAnswer(transcript: String) {
         if (transcript.isBlank() || answer.isNotBlank()) return
         answer = transcript
+        InterviewSession.record(question, transcript)
         reactingDelta = deltaFor(transcript)
         val (nextWho, nextQ) = MockPanelDispatcher.dispatch(transcript, followUpIdx)
         scope.launch {
