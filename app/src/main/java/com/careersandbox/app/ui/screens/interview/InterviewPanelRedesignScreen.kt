@@ -1,15 +1,24 @@
 package com.careersandbox.app.ui.screens.interview
 
+import android.content.Intent
+import android.speech.RecognizerIntent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -27,233 +36,220 @@ import com.careersandbox.app.R
 import com.careersandbox.app.ui.theme.*
 
 /* =====================================================================
-   面試頁改版預覽(Panel)— 兩個不靠圓框堆疊的方向,頂部切換
-   方向 A 場景式:暖黑場景 + 當前發問者立繪(固定高度)+ 名牌條(非圓框)+ 問題對話框 + 作答選項。
-                與沙盒場景對話同一套語言,沉浸、不像聊天機器人。
-   方向 B 視訊格:三個矩形視訊格(發問者高亮 + 發問中標籤),取代一排圓頭像;像真實遠端 panel。
-   皆 mock 資料(3 位面試官 + 一題),純展示版型給你挑;不接邏輯。
+   場景式 Panel 面試(方向 A;沙盒場景背景 + 沙盒角色立繪 + 表情隨回答變 + 語音作答 + 上傳作品)
+   - 背景:bg_scene_meeting(沿用沙盒跨部門會議場景,風格一致)+ 暖黑暈影。
+   - 主考官:直接用沙盒角色(Ken 用人主管 / 阿哲 技術主管 / Vivian 業務代表),
+     因其有表情變體 → 可依回答換臉;且與沙盒同一套角色+場景,完全一致。
+     (若要改回 interviewer_hr/tech/lead 那套,需替它們補表情變體美術。)
+   - 表情:答完後依答案觸發反應(mock 啟發式:答得完整→點頭認可;太短→等你多說)。接後端後改用真評分。
+   - 作答用語音(RecognizerIntent,免權限);可上傳作品給主考官(GetContent,免權限);不打字。
    ===================================================================== */
 
-private data class Panelist(val name: String, val role: String, val drawable: Int, val accent: Color)
+private data class Seat(val name: String, val role: String, val accent: Color)
 
-private val mockPanel = listOf(
-    Panelist("陳怡君", "HR 主管", R.drawable.interviewer_hr, BrandAmber),
-    Panelist("林志豪", "技術主管", R.drawable.interviewer_tech, BrandOrange),
-    Panelist("王思婷", "用人主管", R.drawable.interviewer_lead, BrandDeepOrange),
+private val panel = listOf(
+    Seat("Vivian", "業務代表", BrandAmber),
+    Seat("阿哲", "技術主管", BrandOrange),
+    Seat("Ken", "用人主管", BrandDeepOrange),
 )
-private const val MOCK_Q = "可以說說那個專案裡,你遇到最大的技術取捨是什麼?最後是怎麼決定的?"
-private val MOCK_OPTS = listOf(
-    "先講當時的限制條件,再帶到我的取捨",
-    "從對使用者的影響切入,說明為何這樣選",
-    "直接講最後的決策與量化結果",
+private val questions = listOf(
+    "先自我介紹一下,聊聊你最近最有成就感的一個專案。",
+    "測試才跑六成、race condition 還沒解,你會怎麼跟客戶說月底這個時程?",
+    "如果讓你加入我們團隊,你覺得第一個月能帶來什麼?",
 )
+
+// 依座位(角色)+ 反應強度回傳沙盒立繪;d>0 正面、d<0 負面、0 中性
+private fun faceFor(seat: Int, d: Int): Int = when (seat) {
+    0 -> when { d >= 1 -> R.drawable.colleague_vivian_satisfied; d <= -1 -> R.drawable.colleague_vivian_displeased; else -> R.drawable.colleague_vivian }
+    1 -> if (d <= -1) R.drawable.colleague_akai_frustrated else R.drawable.colleague_akai_calm
+    else -> when { d >= 1 -> R.drawable.ken_happy; d <= -1 -> R.drawable.ken_concerned; else -> R.drawable.ken_neutral }
+}
+
+// mock 反應:答案越完整反應越好(接後端後改用真評分)
+private fun reactionDelta(answer: String): Int = when {
+    answer.isBlank() -> 0
+    answer.length >= 24 -> 1
+    answer.length >= 10 -> 0
+    else -> -1
+}
+private fun reactionText(d: Int): String = when {
+    d >= 1 -> "認可地點點頭"
+    d <= -1 -> "等你再多說一點"
+    else -> "若有所思地聽著"
+}
 
 @Composable
 fun InterviewPanelRedesignScreen(navController: NavHostController) {
-    var direction by remember { mutableIntStateOf(0) }   // 0 場景式 / 1 視訊格
-    val askerIdx = 1                                      // 目前發問者:技術主管
-    val dark = direction == 0
+    var idx by remember { mutableIntStateOf(0) }
+    var answer by remember { mutableStateOf("") }
+    var shared by remember { mutableStateOf(false) }
+    val finished = idx >= panel.size
+    val seat = idx.coerceIn(0, panel.size - 1)
+    val asker = panel[seat]
+    val delta = if (answer.isBlank()) 0 else reactionDelta(answer)
 
-    Column(Modifier.fillMaxSize().background(if (dark) InkCharcoal else PaperOff)) {
-        // ===== 頂列:返回 + 標題 + 方向切換 =====
-        Row(
-            Modifier.fillMaxWidth()
-                .background(if (dark) InkCharcoal else PaperWhite)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                Modifier.size(40.dp).clip(RoundedCornerShape(12.dp))
-                    .background(if (dark) Color(0x33FFFFFF) else PaperOff)
-                    .clickable { navController.popBackStack() },
-                contentAlignment = Alignment.Center,
-            ) {
-                Text("←", color = if (dark) PaperWhite else InkBlack, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text("面試頁改版預覽", color = if (dark) PaperWhite else InkBlack, fontWeight = FontWeight.Black, fontSize = 16.sp)
-                Text("Panel · 不靠圓框堆疊", color = if (dark) PaperWhite.copy(alpha = 0.6f) else InkGray500, fontSize = 11.sp)
-            }
-            SegToggle(direction) { direction = it }
-        }
-        Box(Modifier.weight(1f).fillMaxWidth()) {
-            if (dark) SceneDirection(askerIdx) else VideoGridDirection(askerIdx)
+    val voiceLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val text = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+            if (!text.isNullOrBlank()) answer = text
         }
     }
-}
-
-@Composable
-private fun SegToggle(active: Int, onSel: (Int) -> Unit) {
-    Row(
-        Modifier.clip(RoundedCornerShape(999.dp)).background(Color(0x22808080)).padding(3.dp),
-    ) {
-        listOf("場景式", "視訊格").forEachIndexed { i, label ->
-            Box(
-                Modifier.clip(RoundedCornerShape(999.dp))
-                    .background(if (active == i) BrandOrange else Color.Transparent)
-                    .clickable { onSel(i) }
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-            ) {
-                Text(label, color = if (active == i) PaperWhite else InkGray400, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            }
+    fun startVoice() {
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "zh-TW")
+            putExtra(RecognizerIntent.EXTRA_PROMPT, "請回答主考官的問題")
         }
+        try { voiceLauncher.launch(intent) } catch (e: Exception) { }
     }
-}
+    val fileLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent(),
+    ) { uri -> if (uri != null) shared = true }
 
-/* ===== 方向 A:場景式 ===== */
-@Composable
-private fun SceneDirection(askerIdx: Int) {
-    val asker = mockPanel[askerIdx]
-    Box(
-        Modifier.fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color(0xFF2A2018), Color(0xFF14100B)))),
-    ) {
-        Column(Modifier.fillMaxSize().padding(20.dp)) {
-            // 面試小組名牌條(橫向名片,非圓框;發問者高亮)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                mockPanel.forEachIndexed { i, p ->
-                    val on = i == askerIdx
-                    Column(
-                        Modifier.weight(1f).clip(RoundedCornerShape(12.dp))
-                            .background(if (on) Color(0x33FFB627) else Color(0x1AFFFFFF))
-                            .border(if (on) 1.dp else 0.dp, if (on) p.accent else Color.Transparent, RoundedCornerShape(12.dp))
-                            .padding(horizontal = 10.dp, vertical = 8.dp),
-                    ) {
-                        Text(p.role, color = if (on) p.accent else PaperWhite.copy(alpha = 0.85f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        Text(p.name, color = PaperWhite.copy(alpha = 0.55f), fontSize = 10.sp)
-                    }
-                }
-            }
-            // 當前發問者立繪(固定高度,各人一致)
-            Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Image(
-                        painter = painterResource(asker.drawable),
-                        contentDescription = asker.name,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.height(220.dp),
-                    )
-                    Spacer(Modifier.height(10.dp))
-                    Row(
-                        Modifier.clip(RoundedCornerShape(999.dp)).background(asker.accent).padding(horizontal = 14.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Box(Modifier.size(6.dp).clip(RoundedCornerShape(999.dp)).background(InkBlack.copy(alpha = 0.55f)))
-                        Spacer(Modifier.width(7.dp))
-                        Text("${asker.name} · ${asker.role}  發問中", color = InkBlack, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-            // 問題對話框(amber 名牌 + 問題)
-            Box {
-                Column(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp))
-                        .background(Color(0xDB1C160F))
-                        .padding(start = 20.dp, end = 20.dp, top = 22.dp, bottom = 18.dp),
-                ) {
-                    Text(MOCK_Q, color = PaperWhite, fontSize = 15.sp, lineHeight = 24.sp)
-                }
-                Box(
-                    Modifier.align(Alignment.TopStart).offset(x = 18.dp, y = (-11).dp)
-                        .clip(RoundedCornerShape(999.dp)).background(asker.accent)
-                        .padding(horizontal = 14.dp, vertical = 5.dp),
-                ) {
-                    Text(asker.role, color = InkBlack, fontSize = 12.sp, fontWeight = FontWeight.Black)
-                }
-            }
-            Spacer(Modifier.height(14.dp))
-            // 作答選項
-            MOCK_OPTS.forEachIndexed { i, opt ->
-                Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(PaperWhite)
-                        .clickable { }.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(Modifier.size(26.dp).clip(RoundedCornerShape(999.dp)).background(Color(0x1FF2531C)), contentAlignment = Alignment.Center) {
-                        Text(('A' + i).toString(), color = BrandOrange, fontSize = 13.sp, fontWeight = FontWeight.Black)
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Text(opt, color = InkSlate, fontSize = 14.sp, lineHeight = 20.sp)
-                }
-                Spacer(Modifier.height(9.dp))
-            }
-        }
-    }
-}
-
-/* ===== 方向 B:視訊格 ===== */
-@Composable
-private fun VideoGridDirection(askerIdx: Int) {
-    val asker = mockPanel[askerIdx]
-    Column(Modifier.fillMaxSize().background(PaperOff).padding(16.dp)) {
-        Text("遠端面試 · 3 位面試官", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 15.sp)
-        Spacer(Modifier.height(2.dp))
-        Text("即時視訊格,發問者高亮 — 取代一排圓頭像", color = InkGray500, fontSize = 11.sp)
-        Spacer(Modifier.height(14.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            mockPanel.forEachIndexed { i, p ->
-                VideoTile(p, on = i == askerIdx, modifier = Modifier.weight(1f))
-            }
-        }
-        Spacer(Modifier.height(18.dp))
-        Column(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(PaperWhite).padding(18.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(8.dp).clip(RoundedCornerShape(999.dp)).background(asker.accent))
-                Spacer(Modifier.width(8.dp))
-                Text("${asker.name} · ${asker.role}", color = InkBlack, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-            }
-            Spacer(Modifier.height(10.dp))
-            Text(MOCK_Q, color = InkSlate, fontSize = 15.sp, lineHeight = 24.sp)
-        }
-        Spacer(Modifier.height(16.dp))
-        MOCK_OPTS.forEachIndexed { i, opt ->
-            Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
-                    .border(1.dp, InkGray200, RoundedCornerShape(14.dp)).background(PaperWhite)
-                    .clickable { }.padding(14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(('A' + i).toString(), color = BrandOrange, fontSize = 13.sp, fontWeight = FontWeight.Black)
-                Spacer(Modifier.width(12.dp))
-                Text(opt, color = InkSlate, fontSize = 14.sp)
-            }
-            Spacer(Modifier.height(9.dp))
-        }
-    }
-}
-
-@Composable
-private fun VideoTile(p: Panelist, on: Boolean, modifier: Modifier = Modifier) {
-    Box(
-        modifier.aspectRatio(0.74f).clip(RoundedCornerShape(16.dp)).background(InkCharcoal)
-            .border(if (on) 2.dp else 0.dp, if (on) BrandOrange else Color.Transparent, RoundedCornerShape(16.dp)),
-    ) {
+    Box(Modifier.fillMaxSize().background(Color(0xFF14100B))) {
+        // 場景背景圖(沿用沙盒會議場景)+ 暖黑暈影確保可讀
         Image(
-            painter = painterResource(p.drawable),
-            contentDescription = p.name,
+            painter = painterResource(R.drawable.bg_scene_meeting),
+            contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),
         )
         Box(
-            Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xCC000000))))
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-        ) {
-            Column {
-                Text(p.role, color = PaperWhite, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                Text(p.name, color = PaperWhite.copy(alpha = 0.7f), fontSize = 9.sp)
+            Modifier.fillMaxSize().background(
+                Brush.verticalGradient(
+                    0f to Color(0x59000000), 0.5f to Color(0xB3160F09), 1f to Color(0xF0140F0A),
+                ),
+            ),
+        )
+
+        Column(Modifier.fillMaxSize().padding(20.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(Color(0x22FFFFFF))
+                        .clickable { navController.popBackStack() },
+                    contentAlignment = Alignment.Center,
+                ) { Text("←", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold) }
+                Spacer(Modifier.width(12.dp))
+                Text("面試 · 跨部門 Panel", color = Color(0xCCFFFFFF), fontSize = 13.sp, fontWeight = FontWeight.Bold)
             }
-        }
-        if (on) {
-            Box(
-                Modifier.align(Alignment.TopStart).padding(6.dp)
-                    .clip(RoundedCornerShape(999.dp)).background(BrandOrange)
-                    .padding(horizontal = 8.dp, vertical = 3.dp),
-            ) {
-                Text("發問中", color = PaperWhite, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(14.dp))
+
+            if (finished) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("面試結束", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                        Spacer(Modifier.height(8.dp))
+                        Text("辛苦了,稍後可在報告看回饋。", color = Color(0x99FFFFFF), fontSize = 13.sp)
+                        Spacer(Modifier.height(20.dp))
+                        Box(
+                            Modifier.clip(RoundedCornerShape(999.dp)).background(BrandOrange)
+                                .clickable { navController.popBackStack() }
+                                .padding(horizontal = 24.dp, vertical = 12.dp),
+                        ) { Text("回面試首頁", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold) }
+                    }
+                }
+                return@Column
+            }
+
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                panel.forEachIndexed { i, p ->
+                    val on = i == idx
+                    Column(
+                        Modifier.weight(1f).clip(RoundedCornerShape(10.dp))
+                            .background(if (on) Color(0x33FFB627) else Color(0x14FFFFFF))
+                            .border(if (on) 1.dp else 0.dp, if (on) p.accent else Color.Transparent, RoundedCornerShape(10.dp))
+                            .padding(horizontal = 8.dp, vertical = 7.dp),
+                    ) {
+                        Text(p.role, color = if (on) p.accent else Color(0xD9FFFFFF), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(p.name, color = Color(0x73FFFFFF), fontSize = 11.sp)
+                    }
+                }
+            }
+
+            // 立繪:依回答換表情
+            Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Image(
+                        painter = painterResource(faceFor(seat, delta)),
+                        contentDescription = asker.name,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.height(180.dp),
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        Modifier.clip(RoundedCornerShape(999.dp)).background(asker.accent).padding(horizontal = 13.dp, vertical = 5.dp),
+                    ) {
+                        Text(
+                            if (answer.isBlank()) "${asker.name} · ${asker.role}　發問中" else "${asker.name}（${reactionText(delta)}）",
+                            color = Color(0xFF3A1505), fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
+            }
+
+            Box {
+                Column(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xDB241B12))
+                        .padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 14.dp),
+                ) {
+                    Text(questions[idx], color = Color.White, fontSize = 14.sp, lineHeight = 22.sp)
+                }
+                Box(
+                    Modifier.align(Alignment.TopStart).offset(x = 14.dp, y = (-11).dp)
+                        .clip(RoundedCornerShape(999.dp)).background(asker.accent).padding(horizontal = 11.dp, vertical = 3.dp),
+                ) { Text(asker.role, color = Color(0xFF412402), fontSize = 11.sp, fontWeight = FontWeight.Black) }
+            }
+
+            if (answer.isNotBlank()) {
+                Spacer(Modifier.height(10.dp))
+                Column(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color(0xFFFFF7EE)).padding(13.dp),
+                ) {
+                    Text("你的回答（語音）", color = Color(0xFF9A6A3A), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(4.dp))
+                    Text(answer, color = Color(0xFF1F2937), fontSize = 13.sp, lineHeight = 20.sp)
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    Modifier.clip(RoundedCornerShape(999.dp)).background(Color(0x14FFFFFF))
+                        .clickable { fileLauncher.launch("*/*") }.padding(horizontal = 11.dp, vertical = 7.dp),
+                ) { Text("上傳作品給主考官", color = Color(0xCCFFFFFF), fontSize = 11.sp) }
+                if (shared) {
+                    Spacer(Modifier.width(8.dp))
+                    Row(
+                        Modifier.clip(RoundedCornerShape(999.dp)).background(Color(0x2910B981)).padding(horizontal = 10.dp, vertical = 7.dp),
+                    ) { Text("作品已分享", color = Color(0xFF34D399), fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(
+                        Modifier.size(60.dp).clip(CircleShape).background(BrandOrange).clickable { startVoice() },
+                        contentAlignment = Alignment.Center,
+                    ) { Icon(Icons.Filled.Mic, contentDescription = "語音作答", tint = Color.White, modifier = Modifier.size(26.dp)) }
+                    Spacer(Modifier.height(6.dp))
+                    Text("點一下用說的回答", color = Color(0x99FFFFFF), fontSize = 11.sp)
+                }
+                Spacer(Modifier.weight(1f))
+                Box(
+                    Modifier.clip(RoundedCornerShape(999.dp))
+                        .background(if (answer.isNotBlank()) BrandOrange else Color(0x22FFFFFF))
+                        .clickable { idx += 1; answer = ""; shared = false }
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                ) {
+                    Text(
+                        if (idx == panel.size - 1) "完成面試" else "下一位主考官 →",
+                        color = if (answer.isNotBlank()) Color.White else Color(0x99FFFFFF),
+                        fontSize = 13.sp, fontWeight = FontWeight.Bold,
+                    )
+                }
             }
         }
     }
