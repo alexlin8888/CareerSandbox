@@ -152,7 +152,7 @@ fun WorkplaceSandboxScreen(navController: NavHostController) {
 
         Spacer(Modifier.height(18.dp))
 
-        // === AI 自由對話入口(模型驅動,前端先用 mock 跑通迴圈)===
+        // === AI 對話 Demo(場景式;mock 引擎,預留接真模型;劇情內各天也用同一套對話)===
         StaggeredAppear(delayMillis = 100) {
             Box(
                 modifier = Modifier
@@ -165,9 +165,9 @@ fun WorkplaceSandboxScreen(navController: NavHostController) {
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("試試 AI 自由對話", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 15.sp)
+                        Text("AI 對話 Demo", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 15.sp)
                         Spacer(Modifier.height(2.dp))
-                        Text("直接打字跟阿哲聊(Day 3)·NPC 即時回應、計量會動",
+                        Text("場景式 AI 對話・目前為 mock 引擎,預留接真模型",
                             color = PaperWhite.copy(alpha = 0.85f), fontSize = 11.sp)
                     }
                     Text("→", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 20.sp)
