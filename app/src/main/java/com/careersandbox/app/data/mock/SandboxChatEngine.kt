@@ -54,7 +54,11 @@ interface SandboxChatEngine {
 }
 
 object SandboxChatEngineProvider {
-    val engine: SandboxChatEngine = MockSandboxChatEngine
+    // 預設走 mock;後端就緒時設 useRemote=true 並給 baseUrl → 切到 RemoteSandboxChatEngine(任何失敗自動退回 mock)
+    var useRemote: Boolean = false
+    var baseUrl: String = ""
+    val engine: SandboxChatEngine
+        get() = if (useRemote) RemoteSandboxChatEngine else MockSandboxChatEngine
 }
 
 /**
