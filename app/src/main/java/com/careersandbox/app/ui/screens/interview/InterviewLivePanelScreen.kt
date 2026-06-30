@@ -39,6 +39,7 @@ import com.careersandbox.app.data.mock.InterviewConfig
 import com.careersandbox.app.data.mock.InterviewSession
 import com.careersandbox.app.data.mock.MockPanelDispatcher
 import com.careersandbox.app.navigation.Routes
+import com.careersandbox.app.ui.components.rememberInPageVoice
 import com.careersandbox.app.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -50,7 +51,7 @@ import kotlinx.coroutines.launch
        HR 主管 = Vivian / 技術主管 = 阿哲 / 用人主管 = Ken。
    - 多代理路由用既有 MockPanelDispatcher(數據→技術、團隊→HR、成果→用人、不會→HR 接住),
      真接 LangGraph dispatcher 時換掉 MockPanelDispatcher 即可,本頁不動。
-   - 作答用真語音轉文字(RecognizerIntent,免權限)→ 逐字稿餵 dispatch 做語意路由
+   - 作答用頁內語音(SpeechRecognizer,需 RECORD_AUDIO 權限,不跳 Google 框)→ 逐字稿餵 dispatch 做語意路由
      (比舊 mock 語音傳空字串更準);可上傳作品;不打字。
    - 表情依回答啟發式換(報告評分目前為 mock;接後端評分後可改吃真分數)。
    - 結束 → 既有 INTERVIEW_REPORT(三維評分報告頁不動)。
@@ -121,22 +122,7 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
         }
     }
 
-    val voiceLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult(),
-    ) { result ->
-        if (result.resultCode == android.app.Activity.RESULT_OK) {
-            val text = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
-            if (!text.isNullOrBlank()) submitAnswer(text)
-        }
-    }
-    fun startVoice() {
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "zh-TW")
-            putExtra(RecognizerIntent.EXTRA_PROMPT, "請回答主考官的問題")
-        }
-        try { voiceLauncher.launch(intent) } catch (e: Exception) { }
-    }
+    val voice = rememberInPageVoice(languageTag = "zh-TW") { transcript -> submitAnswer(transcript) }
     val fileLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent(),
     ) { uri -> if (uri != null) shared = true }
@@ -272,12 +258,12 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(
                         Modifier.size(60.dp).clip(CircleShape)
-                            .background(if (answer.isBlank()) BrandOrange else Color(0x33FFFFFF))
-                            .clickable { if (answer.isBlank()) startVoice() },
+                            .background(if (voice.isListening) BrandDeepOrange else if (answer.isBlank()) BrandOrange else Color(0x33FFFFFF))
+                            .clickable { if (answer.isBlank() && !voice.isListening) voice.start() },
                         contentAlignment = Alignment.Center,
                     ) { Icon(Icons.Filled.Mic, contentDescription = "語音作答", tint = Color.White, modifier = Modifier.size(26.dp)) }
                     Spacer(Modifier.height(6.dp))
-                    Text(if (answer.isBlank()) "點一下用說的回答" else "主管思考中…", color = Color(0x99FFFFFF), fontSize = 11.sp)
+                    Text(if (voice.isListening) ("聆聽中… " + voice.partialText) else if (answer.isBlank()) "點一下用說的回答" else "主管思考中…", color = Color(0x99FFFFFF), fontSize = 11.sp)
                 }
                 Spacer(Modifier.weight(1f))
                 Text("答完會自動換下一位主管", color = Color(0x73FFFFFF), fontSize = 11.sp)

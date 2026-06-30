@@ -38,6 +38,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.*
+import com.careersandbox.app.ui.components.rememberInPageVoice
 import com.careersandbox.app.ui.theme.*
 
 // 各角色河狸頭像(「你」維持色圈)
@@ -126,23 +127,8 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
 
     LaunchedEffect(Unit) { com.careersandbox.app.data.mock.InterviewSession.reset() }
 
-    // 真語音轉文字:叫系統語音輸入回逐字稿,餵 dispatch 做同儕路由(免 RECORD_AUDIO 權限)
-    val voiceLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult(),
-    ) { result ->
-        if (result.resultCode == android.app.Activity.RESULT_OK) {
-            val text = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
-            if (!text.isNullOrBlank()) submitGroup(text, text)
-        }
-    }
-    fun startVoice() {
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "zh-TW")
-            putExtra(RecognizerIntent.EXTRA_PROMPT, "說出你的發言")
-        }
-        try { voiceLauncher.launch(intent) } catch (e: Exception) { }
-    }
+    // 頁內語音(SpeechRecognizer,需 RECORD_AUDIO,不跳 Google 框):逐字稿餵 dispatch 做同儕路由
+    val voice = rememberInPageVoice(languageTag = "zh-TW") { transcript -> submitGroup(transcript, transcript) }
 
     LaunchedEffect(messages.size, isTyping) {
         val target = if (isTyping) messages.size else messages.size - 1
@@ -227,11 +213,21 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
                     },
                 )
             } else {
-                GroupBottomBar(input, { input = it }, onVoice = { startVoice() }) {
-                    if (input.isNotBlank() && !isTyping) {
-                        val said = input
-                        input = ""
-                        submitGroup(said, said)
+                Column {
+                    if (voice.isListening) {
+                        Text(
+                            "聆聽中… " + voice.partialText,
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            modifier = Modifier.fillMaxWidth().background(BrandDeepOrange).padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                    }
+                    GroupBottomBar(input, { input = it }, onVoice = { voice.start() }) {
+                        if (input.isNotBlank() && !isTyping) {
+                            val said = input
+                            input = ""
+                            submitGroup(said, said)
+                        }
                     }
                 }
             }
