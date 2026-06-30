@@ -32,8 +32,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
@@ -117,7 +119,21 @@ fun VideoInterviewScreen(navController: NavHostController) {
         }
     }
 
-    Box(Modifier.fillMaxSize().background(InkCharcoal)) {
+    Box(Modifier.fillMaxSize().background(Color(0xFF14100B))) {
+        // 場景背景(沿用個人面試/沙盒的一對一場景)+ 暖黑漸層暈影,與個人面試一致
+        Image(
+            painter = painterResource(R.drawable.bg_scene_1on1),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+        )
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.verticalGradient(
+                    0f to Color(0x59000000), 0.5f to Color(0xB3160F09), 1f to Color(0xF0140F0A),
+                ),
+            ),
+        )
         Column(Modifier.fillMaxSize()) {
             // ── 頂部列
             Row(
@@ -295,7 +311,7 @@ private fun QuestionSubtitle(text: String, focus: String, speaking: Boolean) {
     Column(
         Modifier.fillMaxWidth().padding(horizontal = 20.dp)
             .clip(RoundedCornerShape(18.dp))
-            .background(PaperWhite.copy(alpha = 0.07f))
+            .background(Color(0xDB241B12))
             .padding(16.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
