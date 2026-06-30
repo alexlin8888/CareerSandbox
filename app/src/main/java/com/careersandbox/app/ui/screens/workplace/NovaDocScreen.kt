@@ -18,8 +18,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import com.careersandbox.app.data.mock.WorkplaceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,6 +32,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.careersandbox.app.data.mock.NovaContent
 import com.careersandbox.app.ui.theme.PaperWhite
 
 /* =====================================================================
@@ -50,7 +49,7 @@ private val DocFaint = Color(0xFFEDEDED)
 @Composable
 fun NovaDocScreen(navController: NavHostController) {
     val scroll = rememberScrollState()
-    LaunchedEffect(Unit) { WorkplaceState.setFlag("intel_d3_doc") }   // 讀風險文件＝掌握工程標註的風險(Day3 進階選項用)
+    val doc = NovaContent.decisionDoc
 
     Column(Modifier.fillMaxSize().background(PaperWhite)) {
 
@@ -63,7 +62,7 @@ fun NovaDocScreen(navController: NavHostController) {
                 Icon(Icons.Outlined.ArrowBack, contentDescription = null, tint = DocInk, modifier = Modifier.size(20.dp))
             }
             Text(
-                "NovaPay · 產品 · 分帳上線決議",
+                doc.breadcrumb,
                 color = DocMuted, fontSize = 13.sp, fontWeight = FontWeight.Medium,
                 modifier = Modifier.weight(1f),
             )
@@ -79,7 +78,7 @@ fun NovaDocScreen(navController: NavHostController) {
             // ===== 文件圖示 + 標題 =====
             Icon(Icons.Outlined.Description, null, tint = DocInk, modifier = Modifier.size(34.dp))
             Spacer(Modifier.height(12.dp))
-            Text("分帳上線決議", color = DocInk, fontWeight = FontWeight.ExtraBold, fontSize = 29.sp, lineHeight = 34.sp)
+            Text(doc.title, color = DocInk, fontWeight = FontWeight.ExtraBold, fontSize = 29.sp, lineHeight = 34.sp)
             Spacer(Modifier.height(16.dp))
 
             // ===== 屬性：負責人 / 狀態 =====
@@ -91,7 +90,7 @@ fun NovaDocScreen(navController: NavHostController) {
                 }
                 NovaCircleAvatar(size = 20.dp, letter = "我", bg = Color(0xFFB85C3A))
                 Spacer(Modifier.width(6.dp))
-                Text("你（PM）", color = DocInk, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                Text(doc.owner, color = DocInk, fontSize = 13.sp, fontWeight = FontWeight.Medium)
             }
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -103,7 +102,7 @@ fun NovaDocScreen(navController: NavHostController) {
                 Box(
                     Modifier.clip(RoundedCornerShape(5.dp)).background(Color(0xFFFDEEE6))
                         .padding(horizontal = 10.dp, vertical = 2.dp),
-                ) { Text("審核中", color = Color(0xFFB8421A), fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
+                ) { Text(doc.status, color = Color(0xFFB8421A), fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
             }
             Spacer(Modifier.height(18.dp))
             Box(Modifier.fillMaxWidth().height(1.dp).background(DocFaint))
@@ -112,31 +111,26 @@ fun NovaDocScreen(navController: NavHostController) {
             // ===== 目標 =====
             Text("目標", color = DocInk, fontSize = 19.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(11.dp))
-            DocBullet("讓「一鍵分帳」在 demo 前可用、且不出事")
-            Spacer(Modifier.height(10.dp))
-            DocBullet("在工程、業務、品質之間取得共識")
+            doc.goals.forEachIndexed { i, g ->
+                if (i > 0) Spacer(Modifier.height(10.dp))
+                DocBullet(g)
+            }
             Spacer(Modifier.height(22.dp))
 
             // ===== 範圍 =====
             Text("範圍", color = DocInk, fontSize = 19.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(11.dp))
-            DocCheck(
-                checked = true,
-                content = buildAnnotatedString {
-                    withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append("基本版") }
-                    append("：手動建立分帳、平均拆分")
-                },
-                textColor = DocInk,
-            )
-            Spacer(Modifier.height(10.dp))
-            DocCheck(
-                checked = false,
-                content = buildAnnotatedString {
-                    withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append("進階版") }
-                    append("（下一版）：自動金流串接")
-                },
-                textColor = Color(0xFF73716C),
-            )
+            doc.scopes.forEachIndexed { i, sc ->
+                if (i > 0) Spacer(Modifier.height(10.dp))
+                DocCheck(
+                    checked = sc.done,
+                    content = buildAnnotatedString {
+                        withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(sc.label) }
+                        append(sc.text)
+                    },
+                    textColor = if (sc.done) DocInk else Color(0xFF73716C),
+                )
+            }
             Spacer(Modifier.height(22.dp))
 
             // ===== 風險 =====
@@ -151,12 +145,12 @@ fun NovaDocScreen(navController: NavHostController) {
                     Spacer(Modifier.width(10.dp))
                     Column {
                         Text(
-                            "金流串接 race condition，bug 未解",
+                            doc.riskTitle,
                             color = DocInk, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, lineHeight = 22.sp,
                         )
                         Spacer(Modifier.height(3.dp))
                         Text(
-                            "硬上線 → demo 出錯機率高；延期 → 對客戶承諾跳票。",
+                            doc.riskBody,
                             color = Color(0xFF8A6D63), fontSize = 13.5f.sp, lineHeight = 21.sp,
                         )
                     }

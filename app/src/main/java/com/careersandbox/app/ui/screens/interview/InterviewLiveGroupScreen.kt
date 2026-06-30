@@ -101,13 +101,6 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
     LaunchedEffect(Unit) { while (true) { delay(1000); elapsedSec++ } }
     val timerText = "${(elapsedSec / 60).toString().padStart(2, '0')}:${(elapsedSec % 60).toString().padStart(2, '0')}"
     var interruptCount by remember { mutableIntStateOf(0) }
-    var voiceMode by remember { mutableStateOf(false) }
-    var recording by remember { mutableStateOf(false) }
-    var recordSec by remember { mutableIntStateOf(0) }
-    var holdStartAt by remember { mutableLongStateOf(0L) }
-    LaunchedEffect(recording) {
-        if (recording) { var sct = 0; recordSec = 0; while (true) { delay(1000); sct++; recordSec = sct } }
-    }
     val currentSpeaker = if (isTyping) typingSpeaker
         else (messages.lastOrNull()?.speaker ?: if (panel) "用人主管" else "主考官")
 
@@ -201,38 +194,20 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
             )
         },
         bottomBar = {
-            if (voiceMode) {
-                VoiceBar(
-                    recording = recording,
-                    recordSec = recordSec,
-                    onKeyboard = { if (!recording) voiceMode = false },
-                    onPressStart = {
-                        if (!isTyping) { holdStartAt = System.currentTimeMillis(); recording = true }
-                    },
-                    onPressEnd = {
-                        if (recording) {
-                            recording = false
-                            val dur = ((System.currentTimeMillis() - holdStartAt) / 1000).toInt()
-                            if (dur >= 1) submitGroup("語音發言 ・ $dur 秒", "")
-                        }
-                    },
-                )
-            } else {
-                Column {
-                    if (voice.isListening) {
-                        Text(
-                            "聆聽中… " + voice.partialText,
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            modifier = Modifier.fillMaxWidth().background(BrandDeepOrange).padding(horizontal = 16.dp, vertical = 8.dp),
-                        )
-                    }
-                    GroupBottomBar(input, { input = it }, onVoice = { voice.start() }) {
-                        if (input.isNotBlank() && !isTyping) {
-                            val said = input
-                            input = ""
-                            submitGroup(said, said)
-                        }
+            Column {
+                if (voice.isListening) {
+                    Text(
+                        "聆聽中… " + voice.partialText,
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        modifier = Modifier.fillMaxWidth().background(BrandDeepOrange).padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                }
+                GroupBottomBar(input, { input = it }, onVoice = { voice.start() }) {
+                    if (input.isNotBlank() && !isTyping) {
+                        val said = input
+                        input = ""
+                        submitGroup(said, said)
                     }
                 }
             }
