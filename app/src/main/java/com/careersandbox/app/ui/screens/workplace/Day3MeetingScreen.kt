@@ -1,7 +1,6 @@
 package com.careersandbox.app.ui.screens.workplace
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -103,22 +102,8 @@ fun Day3MeetingScreen(navController: NavHostController) {
 /* ---------- NovaMeet 四宮格會議面板（對齊 band_2,字母格）---------- */
 @Composable
 private fun MeetingPanel(caption: Caption, isLast: Boolean, onNext: () -> Unit, onBack: () -> Unit) {
-    // 逐字串流:caption.line 一字一字浮現;點擊未打完秒顯全句,打完換下一句
-    var shown by remember(caption) { mutableStateOf("") }
-    var done by remember(caption) { mutableStateOf(false) }
-    LaunchedEffect(caption) {
-        shown = ""
-        done = false
-        for (i in caption.line.indices) {
-            shown = caption.line.substring(0, i + 1)
-            kotlinx.coroutines.delay(28)
-        }
-        done = true
-    }
     Box(
-        Modifier.fillMaxSize().background(Color(0xFF0B0E14)).clickable {
-            if (!done) { shown = caption.line; done = true } else onNext()
-        },
+        Modifier.fillMaxSize().background(Color(0xFF0B0E14)).clickable { onNext() },
     ) {
         Column(Modifier.fillMaxSize()) {
             // 頂部標題列
@@ -153,13 +138,13 @@ private fun MeetingPanel(caption: Caption, isLast: Boolean, onNext: () -> Unit, 
             // 2x2 字母格
             Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 10.dp)) {
                 Row(Modifier.weight(1f).fillMaxWidth()) {
-                    Day3Tile(Modifier.weight(1f), "K", Color(0xFF5B7FE3), "Ken", host = true, speaking = caption.who == "Ken")
+                    Day3Tile(Modifier.weight(1f), "K", Color(0xFF5B7FE3), "Ken", host = true)
                     Spacer(Modifier.width(8.dp))
-                    Day3Tile(Modifier.weight(1f), "哲", Color(0xFF35B9A4), "阿哲", speaking = caption.who == "阿哲")
+                    Day3Tile(Modifier.weight(1f), "哲", Color(0xFF35B9A4), "阿哲")
                 }
                 Spacer(Modifier.height(8.dp))
                 Row(Modifier.weight(1f).fillMaxWidth()) {
-                    Day3Tile(Modifier.weight(1f), "V", Color(0xFFE491B4), "Vivian", hand = true, speaking = caption.who == "Vivian")
+                    Day3Tile(Modifier.weight(1f), "V", Color(0xFFE491B4), "Vivian", hand = true)
                     Spacer(Modifier.width(8.dp))
                     Day3Tile(Modifier.weight(1f), "你", Color(0xFF263247), "你", you = true)
                 }
@@ -171,7 +156,7 @@ private fun MeetingPanel(caption: Caption, isLast: Boolean, onNext: () -> Unit, 
                     .clip(RoundedCornerShape(12.dp)).background(Color(0xFF161C28))
                     .padding(horizontal = 16.dp, vertical = 12.dp),
             ) {
-                Text("${caption.who}：$shown", color = Color.White, fontSize =? 13.sp, lineHeight = 19.sp)
+                Text("${caption.who}：${caption.line}", color = Color.White, fontSize = 13.sp, lineHeight = 19.sp)
                 Spacer(Modifier.height(6.dp))
                 Text(
                     if (isLast) "輪到你了 — 點一下繼續 ›" else "點一下繼續 ›",
@@ -205,12 +190,8 @@ private fun Day3Tile(
     host: Boolean = false,
     hand: Boolean = false,
     you: Boolean = false,
-    speaking: Boolean = false,
 ) {
-    Box(
-        modifier.fillMaxHeight().clip(RoundedCornerShape(14.dp)).background(Color(0xFF1B2230))
-            .then(if (speaking) Modifier.border(2.dp, Color(0xFF6CE5C6), RoundedCornerShape(14.dp)) else Modifier),
-    ) {
+    Box(modifier.fillMaxHeight().clip(RoundedCornerShape(14.dp)).background(Color(0xFF1B2230))) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Box(
                 Modifier.size(72.dp).clip(CircleShape).background(avatarColor),
