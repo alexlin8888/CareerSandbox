@@ -51,6 +51,9 @@ data class StarPart(
 /** 影像維度的一項(分數來自影像面試 session 的 MediaPipe 平均;見 VideoFaceMetrics) */
 data class VideoDim(val name: String, val score: Int, val hint: String)
 
+/** 協作維度的一項(來自團體面試;分數待後端依發言時機/傾聽回應/論點結構/協作角色分析) */
+data class CollabDim(val name: String, val score: Int, val hint: String)
+
 /** 面試報告核心回饋分析器(後端接點) */
 interface InterviewReportProvider {
     fun faceDimensions(): List<FaceDimension>
@@ -58,6 +61,7 @@ interface InterviewReportProvider {
     fun questionFeedbacks(): List<QuestionFeedback>
     fun starParts(): List<StarPart>          // STAR 結構拆解
     fun videoDims(): List<VideoDim>          // 影像維度(MediaPipe 平均)
+    fun collabDims(): List<CollabDim>        // 協作維度(團體面試)
     fun improvements(): List<String>         // 下次可以試試
 }
 
@@ -145,6 +149,13 @@ object MockInterviewReportProvider : InterviewReportProvider {
         VideoDim("眼神接觸", 78, "大部分時間看著鏡頭,中段低頭找詞時斷了幾次。下次想詞可以往上看。"),
         VideoDim("姿態穩定度", 85, "坐得穩、沒有大幅晃動,給人沉穩的印象。"),
         VideoDim("表情自然度", 70, "整體放鬆,但講到難題時眉頭會皺。練習時可留意一下。"),
+    )
+
+    override fun collabDims(): List<CollabDim> = listOf(
+        CollabDim("參與主動性", 74, "有主動發言、不會整場沉默。可在開頭就先表態,搶到定錨位置。（待後端依發言時機分析）"),
+        CollabDim("傾聽與回應", 68, "有接著別人的點講,但較常各說各話。試著明確回應前一位:「我同意 X,另外補充…」。（待後端依回應關聯度分析）"),
+        CollabDim("論點建構", 71, "論點清楚但偏短。可多用「因為…所以…」把推理講完整。（待後端依論證結構分析）"),
+        CollabDim("協作姿態", 70, "沒有壓過別人,姿態不錯;但也別只當附和者,適時收斂分歧、推進共識。（待後端依互動角色分析）"),
     )
 
     override fun improvements(): List<String> = listOf(

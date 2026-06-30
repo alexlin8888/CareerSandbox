@@ -12,12 +12,21 @@ object InterviewSession {
 
     val turns = mutableListOf<Turn>()
 
+    // 群面協作:記使用者在團體討論中的發言(報告協作維度用;之後接後端 Interview_Turns 帶 speaker/turn order)
+    val groupSays = mutableListOf<String>()
+
     fun reset() {
         turns.clear()
+        groupSays.clear()
     }
 
     fun record(question: String, answer: String) {
         if (answer.isBlank()) return
         turns.add(Turn(question.trim(), answer.trim()))
+    }
+
+    fun recordGroupSay(text: String) {
+        if (text.isBlank()) return
+        groupSays.add(text.trim())
     }
 }

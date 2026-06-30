@@ -113,6 +113,7 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
 
     fun submitGroup(visible: String, analyzed: String) {
         if (isTyping) return
+        com.careersandbox.app.data.mock.InterviewSession.recordGroupSay(visible)
         messages.add(ChatMessage("u${messages.size}", "你", visible, isUser = true))
         val (rawWho, line) = com.careersandbox.app.data.mock.MockGroupDispatcher.dispatch(analyzed, followUpIdx)
         val who = if (panel && rawWho == "主考官") nextInterviewer() else rawWho
@@ -126,7 +127,10 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
         }
     }
 
-    LaunchedEffect(Unit) { com.careersandbox.app.data.mock.InterviewSession.reset() }
+    LaunchedEffect(Unit) {
+        com.careersandbox.app.data.mock.InterviewSession.reset()
+        com.careersandbox.app.data.mock.InterviewConfig.lastWasGroup = true
+    }
 
     // 頁內語音(SpeechRecognizer,需 RECORD_AUDIO,不跳 Google 框):逐字稿餵 dispatch 做同儕路由
     val voice = rememberInPageVoice(languageTag = "zh-TW") { transcript -> submitGroup(transcript, transcript) }

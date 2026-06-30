@@ -39,7 +39,12 @@ fun InterviewReportScreen(navController: NavHostController) {
     val ctx = LocalContext.current
     // 只有剛做完影像面試才顯示影像維度;讀取後重置,避免下次文字/語音面試誤顯示。
     val showVideoDims = remember { InterviewConfig.lastWasVideo }
-    LaunchedEffect(Unit) { InterviewConfig.lastWasVideo = false }
+    // 只有剛做完團體面試才顯示協作維度;同樣讀取後重置。
+    val showCollab = remember { InterviewConfig.lastWasGroup }
+    LaunchedEffect(Unit) {
+        InterviewConfig.lastWasVideo = false
+        InterviewConfig.lastWasGroup = false
+    }
     val onShare: () -> Unit = {
         val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
             type = "text/plain"
@@ -236,6 +241,17 @@ fun InterviewReportScreen(navController: NavHostController) {
                         color = PaperWhite.copy(alpha = 0.55f), fontSize = 12.sp, lineHeight = 18.sp)
                     Spacer(Modifier.height(12.dp))
                     VideoDimensionSection()
+                    Spacer(Modifier.height(32.dp))
+                }
+
+                // === 協作維度（只在剛做完團體面試時顯示）===
+                if (showCollab) {
+                    SectionTitleDark("協作維度")
+                    Spacer(Modifier.height(6.dp))
+                    Text("這是團體面試的協作參考——看的是你在討論中怎麼互動,不是排名,也不是評分。",
+                        color = PaperWhite.copy(alpha = 0.55f), fontSize = 12.sp, lineHeight = 18.sp)
+                    Spacer(Modifier.height(12.dp))
+                    CollabDimensionSection()
                     Spacer(Modifier.height(32.dp))
                 }
 
@@ -751,6 +767,66 @@ private fun VideoDimensionSection() {
             Box(Modifier.size(5.dp).clip(CircleShape).background(AccentGreen))
             Spacer(Modifier.width(6.dp))
             Text("練習工具 · 這些數字幫你自我覺察,不會用來評斷你,也不會上傳。",
+                color = PaperWhite.copy(alpha = 0.4f), fontSize = 10.sp)
+        }
+    }
+}
+
+@Composable
+private fun CollabDimensionSection() {
+    val says = com.careersandbox.app.data.mock.InterviewSession.groupSays
+    val dims = com.careersandbox.app.data.mock.MockInterviewReportProvider.collabDims()
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        // 事實摘要(真資料:你在這場討論實際發言幾次、講了什麼)
+        Column(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+                .background(Color(0x14FFFFFF)).padding(16.dp),
+        ) {
+            Text("你在這場討論中發言 ${says.size} 次。", color = PaperWhite, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            if (says.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                says.takeLast(3).forEach {
+                    Text("· $it", color = PaperWhite.copy(alpha = 0.65f), fontSize = 12.sp, lineHeight = 18.sp)
+                }
+            }
+        }
+        // 協作維度(mock;待後端真實分析)
+        dims.forEach { d ->
+            val color = when {
+                d.score >= 80 -> AccentGreen
+                d.score >= 65 -> BrandOrange
+                else -> AccentRed
+            }
+            Column(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+                    .background(Color(0x14FFFFFF)).padding(16.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(d.name, color = PaperWhite, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Spacer(Modifier.weight(1f))
+                    Text("${d.score}", color = color, fontWeight = FontWeight.Black, fontSize = 18.sp)
+                    Text(" / 100", color = PaperWhite.copy(alpha = 0.4f), fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold)
+                }
+                Spacer(Modifier.height(8.dp))
+                Box(
+                    Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(50))
+                        .background(PaperWhite.copy(alpha = 0.12f)),
+                ) {
+                    Box(
+                        Modifier.fillMaxWidth(d.score / 100f).fillMaxHeight()
+                            .clip(RoundedCornerShape(50)).background(color),
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(d.hint, color = PaperWhite.copy(alpha = 0.7f), fontSize = 12.sp, lineHeight = 18.sp)
+            }
+        }
+        // 聲明
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(5.dp).clip(CircleShape).background(AccentGreen))
+            Spacer(Modifier.width(6.dp))
+            Text("發言次數為真實記錄;協作分數待後端真實分析,以上為示意。",
                 color = PaperWhite.copy(alpha = 0.4f), fontSize = 10.sp)
         }
     }

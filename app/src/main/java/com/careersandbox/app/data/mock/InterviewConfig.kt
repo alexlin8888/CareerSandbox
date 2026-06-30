@@ -19,4 +19,8 @@ object InterviewConfig {
     // 視訊面試進入時設 true,報告讀取後重置,避免文字/語音面試誤顯示鏡頭指標。
     // 之後接後端時改由 Interview_Sessions.type 帶,介面不變。
     var lastWasVideo: Boolean = false
+
+    // 剛結束的是不是「團體面試」——報告用它決定要不要顯示協作維度區塊。
+    // 群面進入時設 true,報告讀取後重置。之後接後端時改由 Interview_Sessions.type 帶,介面不變。
+    var lastWasGroup: Boolean = false
 }
