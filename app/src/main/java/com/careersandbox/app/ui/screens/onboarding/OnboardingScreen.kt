@@ -31,6 +31,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.outlined.Email
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.ui.components.*
@@ -326,6 +333,9 @@ private fun OnboardingForm(onDone: () -> Unit) {
     var school by remember { mutableStateOf("") }
     var dept by remember { mutableStateOf("") }
     var year by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier.fillMaxSize().background(OnbBg).padding(horizontal = 24.dp),
@@ -362,7 +372,13 @@ private fun OnboardingForm(onDone: () -> Unit) {
         ) { current ->
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 when (current) {
-                    1 -> Step1(name, { name = it }, school, { school = it }, dept, { dept = it }, year, { year = it })
+                    1 -> Step1(
+                        name, { name = it }, school, { school = it },
+                        dept, { dept = it }, year, { year = it },
+                        email, { email = it },
+                        password, { password = it },
+                        confirmPassword, { confirmPassword = it },
+                    )
                     2 -> Step2(interests)
                     3 -> Step3(skillsHave, skillsWant)
                     4 -> Step4()
@@ -394,16 +410,93 @@ private fun Step1(
     school: String, onSchool: (String) -> Unit,
     dept: String, onDept: (String) -> Unit,
     year: String, onYear: (String) -> Unit,
+    email: String, onEmail: (String) -> Unit,
+    password: String, onPassword: (String) -> Unit,
+    confirmPassword: String, onConfirmPassword: (String) -> Unit,
 ) {
-    FormHeadline("先認識你", "這些只用來推薦合適內容,不會公開。")
+    // 眼睛切換用的本地狀態(純畫面用,不需要往上層傳)
+    var passwordVisible by remember { mutableStateOf(false) }
+    var confirmVisible by remember { mutableStateOf(false) }
+    // 防呆:確認密碼有輸入、且和密碼不一致時 → true
+    val passwordMismatch = confirmPassword.isNotEmpty() && password != confirmPassword
+
+    FormHeadline("基本資料設定", "這些只用來推薦合適內容,不會公開。")
     OnboardField("姓名", name, onName)
     OnboardField("學校", school, onSchool)
     OnboardField("系所", dept, onDept)
     OnboardField("年級", year, onYear)
+
+    // ===== 以下三個為新加入的欄位 =====
+
+    // 1. Email(信封圖示)
+    OnboardField(
+        label = "Email",
+        value = email,
+        onChange = onEmail,
+        leadingIcon = { Icon(Icons.Outlined.Email, contentDescription = null, tint = InkGray400) },
+        keyboardType = KeyboardType.Email,
+    )
+
+    // 2. 密碼(眼睛切換顯示/隱藏 + 隱私輸入)
+    OnboardField(
+        label = "密碼",
+        value = password,
+        onChange = onPassword,
+        trailingIcon = {
+            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                Icon(
+                    imageVector = if (passwordVisible) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
+                    contentDescription = if (passwordVisible) "隱藏密碼" else "顯示密碼",
+                    tint = InkGray400,
+                )
+            }
+        },
+        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+        keyboardType = KeyboardType.Password,
+    )
+
+    // 3. 確認密碼(款式與密碼相同;不一致時邊框轉紅)
+    OnboardField(
+        label = "確認密碼",
+        value = confirmPassword,
+        onChange = onConfirmPassword,
+        trailingIcon = {
+            IconButton(onClick = { confirmVisible = !confirmVisible }) {
+                Icon(
+                    imageVector = if (confirmVisible) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
+                    contentDescription = if (confirmVisible) "隱藏密碼" else "顯示密碼",
+                    tint = InkGray400,
+                )
+            }
+        },
+        visualTransformation = if (confirmVisible) VisualTransformation.None else PasswordVisualTransformation(),
+        keyboardType = KeyboardType.Password,
+        isError = passwordMismatch,
+    )
+
+    // 防呆紅字:兩次密碼不一致時才顯示
+    if (passwordMismatch) {
+        Text(
+            "兩次輸入的密碼不一致",
+            color = Color(0xFFEF4444),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(top = 2.dp, start = 4.dp),
+        )
+    }
 }
 
 @Composable
-private fun OnboardField(label: String, value: String, onChange: (String) -> Unit) {
+private fun OnboardField(
+    label: String,
+    value: String,
+    onChange: (String) -> Unit,
+    leadingIcon: (@Composable () -> Unit)? = null,
+    trailingIcon: (@Composable () -> Unit)? = null,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    isError: Boolean = false,
+) {
     Column(Modifier.padding(bottom = 14.dp)) {
         Text(label, color = InkGray700, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
         Spacer(Modifier.height(6.dp))
@@ -413,6 +506,11 @@ private fun OnboardField(label: String, value: String, onChange: (String) -> Uni
             modifier = Modifier.fillMaxWidth().height(54.dp),
             shape = RoundedCornerShape(14.dp),
             singleLine = true,
+            leadingIcon = leadingIcon,
+            trailingIcon = trailingIcon,
+            visualTransformation = visualTransformation,
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            isError = isError,
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = BrandOrange,
                 unfocusedBorderColor = InkGray200,
