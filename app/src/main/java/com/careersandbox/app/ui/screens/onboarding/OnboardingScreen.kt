@@ -42,6 +42,8 @@ import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.careersandbox.app.data.remote.RegisterRequest
 
 private val OnbBg = Color(0xFFFFF8F3)
 private val OnbCardBorder = Color(0xFFF0E6DC)
@@ -337,6 +339,24 @@ private fun OnboardingForm(onDone: () -> Unit) {
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
 
+    // NEW: ViewModel that calls POST /auth/register.
+    // The lambda tells Compose how to build it (it has no zero-arg constructor).
+    val registerViewModel: RegisterViewModel = viewModel { RegisterViewModel() }
+    val registerState = registerViewModel.uiState
+    val isLoading = registerState is RegisterUiState.Loading
+
+    // NEW: minimal client-side validation for step 1
+    var showStep1Hint by remember { mutableStateOf(false) }
+    val step1Valid = name.isNotBlank() &&
+            email.contains("@") &&
+            password.isNotBlank() &&
+            password == confirmPassword
+
+    // NEW: navigate away only after the backend confirms (201)
+    LaunchedEffect(registerState) {
+        if (registerState is RegisterUiState.Success) onDone()
+    }
+
     Column(
         modifier = Modifier.fillMaxSize().background(OnbBg).padding(horizontal = 24.dp),
     ) {
@@ -387,11 +407,55 @@ private fun OnboardingForm(onDone: () -> Unit) {
         }
 
         Spacer(Modifier.height(12.dp))
+
+        // NEW: inline messages shown just above the bottom button
+        if (step == 1 && showStep1Hint && !step1Valid) {
+            Text(
+                "請確認姓名已填、Email 格式正確、兩次密碼一致",
+                color = Color(0xFFEF4444),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+            )
+            Spacer(Modifier.height(8.dp))
+        }
+        if (step == total && registerState is RegisterUiState.Error) {
+            Text(
+                registerState.message,
+                color = Color(0xFFEF4444),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+            )
+            Spacer(Modifier.height(8.dp))
+        }
+
         OnbBottomNav(
-            showBack = step > 1,
+            showBack = step > 1 && !isLoading,   // NEW: lock back-nav during the request
             onBack = { step-- },
-            nextText = if (step == total) "開始使用" else "下一步",
-            onNext = { if (step < total) step++ else onDone() },
+            nextText = when {                     // NEW: button text reflects request state
+                step < total -> "下一步"
+                isLoading -> "建立帳號中..."
+                else -> "開始使用"
+            },
+            onNext = {                            // NEW: replaces the old mock line
+                when {
+                    isLoading -> Unit             // ignore taps while a request is in flight
+                    step == 1 && !step1Valid -> showStep1Hint = true
+                    step < total -> { showStep1Hint = false; step++ }
+                    else -> registerViewModel.register(
+                        RegisterRequest(
+                            email = email.trim(),
+                            password = password,
+                            name = name.trim(),
+                            school = school.trim(),
+                            department = dept.trim(),
+                            year = year.trim(),
+                            interests = interests.toList(),
+                            skillsHave = skillsHave.toList(),
+                            skillsWant = skillsWant.toList(),
+                        )
+                    )
+                }
+            },
         )
     }
 }

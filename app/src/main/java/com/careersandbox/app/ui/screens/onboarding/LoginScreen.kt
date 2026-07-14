@@ -42,12 +42,21 @@ import com.careersandbox.app.ui.components.ScatteredDecorations
 import com.careersandbox.app.ui.components.WaveHeroBackground
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.graphics.Color
 
 @Composable
 fun LoginScreen(
     onLogin: () -> Unit,
     onSignup: () -> Unit,
 ) {
+    val loginViewModel: LoginViewModel = viewModel { LoginViewModel() }
+    val loginState = loginViewModel.uiState
+    val isLoggingIn = loginState is LoginUiState.Loading
+    LaunchedEffect(loginState) {
+        if (loginState is LoginUiState.Success) onLogin()
+    }
+
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var showPw by remember { mutableStateOf(false) }
@@ -149,6 +158,15 @@ fun LoginScreen(
                     )
 
                     Spacer(Modifier.height(10.dp))
+                    if (loginState is LoginUiState.Error) {
+                        Spacer(Modifier.height(10.dp))
+                        Text(
+                            loginState.message,
+                            color = Color(0xFFEF4444),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
                     Text(
                         "忘記密碼?",
                         color = BrandDeepOrange,
@@ -176,7 +194,7 @@ fun LoginScreen(
                                 if (canLogin) Brush.linearGradient(listOf(BrandDeepOrange, BrandOrange, BrandAmber))
                                 else Brush.linearGradient(listOf(InkGray200, InkGray200)),
                             )
-                            .pressScale { if (canLogin) onLogin() },
+                            .pressScale { if (canLogin && !isLoggingIn) loginViewModel.login(email, password) },
                         contentAlignment = Alignment.Center,
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {

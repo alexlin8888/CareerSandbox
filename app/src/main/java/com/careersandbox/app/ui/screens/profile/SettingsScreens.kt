@@ -38,6 +38,9 @@ import com.careersandbox.app.ui.components.SectionDivider
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.components.TourState
 import com.careersandbox.app.ui.theme.*
+import com.careersandbox.app.data.local.SessionManager
+import com.careersandbox.app.data.local.UserStore
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -654,6 +657,7 @@ private fun InfoRow(label: String, value: String) {
 // ============= 05 登出 =============
 @Composable
 fun SettingsLogoutScreen(navController: NavHostController) {
+    val scope = rememberCoroutineScope()
     SettingsScaffold("登出帳號", { navController.popBackStack() }) { pad ->
         Column(
             modifier = Modifier
@@ -696,8 +700,13 @@ fun SettingsLogoutScreen(navController: NavHostController) {
                     .clip(RoundedCornerShape(16.dp))
                     .background(AccentRed)
                     .pressScale {
-                        navController.navigate(Routes.LOGIN) {
-                            popUpTo(0) { inclusive = true }
+                        scope.launch {
+                            // Actually wipe the session (DataStore + memory), then leave
+                            SessionManager.clear()
+                            UserStore.clear()
+                            navController.navigate(Routes.LOGIN) {
+                                popUpTo(0) { inclusive = true }
+                            }
                         }
                     },
                 contentAlignment = Alignment.Center,

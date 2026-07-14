@@ -47,6 +47,10 @@ import com.careersandbox.app.ui.screens.workplace.NovaDocScreen
 import com.careersandbox.app.ui.screens.workplace.NovaGramScreen
 import com.careersandbox.app.ui.screens.workplace.NovaDashboardScreen
 import com.careersandbox.app.ui.screens.workplace.WorkplaceSandboxScreen
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import com.careersandbox.app.data.local.SessionManager
+import com.careersandbox.app.data.local.UserStore
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -91,8 +95,27 @@ fun CareerSandboxNavHost(
         },
     ) {
         composable(Routes.SPLASH) {
+            val scope = rememberCoroutineScope()
             SplashScreen(onDone = {
-                navController.navigate(Routes.LOGIN) { popUpTo(Routes.SPLASH) { inclusive = true } }
+                scope.launch {
+                    // Make sure the persisted session has been read from disk
+                    SessionManager.load()
+
+                    if (SessionManager.token == null) {
+                        // No saved session — go log in
+                        navController.navigate(Routes.LOGIN) { popUpTo(Routes.SPLASH) { inclusive = true } }
+                        return@launch
+                    }
+
+                    // Have a token: verify it by actually fetching the profile
+                    if (UserStore.refresh().isSuccess) {
+                        navController.navigate(Routes.HOME) { popUpTo(Routes.SPLASH) { inclusive = true } }
+                    } else {
+                        // Token expired/invalid or server unreachable — back to login
+                        SessionManager.clear()
+                        navController.navigate(Routes.LOGIN) { popUpTo(Routes.SPLASH) { inclusive = true } }
+                    }
+                }
             })
         }
         composable(Routes.LOGIN) {

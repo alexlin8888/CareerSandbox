@@ -32,10 +32,23 @@ import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
+import androidx.compose.runtime.LaunchedEffect
+import com.careersandbox.app.data.local.UserStore
 
 @Composable
 fun ProfileScreen(navController: NavHostController) {
-    val user = MockData.currentUser
+    val user = UserStore.me
+    if (user == null) {
+        // Not loaded yet (or fetch failed) — retry once and show a spinner
+        LaunchedEffect(Unit) { UserStore.refresh() }
+        Box(
+            modifier = Modifier.fillMaxSize().background(PaperWhite),
+            contentAlignment = Alignment.Center,
+        ) {
+            CircularProgressIndicator(color = BrandOrange)
+        }
+        return
+    }
     Box(modifier = Modifier.fillMaxSize().background(PaperWhite)) {
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
