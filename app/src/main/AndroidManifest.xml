@@ -17,8 +17,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.CareerSandbox"
         android:enableOnBackInvokedCallback="true"
+        android:usesCleartextTraffic="true"
         tools:targetApi="33">
-
+        <!-- android:usesCleartextTraffic="true"，因為 Android 9 之後預設禁止 http://(沒有 s)的連線,開發期先放行,正式上線換 https 再拿掉。-->
         <activity
             android:name=".MainActivity"
             android:exported="true"

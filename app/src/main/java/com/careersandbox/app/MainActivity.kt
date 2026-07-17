@@ -27,10 +27,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import com.careersandbox.app.ui.components.shouldShowBottomNav
 import com.careersandbox.app.ui.theme.CareerSandboxTheme
+import androidx.lifecycle.lifecycleScope
+import com.careersandbox.app.data.local.SessionManager
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        SessionManager.init(applicationContext)
+        lifecycleScope.launch { SessionManager.load() }
         setContent {
             CareerSandboxTheme {
                 Surface(

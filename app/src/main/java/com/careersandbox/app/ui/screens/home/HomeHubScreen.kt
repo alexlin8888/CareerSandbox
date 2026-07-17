@@ -54,6 +54,7 @@ import com.careersandbox.app.data.model.ArticleCategory
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
+import com.careersandbox.app.data.local.UserStore
 
 @Composable
 fun HomeHubScreen(navController: NavHostController) {
@@ -305,6 +306,7 @@ private fun companyDomain(company: String): String? = when (company.trim().lower
 @Composable
 private fun HeroSection(navController: NavHostController) {
     val stat = MockData.homeStat
+    val user = UserStore.me // real user, loaded at login/splash
     val pct = rememberCountUp(stat.resumeCompletion)
     val greeting = remember {
         val h = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
@@ -353,7 +355,7 @@ private fun HeroSection(navController: NavHostController) {
             // 姓名 + 年級
             Row(verticalAlignment = Alignment.Bottom) {
                 Box(modifier = Modifier.pressScale { navController.navigate(Routes.PROFILE) }) {
-                    Text(MockData.currentUser.name,
+                    Text(user?.name ?: "",
                         color = PaperWhite,
                         fontWeight = FontWeight.Black,
                         fontSize = 40.sp,
@@ -371,7 +373,7 @@ private fun HeroSection(navController: NavHostController) {
                     )
                 }
                 Spacer(Modifier.width(8.dp))
-                Text("大三",
+                Text(user?.year ?: "",
                     color = BrandYellow,
                     fontWeight = FontWeight.Black,
                     fontSize = 18.sp,
