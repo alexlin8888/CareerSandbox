@@ -26,6 +26,9 @@ import androidx.navigation.NavHostController
 import com.careersandbox.app.R
 import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.careersandbox.app.data.remote.CreateExperienceRequest
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,6 +49,14 @@ fun ExperienceEditScreen(navController: NavHostController) {
     val chatHistory = remember {
         mutableStateListOf("AI" to chatQuestions[0])
     }
+    val editViewModel: ExperienceEditViewModel = viewModel { ExperienceEditViewModel() }
+    val saveState = editViewModel.uiState
+    val isSaving = saveState is SaveExperienceUiState.Saving
+    var showTitleHint by remember { mutableStateOf(false) }
+
+    LaunchedEffect(saveState) {
+        if (saveState is SaveExperienceUiState.Success) navController.popBackStack()
+    }
 
     Scaffold(
         containerColor = PaperOff,
@@ -61,8 +72,40 @@ fun ExperienceEditScreen(navController: NavHostController) {
             )
         },
         bottomBar = {
-            Box(Modifier.fillMaxWidth().background(PaperOff).padding(20.dp)) {
-                PrimaryDarkButton(text = "儲存", onClick = { navController.popBackStack() })
+            Column(Modifier.fillMaxWidth().background(PaperOff).padding(20.dp)) {
+                if (showTitleHint && title.isBlank()) {
+                    Text("標題是必填的", color = BrandDeepOrange, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                    Spacer(Modifier.height(8.dp))
+                }
+                if (saveState is SaveExperienceUiState.Error) {
+                    Text(saveState.message, color = BrandDeepOrange, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                    Spacer(Modifier.height(8.dp))
+                }
+                PrimaryDarkButton(
+                    text = if (isSaving) "儲存中..." else "儲存",
+                    onClick = {
+                        when {
+                            isSaving -> Unit
+                            // Chat mode keeps its old mock behavior; wiring it is a later step
+                            mode == EditMode.CHAT -> navController.popBackStack()
+                            title.isBlank() -> showTitleHint = true
+                            else -> {
+                                showTitleHint = false
+                                editViewModel.save(
+                                    CreateExperienceRequest(
+                                        title = title.trim(),
+                                        category = category,
+                                        period = timeRange.trim(),
+                                        role = role.trim(),
+                                        action = action.trim(),
+                                        result = result.trim(),
+                                        learning = learning.trim(),
+                                    )
+                                )
+                            }
+                        }
+                    },
+                )
             }
         }
     ) { pad ->

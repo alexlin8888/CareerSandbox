@@ -17,11 +17,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.data.model.Experience
+import com.careersandbox.app.data.repository.RemoteExperienceRepository
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
@@ -29,6 +30,19 @@ fun ExperienceListScreen(navController: NavHostController) {
     val categories = listOf("全部", "學業", "工作", "社團", "競賽", "其他")
     var selectedCategory by remember { mutableStateOf("全部") }
     var pendingDelete by remember { mutableStateOf<Experience?>(null) }
+    val scope = rememberCoroutineScope()
+
+    // null = still loading from the backend
+    var experiences by remember { mutableStateOf<List<Experience>?>(null) }
+    var loadError by remember { mutableStateOf<String?>(null) }
+
+    // Runs when this screen enters the composition — including when coming
+    // back from the add screen, so a newly created item shows up automatically
+    LaunchedEffect(Unit) {
+        RemoteExperienceRepository().list()
+            .onSuccess { experiences = it; loadError = null }
+            .onFailure { loadError = it.message }
+    }
 
     Scaffold(
         containerColor = PaperOff,
@@ -61,54 +75,82 @@ fun ExperienceListScreen(navController: NavHostController) {
             }
             Spacer(Modifier.height(12.dp))
 
-            val filtered = if (selectedCategory == "全部") MockData.experiences
-            else MockData.experiences.filter { it.category == selectedCategory }
-
-            if (filtered.isEmpty()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Spacer(Modifier.height(40.dp))
-                    androidx.compose.foundation.Image(
-                        painter = androidx.compose.ui.res.painterResource(
-                            id = com.careersandbox.app.R.drawable.beaver_peek
-                        ),
-                        contentDescription = null,
-                        modifier = Modifier.size(180.dp),
-                        contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                    )
-                    Spacer(Modifier.height(20.dp))
+            val all = experiences
+            if (all == null) {
+                if (loadError == null) {
+                    // Still loading — show a centered spinner
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = BrandOrange)
+                    }
+                } else {
+                    // First load failed (e.g. server not running) — show why
                     Text(
-                        if (selectedCategory == "全部") "還沒有任何經歷" else "這個分類還沒有經歷",
-                        color = InkBlack,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 18.sp,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "用右上角的 + 新增第一筆,它們會組成你的母版",
-                        color = InkGray500,
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        loadError ?: "",
+                        color = BrandDeepOrange,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                     )
                 }
             } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    items(filtered, key = { it.id }) { e ->
-                        ExperienceCard(
-                            e,
-                            onEdit = { navController.navigate(Routes.EXPERIENCE_EDIT) },
-                            onDelete = { pendingDelete = e },
+                // Loaded — a later action (e.g. delete) may still set loadError
+                if (loadError != null) {
+                    Text(
+                        loadError ?: "",
+                        color = BrandDeepOrange,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+                    )
+                }
+
+                val filtered = if (selectedCategory == "全部") all
+                else all.filter { it.category == selectedCategory }
+
+                if (filtered.isEmpty()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Spacer(Modifier.height(40.dp))
+                        androidx.compose.foundation.Image(
+                            painter = androidx.compose.ui.res.painterResource(
+                                id = com.careersandbox.app.R.drawable.beaver_peek
+                            ),
+                            contentDescription = null,
+                            modifier = Modifier.size(180.dp),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                        )
+                        Spacer(Modifier.height(20.dp))
+                        Text(
+                            if (selectedCategory == "全部") "還沒有任何經歷" else "這個分類還沒有經歷",
+                            color = InkBlack,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 18.sp,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "用右上角的 + 新增第一筆,它們會組成你的母版",
+                            color = InkGray500,
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                         )
                     }
-                    item { Spacer(Modifier.height(24.dp)) }
+                } else {
+                    LazyColumn(
+                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        items(filtered, key = { it.id }) { e ->
+                            ExperienceCard(
+                                e,
+                                onEdit = { navController.navigate(Routes.EXPERIENCE_EDIT) },
+                                onDelete = { pendingDelete = e },
+                            )
+                        }
+                        item { Spacer(Modifier.height(24.dp)) }
+                    }
                 }
             }
         }
@@ -120,8 +162,12 @@ fun ExperienceListScreen(navController: NavHostController) {
                 text = { Text("「${exp.title}」會從你的母版移除。") },
                 confirmButton = {
                     TextButton(onClick = {
-                        MockData.experiences.remove(exp)
                         pendingDelete = null
+                        scope.launch {
+                            RemoteExperienceRepository().delete(exp.id)
+                                .onSuccess { experiences = experiences?.filterNot { it.id == exp.id } }
+                                .onFailure { loadError = it.message }
+                        }
                     }) { Text("刪除", color = BrandDeepOrange) }
                 },
                 dismissButton = {
