@@ -236,7 +236,7 @@ fun FitAnalysisScreen(navController: NavHostController) {
                         Spacer(Modifier.height(28.dp))
                         Box(
                             modifier = Modifier.fillMaxWidth().height(56.dp).clip(RoundedCornerShape(16.dp))
-                                .background(InkBlack).pressScale { navController.navigate(Routes.EXPERIENCE_EDIT) },
+                                .background(InkBlack).pressScale { navController.navigate(Routes.experienceEdit()) },
                             contentAlignment = Alignment.Center,
                         ) {
                             Text("開始補強", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 16.sp)

@@ -55,7 +55,7 @@ fun ExperienceListScreen(navController: NavHostController) {
                     }
                 },
                 actions = {
-                    IconButton(onClick = { navController.navigate(Routes.EXPERIENCE_EDIT) }) {
+                    IconButton(onClick = { navController.navigate(Routes.experienceEdit()) }) {
                         Icon(Icons.Outlined.Add, contentDescription = null, tint = InkBlack)
                     }
                 },
@@ -145,7 +145,7 @@ fun ExperienceListScreen(navController: NavHostController) {
                         items(filtered, key = { it.id }) { e ->
                             ExperienceCard(
                                 e,
-                                onEdit = { navController.navigate(Routes.EXPERIENCE_EDIT) },
+                                onEdit = { navController.navigate(Routes.experienceEdit(e.id)) },
                                 onDelete = { pendingDelete = e },
                             )
                         }

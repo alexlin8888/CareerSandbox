@@ -22,18 +22,20 @@ import androidx.compose.foundation.shape.CircleShape
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.outlined.Mic
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
+import com.careersandbox.app.data.remote.CreateExperienceRequest
 import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.careersandbox.app.data.remote.CreateExperienceRequest
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExperienceEditScreen(navController: NavHostController) {
-    var mode by remember { mutableStateOf(EditMode.CHAT) }
+fun ExperienceEditScreen(navController: NavHostController, expId: String? = null) {
+    // expId == null → create mode; expId != null → edit mode (prefilled)
+    val isEditMode = expId != null
+
+    var mode by remember { mutableStateOf(if (isEditMode) EditMode.FORM else EditMode.CHAT) }
     var title by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("社團") }
     var timeRange by remember { mutableStateOf("") }
@@ -49,11 +51,35 @@ fun ExperienceEditScreen(navController: NavHostController) {
     val chatHistory = remember {
         mutableStateListOf("AI" to chatQuestions[0])
     }
+
     val editViewModel: ExperienceEditViewModel = viewModel { ExperienceEditViewModel() }
     val saveState = editViewModel.uiState
     val isSaving = saveState is SaveExperienceUiState.Saving
     var showTitleHint by remember { mutableStateOf(false) }
+    var pendingDelete by remember { mutableStateOf(false) }
 
+    // Edit mode: fetch the existing record once
+    LaunchedEffect(Unit) {
+        if (expId != null) editViewModel.load(expId)
+    }
+
+    // When the record arrives, pour its values into the form fields (once)
+    var prefilled by remember { mutableStateOf(false) }
+    val loaded = editViewModel.loadedExperience
+    LaunchedEffect(loaded) {
+        if (loaded != null && !prefilled) {
+            title = loaded.title
+            category = loaded.category
+            timeRange = loaded.period
+            role = loaded.role
+            action = loaded.action
+            result = loaded.result
+            learning = loaded.learning
+            prefilled = true
+        }
+    }
+
+    // Save or delete finished successfully → leave the screen
     LaunchedEffect(saveState) {
         if (saveState is SaveExperienceUiState.Success) navController.popBackStack()
     }
@@ -62,7 +88,12 @@ fun ExperienceEditScreen(navController: NavHostController) {
         containerColor = PaperOff,
         topBar = {
             TopAppBar(
-                title = { Text("新增經驗", fontWeight = FontWeight.Bold, color = InkBlack) },
+                title = {
+                    Text(
+                        if (isEditMode) "編輯經驗" else "新增經驗",
+                        fontWeight = FontWeight.Bold, color = InkBlack,
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Outlined.ArrowBack, contentDescription = null, tint = InkBlack)
@@ -81,96 +112,195 @@ fun ExperienceEditScreen(navController: NavHostController) {
                     Text(saveState.message, color = BrandDeepOrange, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(8.dp))
                 }
-                PrimaryDarkButton(
-                    text = if (isSaving) "儲存中..." else "儲存",
-                    onClick = {
-                        when {
-                            isSaving -> Unit
-                            // Chat mode keeps its old mock behavior; wiring it is a later step
-                            mode == EditMode.CHAT -> navController.popBackStack()
-                            title.isBlank() -> showTitleHint = true
-                            else -> {
-                                showTitleHint = false
-                                editViewModel.save(
-                                    CreateExperienceRequest(
-                                        title = title.trim(),
-                                        category = category,
-                                        period = timeRange.trim(),
-                                        role = role.trim(),
-                                        action = action.trim(),
-                                        result = result.trim(),
-                                        learning = learning.trim(),
-                                    )
-                                )
-                            }
+                if (isEditMode) {
+                    // Edit mode: save and delete side by side
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(52.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(BrandDeepOrange.copy(alpha = 0.1f))
+                                .pressScale { if (!isSaving) pendingDelete = true },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                "刪除",
+                                color = BrandDeepOrange,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.titleSmall,
+                            )
                         }
-                    },
-                )
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(52.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(InkBlack)
+                                .pressScale {
+                                    when {
+                                        isSaving -> Unit
+                                        title.isBlank() -> showTitleHint = true
+                                        else -> {
+                                            showTitleHint = false
+                                            editViewModel.save(
+                                                expId,
+                                                CreateExperienceRequest(
+                                                    title = title.trim(),
+                                                    category = category,
+                                                    period = timeRange.trim(),
+                                                    role = role.trim(),
+                                                    action = action.trim(),
+                                                    result = result.trim(),
+                                                    learning = learning.trim(),
+                                                )
+                                            )
+                                        }
+                                    }
+                                },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                if (isSaving) "儲存中..." else "確認儲存",
+                                color = PaperWhite,
+                                fontWeight = FontWeight.Black,
+                                style = MaterialTheme.typography.titleSmall,
+                            )
+                        }
+                    }
+                } else {
+                    // Create mode: single save button, unchanged
+                    PrimaryDarkButton(
+                        text = if (isSaving) "儲存中..." else "儲存",
+                        onClick = {
+                            when {
+                                isSaving -> Unit
+                                mode == EditMode.CHAT -> navController.popBackStack()
+                                title.isBlank() -> showTitleHint = true
+                                else -> {
+                                    showTitleHint = false
+                                    editViewModel.save(
+                                        null,
+                                        CreateExperienceRequest(
+                                            title = title.trim(),
+                                            category = category,
+                                            period = timeRange.trim(),
+                                            role = role.trim(),
+                                            action = action.trim(),
+                                            result = result.trim(),
+                                            learning = learning.trim(),
+                                        )
+                                    )
+                                }
+                            }
+                        },
+                    )
+                }
             }
         }
     ) { pad ->
-        Column(Modifier.padding(pad).padding(horizontal = 20.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Image(
-                    painter = painterResource(R.drawable.beaver_writing),
-                    contentDescription = null,
-                    modifier = Modifier.size(56.dp),
-                )
-                Spacer(Modifier.width(12.dp))
-                Text(
-                    "把這段經歷先完整寫下來,之後客製各版本履歷都會從這裡取材。",
-                    color = InkGray500,
-                    fontSize = 12.sp,
-                    lineHeight = 17.sp,
-                    modifier = Modifier.weight(1f),
-                )
+        if (isEditMode && loaded == null) {
+            // Still fetching the record — don't show an empty form
+            Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) {
+                if (editViewModel.loadError == null) {
+                    CircularProgressIndicator(color = BrandOrange)
+                } else {
+                    Text(
+                        editViewModel.loadError ?: "",
+                        color = BrandDeepOrange,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
             }
-            ModeSegmented(mode = mode, onChange = { mode = it })
-            Spacer(Modifier.height(20.dp))
-
-            when (mode) {
-                EditMode.CHAT -> ChatEdit(
-                    history = chatHistory,
-                    input = chatInput,
-                    onInputChange = { chatInput = it },
-                    step = step,
-                    aiTyping = aiTyping,
-                    answers = answers,
-                    onChipTap = { chatInput = it },
+        } else {
+            Column(Modifier.padding(pad).padding(horizontal = 20.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (chatInput.isNotBlank() && !aiTyping && step < 3) {
-                        val said = chatInput
-                        chatInput = ""
-                        chatHistory.add("你" to said)
-                        answers.add(said)
-                        step++
-                        aiTyping = true
-                        scope.launch {
-                            if (step < 3) {
-                                delay(900)
-                                chatHistory.add("AI" to chatQuestions[step])
-                            } else {
-                                delay(1500)
-                                chatHistory.add("AI" to "整理好了。確認下面這張經驗卡沒問題,就按「儲存」存入母版。")
+                    Image(
+                        painter = painterResource(R.drawable.beaver_writing),
+                        contentDescription = null,
+                        modifier = Modifier.size(56.dp),
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        "把這段經歷先完整寫下來,之後客製各版本履歷都會從這裡取材。",
+                        color = InkGray500,
+                        fontSize = 12.sp,
+                        lineHeight = 17.sp,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                if (!isEditMode) {
+                    ModeSegmented(mode = mode, onChange = { mode = it })
+                    Spacer(Modifier.height(20.dp))
+                } else {
+                    Spacer(Modifier.height(8.dp))
+                }
+
+                when (mode) {
+                    EditMode.CHAT -> ChatEdit(
+                        history = chatHistory,
+                        input = chatInput,
+                        onInputChange = { chatInput = it },
+                        step = step,
+                        aiTyping = aiTyping,
+                        answers = answers,
+                        onChipTap = { chatInput = it },
+                    ) {
+                        if (chatInput.isNotBlank() && !aiTyping && step < 3) {
+                            val said = chatInput
+                            chatInput = ""
+                            chatHistory.add("你" to said)
+                            answers.add(said)
+                            step++
+                            aiTyping = true
+                            scope.launch {
+                                if (step < 3) {
+                                    delay(900)
+                                    chatHistory.add("AI" to chatQuestions[step])
+                                } else {
+                                    delay(1500)
+                                    chatHistory.add("AI" to "整理好了。確認下面這張經驗卡沒問題,就按「儲存」存入母版。")
+                                }
+                                aiTyping = false
                             }
-                            aiTyping = false
                         }
                     }
+                    EditMode.FORM -> FormEdit(
+                        title, { title = it },
+                        category, { category = it },
+                        timeRange, { timeRange = it },
+                        role, { role = it },
+                        action, { action = it },
+                        result, { result = it },
+                        learning, { learning = it },
+                    )
                 }
-                EditMode.FORM -> FormEdit(
-                    title, { title = it },
-                    category, { category = it },
-                    timeRange, { timeRange = it },
-                    role, { role = it },
-                    action, { action = it },
-                    result, { result = it },
-                    learning, { learning = it },
-                )
             }
         }
+    }
+
+    if (pendingDelete && expId != null) {
+        AlertDialog(
+            onDismissRequest = { pendingDelete = false },
+            title = { Text("刪除這筆經歷?") },
+            text = { Text("「${title}」會從你的母版移除,這個動作無法復原。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingDelete = false
+                    editViewModel.delete(expId)
+                }) { Text("刪除", color = BrandDeepOrange) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDelete = false }) { Text("取消", color = InkGray500) }
+            },
+        )
     }
 }
 

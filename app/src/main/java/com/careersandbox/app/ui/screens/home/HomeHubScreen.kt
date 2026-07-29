@@ -516,7 +516,7 @@ private fun QuickActionsBorderless(navController: NavHostController) {
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         BorderlessIconAction("加經驗", Icons.Outlined.AddCircle, BrandOrange) {
-            navController.navigate(Routes.EXPERIENCE_EDIT)
+            navController.navigate(Routes.experienceEdit())
         }
         BorderlessIconAction("練面試", Icons.Outlined.Mic, BrandDeepOrange) {
             navController.navigate(Routes.INTERVIEW_HUB)
