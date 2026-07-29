@@ -8,7 +8,9 @@ import com.careersandbox.app.data.remote.ExperienceResponse
 
 interface ExperienceRepository {
     suspend fun list(): Result<List<Experience>>
+    suspend fun get(id: String): Result<ExperienceResponse>
     suspend fun create(request: CreateExperienceRequest): Result<Experience>
+    suspend fun update(id: String, request: CreateExperienceRequest): Result<Experience>
     suspend fun delete(id: String): Result<Unit>
 }
 
@@ -27,6 +29,19 @@ class RemoteExperienceRepository(
         Result.failure(Exception("無法連線到伺服器"))
     }
 
+    // Returns the raw DTO — the edit form needs every field (role, action, learning...)
+    override suspend fun get(id: String): Result<ExperienceResponse> = try {
+        val res = api.get(id)
+        when {
+            res.isSuccessful && res.body() != null -> Result.success(res.body()!!)
+            res.code() == 404 -> Result.failure(Exception("找不到這筆經歷"))
+            res.code() == 401 -> Result.failure(Exception("登入已過期，請重新登入"))
+            else -> Result.failure(Exception("讀取失敗（錯誤碼 ${res.code()}）"))
+        }
+    } catch (e: Exception) {
+        Result.failure(Exception("無法連線到伺服器"))
+    }
+
     override suspend fun create(request: CreateExperienceRequest): Result<Experience> = try {
         val res = api.create(request)
         when {
@@ -34,6 +49,18 @@ class RemoteExperienceRepository(
             res.code() == 401 -> Result.failure(Exception("登入已過期，請重新登入"))
             res.code() == 400 -> Result.failure(Exception("標題和類別是必填的"))
             else -> Result.failure(Exception("儲存失敗（錯誤碼 ${res.code()}）"))
+        }
+    } catch (e: Exception) {
+        Result.failure(Exception("無法連線到伺服器"))
+    }
+
+    override suspend fun update(id: String, request: CreateExperienceRequest): Result<Experience> = try {
+        val res = api.update(id, request)
+        when {
+            res.isSuccessful && res.body() != null -> Result.success(res.body()!!.toModel())
+            res.code() == 404 -> Result.failure(Exception("找不到這筆經歷"))
+            res.code() == 401 -> Result.failure(Exception("登入已過期，請重新登入"))
+            else -> Result.failure(Exception("更新失敗（錯誤碼 ${res.code()}）"))
         }
     } catch (e: Exception) {
         Result.failure(Exception("無法連線到伺服器"))

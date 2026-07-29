@@ -38,7 +38,9 @@ object Routes {
     const val PROFILE = "profile"
 
     const val EXPERIENCE_LIST = "experience_list"
-    const val EXPERIENCE_EDIT = "experience_edit"
+    const val EXPERIENCE_EDIT = "experience_edit?expId={expId}"
+    fun experienceEdit(expId: String? = null) =
+        if (expId == null) "experience_edit" else "experience_edit?expId=$expId"
     const val TEAM_CHAT = "team_chat"
     const val TEAM_MATCH = "team_match"
     const val JD_CUSTOMIZE = "jd_customize"

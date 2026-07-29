@@ -154,7 +154,16 @@ fun CareerSandboxNavHost(
         composable(Routes.PROFILE) { ProfileScreen(navController) }
 
         composable(Routes.EXPERIENCE_LIST) { ExperienceListScreen(navController) }
-        composable(Routes.EXPERIENCE_EDIT) { ExperienceEditScreen(navController) }
+        composable(
+            route = Routes.EXPERIENCE_EDIT,
+            arguments = listOf(navArgument("expId") {
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            }),
+        ) { entry ->
+            ExperienceEditScreen(navController, entry.arguments?.getString("expId"))
+        }
         composable(Routes.JD_CUSTOMIZE) { JdCustomizeScreen(navController) }
         composable(Routes.RESUME_PROFILE) { ResumeProfileScreen(navController) }
         composable(Routes.RESUME_UPLOAD_PROCESSING) { ResumeUploadProcessingScreen(navController) }
