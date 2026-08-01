@@ -56,7 +56,20 @@ fun ExperienceEditScreen(navController: NavHostController, expId: String? = null
     val saveState = editViewModel.uiState
     val isSaving = saveState is SaveExperienceUiState.Saving
     var showTitleHint by remember { mutableStateOf(false) }
+    var showChatHint by remember { mutableStateOf(false) }
     var pendingDelete by remember { mutableStateOf(false) }
+
+    // Chat mode: once all 3 answers are in, seed the structured fields.
+    // Only blanks are filled, so nothing typed in form mode gets overwritten.
+    LaunchedEffect(step) {
+        if (mode == EditMode.CHAT && step >= 3) {
+            if (action.isBlank()) action = answers.getOrElse(0) { "" }
+            if (role.isBlank()) role = answers.getOrElse(1) { "" }
+            if (result.isBlank()) result = answers.getOrElse(2) { "" }
+            // Seed a short title from the first answer; user confirms it below the draft card
+            if (title.isBlank()) title = answers.getOrElse(0) { "" }.take(15)
+        }
+    }
 
     // Edit mode: fetch the existing record once
     LaunchedEffect(Unit) {
@@ -108,12 +121,16 @@ fun ExperienceEditScreen(navController: NavHostController, expId: String? = null
                     Text("標題是必填的", color = BrandDeepOrange, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(8.dp))
                 }
+                if (showChatHint && mode == EditMode.CHAT && step < 3) {
+                    Text("先回答完三個問題,整理好的經驗卡才能儲存", color = BrandDeepOrange, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                    Spacer(Modifier.height(8.dp))
+                }
                 if (saveState is SaveExperienceUiState.Error) {
                     Text(saveState.message, color = BrandDeepOrange, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(8.dp))
                 }
                 if (isEditMode) {
-                    // Edit mode: save and delete side by side
+                    // Edit mode: delete and save side by side
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -172,16 +189,17 @@ fun ExperienceEditScreen(navController: NavHostController, expId: String? = null
                         }
                     }
                 } else {
-                    // Create mode: single save button, unchanged
+                    // Create mode: one full-width save button serving both chat and form
                     PrimaryDarkButton(
                         text = if (isSaving) "儲存中..." else "儲存",
                         onClick = {
                             when {
                                 isSaving -> Unit
-                                mode == EditMode.CHAT -> navController.popBackStack()
+                                mode == EditMode.CHAT && step < 3 -> showChatHint = true
                                 title.isBlank() -> showTitleHint = true
                                 else -> {
                                     showTitleHint = false
+                                    showChatHint = false
                                     editViewModel.save(
                                         null,
                                         CreateExperienceRequest(
@@ -251,6 +269,14 @@ fun ExperienceEditScreen(navController: NavHostController, expId: String? = null
                         step = step,
                         aiTyping = aiTyping,
                         answers = answers,
+                        title = title,
+                        onTitle = { title = it },
+                        category = category,
+                        onCategory = { category = it },
+                        role = role,
+                        onRole = { role = it },
+                        result = result,
+                        onResult = { result = it },
                         onChipTap = { chatInput = it },
                     ) {
                         if (chatInput.isNotBlank() && !aiTyping && step < 3) {
@@ -266,7 +292,7 @@ fun ExperienceEditScreen(navController: NavHostController, expId: String? = null
                                     chatHistory.add("AI" to chatQuestions[step])
                                 } else {
                                     delay(1500)
-                                    chatHistory.add("AI" to "整理好了。確認下面這張經驗卡沒問題,就按「儲存」存入母版。")
+                                    chatHistory.add("AI" to "整理好了。幫這段經歷確認標題和類別,再按「儲存」存入母版。")
                                 }
                                 aiTyping = false
                             }
@@ -361,6 +387,14 @@ private fun ChatEdit(
     step: Int,
     aiTyping: Boolean,
     answers: List<String>,
+    title: String,
+    onTitle: (String) -> Unit,
+    category: String,
+    onCategory: (String) -> Unit,
+    role: String,
+    onRole: (String) -> Unit,
+    result: String,
+    onResult: (String) -> Unit,
     onChipTap: (String) -> Unit,
     onSend: () -> Unit,
 ) {
@@ -435,55 +469,120 @@ private fun ChatEdit(
         }
         if (step >= 3 && !aiTyping) {
             Spacer(Modifier.height(8.dp))
-            ExperienceDraftCard(answers)
+            EditableDraftCard(
+                title = title, onTitle = onTitle,
+                category = category, onCategory = onCategory,
+                role = role, onRole = onRole,
+                result = result, onResult = onResult,
+            )
             Spacer(Modifier.height(8.dp))
         }
     }
-    Spacer(Modifier.height(12.dp))
-    var voiceMode by remember { mutableStateOf(false) }
-    var recording by remember { mutableStateOf(false) }
-    var recordSec by remember { mutableIntStateOf(0) }
-    LaunchedEffect(recording) {
-        recordSec = 0
-        while (recording) { delay(1000); recordSec++ }
-    }
-    if (voiceMode) {
-        VoiceBar(
-            recording = recording,
-            recordSec = recordSec,
-            onKeyboard = { voiceMode = false; recording = false },
-            onPressStart = { recording = true },
-            onPressEnd = {
-                val sec = recordSec
-                recording = false
-                if (sec > 0) {
-                    onInputChange("(語音回答・$sec 秒)")
-                    onSend()
+    if (step < 3) {
+        Spacer(Modifier.height(12.dp))
+        var voiceMode by remember { mutableStateOf(false) }
+        var recording by remember { mutableStateOf(false) }
+        var recordSec by remember { mutableIntStateOf(0) }
+        LaunchedEffect(recording) {
+            recordSec = 0
+            while (recording) { delay(1000); recordSec++ }
+        }
+        if (voiceMode) {
+            VoiceBar(
+                recording = recording,
+                recordSec = recordSec,
+                onKeyboard = { voiceMode = false; recording = false },
+                onPressStart = { recording = true },
+                onPressEnd = {
+                    val sec = recordSec
+                    recording = false
+                    if (sec > 0) {
+                        onInputChange("(語音回答・$sec 秒)")
+                        onSend()
+                    }
+                },
+            )
+        } else OutlinedTextField(
+            value = input, onValueChange = onInputChange,
+            placeholder = { Text("用口語回答就好", color = InkGray400) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(14.dp),
+            trailingIcon = {
+                Row {
+                    IconButton(onClick = { voiceMode = true }) {
+                        Icon(Icons.Outlined.Mic, contentDescription = null, tint = InkGray500)
+                    }
+                    IconButton(onClick = onSend) {
+                        Icon(Icons.Outlined.Send, contentDescription = null, tint = BrandOrange)
+                    }
                 }
             },
+            maxLines = 4,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = InkBlack, unfocusedBorderColor = InkGray200,
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+            )
         )
-    } else     OutlinedTextField(
-        value = input, onValueChange = onInputChange,
-        placeholder = { Text("用口語回答就好", color = InkGray400) },
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        trailingIcon = {
-            Row {
-                IconButton(onClick = { voiceMode = true }) {
-                    Icon(Icons.Outlined.Mic, contentDescription = null, tint = InkGray500)
-                }
-                IconButton(onClick = onSend) {
-                    Icon(Icons.Outlined.Send, contentDescription = null, tint = BrandOrange)
+    }
+}
+
+@Composable
+private fun EditableDraftCard(
+    title: String, onTitle: (String) -> Unit,
+    category: String, onCategory: (String) -> Unit,
+    role: String, onRole: (String) -> Unit,
+    result: String, onResult: (String) -> Unit,
+) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(16.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.clip(RoundedCornerShape(50)).background(BrandPeach.copy(alpha = 0.6f))
+                    .padding(horizontal = 8.dp, vertical = 3.dp),
+            ) {
+                Text("經驗卡 ・ 確認與微調", color = BrandDeepOrange,
+                    fontSize = 10.sp, fontWeight = FontWeight.Black)
+            }
+            Spacer(Modifier.weight(1f))
+            Image(
+                painter = painterResource(R.drawable.beaver_thumbsup),
+                contentDescription = null,
+                modifier = Modifier.size(34.dp),
+            )
+        }
+        Spacer(Modifier.height(12.dp))
+
+        ExpField("標題", title, onTitle)
+        ExpField("你的角色", role, onRole)
+        ExpField("量化成果", result, onResult, multi = true)
+
+        Text("類別", style = MaterialTheme.typography.labelLarge,
+            color = InkGray700, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("學業", "工作", "社團", "競賽", "其他").forEach { c ->
+                val on = category == c
+                Box(
+                    Modifier.clip(RoundedCornerShape(50))
+                        .background(if (on) InkBlack else InkGray100)
+                        .pressScale { onCategory(c) }
+                        .padding(horizontal = 13.dp, vertical = 7.dp),
+                ) {
+                    Text(c, color = if (on) PaperWhite else InkGray700,
+                        fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
-        },
-        maxLines = 4,
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = InkBlack, unfocusedBorderColor = InkGray200,
-            focusedContainerColor = MaterialTheme.colorScheme.surface,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-        )
-    )
+        }
+        Spacer(Modifier.height(10.dp))
+        Text("「做了什麼」已從你的第一個回答帶入,之後隨時可在編輯模式補時間範圍和學到什麼。",
+            color = InkGray400, fontSize = 10.sp, lineHeight = 14.sp)
+    }
 }
 
 @Composable
