@@ -22,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,19 +32,50 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.careersandbox.app.data.mock.MockData
+import com.careersandbox.app.data.local.UserStore
 import com.careersandbox.app.data.model.LanguageProficiency
+import com.careersandbox.app.data.remote.ExperienceResponse
+import com.careersandbox.app.data.remote.LanguageDto
+import com.careersandbox.app.data.remote.UpdateProfileRequest
+import com.careersandbox.app.data.repository.RemoteExperienceRepository
+import com.careersandbox.app.data.repository.RemoteUserRepository
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.SectionDivider
 import com.careersandbox.app.ui.components.StaggeredAppear
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun ResumeProfileScreen(navController: NavHostController) {
-    val user = MockData.currentUser
+    // Real user from the backend; guard while the session loads
+    val user = UserStore.me
+    if (user == null) {
+        LaunchedEffect(Unit) { UserStore.refresh() }
+        Box(
+            modifier = Modifier.fillMaxSize().background(PaperWhite),
+            contentAlignment = Alignment.Center,
+        ) {
+            CircularProgressIndicator(color = BrandOrange)
+        }
+        return
+    }
+
     val ctxScreen = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    // Push a partial profile update to the backend, then refresh the shared store
+    fun syncProfile(request: UpdateProfileRequest) {
+        scope.launch {
+            RemoteUserRepository().updateMe(request)
+                .onSuccess { UserStore.refresh() }
+                .onFailure {
+                    Toast.makeText(ctxScreen, it.message ?: "儲存失敗,請稍後再試", Toast.LENGTH_SHORT).show()
+                }
+        }
+    }
+
     // #15 直接分享「這個版本」— 系統分享選單已含 Nearby Share / 藍牙 / 訊息(AirDrop 式直傳)
     val onShare: () -> Unit = {
         val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
@@ -52,20 +84,32 @@ fun ResumeProfileScreen(navController: NavHostController) {
         }
         ctxScreen.startActivity(android.content.Intent.createChooser(intent, "分享這個版本"))
     }
-    // 「關於我」可編輯(local state,套用後即時顯示)
+
+    // 「關於我」可編輯(儲存時 PATCH 後端)
     var bioText by remember { mutableStateOf(user.bio) }
     var editingBio by remember { mutableStateOf(false) }
     // 「技能」可編輯(已有的技能,可增刪)
     val skillsHave = remember { mutableStateListOf(*user.skillsHave.toTypedArray()) }
     var editingSkills by remember { mutableStateOf(false) }
     // 「語言」可編輯(語言 + 程度,可增刪)
-    val languages = remember { mutableStateListOf(*user.languages.toTypedArray()) }
+    val languages = remember {
+        mutableStateListOf(*user.languages.map { LanguageProficiency(it.language, it.level) }.toTypedArray())
+    }
     var editingLangs by remember { mutableStateOf(false) }
     // 「連結」可編輯
     var linkedinUrl by remember { mutableStateOf(user.linkedin) }
     var githubUrl by remember { mutableStateOf(user.github) }
     var portfolioUrl by remember { mutableStateOf(user.portfolio) }
     var editingLinks by remember { mutableStateOf(false) }
+
+    // 經歷:真資料,來自經驗收集存進資料庫的內容
+    var expList by remember { mutableStateOf<List<ExperienceResponse>?>(null) }
+    var expError by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        RemoteExperienceRepository().listRaw()
+            .onSuccess { expList = it; expError = null }
+            .onFailure { expError = it.message }
+    }
 
     Scaffold(
         containerColor = PaperWhite,
@@ -215,7 +259,11 @@ fun ResumeProfileScreen(navController: NavHostController) {
                         letterSpacing = (-0.5).sp)
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        "${user.year} ${user.department.replace("學系", "")} · 想做 PM",
+                        // Real data: year + department + first interest ("想做 X")
+                        listOfNotNull(
+                            "${user.year} ${user.department.replace("學系", "")}".trim().ifBlank { null },
+                            user.interests.firstOrNull()?.let { "想做 $it" },
+                        ).joinToString(" · "),
                         color = InkGray500,
                         style = MaterialTheme.typography.bodyMedium,
                     )
@@ -228,22 +276,22 @@ fun ResumeProfileScreen(navController: NavHostController) {
             StaggeredAppear(delayMillis = 100) {
                 androidx.compose.foundation.layout.FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                user.interests.forEach { interest ->
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(BrandPeach.copy(alpha = 0.5f))
-                            .padding(horizontal = 14.dp, vertical = 6.dp),
-                    ) {
-                        Text(interest,
-                            color = BrandDeepOrange,
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold)
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    user.interests.forEach { interest ->
+                        Box(
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(BrandPeach.copy(alpha = 0.5f))
+                                .padding(horizontal = 14.dp, vertical = 6.dp),
+                        ) {
+                            Text(interest,
+                                color = BrandDeepOrange,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
-            }
             }  // 關 StaggeredAppear(興趣 chip)
 
             // === 關於我 ===
@@ -251,45 +299,74 @@ fun ResumeProfileScreen(navController: NavHostController) {
                 Column {
                     SectionLabel("關於我", onEdit = { editingBio = true })
                     Text(
-                        bioText,
-                        color = InkBlack,
+                        bioText.ifBlank { "還沒寫自我介紹,點「編輯」補上一段。" },
+                        color = if (bioText.isBlank()) InkGray400 else InkBlack,
                         style = MaterialTheme.typography.bodyLarge,
                         lineHeight = 28.sp,
                     )
                 }
             }
 
-            // === 經歷 ===
+            // === 經歷(真資料:經驗收集存進資料庫的內容) ===
             StaggeredAppear(delayMillis = 320) {
                 Column { SectionLabel("經歷", onEdit = { navController.navigate(Routes.EXPERIENCE_LIST) }) }
             }
-            user.activities.forEach { act ->
-                Column(modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(act.title,
-                            color = InkBlack,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp,
-                            modifier = Modifier.weight(1f))
-                        Text(act.period,
-                            color = InkGray500,
-                            style = MaterialTheme.typography.labelSmall)
-                    }
-                    Spacer(Modifier.height(4.dp))
-                    Text(act.role,
-                        color = BrandDeepOrange,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold)
-                    if (act.highlight.isNotEmpty()) {
-                        Spacer(Modifier.height(8.dp))
-                        Text(act.highlight,
-                            color = InkGray700,
-                            style = MaterialTheme.typography.bodyMedium,
-                            lineHeight = 22.sp)
+            val exps = expList
+            when {
+                exps == null && expError == null -> {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        CircularProgressIndicator(
+                            color = BrandOrange,
+                            modifier = Modifier.size(22.dp),
+                            strokeWidth = 2.dp,
+                        )
                     }
                 }
-                if (act != user.activities.last()) {
-                    SectionDivider(modifier = Modifier.padding(vertical = 4.dp))
+                exps == null -> {
+                    Text(expError ?: "",
+                        color = BrandDeepOrange,
+                        style = MaterialTheme.typography.bodyMedium)
+                }
+                exps.isEmpty() -> {
+                    Text("還沒有任何經歷,點「編輯」進經驗收集新增第一筆。",
+                        color = InkGray400,
+                        style = MaterialTheme.typography.bodyMedium)
+                }
+                else -> {
+                    exps.forEachIndexed { idx, e ->
+                        Column(modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(e.title,
+                                    color = InkBlack,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp,
+                                    modifier = Modifier.weight(1f))
+                                Text(e.period,
+                                    color = InkGray500,
+                                    style = MaterialTheme.typography.labelSmall)
+                            }
+                            if (e.role.isNotBlank()) {
+                                Spacer(Modifier.height(4.dp))
+                                Text(e.role,
+                                    color = BrandDeepOrange,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold)
+                            }
+                            if (e.description.isNotBlank()) {
+                                Spacer(Modifier.height(8.dp))
+                                Text(e.description,
+                                    color = InkGray700,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    lineHeight = 22.sp)
+                            }
+                        }
+                        if (idx != exps.lastIndex) {
+                            SectionDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        }
+                    }
                 }
             }
 
@@ -355,6 +432,11 @@ fun ResumeProfileScreen(navController: NavHostController) {
 
             // === 語言 ===
             SectionLabel("語言", onEdit = { editingLangs = true })
+            if (languages.isEmpty()) {
+                Text("還沒有語言資料,點「編輯」新增。",
+                    color = InkGray400,
+                    style = MaterialTheme.typography.bodyMedium)
+            }
             languages.forEach { lang ->
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
@@ -376,6 +458,11 @@ fun ResumeProfileScreen(navController: NavHostController) {
 
             // === 連結 ===
             SectionLabel("連結", onEdit = { editingLinks = true })
+            if (linkedinUrl.isBlank() && githubUrl.isBlank() && portfolioUrl.isBlank()) {
+                Text("還沒有任何連結,點「編輯」補上。",
+                    color = InkGray400,
+                    style = MaterialTheme.typography.bodyMedium)
+            }
             if (linkedinUrl.isNotEmpty()) LinkRow("LinkedIn", linkedinUrl)
             if (githubUrl.isNotEmpty()) LinkRow("GitHub", githubUrl)
             if (portfolioUrl.isNotEmpty()) LinkRow("作品集", portfolioUrl)
@@ -384,7 +471,7 @@ fun ResumeProfileScreen(navController: NavHostController) {
         }
     }
 
-    // 「關於我」編輯對話框(真的能改,local state)
+    // 「關於我」編輯對話框(儲存 → PATCH /users/me)
     if (editingBio) {
         var draft by remember { mutableStateOf(bioText) }
         AlertDialog(
@@ -404,7 +491,12 @@ fun ResumeProfileScreen(navController: NavHostController) {
             confirmButton = {
                 Box(
                     modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(BrandOrange)
-                        .pressScale { bioText = draft; editingBio = false }
+                        .pressScale {
+                            val v = draft.trim()
+                            bioText = v
+                            editingBio = false
+                            syncProfile(UpdateProfileRequest(bio = v))
+                        }
                         .padding(horizontal = 20.dp, vertical = 10.dp),
                 ) { Text("儲存", color = PaperWhite, fontWeight = FontWeight.Bold) }
             },
@@ -414,11 +506,15 @@ fun ResumeProfileScreen(navController: NavHostController) {
         )
     }
 
-    // 「技能」編輯對話框(可刪除現有、新增)
+    // 「技能」編輯對話框(關閉時整批 PATCH)
     if (editingSkills) {
         var newSkill by remember { mutableStateOf("") }
+        val finishSkills = {
+            editingSkills = false
+            syncProfile(UpdateProfileRequest(skillsHave = skillsHave.toList()))
+        }
         AlertDialog(
-            onDismissRequest = { editingSkills = false },
+            onDismissRequest = { finishSkills() },
             title = { Text("編輯技能", fontWeight = FontWeight.Black) },
             text = {
                 Column {
@@ -470,19 +566,27 @@ fun ResumeProfileScreen(navController: NavHostController) {
             confirmButton = {
                 Box(
                     modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(BrandOrange)
-                        .pressScale { editingSkills = false }
+                        .pressScale { finishSkills() }
                         .padding(horizontal = 20.dp, vertical = 10.dp),
                 ) { Text("完成", color = PaperWhite, fontWeight = FontWeight.Bold) }
             },
         )
     }
 
-    // 「語言」編輯對話框(語言+程度,可增刪)
+    // 「語言」編輯對話框(關閉時整批 PATCH)
     if (editingLangs) {
         var newLang by remember { mutableStateOf("") }
         var newLevel by remember { mutableStateOf("") }
+        val finishLangs = {
+            editingLangs = false
+            syncProfile(
+                UpdateProfileRequest(
+                    languages = languages.map { LanguageDto(it.language, it.level) }
+                )
+            )
+        }
         AlertDialog(
-            onDismissRequest = { editingLangs = false },
+            onDismissRequest = { finishLangs() },
             title = { Text("編輯語言", fontWeight = FontWeight.Black) },
             text = {
                 Column {
@@ -536,14 +640,14 @@ fun ResumeProfileScreen(navController: NavHostController) {
             confirmButton = {
                 Box(
                     modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(BrandOrange)
-                        .pressScale { editingLangs = false }
+                        .pressScale { finishLangs() }
                         .padding(horizontal = 20.dp, vertical = 10.dp),
                 ) { Text("完成", color = PaperWhite, fontWeight = FontWeight.Bold) }
             },
         )
     }
 
-    // 「連結」編輯對話框
+    // 「連結」編輯對話框(儲存 → PATCH /users/me)
     if (editingLinks) {
         var li by remember { mutableStateOf(linkedinUrl) }
         var gh by remember { mutableStateOf(githubUrl) }
@@ -581,6 +685,13 @@ fun ResumeProfileScreen(navController: NavHostController) {
                         .pressScale {
                             linkedinUrl = li.trim(); githubUrl = gh.trim(); portfolioUrl = pf.trim()
                             editingLinks = false
+                            syncProfile(
+                                UpdateProfileRequest(
+                                    linkedin = linkedinUrl,
+                                    github = githubUrl,
+                                    portfolio = portfolioUrl,
+                                )
+                            )
                         }
                         .padding(horizontal = 20.dp, vertical = 10.dp),
                 ) { Text("儲存", color = PaperWhite, fontWeight = FontWeight.Bold) }

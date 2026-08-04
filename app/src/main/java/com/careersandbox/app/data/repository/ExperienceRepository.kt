@@ -8,6 +8,7 @@ import com.careersandbox.app.data.remote.ExperienceResponse
 
 interface ExperienceRepository {
     suspend fun list(): Result<List<Experience>>
+    suspend fun listRaw(): Result<List<ExperienceResponse>>
     suspend fun get(id: String): Result<ExperienceResponse>
     suspend fun create(request: CreateExperienceRequest): Result<Experience>
     suspend fun update(id: String, request: CreateExperienceRequest): Result<Experience>
@@ -29,7 +30,19 @@ class RemoteExperienceRepository(
         Result.failure(Exception("無法連線到伺服器"))
     }
 
-    // Returns the raw DTO — the edit form needs every field (role, action, learning...)
+    // Same call, but keeps the full DTO (role, action, learning...) for
+    // screens that need every field, e.g. the master resume
+    override suspend fun listRaw(): Result<List<ExperienceResponse>> = try {
+        val res = api.list()
+        when {
+            res.isSuccessful && res.body() != null -> Result.success(res.body()!!)
+            res.code() == 401 -> Result.failure(Exception("登入已過期，請重新登入"))
+            else -> Result.failure(Exception("讀取失敗（錯誤碼 ${res.code()}）"))
+        }
+    } catch (e: Exception) {
+        Result.failure(Exception("無法連線到伺服器"))
+    }
+
     override suspend fun get(id: String): Result<ExperienceResponse> = try {
         val res = api.get(id)
         when {
