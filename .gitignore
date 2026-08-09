@@ -9,6 +9,9 @@ captures/
 .cxx/
 *.apk
 *.aab
+.env
+careersandbox-api/
+project_tree.txt
 
 # Mac/Win
 .DS_Store
