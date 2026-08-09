@@ -31,7 +31,6 @@ import com.careersandbox.app.ui.screens.profile.SettingsProfileScreen
 import com.careersandbox.app.ui.screens.resume.*
 import com.careersandbox.app.ui.screens.workplace.NovaBackFrame
 import com.careersandbox.app.ui.screens.workplace.Day1OneOnOneScreen
-import com.careersandbox.app.ui.screens.workplace.SandboxChatScreen
 import com.careersandbox.app.ui.screens.workplace.Day2EmailScreen
 import com.careersandbox.app.ui.screens.workplace.Day3MeetingScreen
 import com.careersandbox.app.ui.screens.workplace.Day4LunchScreen
@@ -135,7 +134,6 @@ fun CareerSandboxNavHost(
         composable(Routes.RESUME_ARCH_INTRO) { ResumeArchIntroScreen(navController) }
         composable(Routes.INTERVIEW_HUB) { InterviewHubScreen(navController) }
         composable(Routes.WORKPLACE_SANDBOX) { WorkplaceSandboxScreen(navController) }
-        composable(Routes.SANDBOX_CHAT) { SandboxChatScreen(navController) }
         composable(Routes.WORKPLACE_CHAT) { Day1OneOnOneScreen(navController) }
         composable(Routes.WORKPLACE_MEETING) { Day3MeetingScreen(navController) }
         composable(Routes.WORKPLACE_LUNCH) { Day4LunchScreen(navController) }

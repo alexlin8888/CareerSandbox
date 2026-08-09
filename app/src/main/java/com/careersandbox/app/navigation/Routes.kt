@@ -16,7 +16,6 @@ object Routes {
     const val WORKPLACE_MEETING = "workplace_meeting"
     const val WORKPLACE_LUNCH = "workplace_lunch"
     const val WORKPLACE_REVIEW = "workplace_review"
-    const val SANDBOX_CHAT = "sandbox_chat"
     const val NOVA_CHAT = "nova_chat"
     // Nova suite standalone screens (item3): generic-UI workplace surfaces
     const val NOVA_CHAT_LIST = "nova_chat_list"

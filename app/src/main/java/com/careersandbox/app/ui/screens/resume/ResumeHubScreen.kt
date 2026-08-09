@@ -66,12 +66,12 @@ fun ResumeHubScreen(navController: NavHostController) {
             HeroSection()
             // content lifts onto the hero bottom so the master card overlaps
             Column(modifier = Modifier.offset(y = (-28).dp)) {
+                AnimatedSection(visible = visible, delayMs = 120) { ToolStrip(navController) }
+                Spacer(Modifier.height(24.dp))
                 MasterCard(navController)
                 Spacer(Modifier.height(22.dp))
                 AnimatedSection(visible = visible, delayMs = 0) { AiOverviewCard() }
                 Spacer(Modifier.height(22.dp))
-                AnimatedSection(visible = visible, delayMs = 120) { ToolStrip(navController) }
-                Spacer(Modifier.height(24.dp))
                 AnimatedSection(visible = visible, delayMs = 200) { JobApplicationsSection(navController) }
                 Spacer(Modifier.height(44.dp))
             }

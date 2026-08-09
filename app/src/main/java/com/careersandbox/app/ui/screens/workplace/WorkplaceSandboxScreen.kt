@@ -150,31 +150,6 @@ fun WorkplaceSandboxScreen(navController: NavHostController) {
         // === 職場聲望儀表板(貫穿五天的主線)===
         StaggeredAppear(delayMillis = 80) { ReputationDashboard() }
 
-        Spacer(Modifier.height(18.dp))
-
-        // === AI 對話 Demo(場景式;mock 引擎,預留接真模型;劇情內各天也用同一套對話)===
-        StaggeredAppear(delayMillis = 100) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(BrandDeepOrange)
-                    .pressScale { navController.navigate(Routes.SANDBOX_CHAT) }
-                    .padding(horizontal = 18.dp, vertical = 14.dp),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("AI 對話 Demo", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 15.sp)
-                        Spacer(Modifier.height(2.dp))
-                        Text("場景式 AI 對話・目前為 mock 引擎,預留接真模型",
-                            color = PaperWhite.copy(alpha = 0.85f), fontSize = 11.sp)
-                    }
-                    Text("→", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 20.sp)
-                }
-            }
-        }
-
         Spacer(Modifier.height(20.dp))
 
         // === zigzag 路徑 ===

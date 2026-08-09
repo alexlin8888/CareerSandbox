@@ -230,9 +230,9 @@ fun LoginScreen(
                     Spacer(Modifier.height(18.dp))
 
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        SocialButton("Google", "google.com", Modifier.weight(1f))
-                        SocialButton("Apple", "apple.com", Modifier.weight(1f))
-                        SocialButton("LINE", "line.me", Modifier.weight(1f))
+                        SocialButton("Google", "google.com", Modifier.weight(1f), onClick = onSignup)
+                        SocialButton("Apple", "apple.com", Modifier.weight(1f), onClick = onSignup)
+                        SocialButton("LINE", "line.me", Modifier.weight(1f), onClick = onSignup)
                     }
 
                     Spacer(Modifier.height(26.dp))
@@ -287,14 +287,14 @@ private fun loginFieldColors() = OutlinedTextFieldDefaults.colors(
 )
 
 @Composable
-private fun SocialButton(name: String, domain: String, modifier: Modifier = Modifier) {
+private fun SocialButton(name: String, domain: String, modifier: Modifier = Modifier, onClick: () -> Unit,) {
     Row(
         modifier = modifier
             .height(52.dp)
             .clip(RoundedCornerShape(15.dp))
             .border(1.5.dp, InkGray200, RoundedCornerShape(15.dp))
             .background(PaperWhite)
-            .pressScale { },
+            .pressScale ( onClick = onClick ),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {

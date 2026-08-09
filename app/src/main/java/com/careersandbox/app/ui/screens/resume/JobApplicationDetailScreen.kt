@@ -1,5 +1,7 @@
 package com.careersandbox.app.ui.screens.resume
-
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.remember
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -423,7 +425,6 @@ private fun VersionCard(
                     accent = AccentGreen,
                     isFilled = true,
                     modifier = Modifier.weight(1f),
-                    onClick = {},
                 )
             }
         }
@@ -437,7 +438,7 @@ private fun VersionActionPill(
     accent: Color,
     modifier: Modifier = Modifier,
     isFilled: Boolean = false,
-    onClick: () -> Unit,
+    onClick: (() -> Unit)? = null,
 ) {
     Row(
         modifier = modifier
@@ -445,7 +446,18 @@ private fun VersionActionPill(
             .background(
                 if (isFilled) accent else PaperWhite
             )
-            .pressScale(onClick = onClick)
+            .then(
+                if (onClick != null) {
+                    Modifier.pressScale(onClick = onClick)
+                } else {
+                    // 沒有點擊功能，但仍要攔截點擊，避免穿透到底下的整張卡片
+                    Modifier.clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {},
+                    )
+                }
+            )
             .padding(vertical = 9.dp, horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
