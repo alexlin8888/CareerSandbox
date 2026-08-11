@@ -514,6 +514,14 @@ fun SettingsPrivacyScreen(navController: NavHostController) {
     var profilePublic by remember { mutableStateOf(false) }
     var allowSearch by remember { mutableStateOf(true) }
     var aiTraining by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        val saved = SettingsStore.loadPrivacySettings()
+        profilePublic = saved.profilePublic
+        allowSearch = saved.allowSearch
+        aiTraining = saved.aiTraining
+    }
 
     SettingsScaffold("隱私與資料", { navController.popBackStack() }) { pad ->
         Column(
@@ -524,9 +532,15 @@ fun SettingsPrivacyScreen(navController: NavHostController) {
                 .padding(horizontal = 24.dp, vertical = 16.dp),
         ) {
             SettingsGroupTitle("帳號可見性")
-            ToggleRow("公開個人檔案", "其他用戶可看見你的履歷摘要", profilePublic) { profilePublic = it }
+            ToggleRow("公開個人檔案", "其他用戶可看見你的履歷摘要", profilePublic) {
+                profilePublic = it
+                scope.launch { SettingsStore.setProfilePublic(it) }
+            }
             SectionDivider(modifier = Modifier.padding(vertical = 12.dp))
-            ToggleRow("允許企業搜尋", "讓徵才公司主動聯絡你", allowSearch) { allowSearch = it }
+            ToggleRow("允許企業搜尋", "讓徵才公司主動聯絡你", allowSearch) {
+                allowSearch = it
+                scope.launch { SettingsStore.setAllowSearch(it) }
+            }
 
             Spacer(Modifier.height(28.dp))
             SettingsGroupTitle("資料使用")
@@ -534,7 +548,10 @@ fun SettingsPrivacyScreen(navController: NavHostController) {
                 "匿名資料用於模型訓練",
                 "你的資料會去除個資後協助改善 AI 推薦",
                 aiTraining,
-            ) { aiTraining = it }
+            ) {
+                aiTraining = it
+                scope.launch { SettingsStore.setAiTraining(it) }
+            }
 
             Spacer(Modifier.height(28.dp))
             SettingsGroupTitle("資料操作")

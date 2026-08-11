@@ -15,6 +15,9 @@ object SettingsStore {
     private val KEY_INTERVIEW_REMINDER = booleanPreferencesKey("interview_reminder")
     private val KEY_NEW_JOB_MATCH = booleanPreferencesKey("new_job_match")
     private val KEY_WEEKLY_REPORT = booleanPreferencesKey("weekly_report")
+    private val KEY_PROFILE_PUBLIC = booleanPreferencesKey("profile_public")
+    private val KEY_ALLOW_SEARCH = booleanPreferencesKey("allow_search")
+    private val KEY_AI_TRAINING = booleanPreferencesKey("ai_training")
 
     private lateinit var appContext: Context
 
@@ -32,6 +35,12 @@ object SettingsStore {
         val weeklyReport: Boolean = true,
     )
 
+    data class PrivacySettings(
+        val profilePublic: Boolean = false,
+        val allowSearch: Boolean = true,
+        val aiTraining: Boolean = false,
+    )
+
     // 畫面一打開就呼叫這個，把上次存的值讀回來
     suspend fun loadNotificationSettings(): NotificationSettings {
         val prefs = appContext.settingsDataStore.data.first()
@@ -41,6 +50,15 @@ object SettingsStore {
             interviewReminder = prefs[KEY_INTERVIEW_REMINDER] ?: true,
             newJobMatch = prefs[KEY_NEW_JOB_MATCH] ?: false,
             weeklyReport = prefs[KEY_WEEKLY_REPORT] ?: true,
+        )
+    }
+
+    suspend fun loadPrivacySettings(): PrivacySettings {
+        val prefs = appContext.settingsDataStore.data.first()
+        return PrivacySettings(
+            profilePublic = prefs[KEY_PROFILE_PUBLIC] ?: false,
+            allowSearch = prefs[KEY_ALLOW_SEARCH] ?: true,
+            aiTraining = prefs[KEY_AI_TRAINING] ?: false,
         )
     }
 
@@ -59,5 +77,14 @@ object SettingsStore {
     }
     suspend fun setWeeklyReport(value: Boolean) {
         appContext.settingsDataStore.edit { it[KEY_WEEKLY_REPORT] = value }
+    }
+    suspend fun setProfilePublic(value: Boolean) {
+        appContext.settingsDataStore.edit { it[KEY_PROFILE_PUBLIC] = value }
+    }
+    suspend fun setAllowSearch(value: Boolean) {
+        appContext.settingsDataStore.edit { it[KEY_ALLOW_SEARCH] = value }
+    }
+    suspend fun setAiTraining(value: Boolean) {
+        appContext.settingsDataStore.edit { it[KEY_AI_TRAINING] = value }
     }
 }
