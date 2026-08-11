@@ -46,6 +46,20 @@ import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.data.mock.MockJdCustomizer
 import com.careersandbox.app.data.mock.MockResumeHierarchyProvider
 import kotlinx.coroutines.delay
+import android.graphics.Bitmap
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import com.careersandbox.app.data.pdf.DeviceCustomResumePdfGenerator
+import com.careersandbox.app.data.pdf.buildCustomResumeDataFromCustomization
+import com.careersandbox.app.data.pdf.renderFirstPageAsBitmap
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.text.style.TextAlign
 
 private enum class JdPhase { INPUT, ANALYZING, RESULT }
 
@@ -563,35 +577,72 @@ private fun ResultPhase(onBack: () -> Unit, onExport: () -> Unit, onViewVersions
         }
 
         if (showPreview) {
-            val user = MockData.currentUser
-            AlertDialog(
+            val ctx = LocalContext.current
+            var previewBitmap by remember { mutableStateOf<Bitmap?>(null) }
+            var previewError by remember { mutableStateOf(false) }
+
+            LaunchedEffect(Unit) {
+                val data = buildCustomResumeDataFromCustomization(customized, dimmedItems.toSet())
+                if (data == null) {
+                    previewError = true
+                } else {
+                    val file = DeviceCustomResumePdfGenerator.generate(ctx, "preview_temp", data)
+                    previewBitmap = renderFirstPageAsBitmap(file)
+                }
+            }
+
+            Dialog(
                 onDismissRequest = { showPreview = false },
-                confirmButton = {
-                    TextButton(onClick = { showPreview = false }) { Text("關閉") }
-                },
-                title = { Text("客製版預覽") },
-                text = {
-                    Column {
-                        Text(user.name, fontWeight = FontWeight.Black, fontSize = 20.sp, color = InkBlack)
-                        Text("${user.school} · ${user.department} · ${user.year}",
-                            color = InkGray500, fontSize = 12.sp)
-                        Spacer(Modifier.height(12.dp))
-                        Text("為這份 JD 保留的重點", color = BrandDeepOrange,
-                            fontWeight = FontWeight.Black, fontSize = 12.sp)
-                        Spacer(Modifier.height(6.dp))
-                        highlights.forEach { (text, _) ->
-                            Text("· $text", color = InkGray700, fontSize = 12.sp, lineHeight = 17.sp)
-                            Spacer(Modifier.height(6.dp))
-                        }
-                        if (dimmedItems.isNotEmpty()) {
-                            Text("已隱藏 ${dimmedItems.size} 段較不相關的經歷",
-                                color = InkGray400, fontSize = 11.sp)
-                        }
-                        Spacer(Modifier.height(10.dp))
-                        Text("這就是匯出後 PDF 的內容方向", color = InkGray400, fontSize = 11.sp)
+                properties = DialogProperties(usePlatformDefaultWidth = false),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(InkBlack.copy(alpha = 0.92f)),
+                ) {
+                    // 關閉按鈕
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(20.dp)
+                            .clip(CircleShape)
+                            .background(PaperWhite.copy(alpha = 0.15f))
+                            .pressScale { showPreview = false }
+                            .padding(10.dp),
+                    ) {
+                        Icon(
+                            Icons.Outlined.Close,
+                            contentDescription = "關閉",
+                            tint = PaperWhite,
+                            modifier = Modifier.size(22.dp),
+                        )
                     }
-                },
-            )
+
+                    val bitmap = previewBitmap
+                    if (previewError) {
+                        Text(
+                            "找不到你的個人資料，請先回到個人檔案頁確認資料已載入",
+                            color = PaperWhite,
+                            modifier = Modifier.align(Alignment.Center).padding(horizontal = 32.dp),
+                            textAlign = TextAlign.Center,
+                        )
+                    } else if (bitmap == null) {
+                        CircularProgressIndicator(
+                            color = PaperWhite,
+                            modifier = Modifier.align(Alignment.Center),
+                        )
+                    } else {
+                        Image(
+                            bitmap = bitmap.asImageBitmap(),
+                            contentDescription = "客製化履歷預覽",
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .fillMaxWidth(0.94f)
+                                .verticalScroll(rememberScrollState()),
+                        )
+                    }
+                }
+            }
         }
 
         // 選職缺存成新版本
