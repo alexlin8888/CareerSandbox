@@ -29,12 +29,14 @@ import com.careersandbox.app.ui.components.shouldShowBottomNav
 import com.careersandbox.app.ui.theme.CareerSandboxTheme
 import androidx.lifecycle.lifecycleScope
 import com.careersandbox.app.data.local.SessionManager
+import com.careersandbox.app.data.local.SettingsStore
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         SessionManager.init(applicationContext)
+        SettingsStore.init(applicationContext)
         lifecycleScope.launch { SessionManager.load() }
         setContent {
             CareerSandboxTheme {
