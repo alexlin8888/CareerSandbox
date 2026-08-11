@@ -1,5 +1,7 @@
 package com.careersandbox.app.ui.screens.profile
 
+import androidx.compose.runtime.rememberCoroutineScope
+import com.careersandbox.app.data.local.SettingsStore
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -41,6 +43,7 @@ import com.careersandbox.app.ui.theme.*
 import com.careersandbox.app.data.local.SessionManager
 import com.careersandbox.app.data.local.UserStore
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.LaunchedEffect
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -410,6 +413,17 @@ fun SettingsNotificationsScreen(navController: NavHostController) {
     var newJobMatch by remember { mutableStateOf(false) }
     var weeklyReport by remember { mutableStateOf(true) }
 
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        val saved = SettingsStore.loadNotificationSettings()
+        pushEnabled = saved.pushEnabled
+        dailyDigest = saved.dailyDigest
+        interviewReminder = saved.interviewReminder
+        newJobMatch = saved.newJobMatch
+        weeklyReport = saved.weeklyReport
+    }
+
     SettingsScaffold("通知設定", { navController.popBackStack() }) { pad ->
         Column(
             modifier = Modifier
@@ -419,17 +433,32 @@ fun SettingsNotificationsScreen(navController: NavHostController) {
                 .padding(horizontal = 24.dp, vertical = 16.dp),
         ) {
             SettingsGroupTitle("主要")
-            ToggleRow("推播通知", "接收所有 app 推播", pushEnabled) { pushEnabled = it }
+            ToggleRow("推播通知", "接收所有 app 推播", pushEnabled) {
+                pushEnabled = it
+                scope.launch { SettingsStore.setPushEnabled(it)}
+            }
             SectionDivider(modifier = Modifier.padding(vertical = 12.dp))
 
             SettingsGroupTitle("內容類型")
-            ToggleRow("每日精選", "AI 為你挑選的每日重點", dailyDigest) { dailyDigest = it }
+            ToggleRow("每日精選", "AI 為你挑選的每日重點", dailyDigest) {
+                dailyDigest = it
+                scope.launch { SettingsStore.setDailyDigest(it) }
+            }
             SectionDivider(modifier = Modifier.padding(vertical = 12.dp))
-            ToggleRow("面試提醒", "預約的模擬面試開始前通知", interviewReminder) { interviewReminder = it }
+            ToggleRow("面試提醒", "預約的模擬面試開始前通知", interviewReminder) {
+                interviewReminder = it
+                scope.launch { SettingsStore.setInterviewReminder(it) }
+            }
             SectionDivider(modifier = Modifier.padding(vertical = 12.dp))
-            ToggleRow("新職缺媒合", "符合你條件的職缺出現時", newJobMatch) { newJobMatch = it }
+            ToggleRow("新職缺媒合", "符合你條件的職缺出現時", newJobMatch) {
+                newJobMatch = it
+                scope.launch { SettingsStore.setNewJobMatch(it) }
+            }
             SectionDivider(modifier = Modifier.padding(vertical = 12.dp))
-            ToggleRow("每週成長報告", "每週日早上 9:00 寄送", weeklyReport) { weeklyReport = it }
+            ToggleRow("每週成長報告", "每週日早上 9:00 寄送", weeklyReport) {
+                weeklyReport = it
+                scope.launch { SettingsStore.setWeeklyReport(it) }
+            }
 
             Spacer(Modifier.height(40.dp))
         }
