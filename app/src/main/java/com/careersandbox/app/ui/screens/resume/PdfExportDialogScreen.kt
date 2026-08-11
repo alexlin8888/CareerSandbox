@@ -85,6 +85,7 @@ fun PdfExportDialogScreen(
                 ExportPhase.DONE -> DonePhase(
                     onClose = { navController.popBackStack() },
                     contentPadding = pad,
+                    versionId = versionId,
                 )
             }
         }
@@ -293,7 +294,7 @@ private fun ExportingPhase(onDone: () -> Unit, contentPadding: PaddingValues) {
 }
 
 @Composable
-private fun DonePhase(onClose: () -> Unit, contentPadding: PaddingValues) {
+private fun DonePhase(onClose: () -> Unit, contentPadding: PaddingValues, versionId: String) {
     var fileName by remember { mutableStateOf("履歷_AlexLin_2026") }
     Column(
         modifier = Modifier
@@ -357,7 +358,13 @@ private fun DonePhase(onClose: () -> Unit, contentPadding: PaddingValues) {
                     .background(InkBlack)
                     .pressScale {
                         try {
-                            val file = com.careersandbox.app.data.pdf.DeviceResumePdfGenerator.generate(ctx, fileName)
+                            val file = if (versionId == "custom") {
+                                val data = com.careersandbox.app.data.pdf.buildCustomResumeDataForExport()
+                                    ?: throw IllegalStateException("找不到使用者資料，請先確認已登入")
+                                com.careersandbox.app.data.pdf.DeviceCustomResumePdfGenerator.generate(ctx, fileName, data)
+                            } else {
+                                com.careersandbox.app.data.pdf.DeviceResumePdfGenerator.generate(ctx, fileName)
+                            }
                             val uri = androidx.core.content.FileProvider.getUriForFile(
                                 ctx, "${ctx.packageName}.fileprovider", file
                             )
