@@ -30,6 +30,8 @@ import com.careersandbox.app.R
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 import kotlinx.coroutines.delay
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 
 private enum class ExportPhase { SELECT_TEMPLATE, EXPORTING, DONE }
 
@@ -350,6 +352,7 @@ private fun DonePhase(onClose: () -> Unit, contentPadding: PaddingValues, versio
 
         Column(modifier = Modifier.fillMaxWidth()) {
             val ctx = LocalContext.current
+            val scope = rememberCoroutineScope()
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -357,30 +360,32 @@ private fun DonePhase(onClose: () -> Unit, contentPadding: PaddingValues, versio
                     .clip(RoundedCornerShape(16.dp))
                     .background(InkBlack)
                     .pressScale {
-                        try {
-                            val file = if (versionId == "custom") {
-                                val data = com.careersandbox.app.data.pdf.buildCustomResumeDataForExport()
-                                    ?: throw IllegalStateException("找不到使用者資料，請先確認已登入")
-                                com.careersandbox.app.data.pdf.DeviceCustomResumePdfGenerator.generate(ctx, fileName, data)
-                            } else {
-                                com.careersandbox.app.data.pdf.DeviceResumePdfGenerator.generate(ctx, fileName)
+                        scope.launch {
+                            try {
+                                val file = if (versionId == "custom") {
+                                    val data = com.careersandbox.app.data.pdf.buildCustomResumeDataForExport()
+                                        ?: throw IllegalStateException("找不到使用者資料，請先確認已登入")
+                                    com.careersandbox.app.data.pdf.DeviceCustomResumePdfGenerator.generate(ctx, fileName, data)
+                                } else {
+                                    com.careersandbox.app.data.pdf.DeviceResumePdfGenerator.generate(ctx, fileName)
+                                }
+                                val uri = androidx.core.content.FileProvider.getUriForFile(
+                                    ctx, "${ctx.packageName}.fileprovider", file
+                                )
+                                val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                    type = "application/pdf"
+                                    putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                                    putExtra(android.content.Intent.EXTRA_SUBJECT, "我的履歷 - CareerSandbox")
+                                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                val chooser = android.content.Intent.createChooser(intent, "分享履歷")
+                                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                ctx.startActivity(chooser)
+                            } catch (e: Exception) {
+                                android.widget.Toast.makeText(
+                                    ctx, "目前無法產生或分享 PDF", android.widget.Toast.LENGTH_SHORT
+                                ).show()
                             }
-                            val uri = androidx.core.content.FileProvider.getUriForFile(
-                                ctx, "${ctx.packageName}.fileprovider", file
-                            )
-                            val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                                type = "application/pdf"
-                                putExtra(android.content.Intent.EXTRA_STREAM, uri)
-                                putExtra(android.content.Intent.EXTRA_SUBJECT, "我的履歷 - CareerSandbox")
-                                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            }
-                            val chooser = android.content.Intent.createChooser(intent, "分享履歷")
-                                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                            ctx.startActivity(chooser)
-                        } catch (e: Exception) {
-                            android.widget.Toast.makeText(
-                                ctx, "目前無法產生或分享 PDF", android.widget.Toast.LENGTH_SHORT
-                            ).show()
                         }
                     },
                 contentAlignment = Alignment.Center,
