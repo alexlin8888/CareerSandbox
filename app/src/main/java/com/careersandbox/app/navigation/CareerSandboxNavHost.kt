@@ -50,6 +50,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import com.careersandbox.app.data.local.SessionManager
 import com.careersandbox.app.data.local.UserStore
+import com.careersandbox.app.ui.screens.onboarding.ForgotPasswordScreen
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -121,8 +122,10 @@ fun CareerSandboxNavHost(
             LoginScreen(
                 onLogin = { navController.navigate(Routes.HOME) { popUpTo(Routes.LOGIN) { inclusive = true } } },
                 onSignup = { navController.navigate(Routes.ONBOARDING) },
+                onForgotPassword = { navController.navigate(Routes.FORGOT_PASSWORD) },
             )
         }
+        composable(Routes.FORGOT_PASSWORD) { ForgotPasswordScreen(navController) }
         composable(Routes.ONBOARDING) {
             OnboardingScreen(onDone = {
                 navController.navigate(Routes.HOME) { popUpTo(Routes.LOGIN) { inclusive = true } }
