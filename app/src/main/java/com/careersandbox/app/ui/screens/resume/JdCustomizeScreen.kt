@@ -53,7 +53,6 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import com.careersandbox.app.data.pdf.DeviceCustomResumePdfGenerator
 import com.careersandbox.app.data.pdf.buildCustomResumeDataFromCustomization
-import com.careersandbox.app.data.pdf.renderFirstPageAsBitmap
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.shape.CircleShape
@@ -587,7 +586,7 @@ private fun ResultPhase(onBack: () -> Unit, onExport: () -> Unit, onViewVersions
                     previewError = true
                 } else {
                     val file = DeviceCustomResumePdfGenerator.generate(ctx, "preview_temp", data)
-                    previewBitmap = renderFirstPageAsBitmap(file)
+                    previewBitmap = DeviceCustomResumePdfGenerator.renderFirstPageAsBitmap(file)
                 }
             }
 

@@ -1,28 +1,32 @@
 package com.careersandbox.app.data.pdf
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
-import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
 import java.io.File
 
-/**
- * 客製化履歷 PDF 產生器介面，只依賴 CustomResumeData，
- * 不管資料是從 MockData 還是真實 API 組出來的。
- */
 interface CustomResumePdfGenerator {
     fun generate(context: Context, fileName: String, data: CustomResumeData): File
 }
 
 object DeviceCustomResumePdfGenerator : CustomResumePdfGenerator {
 
+    private const val PAGE_W = 595
+    private const val PAGE_H = 842
+    private const val SIDEBAR_W = 190f
+    private const val SIDE_PAD = 26f
+    private const val CONTENT_X = SIDEBAR_W + 34f
+    private const val RIGHT = 555f
+
     override fun generate(context: Context, fileName: String, data: CustomResumeData): File {
         val doc = PdfDocument()
-        val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create()
+        val pageInfo = PdfDocument.PageInfo.Builder(PAGE_W, PAGE_H, 1).create()
         val page = doc.startPage(pageInfo)
         drawResume(page.canvas, data)
         doc.finishPage(page)
@@ -38,92 +42,189 @@ object DeviceCustomResumePdfGenerator : CustomResumePdfGenerator {
         return if (base.endsWith(".pdf", ignoreCase = true)) base else "$base.pdf"
     }
 
+    // ===== 色票 =====
+    private val cInk = Color.parseColor("#0B0E14")
+    private val cBody = Color.parseColor("#374151")
+    private val cMuted = Color.parseColor("#6B7280")
+    private val cHairline = Color.parseColor("#E5E7EB")
+    private val cAccent = Color.parseColor("#D84315")
+    private val cWhite = Color.parseColor("#FFFFFF")
+    private val cSidebar = Color.parseColor("#D84315")
+    private val cSidebarSub = Color.parseColor("#FFD9C7")
+    private val cSidebarLine = Color.argb(130, 255, 255, 255) // 側欄分隔線:半透明白
+
     private fun drawResume(canvas: Canvas, data: CustomResumeData) {
-        val left = 48f
-        val rightEdge = 547f
-        var y = 80f
+        canvas.drawColor(cWhite)
+        canvas.drawRect(0f, 0f, SIDEBAR_W, PAGE_H.toFloat(), Paint().apply { color = cSidebar })
 
-        val title = paint("#1F1916", 26f, bold = true)
-        val sub = paint("#6B7280", 13f)
-        val h2 = paint("#B85C3A", 15f, bold = true)
-        val item = paint("#1F1916", 12.5f, bold = true)
-        val body = paint("#374151", 11.5f)
-        val meta = paint("#9CA3AF", 10.5f)
-        val small = paint("#6B7280", 10.5f)
-        val rule = Paint().apply { color = Color.parseColor("#E5E7EB"); strokeWidth = 1f; isAntiAlias = true }
+        drawSidebar(canvas, data)
+        drawMainColumn(canvas, data)
+    }
 
-        // === 標題區 ===
-        canvas.drawText(data.name, left, y, title)
-        y += 22f
-        canvas.drawText(data.schoolLine, left, y, sub)
-        y += 20f
+    // ===================== 左側色塊欄 =====================
 
-        if (data.bio.isNotBlank()) {
-            wrap(data.bio, body, rightEdge - left).forEach { line ->
-                canvas.drawText(line, left, y, body)
-                y += 15f
+    private fun drawSidebar(canvas: Canvas, data: CustomResumeData) {
+        val x = SIDE_PAD
+        val right = SIDEBAR_W - SIDE_PAD
+        var y = 74f
+
+        // 姓名
+        val namePaint = textPaint(cWhite, 26f, Typeface.create("sans-serif-condensed", Typeface.BOLD))
+        wrap(data.name, namePaint, right - x).forEach { line ->
+            canvas.drawText(line, x, y, namePaint)
+            y += 30f
+        }
+        y += 16f
+        y = sidebarDivider(canvas, x, right, y)
+
+        // 個人資料
+        val contactFields = listOfNotNull(
+            "Mail" to data.email,
+            "Phone" to data.phone,
+            "LinkedIn" to data.linkedin,
+            "GitHub" to data.github,
+            "Portfolio" to data.portfolio,
+        ).filter { it.second.isNotBlank() }
+
+        if (contactFields.isNotEmpty()) {
+            y = sidebarHeader(canvas, "個人資料", x, y)
+            val labelPaint = textPaint(cSidebarSub, 10.5f, Typeface.create("sans-serif-medium", Typeface.BOLD))
+            val valuePaint = textPaint(cWhite, 11.5f, Typeface.DEFAULT)
+            contactFields.forEach { (label, value) ->
+                val displayValue = if (label == "Mail" || label == "Phone") value else shortenUrl(value)
+                canvas.drawText(label, x, y, labelPaint)
+                y += 14f
+                wrap(displayValue, valuePaint, right - x).forEach { line ->
+                    canvas.drawText(line, x, y, valuePaint)
+                    y += 16f
+                }
+                y += 5f
             }
-            y += 6f
+            y = sidebarDivider(canvas, x, right, y + 4f)
         }
 
-        if (data.keywords.isNotEmpty()) {
-            canvas.drawText(data.keywords.joinToString("  ·  "), left, y, small)
-            y += 20f
+        // 技能
+        if (data.coveredSkills.isNotEmpty() || data.otherSkills.isNotEmpty()) {
+            y = sidebarHeader(canvas, "技能", x, y)
+            val skillPaint = textPaint(cWhite, 11.5f, Typeface.DEFAULT)
+            val allSkills = data.coveredSkills + data.otherSkills
+            allSkills.forEach { skill ->
+                wrap(skill, skillPaint, right - x).forEach { line ->
+                    canvas.drawText(line, x, y, skillPaint)
+                    y += 16f
+                }
+            }
+            y = sidebarDivider(canvas, x, right, y + 10f)
         }
 
-        canvas.drawLine(left, y, rightEdge, y, rule)
-        y += 24f
-
-        // === 聯絡區（空欄不印，定案二有寫）===
-        val contactLine = listOfNotNull(
-            data.email.takeIf { it.isNotBlank() },
-            data.phone.takeIf { it.isNotBlank() },
-            data.linkedin.takeIf { it.isNotBlank() },
-            data.github.takeIf { it.isNotBlank() },
-            data.portfolio.takeIf { it.isNotBlank() },
-        ).joinToString("   ")
-        if (contactLine.isNotBlank()) {
-            canvas.drawText(contactLine, left, y, small)
-            y += 24f
-        }
-
-        // === 技能區：coveredSkills 排最前 ===
-        canvas.drawText("技能", left, y, h2)
-        y += 20f
-        if (data.coveredSkills.isNotEmpty()) {
-            canvas.drawText("依此職缺：${data.coveredSkills.joinToString("、")}", left, y, body)
-            y += 18f
-        }
-        if (data.otherSkills.isNotEmpty()) {
-            canvas.drawText(data.otherSkills.joinToString("、"), left, y, body)
-            y += 18f
-        }
+        // 語言
         if (data.languages.isNotEmpty()) {
-            val langLine = data.languages.joinToString("、") { "${it.first} ${it.second}" }
-            canvas.drawText(langLine, left, y, small)
-            y += 18f
-        }
-        y += 10f
-
-        // === 經歷區 ===
-        canvas.drawText("經歷", left, y, h2)
-        y += 20f
-        data.experienceItems.forEach { exp ->
-            canvas.drawText(exp.title, left, y, item)
-            canvas.drawText(exp.timeRange, rightEdge - meta.measureText(exp.timeRange), y, meta)
-            y += 16f
-            wrap(exp.text, body, rightEdge - left).forEach { line ->
-                canvas.drawText(line, left, y, body)
-                y += 15f
+            y = sidebarHeader(canvas, "語言", x, y)
+            val labelPaint = textPaint(cSidebarSub, 10.5f, Typeface.create("sans-serif-medium", Typeface.BOLD))
+            val valuePaint = textPaint(cWhite, 11.5f, Typeface.DEFAULT)
+            val grouped = data.languages.groupBy({ it.first }, { it.second })
+            grouped.forEach { (language, certs) ->
+                canvas.drawText(language, x, y, labelPaint)
+                y += 14f
+                wrap(certs.joinToString("、"), valuePaint, right - x).forEach { line ->
+                    canvas.drawText(line, x, y, valuePaint)
+                    y += 16f
+                }
+                y += 5f
             }
-            y += 10f
         }
     }
 
-    private fun paint(hex: String, size: Float, bold: Boolean = false) = Paint().apply {
-        color = Color.parseColor(hex)
+    /** 側欄用的區塊標題(白字、比內文大一點),回傳下一行內容該從的 y。*/
+    private fun sidebarHeader(canvas: Canvas, label: String, x: Float, y: Float): Float {
+        val paint = textPaint(cWhite, 15f, Typeface.create("sans-serif-medium", Typeface.BOLD))
+        canvas.drawText(label, x, y, paint)
+        return y + 22f
+    }
+
+    /** 側欄的白色分隔線,回傳下一個區塊該從的 y。*/
+    private fun sidebarDivider(canvas: Canvas, x: Float, right: Float, y: Float): Float {
+        canvas.drawLine(x, y, right, y, Paint().apply {
+            color = cSidebarLine; strokeWidth = 1f; isAntiAlias = true
+        })
+        return y + 22f
+    }
+
+    // ===================== 右側主欄 =====================
+
+    private fun drawMainColumn(canvas: Canvas, data: CustomResumeData) {
+        var y = 74f
+
+        // 摘要
+        if (data.bio.isNotBlank()) {
+            y = mainHeader(canvas, "摘要", y)
+            val bioPaint = textPaint(cBody, 12.5f, Typeface.DEFAULT)
+            wrap(data.bio, bioPaint, RIGHT - CONTENT_X).forEach { line ->
+                canvas.drawText(line, CONTENT_X, y, bioPaint)
+                y += 17.5f
+            }
+            y = mainDivider(canvas, y + 8f)
+        }
+
+        // 學歷
+        if (data.schoolLine.isNotBlank()) {
+            y = mainHeader(canvas, "學歷", y)
+            val paint = textPaint(cBody, 12f, Typeface.DEFAULT)
+            wrap(data.schoolLine, paint, RIGHT - CONTENT_X).forEach { line ->
+                canvas.drawText(line, CONTENT_X, y, paint)
+                y += 17f
+            }
+            y = mainDivider(canvas, y + 6f)
+        }
+
+        // 經歷
+        if (data.experienceItems.isNotEmpty()) {
+            y = mainHeader(canvas, "經歷", y)
+            val dateColW = 76f
+            val dateContentGap = 24f
+            val itemContentX = CONTENT_X + dateColW + dateContentGap
+            val datePaint = textPaint(cMuted, 11f, Typeface.DEFAULT)
+            val titlePaint = textPaint(cInk, 13.5f, Typeface.create("sans-serif-medium", Typeface.BOLD))
+            val bodyPaint = textPaint(cBody, 12f, Typeface.DEFAULT)
+
+            data.experienceItems.forEachIndexed { idx, exp ->
+                val blockStartY = y
+                canvas.drawText(exp.timeRange, CONTENT_X, blockStartY, datePaint)
+
+                var cy = blockStartY
+                canvas.drawText(exp.title, itemContentX, cy, titlePaint)
+                cy += 18.5f
+                wrap(exp.text, bodyPaint, RIGHT - itemContentX).forEach { line ->
+                    canvas.drawText(line, itemContentX, cy, bodyPaint)
+                    cy += 16.5f
+                }
+
+                y = cy
+                if (idx != data.experienceItems.lastIndex) y += 16f
+            }
+        }
+    }
+
+    /** 主欄區塊標題:橘色粗體,回傳下一行內容該從的 y。*/
+    private fun mainHeader(canvas: Canvas, label: String, y: Float): Float {
+        val paint = textPaint(cAccent, 15f, Typeface.create("sans-serif-medium", Typeface.BOLD))
+        canvas.drawText(label, CONTENT_X, y, paint)
+        return y + 22f
+    }
+
+    private fun mainDivider(canvas: Canvas, y: Float): Float {
+        canvas.drawLine(CONTENT_X, y, RIGHT, y, Paint().apply {
+            color = cHairline; strokeWidth = 1f; isAntiAlias = true
+        })
+        return y + 22f
+    }
+
+    // ===== 小工具函式 =====
+
+    private fun textPaint(colorInt: Int, size: Float, typeface: Typeface) = Paint().apply {
+        color = colorInt
         textSize = size
-        isFakeBoldText = bold
+        this.typeface = typeface
         isAntiAlias = true
     }
 
@@ -141,23 +242,25 @@ object DeviceCustomResumePdfGenerator : CustomResumePdfGenerator {
         if (cur.isNotEmpty()) lines.add(cur.toString())
         return lines
     }
-}
 
-/**
- * 把 PDF 檔案的第一頁渲染成一張 Bitmap，給預覽對話框顯示用。
- * *2 是為了在手機螢幕上看起來夠清楚（PDF 原始尺寸是 72dpi，偏小偏糊）。
- */
-fun renderFirstPageAsBitmap(file: File): Bitmap {
-    ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { pfd ->
-        PdfRenderer(pfd).use { renderer ->
-            val page = renderer.openPage(0)
-            val bitmap = Bitmap.createBitmap(
-                page.width * 2, page.height * 2, Bitmap.Config.ARGB_8888
-            )
-            bitmap.eraseColor(android.graphics.Color.WHITE)
-            page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-            page.close()
-            return bitmap
+    /** 把網址簡化成只顯示最後一段,通用處理任何網址格式。*/
+    private fun shortenUrl(raw: String): String {
+        val noProtocol = raw.trim().removePrefix("https://").removePrefix("http://")
+        val noTrailingSlash = noProtocol.trimEnd('/')
+        return noTrailingSlash.substringAfterLast('/')
+    }
+
+    /** 把 PDF 第一頁渲染成 Bitmap,給預覽對話框顯示用。*/
+    fun renderFirstPageAsBitmap(file: File): Bitmap {
+        ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { pfd ->
+            PdfRenderer(pfd).use { renderer ->
+                val page = renderer.openPage(0)
+                val bitmap = Bitmap.createBitmap(page.width * 2, page.height * 2, Bitmap.Config.ARGB_8888)
+                bitmap.eraseColor(Color.WHITE)
+                page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                page.close()
+                return bitmap
+            }
         }
     }
 }
