@@ -34,6 +34,10 @@ import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
 import androidx.compose.runtime.LaunchedEffect
 import com.careersandbox.app.data.local.UserStore
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
 @Composable
 fun ProfileScreen(navController: NavHostController) {
@@ -126,6 +130,12 @@ private fun HeroSection(userName: String, school: String, dept: String, year: St
 
 @Composable
 private fun StatsSection() {
+    var experienceCount by remember { mutableStateOf<Int?>(null) }
+    LaunchedEffect(Unit) {
+        experienceCount = com.careersandbox.app.data.repository.RemoteExperienceRepository()
+            .list().getOrNull()?.size
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -134,7 +144,7 @@ private fun StatsSection() {
     ) {
         StatBlock(value = "4", label = "完成面試")
         VerticalDivider()
-        StatBlock(value = "${MockData.experiences.size}", label = "經驗筆數")
+        StatBlock(value = experienceCount?.toString() ?: "—", label = "經歷筆數")
         VerticalDivider()
         StatBlock(value = "${MockData.jobApplications.size}", label = "履歷數")
     }

@@ -53,7 +53,6 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import com.careersandbox.app.data.pdf.DeviceCustomResumePdfGenerator
 import com.careersandbox.app.data.pdf.buildCustomResumeDataFromCustomization
-import com.careersandbox.app.data.pdf.renderFirstPageAsBitmap
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.shape.CircleShape
@@ -405,6 +404,22 @@ private fun AnalyzingPhase(onDone: () -> Unit, contentPadding: PaddingValues) {
 // ========== 階段 3:結果 ==========
 @Composable
 private fun ResultPhase(onBack: () -> Unit, onExport: () -> Unit, onViewVersions: () -> Unit, contentPadding: PaddingValues) {
+    var experiences by remember { mutableStateOf<List<com.careersandbox.app.data.model.Experience>?>(null) }
+    LaunchedEffect(Unit) {
+        experiences = com.careersandbox.app.data.repository.RemoteExperienceRepository().list().getOrNull() ?: emptyList()
+    }
+    val exp = experiences
+
+    if (exp == null) {
+        Box(
+            modifier = Modifier.padding(contentPadding).fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            CircularProgressIndicator(color = BrandDeepOrange)
+        }
+        return
+    }
+
     Column(
         modifier = Modifier
             .padding(contentPadding)
@@ -414,13 +429,13 @@ private fun ResultPhase(onBack: () -> Unit, onExport: () -> Unit, onViewVersions
     ) {
         Spacer(Modifier.height(8.dp))
 
-        val customized = remember { MockJdCustomizer.customize(MockData.experiences) }
-        val highlights = remember {
+        val customized = remember(exp) { MockJdCustomizer.customize(exp) }
+        val highlights = remember(exp) {
             customized.filter { it.highlighted }.map { it.text to it.matchedKeywords }
         }
-        val covered = remember { MockJdCustomizer.coveredKeywords(MockData.experiences) }
+        val covered = remember(exp) { MockJdCustomizer.coveredKeywords(exp) }
         val totalKw = MockJdCustomizer.jdKeywords.size
-        val matchScore = remember { if (totalKw == 0) 0 else covered.size * 100 / totalKw }
+        val matchScore = remember(exp) { if (totalKw == 0) 0 else covered.size * 100 / totalKw }
         var showPreview by remember { mutableStateOf(false) }
         var showSaveSheet by remember { mutableStateOf(false) }
         var savedTo by remember { mutableStateOf<String?>(null) }
@@ -582,12 +597,12 @@ private fun ResultPhase(onBack: () -> Unit, onExport: () -> Unit, onViewVersions
             var previewError by remember { mutableStateOf(false) }
 
             LaunchedEffect(Unit) {
-                val data = buildCustomResumeDataFromCustomization(customized, dimmedItems.toSet())
+                val data = buildCustomResumeDataFromCustomization(customized, dimmedItems.toSet(), exp)
                 if (data == null) {
                     previewError = true
                 } else {
                     val file = DeviceCustomResumePdfGenerator.generate(ctx, "preview_temp", data)
-                    previewBitmap = renderFirstPageAsBitmap(file)
+                    previewBitmap = DeviceCustomResumePdfGenerator.renderFirstPageAsBitmap(file)
                 }
             }
 

@@ -4,6 +4,7 @@ import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.data.local.UserStore
 import com.careersandbox.app.data.mock.CustomizedItem
 import com.careersandbox.app.data.mock.MockJdCustomizer
+import com.careersandbox.app.data.repository.RemoteExperienceRepository
 
 /**
  * 客製化履歷 PDF 專用的資料結構（定案二素材清單，交接文件三）。
@@ -33,15 +34,16 @@ data class CustomResumeItem(
 )
 
 /**
- * 用真實登入使用者資料（UserStore.me，來自 /users/me）+ 實際客製化結果組資料。
- * user 為 null 時代表 UserStore 還沒載入，呼叫端要自行處理（例如先 UserStore.refresh()）。
+ * 用真實登入使用者資料(UserStore.me)+ 真實經歷(RemoteExperienceRepository)+ 實際客製化結果組資料。
+ * 回傳 null 代表使用者資料或經歷資料任一項拿不到,呼叫端要自行處理。
  */
-fun buildCustomResumeDataFromCustomization(
+suspend fun buildCustomResumeDataFromCustomization(
     customized: List<CustomizedItem>,
     includedTexts: Set<String>,
+    experiences: List<com.careersandbox.app.data.model.Experience>,
 ): CustomResumeData? {
     val user = UserStore.me ?: return null
-    val coveredSkills = MockJdCustomizer.coveredKeywords(MockData.experiences)
+    val coveredSkills = MockJdCustomizer.coveredKeywords(experiences)
     return CustomResumeData(
         name = user.name,
         schoolLine = "${user.school} · ${user.department} · ${user.year}",
@@ -55,7 +57,7 @@ fun buildCustomResumeDataFromCustomization(
         coveredSkills = coveredSkills,
         otherSkills = user.skillsHave.filterNot { it in coveredSkills },
         languages = user.languages.map { it.language to it.level },
-        experienceItems = MockData.experiences.mapIndexedNotNull { i, exp ->
+        experienceItems = experiences.mapIndexedNotNull { i, exp ->
             val item = customized.getOrNull(i) ?: return@mapIndexedNotNull null
             if (item.highlighted || item.text in includedTexts) {
                 CustomResumeItem(title = exp.title, timeRange = exp.timeRange, text = item.text)
@@ -65,15 +67,15 @@ fun buildCustomResumeDataFromCustomization(
 }
 
 /**
- * 匯出流程專用：用真實使用者資料 + 預設客製化結果（全部收錄）組資料。
- * ⚠️ 經歷列表（title/timeRange/text）目前仍讀 MockData.experiences，尚未換成 RemoteExperienceRepository，
- * 屬已知待辦——經歷的欄位結構（ExperienceResponse）跟客製化比對邏輯需要另外處理，先不在這次範圍內。
+ * 匯出流程專用:抓真實經歷 + 用真實使用者資料 + 預設客製化結果(全部收錄)組資料。
+ * 經歷資料抓取失敗時回傳 null。
  */
-fun buildCustomResumeDataForExport(): CustomResumeData? {
-    val customized = MockJdCustomizer.customize(MockData.experiences)
+suspend fun buildCustomResumeDataForExport(): CustomResumeData? {
+    val experiences = RemoteExperienceRepository().list().getOrNull() ?: return null
+    val customized = MockJdCustomizer.customize(experiences)
     return buildCustomResumeDataFromCustomization(
         customized = customized,
         includedTexts = customized.map { it.text }.toSet(),
+        experiences = experiences,
     )
 }
-
