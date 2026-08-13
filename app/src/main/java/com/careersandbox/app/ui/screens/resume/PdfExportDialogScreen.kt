@@ -41,7 +41,9 @@ fun PdfExportDialogScreen(
     navController: NavHostController,
     versionId: String,
 ) {
-    var phase by remember { mutableStateOf(ExportPhase.SELECT_TEMPLATE) }
+    var phase by remember {
+        mutableStateOf(if (versionId == "master") ExportPhase.EXPORTING else ExportPhase.SELECT_TEMPLATE)
+    }
     var selectedTemplate by remember { mutableIntStateOf(0) }
 
     Scaffold(
@@ -297,7 +299,9 @@ private fun ExportingPhase(onDone: () -> Unit, contentPadding: PaddingValues) {
 
 @Composable
 private fun DonePhase(onClose: () -> Unit, contentPadding: PaddingValues, versionId: String) {
-    var fileName by remember { mutableStateOf("履歷_AlexLin_2026") }
+    var fileName by remember {
+        mutableStateOf(if (versionId == "master") "母版履歷_AlexLin_2026" else "履歷_AlexLin_2026")
+    }
     Column(
         modifier = Modifier
             .padding(contentPadding)
@@ -362,12 +366,18 @@ private fun DonePhase(onClose: () -> Unit, contentPadding: PaddingValues, versio
                     .pressScale {
                         scope.launch {
                             try {
-                                val file = if (versionId == "custom") {
-                                    val data = com.careersandbox.app.data.pdf.buildCustomResumeDataForExport()
-                                        ?: throw IllegalStateException("找不到使用者資料，請先確認已登入")
-                                    com.careersandbox.app.data.pdf.DeviceCustomResumePdfGenerator.generate(ctx, fileName, data)
-                                } else {
-                                    com.careersandbox.app.data.pdf.DeviceResumePdfGenerator.generate(ctx, fileName)
+                                val file = when (versionId) {
+                                    "custom" -> {
+                                        val data = com.careersandbox.app.data.pdf.buildCustomResumeDataForExport()
+                                            ?: throw IllegalStateException("找不到使用者資料，請先確認已登入")
+                                        com.careersandbox.app.data.pdf.DeviceCustomResumePdfGenerator.generate(ctx, fileName, data)
+                                    }
+                                    "master" -> {
+                                        val data = com.careersandbox.app.data.pdf.buildCustomResumeDataForMasterExport()
+                                            ?: throw IllegalStateException("找不到使用者資料，請先確認已登入")
+                                        com.careersandbox.app.data.pdf.DeviceCustomResumePdfGenerator.generate(ctx, fileName, data)
+                                    }
+                                    else -> com.careersandbox.app.data.pdf.DeviceResumePdfGenerator.generate(ctx, fileName)
                                 }
                                 val uri = androidx.core.content.FileProvider.getUriForFile(
                                     ctx, "${ctx.packageName}.fileprovider", file

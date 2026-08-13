@@ -79,3 +79,30 @@ suspend fun buildCustomResumeDataForExport(): CustomResumeData? {
         experiences = experiences,
     )
 }
+
+/**
+ * 母版履歷專用:直接抓真實使用者資料 + 真實經歷(原文,不經過客製化改寫)。
+ * 沒有「此職缺看重」的概念,所有技能都放 otherSkills,不分 coveredSkills。
+ * 回傳 null 代表使用者資料或經歷資料任一項拿不到。
+ */
+suspend fun buildCustomResumeDataForMasterExport(): CustomResumeData? {
+    val user = UserStore.me ?: UserStore.refresh().let { UserStore.me } ?: return null
+    val experiences = RemoteExperienceRepository().list().getOrNull() ?: return null
+    return CustomResumeData(
+        name = user.name,
+        schoolLine = "${user.school} · ${user.department} · ${user.year}",
+        bio = user.bio,
+        keywords = user.interests,
+        email = user.email,
+        phone = user.phone,
+        linkedin = user.linkedin,
+        github = user.github,
+        portfolio = user.portfolio,
+        coveredSkills = emptyList(),
+        otherSkills = user.skillsHave,
+        languages = user.languages.map { it.language to it.level },
+        experienceItems = experiences.map { exp ->
+            CustomResumeItem(title = exp.title, timeRange = exp.timeRange, text = exp.description)
+        },
+    )
+}

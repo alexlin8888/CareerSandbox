@@ -45,6 +45,10 @@ import com.careersandbox.app.ui.components.StaggeredAppear
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 import kotlinx.coroutines.launch
+import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.ui.graphics.asImageBitmap
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
@@ -84,13 +88,18 @@ fun ResumeProfileScreen(navController: NavHostController) {
         }
         ctxScreen.startActivity(android.content.Intent.createChooser(intent, "分享這個版本"))
     }
+    var showMasterPreview by remember { mutableStateOf(false) }
+    var masterPreviewBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+    var masterPreviewError by remember { mutableStateOf(false) }
 
     // 「關於我」可編輯(儲存時 PATCH 後端)
     var bioText by remember { mutableStateOf(user.bio) }
     var editingBio by remember { mutableStateOf(false) }
-    // 「技能」可編輯(已有的技能,可增刪)
+    // 技能編輯
     val skillsHave = remember { mutableStateListOf(*user.skillsHave.toTypedArray()) }
     var editingSkills by remember { mutableStateOf(false) }
+    val skillsWant = remember { mutableStateListOf(*user.skillsWant.toTypedArray()) }
+    var editingWantSkills by remember { mutableStateOf(false) }
     // 「語言」可編輯(語言 + 程度,可增刪)
     val languages = remember {
         mutableStateListOf(*user.languages.map { LanguageProficiency(it.language, it.level) }.toTypedArray())
@@ -122,8 +131,8 @@ fun ResumeProfileScreen(navController: NavHostController) {
                     }
                 },
                 actions = {
-                    IconButton(onClick = onShare) {
-                        Icon(Icons.Outlined.Share, contentDescription = "分享這個版本", tint = InkBlack)
+                    IconButton(onClick = { navController.navigate(Routes.pdfExportDialog("master")) }) {
+                        Icon(Icons.Outlined.Download, contentDescription = "下載履歷", tint = InkBlack)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = PaperWhite),
@@ -183,14 +192,18 @@ fun ResumeProfileScreen(navController: NavHostController) {
                                 .height(52.dp)
                                 .clip(RoundedCornerShape(14.dp))
                                 .background(BrandPeach)
-                                .pressScale(onClick = onShare),
+                                .pressScale {
+                                    masterPreviewBitmap = null
+                                    masterPreviewError = false
+                                    showMasterPreview = true
+                                },
                             contentAlignment = Alignment.Center,
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Outlined.Share, contentDescription = null,
+                                Icon(Icons.Outlined.Visibility, contentDescription = null,
                                     tint = BrandDeepOrange, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(8.dp))
-                                Text("分享這個版本",
+                                Text("預覽這個版本",
                                     color = BrandDeepOrange,
                                     fontWeight = FontWeight.Bold,
                                     style = MaterialTheme.typography.titleSmall)
@@ -408,14 +421,26 @@ fun ResumeProfileScreen(navController: NavHostController) {
                     color = InkGray500,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 1.sp)
+                    letterSpacing = 1.sp,
+                    modifier = Modifier.weight(1f))
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .pressScale { editingWantSkills = true }
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Outlined.Edit, contentDescription = "編輯", tint = BrandDeepOrange, modifier = Modifier.size(13.dp))
+                    Spacer(Modifier.width(3.dp))
+                    Text("編輯", color = BrandDeepOrange, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                }
             }
             Spacer(Modifier.height(8.dp))
             androidx.compose.foundation.layout.FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                user.skillsWant.forEach { skill ->
+                skillsWant.forEach { skill ->
                     Box(
                         modifier = Modifier
                             .clip(CircleShape)
@@ -428,6 +453,73 @@ fun ResumeProfileScreen(navController: NavHostController) {
                             fontWeight = FontWeight.SemiBold)
                     }
                 }
+            }
+
+            // 「學習中技能」編輯對話框(關閉時整批 PATCH)
+            if (editingWantSkills) {
+                var newWantSkill by remember { mutableStateOf("") }
+                val finishWantSkills = {
+                    editingWantSkills = false
+                    syncProfile(UpdateProfileRequest(skillsWant = skillsWant.toList()))
+                }
+                AlertDialog(
+                    onDismissRequest = { finishWantSkills() },
+                    title = { Text("編輯學習中技能", fontWeight = FontWeight.Black) },
+                    text = {
+                        Column {
+                            Text("點 × 移除，或在下方新增", color = InkGray500, fontSize = 13.sp)
+                            Spacer(Modifier.height(12.dp))
+                            androidx.compose.foundation.layout.FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                skillsWant.forEach { skill ->
+                                    Row(
+                                        modifier = Modifier.clip(CircleShape).background(GlowPurple.copy(alpha = 0.12f))
+                                            .padding(start = 12.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Text(skill, color = GlowPurple, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                        Spacer(Modifier.width(4.dp))
+                                        Box(
+                                            modifier = Modifier.size(18.dp).clip(CircleShape).background(GlowPurple.copy(alpha = 0.2f))
+                                                .pressScale { skillsWant.remove(skill) },
+                                            contentAlignment = Alignment.Center,
+                                        ) { Text("×", color = GlowPurple, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+                                    }
+                                }
+                            }
+                            Spacer(Modifier.height(14.dp))
+                            OutlinedTextField(
+                                value = newWantSkill, onValueChange = { newWantSkill = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                placeholder = { Text("新增一項想學的技能") },
+                                shape = RoundedCornerShape(12.dp),
+                                singleLine = true,
+                                trailingIcon = {
+                                    if (newWantSkill.isNotBlank()) {
+                                        Box(
+                                            modifier = Modifier.padding(end = 6.dp).clip(RoundedCornerShape(8.dp)).background(GlowPurple)
+                                                .pressScale {
+                                                    if (newWantSkill.isNotBlank() && newWantSkill !in skillsWant) {
+                                                        skillsWant.add(newWantSkill.trim()); newWantSkill = ""
+                                                    }
+                                                }
+                                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                                        ) { Text("加入", color = PaperWhite, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+                                    }
+                                },
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        Box(
+                            modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(GlowPurple)
+                                .pressScale { finishWantSkills() }
+                                .padding(horizontal = 20.dp, vertical = 10.dp),
+                        ) { Text("完成", color = PaperWhite, fontWeight = FontWeight.Bold) }
+                    },
+                )
             }
 
             // === 語言 ===
@@ -468,6 +560,62 @@ fun ResumeProfileScreen(navController: NavHostController) {
             if (portfolioUrl.isNotEmpty()) LinkRow("作品集", portfolioUrl)
 
             Spacer(Modifier.height(40.dp))
+        }
+    }
+    if (showMasterPreview) {
+        LaunchedEffect(Unit) {
+            val data = com.careersandbox.app.data.pdf.buildCustomResumeDataForMasterExport()
+            if (data == null) {
+                masterPreviewError = true
+            } else {
+                val file = com.careersandbox.app.data.pdf.DeviceCustomResumePdfGenerator.generate(
+                    ctxScreen, "preview_temp", data
+                )
+                masterPreviewBitmap = com.careersandbox.app.data.pdf.DeviceCustomResumePdfGenerator
+                    .renderFirstPageAsBitmap(file)
+            }
+        }
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showMasterPreview = false },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(InkBlack.copy(alpha = 0.92f)),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(20.dp)
+                        .clip(CircleShape)
+                        .background(PaperWhite.copy(alpha = 0.15f))
+                        .pressScale { showMasterPreview = false }
+                        .padding(10.dp),
+                ) {
+                    Icon(Icons.Outlined.Close, contentDescription = "關閉", tint = PaperWhite, modifier = Modifier.size(22.dp))
+                }
+                when {
+                    masterPreviewError -> Text(
+                        "找不到你的個人資料，請稍後再試",
+                        color = PaperWhite,
+                        modifier = Modifier.align(Alignment.Center).padding(horizontal = 32.dp),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    )
+                    masterPreviewBitmap == null -> CircularProgressIndicator(
+                        color = PaperWhite,
+                        modifier = Modifier.align(Alignment.Center),
+                    )
+                    else -> androidx.compose.foundation.Image(
+                        bitmap = masterPreviewBitmap!!.asImageBitmap(),
+                        contentDescription = "母版履歷預覽",
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .fillMaxWidth(0.94f)
+                            .verticalScroll(rememberScrollState()),
+                    )
+                }
+            }
         }
     }
 
