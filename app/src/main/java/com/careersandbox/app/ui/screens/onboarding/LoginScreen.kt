@@ -49,6 +49,7 @@ import androidx.compose.ui.graphics.Color
 fun LoginScreen(
     onLogin: () -> Unit,
     onSignup: () -> Unit,
+    onForgotPassword: () -> Unit,
 ) {
     val loginViewModel: LoginViewModel = viewModel { LoginViewModel() }
     val loginState = loginViewModel.uiState
@@ -168,11 +169,13 @@ fun LoginScreen(
                         )
                     }
                     Text(
-                        "忘記密碼?",
+                        "忘記密碼？",
                         color = BrandDeepOrange,
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp,
-                        modifier = Modifier.align(Alignment.End),
+                        modifier = Modifier
+                            .align(Alignment.End)
+                            .pressScale { onForgotPassword() },
                     )
 
                     Spacer(Modifier.height(22.dp))

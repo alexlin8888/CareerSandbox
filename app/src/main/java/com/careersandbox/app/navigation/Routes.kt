@@ -5,6 +5,7 @@ object Routes {
     const val LOGIN = "login"
     const val ONBOARDING = "onboarding"
 
+    const val FORGOT_PASSWORD = "forgot_password"
     const val HOME = "home"
     const val RESUME_HUB = "resume_hub"
     const val RESUME_HIERARCHY = "resume_hierarchy"
