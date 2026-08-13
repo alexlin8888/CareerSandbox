@@ -23,7 +23,7 @@ fun ForgotPasswordScreen(navController: NavHostController) {
         topBar = {
             TopAppBar(
                 title = { Text("重設密碼", fontWeight = FontWeight.Bold, color = InkBlack) },
-                navigationIcon = {
+                actions = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Outlined.Close, contentDescription = null, tint = InkBlack)
                     }
