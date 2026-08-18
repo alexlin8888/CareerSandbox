@@ -48,6 +48,8 @@ fun rememberInPageVoice(
     val context = LocalContext.current
     var listening by remember { mutableStateOf(false) }
     var partial by remember { mutableStateOf("") }
+    var accumulated by remember { mutableStateOf("") }
+    var manualStopRequested by remember { mutableStateOf(false) }
     var hasPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
@@ -65,6 +67,15 @@ fun rememberInPageVoice(
     }
     DisposableEffect(Unit) { onDispose { recognizer?.destroy() } }
 
+    fun finalizeAndReset() {
+        listening = false
+        partial = ""
+        manualStopRequested = false
+        val finalText = accumulated
+        accumulated = ""
+        if (finalText.isNotBlank()) onResult(finalText)
+    }
+
     fun reallyStart() {
         val r = recognizer ?: return
         r.setRecognitionListener(object : RecognitionListener {
@@ -73,16 +84,20 @@ fun rememberInPageVoice(
             override fun onRmsChanged(rmsdB: Float) {}
             override fun onBufferReceived(buffer: ByteArray?) {}
             override fun onEndOfSpeech() { listening = false }
-            override fun onError(error: Int) { listening = false; partial = "" }
+            override fun onError(error: Int) { finalizeAndReset() }
             override fun onPartialResults(partialResults: Bundle?) {
                 val t = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
-                if (!t.isNullOrBlank()) partial = t
+                if (!t.isNullOrBlank()) partial = (accumulated + " " + t).trim()
             }
             override fun onResults(results: Bundle?) {
                 val t = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
-                listening = false
-                partial = ""
-                if (!t.isNullOrBlank()) onResult(t)
+                if (!t.isNullOrBlank()) accumulated = (accumulated + " " + t).trim()
+                if (manualStopRequested) {
+                    finalizeAndReset()
+                } else {
+                    // 系統只是內部批次切斷,不是使用者講完,自動接續聽下一段
+                    reallyStart()
+                }
             }
             override fun onEvent(eventType: Int, params: Bundle?) {}
         })
@@ -107,6 +122,8 @@ fun rememberInPageVoice(
         override val available: Boolean get() = recognizer != null
         override fun start() {
             if (listening) return
+            accumulated = ""
+            manualStopRequested = false
             if (hasPermission) {
                 reallyStart()
             } else {
@@ -114,6 +131,9 @@ fun rememberInPageVoice(
                 permLauncher.launch(Manifest.permission.RECORD_AUDIO)
             }
         }
-        override fun stop() { recognizer?.stopListening(); listening = false }
+        override fun stop() {
+            manualStopRequested = true
+            recognizer?.stopListening()
+        }
     }
 }
