@@ -42,6 +42,7 @@ import com.careersandbox.app.ui.components.rememberInPageVoice
 import com.careersandbox.app.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.material.icons.filled.Stop
 
 /* =====================================================================
    1 對 1 面試(場景式,真流程)
@@ -350,11 +351,22 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
                             Box(
                                 Modifier.size(60.dp).clip(CircleShape)
                                     .background(if (voice.isListening) BrandDeepOrange else if (answer.isBlank()) BrandOrange else Color(0x33FFFFFF))
-                                    .clickable { if (answer.isBlank() && !voice.isListening) voice.start() },
+                                    .clickable {
+                                        if (voice.isListening) {
+                                            voice.stop()
+                                        } else if (answer.isBlank()) {
+                                            voice.start()
+                                        }
+                                    },
                                 contentAlignment = Alignment.Center,
-                            ) { Icon(Icons.Filled.Mic, contentDescription = t("語音作答", "Speak"), tint = Color.White, modifier = Modifier.size(26.dp)) }
+                            ) { Icon(if (voice.isListening) Icons.Filled.Stop else Icons.Filled.Mic, contentDescription = null, tint = Color.White, modifier = Modifier.size(26.dp)) }
                             Spacer(Modifier.height(6.dp))
-                            Text(if (voice.isListening) (t("聆聽中… ", "Listening… ") + voice.partialText) else if (answer.isBlank()) t("點一下用說的", "Tap to speak") else t("思考中…", "Thinking…"), color = Color(0x99FFFFFF), fontSize = 11.sp)
+                            Text(
+                                if (voice.isListening) t("點一下結束", "Tap to finish")
+                                else if (answer.isBlank()) t("輕點開始說話", "Tap to speak")
+                                else t("思考中…", "Thinking…"),
+                                color = Color(0x99FFFFFF), fontSize = 11.sp,
+                            )
                         }
                     }
                 }
