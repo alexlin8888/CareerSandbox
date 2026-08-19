@@ -35,7 +35,7 @@ import com.careersandbox.app.ui.theme.*
 private data class PeerPersona(val name: String, val trait: String, val drawable: Int)
 
 private val allPeers = listOf(
-    PeerPersona("AI-強勢", "搶話、主導節奏", R.drawable.peer_assertive),
+    PeerPersona("AI-強勢", "發言積極、主導節奏", R.drawable.peer_assertive),
     PeerPersona("AI-邏輯", "凡事要數據", R.drawable.peer_logical),
     PeerPersona("AI-親切", "會接住你的話", R.drawable.peer_friendly),
     PeerPersona("AI-沉默", "話少,但偶爾一針見血", R.drawable.peer_quiet),
@@ -45,7 +45,7 @@ private data class GroupRole(val title: String, val subtitle: String)
 
 private val roleOptions = listOf(
     GroupRole("一般應徵者", "預設模式,公平競爭"),
-    GroupRole("較資深應徵者", "其他人比你新鮮,你被預期帶話題"),
+    GroupRole("較資深應徵者", "其他人比你新鮮，你會被期待多分享經驗"),
     GroupRole("較資淺應徵者", "其他人比你資深,挑戰更大"),
 )
 
@@ -109,7 +109,7 @@ fun InterviewSetupGroupScreen(navController: NavHostController) {
             // 1. 目標職缺 — 從你的職缺帶入
             SectionLabelGroup("目標職缺")
             Spacer(Modifier.height(4.dp))
-            Text("AI 應徵者會跟你搶同一個位子",
+            Text("AI 應徵者會跟你一起參與討論",
                 color = InkGray400, fontSize = 12.sp)
             Spacer(Modifier.height(12.dp))
             jobs.forEach { job ->
@@ -241,7 +241,7 @@ fun InterviewSetupGroupScreen(navController: NavHostController) {
                 )
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("別急著搶話",
+                    Text("先聽再說",
                         color = BrandDeepOrange,
                         fontWeight = FontWeight.Black, fontSize = 15.sp)
                     Spacer(Modifier.height(2.dp))
@@ -361,7 +361,7 @@ private fun GroupRoomPreview(groupSize: Int) {
             fontWeight = FontWeight.Bold,
             letterSpacing = 2.sp)
         Spacer(Modifier.height(4.dp))
-        Text("這 ${peers.size} 位會跟你搶話",
+        Text("這 ${peers.size} 位會跟你一起應徵",
             color = PaperWhite,
             fontWeight = FontWeight.Black,
             fontSize = 18.sp)

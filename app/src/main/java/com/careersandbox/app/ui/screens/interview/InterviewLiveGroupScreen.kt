@@ -41,6 +41,7 @@ import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.components.rememberInPageVoice
 import com.careersandbox.app.ui.theme.*
+import androidx.compose.material.icons.outlined.Stop
 
 // 各角色河狸頭像(「你」維持色圈)
 private val ParticipantAvatars = mapOf(
@@ -133,7 +134,7 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
         if (target >= 0) listState.animateScrollToItem(target)
     }
 
-    // 你打到一半停下來,AI-強勢不會等你
+    // 你打字停頓超過 2.6 秒,AI-強勢會接著發言
     LaunchedEffect(input) {
         if (input.length >= 14 && !isTyping && interruptCount < com.careersandbox.app.data.mock.MockGroupDispatcher.interruptCap()) {
             delay(2600)
@@ -196,14 +197,32 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
         bottomBar = {
             Column {
                 if (voice.isListening) {
-                    Text(
-                        "聆聽中… " + voice.partialText,
-                        color = Color.White,
-                        fontSize = 12.sp,
-                        modifier = Modifier.fillMaxWidth().background(BrandDeepOrange).padding(horizontal = 16.dp, vertical = 8.dp),
-                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(BrandDeepOrange)
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                    ) {
+                        Text(
+                            "聆聽中（點麥克風結束）",
+                            color = Color.White.copy(alpha = 0.85f),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            voice.partialText.ifBlank { "…" },
+                            color = Color.White,
+                            fontSize = 15.sp,
+                            lineHeight = 20.sp,
+                        )
+                    }
                 }
-                GroupBottomBar(input, { input = it }, onVoice = { voice.start() }) {
+                GroupBottomBar(
+                    input, { input = it },
+                    onVoice = { if (voice.isListening) voice.stop() else voice.start() },
+                    isListening = voice.isListening,
+                ) {
                     if (input.isNotBlank() && !isTyping) {
                         val said = input
                         input = ""
@@ -219,14 +238,9 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
             // 觀察面板
             AnimatedVisibility(visible = showObservation) {
                 val userMsgs = messages.filter { it.isUser }
-                val citedCount = userMsgs.count { m ->
-                    listOf("剛剛", "同意", "補充", "你說", "接").any { m.content.contains(it) }
-                }
                 val avgLen = if (userMsgs.isEmpty()) 0 else userMsgs.sumOf { it.content.length } / userMsgs.size
                 ObservationPanel(
                     speakCount = userMsgs.size,
-                    interruptedCount = interruptCount,
-                    citedCount = citedCount,
                     avgLen = avgLen,
                     onClose = { showObservation = false },
                 )
@@ -315,8 +329,6 @@ private fun ParticipantsRow(currentSpeaker: String, panel: Boolean) {
 @Composable
 private fun ObservationPanel(
     speakCount: Int,
-    interruptedCount: Int,
-    citedCount: Int,
     avgLen: Int,
     onClose: () -> Unit,
 ) {
@@ -343,8 +355,6 @@ private fun ObservationPanel(
             }
             Spacer(Modifier.height(8.dp))
             ObservationRow("你的發言次數", "$speakCount 次")
-            ObservationRow("被打斷次數", "$interruptedCount 次")
-            ObservationRow("引用他人觀點", "$citedCount 次")
             ObservationRow("平均發言長度", "$avgLen 字")
         }
     }
@@ -425,27 +435,28 @@ private fun GroupMessageBubble(m: ChatMessage) {
 }
 
 @Composable
-private fun GroupBottomBar(input: String, onChange: (String) -> Unit, onVoice: () -> Unit, onSend: () -> Unit) {
+private fun GroupBottomBar(
+    input: String,
+    onChange: (String) -> Unit,
+    onVoice: () -> Unit,
+    isListening: Boolean,
+    onSend: () -> Unit,
+) {
     Column(Modifier.fillMaxWidth().background(PaperOff).padding(12.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ActionButton("搶答", Icons.Outlined.Mic, Modifier.weight(1f)) {
-                onChange("我直接說結論:")
-            }
-            ActionButton("舉手補充", Icons.Outlined.PanTool, Modifier.weight(1f)) {
-                onChange("補充剛剛的觀點:")
-            }
-        }
-        Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(BrandPeach)
+                    .background(if (isListening) BrandDeepOrange else BrandPeach)
                     .pressScale { onVoice() },
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Outlined.Mic, contentDescription = null, tint = BrandDeepOrange)
+                Icon(
+                    if (isListening) Icons.Outlined.Stop else Icons.Outlined.Mic,
+                    contentDescription = null,
+                    tint = if (isListening) PaperWhite else BrandDeepOrange,
+                )
             }
             Spacer(Modifier.width(8.dp))
             OutlinedTextField(
