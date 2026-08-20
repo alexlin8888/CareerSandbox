@@ -102,12 +102,21 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
     LaunchedEffect(Unit) { while (true) { delay(1000); elapsedSec++ } }
     val timerText = "${(elapsedSec / 60).toString().padStart(2, '0')}:${(elapsedSec % 60).toString().padStart(2, '0')}"
     var interruptCount by remember { mutableIntStateOf(0) }
+    var lastVoiceResult by remember { mutableStateOf<com.careersandbox.app.ui.components.VoiceResult?>(null) }
     val currentSpeaker = if (isTyping) typingSpeaker
         else (messages.lastOrNull()?.speaker ?: if (panel) "用人主管" else "主考官")
 
     fun submitGroup(visible: String, analyzed: String) {
         if (isTyping) return
         com.careersandbox.app.data.mock.InterviewSession.recordGroupSay(visible)
+        com.careersandbox.app.data.mock.InterviewSession.recordGroupUtterance(
+            speaker = "你",
+            content = visible,
+            isUser = true,
+            segments = lastVoiceResult?.segments ?: emptyList(),
+            segmentStartsMs = lastVoiceResult?.segmentStartsMs ?: emptyList(),
+        )
+        lastVoiceResult = null
         messages.add(ChatMessage("u${messages.size}", "你", visible, isUser = true))
         val (rawWho, line) = com.careersandbox.app.data.mock.MockGroupDispatcher.dispatch(analyzed, followUpIdx)
         val who = if (panel && rawWho == "主考官") nextInterviewer() else rawWho
@@ -115,6 +124,7 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
         isTyping = true
         scope.launch {
             delay(1400)
+            com.careersandbox.app.data.mock.InterviewSession.recordGroupUtterance(who, line, isUser = false)
             messages.add(ChatMessage("g${messages.size}", who, line, isUser = false))
             followUpIdx++
             isTyping = false
@@ -127,7 +137,10 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
     }
 
     // 頁內語音(SpeechRecognizer,需 RECORD_AUDIO,不跳 Google 框):逐字稿餵 dispatch 做同儕路由
-    val voice = rememberInPageVoice(languageTag = "zh-TW") { transcript -> submitGroup(transcript, transcript) }
+    val voice = rememberInPageVoice(
+        languageTag = "zh-TW",
+        onDetailedResult = { result -> lastVoiceResult = result },
+    ) { transcript -> submitGroup(transcript, transcript) }
 
     LaunchedEffect(messages.size, isTyping) {
         val target = if (isTyping) messages.size else messages.size - 1
@@ -136,7 +149,7 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
 
     // 你打字停頓超過 2.6 秒,AI-強勢會接著發言
     LaunchedEffect(input) {
-        if (input.length >= 14 && !isTyping && interruptCount < com.careersandbox.app.data.mock.MockGroupDispatcher.interruptCap()) {
+        if (input.length >= 14 && !isTyping && com.careersandbox.app.data.mock.MockGroupDispatcher.interruptCap() > interruptCount) {
             delay(2600)
             if (!isTyping && input.length >= 14) {
                 val line = com.careersandbox.app.data.mock.MockGroupDispatcher.interruptLine(interruptCount)
@@ -144,6 +157,7 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
                 typingSpeaker = "AI-強勢"
                 isTyping = true
                 delay(700)
+                com.careersandbox.app.data.mock.InterviewSession.recordGroupUtterance("AI-強勢", line, isUser = false)
                 messages.add(ChatMessage("int${messages.size}", "AI-強勢", line, isUser = false))
                 isTyping = false
             }
