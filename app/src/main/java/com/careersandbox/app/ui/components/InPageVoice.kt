@@ -79,12 +79,18 @@ fun rememberInPageVoice(
     fun reallyStart() {
         val r = recognizer ?: return
         r.setRecognitionListener(object : RecognitionListener {
-            override fun onReadyForSpeech(params: Bundle?) { listening = true; partial = "" }
+            override fun onReadyForSpeech(params: Bundle?) { listening = true; partial = accumulated }
             override fun onBeginningOfSpeech() {}
             override fun onRmsChanged(rmsdB: Float) {}
             override fun onBufferReceived(buffer: ByteArray?) {}
             override fun onEndOfSpeech() { listening = false }
-            override fun onError(error: Int) { finalizeAndReset() }
+            override fun onError(error: Int) {
+                if (manualStopRequested || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) {
+                    finalizeAndReset()
+                } else {
+                    reallyStart()
+                }
+            }
             override fun onPartialResults(partialResults: Bundle?) {
                 val t = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
                 if (!t.isNullOrBlank()) partial = (accumulated + " " + t).trim()
