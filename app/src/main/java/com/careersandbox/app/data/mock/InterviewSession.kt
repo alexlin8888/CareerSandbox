@@ -10,14 +10,26 @@ package com.careersandbox.app.data.mock
 object InterviewSession {
     data class Turn(val question: String, val answer: String)
 
+    /** 團體面試完整逐字稿:依實際發生順序記錄每一句話跟說話者(使用者或 AI 隊友)。*/
+    data class GroupUtterance(
+        val speaker: String,
+        val content: String,
+        val isUser: Boolean,
+        val segments: List<String> = emptyList(),
+        val segmentStartsMs: List<Long> = emptyList(),
+    )
+
     val turns = mutableListOf<Turn>()
 
-    // 群面協作:記使用者在團體討論中的發言(報告協作維度用;之後接後端 Interview_Turns 帶 speaker/turn order)
+    @Deprecated("只存使用者發言,已不足以支援評分需求,改用 groupTranscript")
     val groupSays = mutableListOf<String>()
+
+    val groupTranscript = mutableListOf<GroupUtterance>()
 
     fun reset() {
         turns.clear()
         groupSays.clear()
+        groupTranscript.clear()
     }
 
     fun record(question: String, answer: String) {
@@ -28,5 +40,17 @@ object InterviewSession {
     fun recordGroupSay(text: String) {
         if (text.isBlank()) return
         groupSays.add(text.trim())
+    }
+
+    /** 記錄團體面試裡任何一句發言(使用者或 AI),依呼叫順序即代表實際發生順序。*/
+    fun recordGroupUtterance(
+        speaker: String,
+        content: String,
+        isUser: Boolean,
+        segments: List<String> = emptyList(),
+        segmentStartsMs: List<Long> = emptyList(),
+    ) {
+        if (content.isBlank()) return
+        groupTranscript.add(GroupUtterance(speaker.trim(), content.trim(), isUser, segments, segmentStartsMs))
     }
 }

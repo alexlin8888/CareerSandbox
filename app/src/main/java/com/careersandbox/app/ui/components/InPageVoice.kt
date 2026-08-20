@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
@@ -32,6 +33,13 @@ import androidx.core.content.ContextCompat
      // 顯示: voice.isListening(聆聽中) / voice.partialText(即時字幕)
    ===================================================================== */
 
+/** 一次語音輸入的完整結果:完整逐字稿 + 依重啟切出的分段 + 每段開始的時間戳記(毫秒)。*/
+data class VoiceResult(
+    val text: String,
+    val segments: List<String>,
+    val segmentStartsMs: List<Long>,
+)
+
 interface InPageVoice {
     val isListening: Boolean
     val partialText: String
@@ -43,6 +51,7 @@ interface InPageVoice {
 @Composable
 fun rememberInPageVoice(
     languageTag: String = "zh-TW",
+    onDetailedResult: ((VoiceResult) -> Unit)? = null,
     onResult: (String) -> Unit,
 ): InPageVoice {
     val context = LocalContext.current
@@ -50,6 +59,8 @@ fun rememberInPageVoice(
     var partial by remember { mutableStateOf("") }
     var accumulated by remember { mutableStateOf("") }
     var manualStopRequested by remember { mutableStateOf(false) }
+    val segments = remember { mutableStateListOf<String>() }
+    val segmentStartsMs = remember { mutableStateListOf<Long>() }
     var hasPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
@@ -72,14 +83,25 @@ fun rememberInPageVoice(
         partial = ""
         manualStopRequested = false
         val finalText = accumulated
+        val finalSegments = segments.toList()
+        val finalStarts = segmentStartsMs.toList()
         accumulated = ""
-        if (finalText.isNotBlank()) onResult(finalText)
+        segments.clear()
+        segmentStartsMs.clear()
+        if (finalText.isNotBlank()) {
+            onDetailedResult?.invoke(VoiceResult(finalText, finalSegments, finalStarts))
+            onResult(finalText)
+        }
     }
 
     fun reallyStart() {
         val r = recognizer ?: return
         r.setRecognitionListener(object : RecognitionListener {
-            override fun onReadyForSpeech(params: Bundle?) { listening = true; partial = accumulated }
+            override fun onReadyForSpeech(params: Bundle?) {
+                listening = true
+                partial = accumulated
+                segmentStartsMs.add(System.currentTimeMillis())
+            }
             override fun onBeginningOfSpeech() {}
             override fun onRmsChanged(rmsdB: Float) {}
             override fun onBufferReceived(buffer: ByteArray?) {}
@@ -97,11 +119,13 @@ fun rememberInPageVoice(
             }
             override fun onResults(results: Bundle?) {
                 val t = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
-                if (!t.isNullOrBlank()) accumulated = (accumulated + " " + t).trim()
+                if (!t.isNullOrBlank()) {
+                    accumulated = (accumulated + " " + t).trim()
+                    segments.add(t.trim())
+                }
                 if (manualStopRequested) {
                     finalizeAndReset()
                 } else {
-                    // 系統只是內部批次切斷,不是使用者講完,自動接續聽下一段
                     reallyStart()
                 }
             }
@@ -130,6 +154,8 @@ fun rememberInPageVoice(
             if (listening) return
             accumulated = ""
             manualStopRequested = false
+            segments.clear()
+            segmentStartsMs.clear()
             if (hasPermission) {
                 reallyStart()
             } else {
