@@ -59,14 +59,20 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.text.style.TextAlign
-
-private enum class JdPhase { INPUT, ANALYZING, RESULT }
+import androidx.compose.material.icons.outlined.WorkOutline
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.foundation.border
+private enum class JdPhase { SELECT_JOB, ANALYZING, RESULT }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun JdCustomizeScreen(navController: NavHostController) {
-    var phase by remember { mutableStateOf(JdPhase.INPUT) }
-    var jdText by remember { mutableStateOf("") }
+fun JdCustomizeScreen(navController: NavHostController, preselectedJobId: String? = null) {
+    var phase by remember {
+        mutableStateOf(if (preselectedJobId != null) JdPhase.ANALYZING else JdPhase.SELECT_JOB)
+    }
+    var selectedJob by remember {
+        mutableStateOf(MockData.jobApplications.find { it.id == preselectedJobId })
+    }
 
     Scaffold(
         containerColor = PaperWhite,
@@ -75,7 +81,7 @@ fun JdCustomizeScreen(navController: NavHostController) {
                 title = {
                     Text(
                         when (phase) {
-                            JdPhase.INPUT -> "貼上職缺 JD"
+                            JdPhase.SELECT_JOB -> "選擇職缺"
                             JdPhase.ANALYZING -> "AI 分析中"
                             JdPhase.RESULT -> "客製化結果"
                         },
@@ -92,10 +98,9 @@ fun JdCustomizeScreen(navController: NavHostController) {
         },
     ) { pad ->
         when (phase) {
-            JdPhase.INPUT -> InputPhase(
-                jdText = jdText,
-                onJdChange = { jdText = it },
-                onSubmit = { phase = JdPhase.ANALYZING },
+            JdPhase.SELECT_JOB -> SelectJobPhase(
+                onSelect = { job -> selectedJob = job; phase = JdPhase.ANALYZING },
+                onAddNewJob = { navController.navigate(Routes.NEW_JOB_APPLICATION) },
                 contentPadding = pad,
             )
             JdPhase.ANALYZING -> AnalyzingPhase(
@@ -103,23 +108,31 @@ fun JdCustomizeScreen(navController: NavHostController) {
                 contentPadding = pad,
             )
             JdPhase.RESULT -> ResultPhase(
-                onBack = { phase = JdPhase.INPUT },
+                job = selectedJob,
+                onBack = { phase = JdPhase.SELECT_JOB },
                 onExport = { navController.navigate(Routes.pdfExportDialog("custom")) },
-                onViewVersions = { navController.navigate(Routes.RESUME_HIERARCHY) },
+                onViewThisJob = {
+                    selectedJob?.let { job ->
+                        navController.navigate(Routes.jobApplicationDetail(job.id)) {
+                            popUpTo(Routes.RESUME_HUB)
+                        }
+                    }
+                },
                 contentPadding = pad,
             )
         }
     }
 }
 
-// ========== 階段 1:貼 JD ==========
+// ========== 階段 1: 選擇職缺 ==========
 @Composable
-private fun InputPhase(
-    jdText: String,
-    onJdChange: (String) -> Unit,
-    onSubmit: () -> Unit,
+private fun SelectJobPhase(
+    onSelect: (com.careersandbox.app.data.model.JobApplication) -> Unit,
+    onAddNewJob: () -> Unit,
     contentPadding: PaddingValues,
 ) {
+    val jobs = MockData.jobApplications
+
     Column(
         modifier = Modifier
             .padding(contentPadding)
@@ -129,7 +142,6 @@ private fun InputPhase(
     ) {
         Spacer(Modifier.height(8.dp))
 
-        // 簡介卡
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -143,14 +155,14 @@ private fun InputPhase(
                     tint = BrandDeepOrange,
                     modifier = Modifier.size(22.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("AI 變魔術",
+                Text("AI 職缺客製化",
                     color = BrandDeepOrange,
                     fontWeight = FontWeight.Black,
                     fontSize = 17.sp)
             }
             Spacer(Modifier.height(10.dp))
             Text(
-                "貼上你想應徵的職缺敘述,AI 會分析你的個人檔案跟這份 JD 的適配度,自動凸顯相關段落、隱藏無關內容,並給你 ATS 通過率評估。",
+                "挑一個你已經新增的職缺，AI 會依照這個職缺的 JD 內容，幫你調整履歷重點。",
                 color = InkGray700,
                 style = MaterialTheme.typography.bodyMedium,
                 lineHeight = 22.sp,
@@ -159,114 +171,69 @@ private fun InputPhase(
 
         Spacer(Modifier.height(24.dp))
 
-        Text("職缺敘述",
-            color = InkGray500,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Black,
-            letterSpacing = 3.sp)
-        Spacer(Modifier.height(10.dp))
-        OutlinedTextField(
-            value = jdText,
-            onValueChange = onJdChange,
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 280.dp),
-            shape = RoundedCornerShape(16.dp),
-            placeholder = {
-                Text(
-                    "貼上完整 JD 內容(職位描述 + 必要條件 + 加分條件)。\n\n例如:\n「我們正在尋找一位 Junior PM,需要熟悉資料分析、A/B 測試,並有獨立帶專案的經驗...」",
-                    color = InkGray400,
-                    style = MaterialTheme.typography.bodyMedium,
-                    lineHeight = 22.sp,
-                )
-            },
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = BrandOrange,
-                unfocusedBorderColor = InkGray200,
-            ),
-        )
-        if (jdText.isNotEmpty()) {
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "${jdText.length} 字元",
-                color = AccentGreen,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.align(Alignment.End),
-            )
-        }
-
-        Spacer(Modifier.height(28.dp))
-
-        // 範例提示
-        Text("試試貼上這個範例:",
-            color = InkGray500,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold)
-        Spacer(Modifier.height(8.dp))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(InkGray100)
-                .pressScale {
-                    onJdChange(
-                        "Junior Product Manager - 電商產品團隊\n\n" +
-                                "我們正在尋找一位充滿好奇心的 Junior PM,加入我們的電商產品團隊。\n\n" +
-                                "工作內容:\n" +
-                                "- 透過資料分析找出產品優化機會\n" +
-                                "- 規劃 A/B 測試,驗證產品假設\n" +
-                                "- 跨部門協作(設計、工程、行銷)\n" +
-                                "- 撰寫 PRD 與 user story\n\n" +
-                                "必要條件:\n" +
-                                "- 熟悉 SQL 與資料分析工具\n" +
-                                "- 有 A/B 測試、量化思考經驗\n" +
-                                "- 良好的溝通與跨部門協作能力\n" +
-                                "- 對使用者體驗有熱情\n\n" +
-                                "加分條件:\n" +
-                                "- 曾在零售、電商相關產業實習\n" +
-                                "- 熟悉 SaaS 產品邏輯\n" +
-                                "- 英文流利"
-                    )
+        if (jobs.isEmpty()) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Icon(Icons.Outlined.WorkOutline, contentDescription = null,
+                    tint = InkGray400, modifier = Modifier.size(48.dp))
+                Spacer(Modifier.height(12.dp))
+                Text("還沒有任何職缺", color = InkGray500, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(4.dp))
+                Text("先新增一個職缺，才能開始客製化履歷", color = InkGray400, fontSize = 13.sp)
+            }
+        } else {
+            Text("選擇職缺",
+                color = InkGray500,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 3.sp)
+            Spacer(Modifier.height(10.dp))
+            jobs.forEach { job ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(InkGray100)
+                        .pressScale { onSelect(job) }
+                        .padding(18.dp),
+                ) {
+                    Column {
+                        Text(job.position, color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Spacer(Modifier.height(2.dp))
+                        Text(job.company, color = InkGray500, fontSize = 13.sp)
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            job.jdSnippet,
+                            color = InkGray700,
+                            fontSize = 12.sp,
+                            lineHeight = 18.sp,
+                            maxLines = 2,
+                        )
+                    }
                 }
-                .padding(14.dp),
-        ) {
-            Text("Junior PM @ 電商產品團隊",
-                color = BrandDeepOrange,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(10.dp))
+            }
         }
 
-        Spacer(Modifier.height(36.dp))
+        Spacer(Modifier.height(16.dp))
 
-        // CTA
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(if (jdText.length >= 20) InkBlack else InkGray300)
-                .pressScale(enabled = jdText.length >= 20) { onSubmit() },
+                .height(52.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(PaperWhite)
+                .border(1.5.dp, BrandOrange, RoundedCornerShape(14.dp))
+                .pressScale { onAddNewJob() },
             contentAlignment = Alignment.Center,
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.AutoAwesome,
-                    contentDescription = null,
-                    tint = if (jdText.length >= 20) BrandAmber else InkGray500,
-                    modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("開始 AI 客製化",
-                    color = if (jdText.length >= 20) PaperWhite else InkGray500,
-                    fontWeight = FontWeight.Black,
-                    style = MaterialTheme.typography.titleMedium)
+                Icon(Icons.Outlined.Add, contentDescription = null, tint = BrandDeepOrange, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("新增職缺", color = BrandDeepOrange, fontWeight = FontWeight.Bold)
             }
-        }
-        if (jdText.length < 20) {
-            Spacer(Modifier.height(8.dp))
-            Text("至少貼 20 個字元才能開始",
-                color = InkGray500,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.align(Alignment.CenterHorizontally))
         }
 
         Spacer(Modifier.height(40.dp))
@@ -403,7 +370,13 @@ private fun AnalyzingPhase(onDone: () -> Unit, contentPadding: PaddingValues) {
 
 // ========== 階段 3:結果 ==========
 @Composable
-private fun ResultPhase(onBack: () -> Unit, onExport: () -> Unit, onViewVersions: () -> Unit, contentPadding: PaddingValues) {
+private fun ResultPhase(
+    job: com.careersandbox.app.data.model.JobApplication?,
+    onBack: () -> Unit,
+    onExport: () -> Unit,
+    onViewThisJob: () -> Unit,
+    contentPadding: PaddingValues,
+) {
     var experiences by remember { mutableStateOf<List<com.careersandbox.app.data.model.Experience>?>(null) }
     LaunchedEffect(Unit) {
         experiences = com.careersandbox.app.data.repository.RemoteExperienceRepository().list().getOrNull() ?: emptyList()
@@ -429,12 +402,13 @@ private fun ResultPhase(onBack: () -> Unit, onExport: () -> Unit, onViewVersions
     ) {
         Spacer(Modifier.height(8.dp))
 
-        val customized = remember(exp) { MockJdCustomizer.customize(exp) }
+        val jdKeywords = job?.jdKeywords ?: emptyList()
+        val customized = remember(exp, jdKeywords) { MockJdCustomizer.customize(exp, jdKeywords) }
         val highlights = remember(exp) {
             customized.filter { it.highlighted }.map { it.text to it.matchedKeywords }
         }
-        val covered = remember(exp) { MockJdCustomizer.coveredKeywords(exp) }
-        val totalKw = MockJdCustomizer.jdKeywords.size
+        val covered = remember(exp, jdKeywords) { MockJdCustomizer.coveredKeywords(exp, jdKeywords) }
+        val totalKw = jdKeywords.size
         val matchScore = remember(exp) { if (totalKw == 0) 0 else covered.size * 100 / totalKw }
         var showPreview by remember { mutableStateOf(false) }
         var showSaveSheet by remember { mutableStateOf(false) }
@@ -448,7 +422,11 @@ private fun ResultPhase(onBack: () -> Unit, onExport: () -> Unit, onViewVersions
             Column(modifier = Modifier.weight(1f)) {
                 Text("客製化完成", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 22.sp)
                 Spacer(Modifier.height(4.dp))
-                Text("已根據 JD 調整好這份履歷", color = InkGray500, fontSize = 13.sp)
+                Text(
+                    if (job != null) "已依「${job.position}・${job.company}」調整好這份履歷"
+                    else "已根據 JD 調整好這份履歷",
+                    color = InkGray500, fontSize = 13.sp,
+                )
             }
             MascotVideo(
                 rawResId = R.raw.beaver_celebrate_anim,
@@ -537,16 +515,24 @@ private fun ResultPhase(onBack: () -> Unit, onExport: () -> Unit, onViewVersions
                 .height(52.dp)
                 .clip(RoundedCornerShape(14.dp))
                 .background(BrandOrange)
-                .pressScale { showSaveSheet = true },
+                .pressScale {
+                    if (job != null) {
+                        val note = "依 JD 客製：保留 ${highlights.size} 段重點" +
+                                if (dimmedItems.isNotEmpty()) "、弱化 ${dimmedItems.size} 段" else ""
+                        savedTo = "${job.position}・${job.company}"
+                    }
+                },
             contentAlignment = Alignment.Center,
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Outlined.Check, contentDescription = null,
                     tint = PaperWhite, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("存成某職缺的新版本",
+                Text(
+                    if (job != null) "存成「${job.position}」的新版本" else "存成新版本",
                     color = PaperWhite, fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleSmall)
+                    style = MaterialTheme.typography.titleSmall,
+                )
             }
         }
         Spacer(Modifier.height(10.dp))
@@ -660,48 +646,6 @@ private fun ResultPhase(onBack: () -> Unit, onExport: () -> Unit, onViewVersions
             }
         }
 
-        // 選職缺存成新版本
-        if (showSaveSheet) {
-            val note = "依 JD 客製:保留 ${highlights.size} 段重點" +
-                if (dimmedItems.isNotEmpty()) "、弱化 ${dimmedItems.size} 段" else ""
-            AlertDialog(
-                onDismissRequest = { showSaveSheet = false },
-                confirmButton = {},
-                dismissButton = {
-                    TextButton(onClick = { showSaveSheet = false }) { Text("取消") }
-                },
-                title = { Text("存到哪個職缺?") },
-                text = {
-                    Column {
-                        Text("這次客製會存成該職缺底下的新版本(草稿)",
-                            color = InkGray500, fontSize = 12.sp)
-                        Spacer(Modifier.height(12.dp))
-                        MockResumeHierarchyProvider.jobTargets().forEach { t ->
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(InkGray100)
-                                    .pressScale {
-                                        MockResumeHierarchyProvider.addVersion(t.id, note)
-                                        savedTo = "${t.title}・${t.company}"
-                                        showSaveSheet = false
-                                    }
-                                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                            ) {
-                                Column {
-                                    Text("${t.title}・${t.company}",
-                                        color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                    Text("目前 ${t.versions.size} 版",
-                                        color = InkGray500, fontSize = 11.sp)
-                                }
-                            }
-                            Spacer(Modifier.height(8.dp))
-                        }
-                    }
-                },
-            )
-        }
 
         // 存檔成功確認
         savedTo?.let { dest ->
@@ -710,8 +654,8 @@ private fun ResultPhase(onBack: () -> Unit, onExport: () -> Unit, onViewVersions
                 confirmButton = {
                     TextButton(onClick = {
                         savedTo = null
-                        onViewVersions()
-                    }) { Text("查看職缺與版本") }
+                        onViewThisJob()
+                    }) { Text("查看這個職缺") }
                 },
                 dismissButton = {
                     TextButton(onClick = { savedTo = null }) { Text("繼續客製") }

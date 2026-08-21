@@ -43,7 +43,7 @@ suspend fun buildCustomResumeDataFromCustomization(
     experiences: List<com.careersandbox.app.data.model.Experience>,
 ): CustomResumeData? {
     val user = UserStore.me ?: return null
-    val coveredSkills = MockJdCustomizer.coveredKeywords(experiences)
+    val coveredSkills = MockJdCustomizer.coveredKeywords(experiences, MockJdCustomizer.defaultJdKeywords)
     return CustomResumeData(
         name = user.name,
         schoolLine = "${user.school} · ${user.department} · ${user.year}",
@@ -72,7 +72,7 @@ suspend fun buildCustomResumeDataFromCustomization(
  */
 suspend fun buildCustomResumeDataForExport(): CustomResumeData? {
     val experiences = RemoteExperienceRepository().list().getOrNull() ?: return null
-    val customized = MockJdCustomizer.customize(experiences)
+    val customized = MockJdCustomizer.customize(experiences, MockJdCustomizer.defaultJdKeywords)
     return buildCustomResumeDataFromCustomization(
         customized = customized,
         includedTexts = customized.map { it.text }.toSet(),

@@ -43,7 +43,9 @@ object Routes {
         if (expId == null) "experience_edit" else "experience_edit?expId=$expId"
     const val TEAM_CHAT = "team_chat"
     const val TEAM_MATCH = "team_match"
-    const val JD_CUSTOMIZE = "jd_customize"
+    const val JD_CUSTOMIZE = "jd_customize?jobId={jobId}"
+    fun jdCustomize(jobId: String? = null) =
+        if (jobId == null) "jd_customize" else "jd_customize?jobId=$jobId"
 
     const val INTERVIEW_SETUP_INDIVIDUAL = "interview_setup_individual"
     const val INTERVIEW_SETUP_GROUP = "interview_setup_group"

@@ -149,7 +149,7 @@ fun ResumeProfileScreen(navController: NavHostController) {
                             .clip(RoundedCornerShape(16.dp))
                             .background(InkBlack)
                             .pressScale {
-                                navController.navigate(Routes.JD_CUSTOMIZE)
+                                navController.navigate(Routes.jdCustomize())
                             },
                         contentAlignment = Alignment.Center,
                     ) {
