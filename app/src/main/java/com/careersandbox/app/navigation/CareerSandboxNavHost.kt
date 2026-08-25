@@ -165,7 +165,19 @@ fun CareerSandboxNavHost(
         ) { entry ->
             ExperienceEditScreen(navController, entry.arguments?.getString("expId"))
         }
-        composable(Routes.JD_CUSTOMIZE) { JdCustomizeScreen(navController) }
+        composable(
+            route = Routes.JD_CUSTOMIZE,
+            arguments = listOf(
+                navArgument("jobId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            ),
+        ) { backStackEntry ->
+            val jobId = backStackEntry.arguments?.getString("jobId")
+            JdCustomizeScreen(navController, preselectedJobId = jobId)
+        }
         composable(Routes.RESUME_PROFILE) { ResumeProfileScreen(navController) }
         composable(Routes.RESUME_UPLOAD_PROCESSING) { ResumeUploadProcessingScreen(navController) }
         composable(Routes.CAREER_EXPLORATION) { CareerExplorationScreen(navController) }

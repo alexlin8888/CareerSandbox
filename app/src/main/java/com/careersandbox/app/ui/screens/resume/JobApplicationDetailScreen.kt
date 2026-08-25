@@ -295,12 +295,12 @@ private fun VersionsSection(
                 fontSize = 26.sp,
                 modifier = Modifier.weight(1f),
             )
-            Text("+ 新版本",
+            Text("+ 新增版本",
                 color = BrandDeepOrange,
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.pressScale {
-                    navController.navigate(Routes.JD_CUSTOMIZE)
+                    navController.navigate(Routes.jdCustomize(job.id))
                 })
         }
         Spacer(Modifier.height(4.dp))

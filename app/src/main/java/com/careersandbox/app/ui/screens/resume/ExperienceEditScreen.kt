@@ -3,6 +3,9 @@ package com.careersandbox.app.ui.screens.resume
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -25,9 +28,13 @@ import androidx.compose.material.icons.outlined.Mic
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
+import com.careersandbox.app.data.remote.ChatHistoryTurn
 import com.careersandbox.app.data.remote.CreateExperienceRequest
+import com.careersandbox.app.data.repository.RemoteExperienceChatRepository
 import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,32 +51,20 @@ fun ExperienceEditScreen(navController: NavHostController, expId: String? = null
     var result by remember { mutableStateOf("") }
     var learning by remember { mutableStateOf("") }
     var chatInput by remember { mutableStateOf("") }
-    var step by remember { mutableIntStateOf(0) }
     var aiTyping by remember { mutableStateOf(false) }
-    val answers = remember { mutableStateListOf<String>() }
+    var chatDone by remember { mutableStateOf(false) }
+    var chatError by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val chatRepo = remember { RemoteExperienceChatRepository() }
     val chatHistory = remember {
-        mutableStateListOf("AI" to chatQuestions[0])
+        mutableStateListOf("AI" to openingQuestion)
     }
 
     val editViewModel: ExperienceEditViewModel = viewModel { ExperienceEditViewModel() }
     val saveState = editViewModel.uiState
     val isSaving = saveState is SaveExperienceUiState.Saving
     var showTitleHint by remember { mutableStateOf(false) }
-    var showChatHint by remember { mutableStateOf(false) }
     var pendingDelete by remember { mutableStateOf(false) }
-
-    // Chat mode: once all 3 answers are in, seed the structured fields.
-    // Only blanks are filled, so nothing typed in form mode gets overwritten.
-    LaunchedEffect(step) {
-        if (mode == EditMode.CHAT && step >= 3) {
-            if (action.isBlank()) action = answers.getOrElse(0) { "" }
-            if (role.isBlank()) role = answers.getOrElse(1) { "" }
-            if (result.isBlank()) result = answers.getOrElse(2) { "" }
-            // Seed a short title from the first answer; user confirms it below the draft card
-            if (title.isBlank()) title = answers.getOrElse(0) { "" }.take(15)
-        }
-    }
 
     // Edit mode: fetch the existing record once
     LaunchedEffect(Unit) {
@@ -97,8 +92,43 @@ fun ExperienceEditScreen(navController: NavHostController, expId: String? = null
         if (saveState is SaveExperienceUiState.Success) navController.popBackStack()
     }
 
+    // Sends one turn to the AI backend and folds the response into local state.
+    fun sendChatTurn(said: String) {
+        chatInput = ""
+        chatHistory.add("你" to said)
+        aiTyping = true
+        chatError = null
+        scope.launch {
+            // Everything except the message we just appended is "prior history"
+            val apiHistory = chatHistory.dropLast(1).map { (speaker, text) ->
+                ChatHistoryTurn(speaker = if (speaker == "AI") "assistant" else "user", text = text)
+            }
+            val outcome = chatRepo.sendTurn(apiHistory, said)
+            outcome.onSuccess { resp ->
+                val f = resp.extractedFields
+                if (f.role.isNotBlank()) role = f.role
+                if (f.action.isNotBlank()) action = f.action
+                if (f.result.isNotBlank()) result = f.result
+                if (f.learning.isNotBlank()) learning = f.learning
+                if (f.title.isNotBlank() && title.isBlank()) title = f.title
+
+                if (resp.done) {
+                    chatDone = true
+                    chatHistory.add("AI" to "整理好了。幫這段經歷確認標題和類別,再按「儲存」存入母版。")
+                } else if (resp.nextQuestion != null) {
+                    chatHistory.add("AI" to resp.nextQuestion)
+                }
+            }.onFailure { e ->
+                chatError = e.message
+                chatHistory.add("AI" to "不好意思,剛剛發生一點問題,可以再說一次看看嗎?")
+            }
+            aiTyping = false
+        }
+    }
+
     Scaffold(
         containerColor = PaperOff,
+        contentWindowInsets = WindowInsets.navigationBars,
         topBar = {
             TopAppBar(
                 title = {
@@ -116,13 +146,10 @@ fun ExperienceEditScreen(navController: NavHostController, expId: String? = null
             )
         },
         bottomBar = {
+            if (!(mode == EditMode.CHAT && !isEditMode)) {
             Column(Modifier.fillMaxWidth().background(PaperOff).padding(20.dp)) {
                 if (showTitleHint && title.isBlank()) {
                     Text("標題是必填的", color = BrandDeepOrange, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                    Spacer(Modifier.height(8.dp))
-                }
-                if (showChatHint && mode == EditMode.CHAT && step < 3) {
-                    Text("先回答完三個問題,整理好的經驗卡才能儲存", color = BrandDeepOrange, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(8.dp))
                 }
                 if (saveState is SaveExperienceUiState.Error) {
@@ -189,17 +216,15 @@ fun ExperienceEditScreen(navController: NavHostController, expId: String? = null
                         }
                     }
                 } else {
-                    // Create mode: one full-width save button serving both chat and form
+                    // Reaches here only for create mode + FORM — CHAT has its own save button below
                     PrimaryDarkButton(
                         text = if (isSaving) "儲存中..." else "儲存",
                         onClick = {
                             when {
                                 isSaving -> Unit
-                                mode == EditMode.CHAT && step < 3 -> showChatHint = true
                                 title.isBlank() -> showTitleHint = true
                                 else -> {
                                     showTitleHint = false
-                                    showChatHint = false
                                     editViewModel.save(
                                         null,
                                         CreateExperienceRequest(
@@ -218,6 +243,7 @@ fun ExperienceEditScreen(navController: NavHostController, expId: String? = null
                     )
                 }
             }
+            }
         }
     ) { pad ->
         if (isEditMode && loaded == null) {
@@ -235,7 +261,7 @@ fun ExperienceEditScreen(navController: NavHostController, expId: String? = null
                 }
             }
         } else {
-            Column(Modifier.padding(pad).padding(horizontal = 20.dp)) {
+            Column(Modifier.fillMaxSize().padding(pad).padding(horizontal = 20.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -262,41 +288,51 @@ fun ExperienceEditScreen(navController: NavHostController, expId: String? = null
                 }
 
                 when (mode) {
-                    EditMode.CHAT -> ChatEdit(
-                        history = chatHistory,
-                        input = chatInput,
-                        onInputChange = { chatInput = it },
-                        step = step,
-                        aiTyping = aiTyping,
-                        answers = answers,
-                        title = title,
-                        onTitle = { title = it },
-                        category = category,
-                        onCategory = { category = it },
-                        role = role,
-                        onRole = { role = it },
-                        result = result,
-                        onResult = { result = it },
-                        onChipTap = { chatInput = it },
-                    ) {
-                        if (chatInput.isNotBlank() && !aiTyping && step < 3) {
-                            val said = chatInput
-                            chatInput = ""
-                            chatHistory.add("你" to said)
-                            answers.add(said)
-                            step++
-                            aiTyping = true
-                            scope.launch {
-                                if (step < 3) {
-                                    delay(900)
-                                    chatHistory.add("AI" to chatQuestions[step])
-                                } else {
-                                    delay(1500)
-                                    chatHistory.add("AI" to "整理好了。幫這段經歷確認標題和類別,再按「儲存」存入母版。")
+                    EditMode.CHAT -> Box(Modifier.weight(1f)) {
+                        ChatEdit(
+                            history = chatHistory,
+                            input = chatInput,
+                            onInputChange = { chatInput = it },
+                            done = chatDone,
+                            aiTyping = aiTyping,
+                            role = role,
+                            action = action,
+                            result = result,
+                            title = title,
+                            onTitle = { title = it },
+                            category = category,
+                            onCategory = { category = it },
+                            onRole = { role = it },
+                            onResult = { result = it },
+                            onChipTap = { chatInput = it },
+                            onSend = {
+                                if (chatInput.isNotBlank() && !aiTyping && !chatDone) {
+                                    sendChatTurn(chatInput)
                                 }
-                                aiTyping = false
-                            }
-                        }
+                            },
+                            isSaving = isSaving,
+                            onSave = {
+                                when {
+                                    isSaving -> Unit
+                                    title.isBlank() -> showTitleHint = true
+                                    else -> {
+                                        showTitleHint = false
+                                        editViewModel.save(
+                                            null,
+                                            CreateExperienceRequest(
+                                                title = title.trim(),
+                                                category = category,
+                                                period = timeRange.trim(),
+                                                role = role.trim(),
+                                                action = action.trim(),
+                                                result = result.trim(),
+                                                learning = learning.trim(),
+                                            )
+                                        )
+                                    }
+                                }
+                            },
+                        )
                     }
                     EditMode.FORM -> FormEdit(
                         title, { title = it },
@@ -332,11 +368,8 @@ fun ExperienceEditScreen(navController: NavHostController, expId: String? = null
 
 private enum class EditMode { CHAT, FORM }
 
-private val chatQuestions = listOf(
-    "最近做過什麼讓你印象深刻的事?可以是課程、社團、實習都好。",
-    "你在裡面具體負責什麼?一句話就好。",
-    "有沒有可以量化的成果?人數、金額、百分比,什麼都好。",
-)
+private const val openingQuestion =
+    "最近做過什麼讓你印象深刻的事?可以是課程、社團、實習都好。"
 
 private val starterChips = listOf(
     "課程專題" to "我在課程專題做了",
@@ -384,149 +417,198 @@ private fun ChatEdit(
     history: List<Pair<String, String>>,
     input: String,
     onInputChange: (String) -> Unit,
-    step: Int,
+    done: Boolean,
     aiTyping: Boolean,
-    answers: List<String>,
+    role: String,
+    action: String,
+    result: String,
     title: String,
     onTitle: (String) -> Unit,
     category: String,
     onCategory: (String) -> Unit,
-    role: String,
     onRole: (String) -> Unit,
-    result: String,
     onResult: (String) -> Unit,
     onChipTap: (String) -> Unit,
     onSend: () -> Unit,
+    isSaving: Boolean,
+    onSave: () -> Unit,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-            repeat(3) { i ->
-                Box(
-                    Modifier
-                        .width(if (i == step.coerceAtMost(2)) 18.dp else 7.dp)
-                        .height(7.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(if (i <= step.coerceAtMost(2)) BrandOrange else InkGray200),
-                )
-            }
+    val filledCount = listOf(role, action, result).count { it.isNotBlank() }
+    val listState = rememberLazyListState()
+
+    // The draft card (when done) is always the item right after the last history message.
+    val cardIndex = history.size
+
+    // Auto-scroll to the newest message as the conversation grows — like a chat app.
+    LaunchedEffect(history.size, aiTyping, done) {
+        if (!done) {
+            val lastIndex = history.lastIndex + if (aiTyping) 1 else 0
+            if (lastIndex >= 0) listState.animateScrollToItem(lastIndex)
         }
-        Spacer(Modifier.width(10.dp))
-        Text(
-            if (step < 3) "第 ${step + 1} / 3 題" else "整理完成",
-            color = InkGray500, fontSize = 11.sp, fontWeight = FontWeight.Bold,
-        )
     }
-    Spacer(Modifier.height(10.dp))
-    Column(
-        Modifier.fillMaxWidth().heightIn(max = 430.dp)
-            .verticalScroll(rememberScrollState()),
-    ) {
-        history.forEach { (speaker, msg) ->
-            val isUser = speaker == "你"
-            Row(
-                Modifier.fillMaxWidth().padding(vertical = 5.dp),
-                horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
-            ) {
-                Box(
-                    Modifier
-                        .widthIn(max = 280.dp)
-                        .clip(RoundedCornerShape(
-                            topStart = 16.dp, topEnd = 16.dp,
-                            bottomStart = if (isUser) 16.dp else 4.dp,
-                            bottomEnd = if (isUser) 4.dp else 16.dp,
-                        ))
-                        .background(if (isUser) InkBlack else MaterialTheme.colorScheme.surface)
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
+
+    // Once the draft card appears, scroll so its TOP lands in view.
+    LaunchedEffect(done) {
+        if (done) listState.animateScrollToItem(cardIndex)
+    }
+
+    var showTitleHintInline by remember { mutableStateOf(false) }
+
+    Column(Modifier.fillMaxSize()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                repeat(3) { i ->
+                    Box(
+                        Modifier
+                            .width(if (i < filledCount) 18.dp else 7.dp)
+                            .height(7.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(if (i < filledCount) BrandOrange else InkGray200),
+                    )
+                }
+            }
+            Spacer(Modifier.width(10.dp))
+            Text(
+                if (!done) "已收集 $filledCount / 3 個重點" else "整理完成",
+                color = InkGray500, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+
+        // Message list: takes all remaining space and scrolls internally.
+        // This is the only part that should grow — input/send stays fixed below it.
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+        ) {
+            itemsIndexed(history) { _, (speaker, msg) ->
+                val isUser = speaker == "你"
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = 5.dp),
+                    horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
                 ) {
-                    Text(msg,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (isUser) PaperWhite else InkBlack)
+                    Box(
+                        Modifier
+                            .widthIn(max = 280.dp)
+                            .clip(RoundedCornerShape(
+                                topStart = 16.dp, topEnd = 16.dp,
+                                bottomStart = if (isUser) 16.dp else 4.dp,
+                                bottomEnd = if (isUser) 4.dp else 16.dp,
+                            ))
+                            .background(if (isUser) InkBlack else MaterialTheme.colorScheme.surface)
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                    ) {
+                        Text(msg,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (isUser) PaperWhite else InkBlack)
+                    }
+                }
+            }
+            if (aiTyping) {
+                item { ChatTypingDots() }
+            }
+            if (history.size == 1 && !aiTyping && !done) {
+                item {
+                    Spacer(Modifier.height(6.dp))
+                    Text("不知道從哪開始?點一個起手:", color = InkGray400, fontSize = 11.sp)
+                    Spacer(Modifier.height(8.dp))
+                    starterChips.chunked(2).forEach { rowChips ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            rowChips.forEach { (label, starter) ->
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(50))
+                                        .background(BrandPeach.copy(alpha = 0.5f))
+                                        .pressScale { onChipTap(starter) }
+                                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                                ) {
+                                    Text(label, color = BrandDeepOrange,
+                                        fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                    }
+                }
+            }
+            if (done) {
+                item {
+                    Spacer(Modifier.height(8.dp))
+                    EditableDraftCard(
+                        title = title, onTitle = onTitle,
+                        category = category, onCategory = onCategory,
+                        role = role, onRole = onRole,
+                        result = result, onResult = onResult,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    if (showTitleHintInline && title.isBlank()) {
+                        Text("標題是必填的", color = BrandDeepOrange, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                        Spacer(Modifier.height(8.dp))
+                    }
+                    PrimaryDarkButton(
+                        text = if (isSaving) "儲存中..." else "儲存",
+                        onClick = {
+                            if (title.isBlank()) showTitleHintInline = true else onSave()
+                        },
+                    )
+                    Spacer(Modifier.height(24.dp))
                 }
             }
         }
-        if (aiTyping) ChatTypingDots()
-        if (step == 0 && history.size == 1 && !aiTyping) {
-            Spacer(Modifier.height(6.dp))
-            Text("不知道從哪開始?點一個起手:", color = InkGray400, fontSize = 11.sp)
-            Spacer(Modifier.height(8.dp))
-            starterChips.chunked(2).forEach { rowChips ->
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    rowChips.forEach { (label, starter) ->
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(50))
-                                .background(BrandPeach.copy(alpha = 0.5f))
-                                .pressScale { onChipTap(starter) }
-                                .padding(horizontal = 14.dp, vertical = 8.dp),
-                        ) {
-                            Text(label, color = BrandDeepOrange,
-                                fontSize = 12.sp, fontWeight = FontWeight.Bold)
+
+        // Input row: fixed below the scrolling list, never pushed off-screen.
+        if (!done) {
+            Spacer(Modifier.height(12.dp))
+            Box(Modifier.fillMaxWidth().padding(bottom = 24.dp).navigationBarsPadding()) {
+                var voiceMode by remember { mutableStateOf(false) }
+            var recording by remember { mutableStateOf(false) }
+            var recordSec by remember { mutableIntStateOf(0) }
+            LaunchedEffect(recording) {
+                recordSec = 0
+                while (recording) { delay(1000); recordSec++ }
+            }
+            if (voiceMode) {
+                VoiceBar(
+                    recording = recording,
+                    recordSec = recordSec,
+                    onKeyboard = { voiceMode = false; recording = false },
+                    onPressStart = { recording = true },
+                    onPressEnd = {
+                        val sec = recordSec
+                        recording = false
+                        if (sec > 0) {
+                            onInputChange("(語音回答・$sec 秒)")
+                            onSend()
+                        }
+                    },
+                )
+            } else OutlinedTextField(
+                value = input, onValueChange = onInputChange,
+                placeholder = { Text("用口語回答就好", color = InkGray400) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                enabled = !aiTyping,
+                trailingIcon = {
+                    Row {
+                        IconButton(onClick = { voiceMode = true }) {
+                            Icon(Icons.Outlined.Mic, contentDescription = null, tint = InkGray500)
+                        }
+                        IconButton(onClick = onSend) {
+                            Icon(Icons.Outlined.Send, contentDescription = null, tint = BrandOrange)
                         }
                     }
-                }
-                Spacer(Modifier.height(8.dp))
+                },
+                maxLines = 4,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = InkBlack, unfocusedBorderColor = InkGray200,
+                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                )
+            )
             }
         }
-        if (step >= 3 && !aiTyping) {
-            Spacer(Modifier.height(8.dp))
-            EditableDraftCard(
-                title = title, onTitle = onTitle,
-                category = category, onCategory = onCategory,
-                role = role, onRole = onRole,
-                result = result, onResult = onResult,
-            )
-            Spacer(Modifier.height(8.dp))
-        }
-    }
-    if (step < 3) {
-        Spacer(Modifier.height(12.dp))
-        var voiceMode by remember { mutableStateOf(false) }
-        var recording by remember { mutableStateOf(false) }
-        var recordSec by remember { mutableIntStateOf(0) }
-        LaunchedEffect(recording) {
-            recordSec = 0
-            while (recording) { delay(1000); recordSec++ }
-        }
-        if (voiceMode) {
-            VoiceBar(
-                recording = recording,
-                recordSec = recordSec,
-                onKeyboard = { voiceMode = false; recording = false },
-                onPressStart = { recording = true },
-                onPressEnd = {
-                    val sec = recordSec
-                    recording = false
-                    if (sec > 0) {
-                        onInputChange("(語音回答・$sec 秒)")
-                        onSend()
-                    }
-                },
-            )
-        } else OutlinedTextField(
-            value = input, onValueChange = onInputChange,
-            placeholder = { Text("用口語回答就好", color = InkGray400) },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(14.dp),
-            trailingIcon = {
-                Row {
-                    IconButton(onClick = { voiceMode = true }) {
-                        Icon(Icons.Outlined.Mic, contentDescription = null, tint = InkGray500)
-                    }
-                    IconButton(onClick = onSend) {
-                        Icon(Icons.Outlined.Send, contentDescription = null, tint = BrandOrange)
-                    }
-                }
-            },
-            maxLines = 4,
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = InkBlack, unfocusedBorderColor = InkGray200,
-                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-            )
-        )
     }
 }
-
 @Composable
 private fun EditableDraftCard(
     title: String, onTitle: (String) -> Unit,
@@ -580,7 +662,7 @@ private fun EditableDraftCard(
             }
         }
         Spacer(Modifier.height(10.dp))
-        Text("「做了什麼」已從你的第一個回答帶入,之後隨時可在編輯模式補時間範圍和學到什麼。",
+        Text("內容已從對話帶入,之後隨時可在編輯模式補時間範圍和學到什麼。",
             color = InkGray400, fontSize = 10.sp, lineHeight = 14.sp)
     }
 }
@@ -731,49 +813,5 @@ private fun ChatTypingDots() {
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun ExperienceDraftCard(answers: List<String>) {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(16.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier.clip(RoundedCornerShape(50)).background(BrandPeach.copy(alpha = 0.6f))
-                    .padding(horizontal = 8.dp, vertical = 3.dp),
-            ) {
-                Text("經驗卡 ・ 已整理", color = BrandDeepOrange,
-                    fontSize = 10.sp, fontWeight = FontWeight.Black)
-            }
-            Spacer(Modifier.weight(1f))
-            Image(
-                painter = painterResource(R.drawable.beaver_thumbsup),
-                contentDescription = null,
-                modifier = Modifier.size(34.dp),
-            )
-        }
-        Spacer(Modifier.height(10.dp))
-        DraftRow("經歷", answers.getOrElse(0) { "" })
-        DraftRow("你的角色", answers.getOrElse(1) { "" })
-        DraftRow("量化成果", answers.getOrElse(2) { "" })
-        Spacer(Modifier.height(8.dp))
-        Text("之後每個職缺的客製版本,都會從這張卡取材。",
-            color = InkGray400, fontSize = 10.sp, lineHeight = 14.sp)
-    }
-}
-
-@Composable
-private fun DraftRow(label: String, value: String) {
-    Column(Modifier.padding(vertical = 4.dp)) {
-        Text(label, color = InkGray500, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(2.dp))
-        Text(value.ifBlank { "—" }, color = InkBlack, fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold, lineHeight = 18.sp)
     }
 }

@@ -21,29 +21,25 @@ data class CustomizedItem(
 
 /** JD 客製化器(後端接點) */
 interface JdCustomizer {
-    fun customize(experiences: List<Experience>): List<CustomizedItem>
+    fun customize(experiences: List<Experience>, jdKeywords: List<String>): List<CustomizedItem>
 }
 
-/**
- * Mock:以「資料分析類 JD」的關鍵字為準,某段經歷命中 >=2 個相關 tag 就強化,否則弱化。
- * 真接後端時換成真正的 JD ↔ 經歷比對或 LLM 評分,介面不變。
- */
 object MockJdCustomizer : JdCustomizer {
-    /** 這份 JD 看重的關鍵技能(後端接入時來自 JD 解析) */
-    val jdKeywords: List<String> = listOf("數據分析", "SQL", "報表", "Excel", "Python")
-    private val jdRelevantTags = jdKeywords.toSet()
+    /** 備援關鍵字,只給還沒接上真實職缺的舊呼叫端當預設值用。*/
+    val defaultJdKeywords: List<String> = listOf("需求分析", "SQL", "簡報", "Excel", "Python")
 
-    override fun customize(experiences: List<Experience>): List<CustomizedItem> =
-        experiences.map { exp ->
-            val matched = exp.tags.filter { it in jdRelevantTags }
+    override fun customize(experiences: List<Experience>, jdKeywords: List<String>): List<CustomizedItem> {
+        val relevantTags = jdKeywords.toSet()
+        return experiences.map { exp ->
+            val matched = exp.tags.filter { it in relevantTags }
             CustomizedItem(
                 text = exp.description,
                 matchedKeywords = matched,
                 highlighted = matched.size >= 2,
             )
         }
+    }
 
-    /** 母版涵蓋到的 JD 關鍵字(用來算命中率與適配度) */
-    fun coveredKeywords(experiences: List<Experience>): List<String> =
+    fun coveredKeywords(experiences: List<Experience>, jdKeywords: List<String> = defaultJdKeywords): List<String> =
         jdKeywords.filter { kw -> experiences.any { kw in it.tags } }
 }

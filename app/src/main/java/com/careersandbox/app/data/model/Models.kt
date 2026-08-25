@@ -59,6 +59,7 @@ data class JobApplication(
     val company: String,
     val position: String,
     val jdSnippet: String,
+    val jdKeywords: List<String> = emptyList(),
     val matchScore: Int,
     val createdAt: String,
     val versions: List<ResumeVersion>,

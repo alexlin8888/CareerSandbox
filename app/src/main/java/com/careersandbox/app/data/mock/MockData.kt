@@ -81,6 +81,7 @@ object MockData {
             company = "Acer",
             position = "Junior PM",
             jdSnippet = "尋找對使用者體驗有熱情的 PM,需熟悉資料分析與 A/B 測試,獨立帶專案經驗加分。",
+            jdKeywords = listOf("需求分析", "SQL", "簡報", "Excel", "Python"),
             matchScore = 82,
             createdAt = "10/12",
             versions = listOf(
@@ -94,6 +95,7 @@ object MockData {
             company = "KKday",
             position = "資料分析師",
             jdSnippet = "需熟悉 SQL,協助業務團隊產出週報、洞察客群行為。",
+            jdKeywords = listOf("SQL", "資料視覺化", "A/B 測試"),
             matchScore = 64,
             createdAt = "10/15",
             versions = listOf(
@@ -105,6 +107,7 @@ object MockData {
             company = "蝦皮",
             position = "UX 研究員(實習)",
             jdSnippet = "尋找對使用者研究有興趣的學生,進行訪談、可用性測試。",
+            jdKeywords = listOf("使用者研究", "訪談", "Notion"),
             matchScore = 32,
             createdAt = "10/16",
             versions = listOf(
