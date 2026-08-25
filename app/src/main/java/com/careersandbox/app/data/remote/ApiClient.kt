@@ -45,4 +45,6 @@ object ApiClient {
     val userApi: UserApiService by lazy { retrofit.create(UserApiService::class.java) }
     val experienceApi: ExperienceApiService by lazy { retrofit.create(ExperienceApiService::class.java) }
 
+    val experienceChatApi: ExperienceChatApiService by lazy { retrofit.create(ExperienceChatApiService::class.java) }
+
 }
