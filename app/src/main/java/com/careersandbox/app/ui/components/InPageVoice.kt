@@ -38,6 +38,7 @@ data class VoiceResult(
     val text: String,
     val segments: List<String>,
     val segmentStartsMs: List<Long>,
+    val endedBy: String,   // "user"（使用者主動按停止）或 "timeout"（Android 判定沉默逾時）
 )
 
 interface InPageVoice {
@@ -78,7 +79,7 @@ fun rememberInPageVoice(
     }
     DisposableEffect(Unit) { onDispose { recognizer?.destroy() } }
 
-    fun finalizeAndReset() {
+    fun finalizeAndReset(endedBy: String) {
         listening = false
         partial = ""
         manualStopRequested = false
@@ -89,7 +90,7 @@ fun rememberInPageVoice(
         segments.clear()
         segmentStartsMs.clear()
         if (finalText.isNotBlank()) {
-            onDetailedResult?.invoke(VoiceResult(finalText, finalSegments, finalStarts))
+            onDetailedResult?.invoke(VoiceResult(finalText, finalSegments, finalStarts, endedBy))
             onResult(finalText)
         }
     }
@@ -107,8 +108,10 @@ fun rememberInPageVoice(
             override fun onBufferReceived(buffer: ByteArray?) {}
             override fun onEndOfSpeech() { listening = false }
             override fun onError(error: Int) {
-                if (manualStopRequested || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) {
-                    finalizeAndReset()
+                if (manualStopRequested) {
+                    finalizeAndReset("user")
+                } else if (error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) {
+                    finalizeAndReset("timeout")
                 } else {
                     reallyStart()
                 }
@@ -124,7 +127,7 @@ fun rememberInPageVoice(
                     segments.add(t.trim())
                 }
                 if (manualStopRequested) {
-                    finalizeAndReset()
+                    finalizeAndReset("user")
                 } else {
                     reallyStart()
                 }
