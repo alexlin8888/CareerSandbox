@@ -27,7 +27,7 @@ class RemoteExperienceRepository(
             else -> Result.failure(Exception("讀取失敗（錯誤碼 ${res.code()}）"))
         }
     } catch (e: Exception) {
-        Result.failure(Exception("無法連線到伺服器"))
+        Result.failure(Exception("讀取失敗，請稍後再試"))
     }
 
     // Same call, but keeps the full DTO (role, action, learning...) for
@@ -91,9 +91,9 @@ class RemoteExperienceRepository(
 // Map network DTO → the app's existing display model (period → timeRange)
 private fun ExperienceResponse.toModel() = Experience(
     id = id,
-    title = title,
-    category = category,
-    timeRange = period,
-    description = description,
-    tags = tags,
+    title = title.orEmpty(),
+    category = category.orEmpty(),
+    timeRange = period.orEmpty(),
+    description = description.orEmpty(),
+    tags = tags ?: emptyList(),
 )

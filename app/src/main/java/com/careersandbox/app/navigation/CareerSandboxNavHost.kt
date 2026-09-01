@@ -206,10 +206,18 @@ fun CareerSandboxNavHost(
         }
         composable(
             route = Routes.PDF_EXPORT_DIALOG,
-            arguments = listOf(navArgument("versionId") { type = NavType.StringType })
+            arguments = listOf(
+                navArgument("versionId") { type = NavType.StringType },
+                navArgument("jobId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+            )
         ) { entry ->
             val versionId = entry.arguments?.getString("versionId") ?: ""
-            PdfExportDialogScreen(navController, versionId)
+            val jobId = entry.arguments?.getString("jobId")
+            PdfExportDialogScreen(navController, versionId, jobId)
         }
 
         composable(Routes.INTERVIEW_SETUP_INDIVIDUAL) { InterviewSetupScreen(navController) }

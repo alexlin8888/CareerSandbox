@@ -62,17 +62,18 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material.icons.outlined.WorkOutline
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.foundation.border
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.saveable.rememberSaveable
 private enum class JdPhase { SELECT_JOB, ANALYZING, RESULT }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JdCustomizeScreen(navController: NavHostController, preselectedJobId: String? = null) {
-    var phase by remember {
+    var phase by rememberSaveable {
         mutableStateOf(if (preselectedJobId != null) JdPhase.ANALYZING else JdPhase.SELECT_JOB)
     }
-    var selectedJob by remember {
-        mutableStateOf(MockData.jobApplications.find { it.id == preselectedJobId })
-    }
+    var selectedJobId by rememberSaveable { mutableStateOf(preselectedJobId) }
+    val selectedJob = remember(selectedJobId) { MockData.jobApplications.find { it.id == selectedJobId } }
 
     Scaffold(
         containerColor = PaperWhite,
@@ -99,7 +100,7 @@ fun JdCustomizeScreen(navController: NavHostController, preselectedJobId: String
     ) { pad ->
         when (phase) {
             JdPhase.SELECT_JOB -> SelectJobPhase(
-                onSelect = { job -> selectedJob = job; phase = JdPhase.ANALYZING },
+                onSelect = { job -> selectedJobId = job.id; phase = JdPhase.ANALYZING },
                 onAddNewJob = { navController.navigate(Routes.NEW_JOB_APPLICATION) },
                 contentPadding = pad,
             )
@@ -110,7 +111,9 @@ fun JdCustomizeScreen(navController: NavHostController, preselectedJobId: String
             JdPhase.RESULT -> ResultPhase(
                 job = selectedJob,
                 onBack = { phase = JdPhase.SELECT_JOB },
-                onExport = { navController.navigate(Routes.pdfExportDialog("custom")) },
+                onExport = {
+                    navController.navigate(Routes.pdfExportDialog("custom", selectedJob?.id))
+                },
                 onViewThisJob = {
                     selectedJob?.let { job ->
                         navController.navigate(Routes.jobApplicationDetail(job.id)) {
@@ -461,14 +464,11 @@ private fun ResultPhase(
         Spacer(Modifier.height(28.dp))
 
         // 已弱化(減法)— 使用者可主動拉回
-        val dimmedItems = remember {
-            mutableStateListOf(
-                *customized.filter { !it.highlighted }.map { it.text }.toTypedArray()
-            )
-        }
-        if (dimmedItems.isNotEmpty()) {
+        val restoredItems = remember { mutableStateListOf<String>() }
+        val allDimmed = remember(exp, jdKeywords) { customized.filter { !it.highlighted }.map { it.text } }
+        if (allDimmed.isNotEmpty()) {
             Box(modifier = Modifier.fillMaxWidth().padding(end = 64.dp)) {
-                SectionTitle("已弱化 ${dimmedItems.size} 段", "移除無關經歷,讓 recruiter 30 秒抓到重點")
+                SectionTitle("已弱化 ${allDimmed.size} 段", "移除無關經歷,讓 recruiter 30 秒抓到重點")
             }
             Box(modifier = Modifier.fillMaxWidth()) {
                 StickyNote(
@@ -478,9 +478,15 @@ private fun ResultPhase(
                 )
             }
             Spacer(Modifier.height(4.dp))
-            dimmedItems.forEachIndexed { idx, item ->
-                DimmedItem(text = item, onRestore = { dimmedItems.remove(item) })
-                if (idx < dimmedItems.size - 1) Spacer(Modifier.height(8.dp))
+            allDimmed.forEachIndexed { idx, item ->
+                DimmedItem(
+                    text = item,
+                    isRestored = item in restoredItems,
+                    onRestore = {
+                        if (item in restoredItems) restoredItems.remove(item) else restoredItems.add(item)
+                    },
+                )
+                if (idx < allDimmed.size - 1) Spacer(Modifier.height(8.dp))
             }
             Spacer(Modifier.height(28.dp))
         }
@@ -518,7 +524,7 @@ private fun ResultPhase(
                 .pressScale {
                     if (job != null) {
                         val note = "依 JD 客製：保留 ${highlights.size} 段重點" +
-                                if (dimmedItems.isNotEmpty()) "、弱化 ${dimmedItems.size} 段" else ""
+                                if (restoredItems.isNotEmpty()) "、額外拉回 ${restoredItems.size} 段" else ""
                         savedTo = "${job.position}・${job.company}"
                     }
                 },
@@ -538,13 +544,21 @@ private fun ResultPhase(
         Spacer(Modifier.height(10.dp))
 
         // 主按鈕
+        // 匯出按鈕
+        val exportScope = rememberCoroutineScope()
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .background(InkBlack)
-                .pressScale(onClick = onExport),
+                .pressScale {
+                    exportScope.launch {
+                        com.careersandbox.app.data.pdf.PendingCustomExport.data =
+                            buildCustomResumeDataFromCustomization(customized, restoredItems.toSet(), exp)
+                        onExport()
+                    }
+                },
             contentAlignment = Alignment.Center,
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -583,7 +597,7 @@ private fun ResultPhase(
             var previewError by remember { mutableStateOf(false) }
 
             LaunchedEffect(Unit) {
-                val data = buildCustomResumeDataFromCustomization(customized, dimmedItems.toSet(), exp)
+                val data = buildCustomResumeDataFromCustomization(customized, restoredItems.toSet(), exp)
                 if (data == null) {
                     previewError = true
                 } else {
@@ -831,7 +845,7 @@ private fun HighlightItem(text: String, matched: List<String>) {
 }
 
 @Composable
-private fun DimmedItem(text: String, onRestore: () -> Unit) {
+private fun DimmedItem(text: String, isRestored: Boolean, onRestore: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -848,17 +862,22 @@ private fun DimmedItem(text: String, onRestore: () -> Unit) {
         Text(text,
             color = InkGray500,
             style = MaterialTheme.typography.bodyMedium,
-            textDecoration = TextDecoration.LineThrough,
+            textDecoration = if (isRestored) TextDecoration.None else TextDecoration.LineThrough,
             modifier = Modifier.weight(1f))
         Spacer(Modifier.width(8.dp))
         Box(
             modifier = Modifier
                 .clip(CircleShape)
-                .background(BrandPeach)
+                .background(if (isRestored) InkGray200 else BrandPeach)
                 .pressScale(onClick = onRestore)
                 .padding(horizontal = 12.dp, vertical = 5.dp),
         ) {
-            Text("拉回", color = BrandDeepOrange, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+            Text(
+                if (isRestored) "已拉回" else "拉回",
+                color = if (isRestored) InkGray500 else BrandDeepOrange,
+                fontWeight = FontWeight.Bold,
+                fontSize = 11.sp,
+            )
         }
     }
 }

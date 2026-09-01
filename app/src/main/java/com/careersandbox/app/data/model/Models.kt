@@ -35,7 +35,7 @@ data class Experience(
     val id: String,
     val title: String,
     val category: String,
-    val timeRange: String,
+    val timeRange: String = "",   // ← 加上預設值
     val description: String,
     val tags: List<String> = emptyList(),
 )
