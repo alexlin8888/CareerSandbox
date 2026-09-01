@@ -16,3 +16,5 @@ project_tree.txt
 # Mac/Win
 .DS_Store
 Thumbs.db
+
+all_source.txt

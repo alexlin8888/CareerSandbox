@@ -40,6 +40,7 @@ private enum class ExportPhase { SELECT_TEMPLATE, EXPORTING, DONE }
 fun PdfExportDialogScreen(
     navController: NavHostController,
     versionId: String,
+    jobId: String? = null,
 ) {
     var phase by remember {
         mutableStateOf(if (versionId == "master") ExportPhase.EXPORTING else ExportPhase.SELECT_TEMPLATE)
@@ -90,6 +91,7 @@ fun PdfExportDialogScreen(
                     onClose = { navController.popBackStack() },
                     contentPadding = pad,
                     versionId = versionId,
+                    jobId = jobId,
                 )
             }
         }
@@ -298,7 +300,12 @@ private fun ExportingPhase(onDone: () -> Unit, contentPadding: PaddingValues) {
 }
 
 @Composable
-private fun DonePhase(onClose: () -> Unit, contentPadding: PaddingValues, versionId: String) {
+private fun DonePhase(
+    onClose: () -> Unit,
+    contentPadding: PaddingValues,
+    versionId: String,
+    jobId: String?,
+) {
     var fileName by remember {
         mutableStateOf(if (versionId == "master") "母版履歷_AlexLin_2026" else "履歷_AlexLin_2026")
     }
@@ -368,8 +375,17 @@ private fun DonePhase(onClose: () -> Unit, contentPadding: PaddingValues, versio
                             try {
                                 val file = when (versionId) {
                                     "custom" -> {
-                                        val data = com.careersandbox.app.data.pdf.buildCustomResumeDataForExport()
-                                            ?: throw IllegalStateException("找不到使用者資料，請先確認已登入")
+                                        val pending = com.careersandbox.app.data.pdf.PendingCustomExport.data
+                                        val data = if (pending != null) {
+                                            com.careersandbox.app.data.pdf.PendingCustomExport.data = null
+                                            pending
+                                        } else {
+                                            val job = jobId?.let { id ->
+                                                com.careersandbox.app.data.mock.MockData.jobApplications.find { it.id == id }
+                                            }
+                                            com.careersandbox.app.data.pdf.buildCustomResumeDataForExport(job)
+                                                ?: throw IllegalStateException("找不到使用者資料，請先確認已登入")
+                                        }
                                         com.careersandbox.app.data.pdf.DeviceCustomResumePdfGenerator.generate(ctx, fileName, data)
                                     }
                                     "master" -> {

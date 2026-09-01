@@ -73,8 +73,9 @@ object Routes {
     const val NEW_JOB_APPLICATION = "new_job_application"
     const val JOB_APPLICATION_DETAIL = "job_application_detail/{jobId}"
     fun jobApplicationDetail(jobId: String) = "job_application_detail/$jobId"
-    const val PDF_EXPORT_DIALOG = "pdf_export_dialog/{versionId}"
-    fun pdfExportDialog(versionId: String) = "pdf_export_dialog/$versionId"
+    const val PDF_EXPORT_DIALOG = "pdf_export_dialog/{versionId}?jobId={jobId}"
+    fun pdfExportDialog(versionId: String, jobId: String? = null) =
+        if (jobId == null) "pdf_export_dialog/$versionId" else "pdf_export_dialog/$versionId?jobId=$jobId"
 
     const val SETTINGS_PROFILE = "settings_profile"
     const val SETTINGS_NOTIFICATIONS = "settings_notifications"

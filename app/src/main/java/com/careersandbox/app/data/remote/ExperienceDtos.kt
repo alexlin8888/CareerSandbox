@@ -13,13 +13,13 @@ data class CreateExperienceRequest(
 
 data class ExperienceResponse(
     val id: String,
-    val title: String,
-    val category: String,
-    val period: String,
-    val role: String,
-    val action: String,
-    val result: String,
-    val learning: String,
-    val description: String,
-    val tags: List<String>,
+    val title: String = "",
+    val category: String = "",
+    val period: String = "",
+    val role: String = "",
+    val action: String = "",
+    val result: String = "",
+    val learning: String = "",
+    val description: String = "",
+    val tags: List<String> = emptyList(),
 )

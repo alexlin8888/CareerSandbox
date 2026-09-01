@@ -5,6 +5,14 @@ import com.careersandbox.app.data.local.UserStore
 import com.careersandbox.app.data.mock.CustomizedItem
 import com.careersandbox.app.data.mock.MockJdCustomizer
 import com.careersandbox.app.data.repository.RemoteExperienceRepository
+import com.careersandbox.app.data.model.JobApplication
+
+/** 客製化結果頁按下「匯出」的那一刻，把當下畫面算好的資料先存在這裡，
+ *  匯出流程直接讀這份，避免重新計算跟預覽對不起來。用完即清空。 */
+object PendingCustomExport {
+    var data: CustomResumeData? = null
+}
+
 
 /**
  * 客製化履歷 PDF 專用的資料結構（定案二素材清單，交接文件三）。
@@ -70,12 +78,15 @@ suspend fun buildCustomResumeDataFromCustomization(
  * 匯出流程專用:抓真實經歷 + 用真實使用者資料 + 預設客製化結果(全部收錄)組資料。
  * 經歷資料抓取失敗時回傳 null。
  */
-suspend fun buildCustomResumeDataForExport(): CustomResumeData? {
+suspend fun buildCustomResumeDataForExport(
+    job: JobApplication?,
+): CustomResumeData? {
     val experiences = RemoteExperienceRepository().list().getOrNull() ?: return null
-    val customized = MockJdCustomizer.customize(experiences, MockJdCustomizer.defaultJdKeywords)
+    val jdKeywords = job?.jdKeywords?.takeIf { it.isNotEmpty() } ?: MockJdCustomizer.defaultJdKeywords
+    val customized = MockJdCustomizer.customize(experiences, jdKeywords)
     return buildCustomResumeDataFromCustomization(
         customized = customized,
-        includedTexts = customized.map { it.text }.toSet(),
+        includedTexts = customized.filter { it.highlighted }.map { it.text }.toSet(),
         experiences = experiences,
     )
 }
