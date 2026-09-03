@@ -39,10 +39,13 @@ import com.careersandbox.app.data.mock.InterviewConfig
 import com.careersandbox.app.data.mock.InterviewSession
 import com.careersandbox.app.data.mock.MockPanelDispatcher
 import com.careersandbox.app.navigation.Routes
-import com.careersandbox.app.ui.components.rememberInPageVoice
 import com.careersandbox.app.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.material3.CircularProgressIndicator
+import com.careersandbox.app.data.repository.RemoteTranscribeRepository
+import com.careersandbox.app.ui.components.RecordingMicButton
+import com.careersandbox.app.ui.components.rememberInPageAudioRecorder
 
 /* =====================================================================
    主管 panel 面試(場景式,真流程)
@@ -122,7 +125,19 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
         }
     }
 
-    val voice = rememberInPageVoice(languageTag = "zh-TW") { transcript -> submitAnswer(transcript) }
+    var isTranscribing by remember { mutableStateOf(false) }
+    var pendingTranscript by remember { mutableStateOf<String?>(null) }
+    val transcribeRepo = remember { RemoteTranscribeRepository() }
+    val recorder = rememberInPageAudioRecorder(maxDurationMs = 120_000L) { file ->
+        isTranscribing = true
+        scope.launch {
+            transcribeRepo.transcribe(file)
+                .onSuccess { text -> pendingTranscript = text }
+                .onFailure { /* 轉錄失敗：先讓使用者看到麥克風按鈕重新出現，可以再錄一次 */ }
+            isTranscribing = false
+            file.delete()
+        }
+    }
     val fileLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent(),
     ) { uri -> if (uri != null) shared = true }
@@ -254,19 +269,64 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
             }
 
             Spacer(Modifier.height(12.dp))
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(
-                        Modifier.size(60.dp).clip(CircleShape)
-                            .background(if (voice.isListening) BrandDeepOrange else if (answer.isBlank()) BrandOrange else Color(0x33FFFFFF))
-                            .clickable { if (answer.isBlank() && !voice.isListening) voice.start() },
-                        contentAlignment = Alignment.Center,
-                    ) { Icon(Icons.Filled.Mic, contentDescription = "語音作答", tint = Color.White, modifier = Modifier.size(26.dp)) }
-                    Spacer(Modifier.height(6.dp))
-                    Text(if (voice.isListening) ("聆聽中… " + voice.partialText) else if (answer.isBlank()) "點一下用說的回答" else "主管思考中…", color = Color(0x99FFFFFF), fontSize = 11.sp)
+            val pending = pendingTranscript
+            if (pending != null) {
+                Column(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+                        .background(Color(0xFFFFF7EE)).padding(14.dp),
+                ) {
+                    Text("確認這段回答內容：", color = Color(0xFF9A6A3A), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(4.dp))
+                    Text(pending, color = Color(0xFF1F2937), fontSize = 13.sp, lineHeight = 20.sp)
+                    Spacer(Modifier.height(10.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Box(
+                            Modifier.weight(1f).clip(RoundedCornerShape(999.dp))
+                                .background(Color(0x14000000))
+                                .clickable { pendingTranscript = null }
+                                .padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center,
+                        ) { Text("重新錄音", color = Color(0xFF6B5B4A), fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+                        Box(
+                            Modifier.weight(1f).clip(RoundedCornerShape(999.dp))
+                                .background(BrandOrange)
+                                .clickable {
+                                    submitAnswer(pending)
+                                    pendingTranscript = null
+                                }
+                                .padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center,
+                        ) { Text("確認送出", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+                    }
                 }
-                Spacer(Modifier.weight(1f))
-                Text("答完會自動換下一位主管", color = Color(0x73FFFFFF), fontSize = 11.sp)
+            } else {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    if (isTranscribing) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(
+                                color = BrandOrange,
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(28.dp),
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            Text("轉錄中...", color = Color(0x99FFFFFF), fontSize = 11.sp)
+                        }
+                    } else {
+                        RecordingMicButton(
+                            isRecording = recorder.isRecording,
+                            amplitude = recorder.amplitude,
+                            elapsedMs = recorder.elapsedMs,
+                            maxDurationMs = 120_000L,
+                            idleEnabled = answer.isBlank(),
+                            onClick = {
+                                if (recorder.isRecording) recorder.stop()
+                                else if (answer.isBlank()) recorder.start()
+                            },
+                        )
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Text("等待其他小組成員發言", color = Color(0x73FFFFFF), fontSize = 11.sp)
+                }
             }
         }
     }
