@@ -38,11 +38,14 @@ import com.careersandbox.app.data.mock.InterviewConfig
 import com.careersandbox.app.data.mock.MockInterviewProber
 import com.careersandbox.app.data.mock.InterviewSession
 import com.careersandbox.app.navigation.Routes
-import com.careersandbox.app.ui.components.rememberInPageVoice
 import com.careersandbox.app.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.CircularProgressIndicator
+import com.careersandbox.app.data.repository.RemoteTranscribeRepository
+import com.careersandbox.app.ui.components.RecordingMicButton
+import com.careersandbox.app.ui.components.rememberInPageAudioRecorder
 
 /* =====================================================================
    1 對 1 面試(場景式,真流程)
@@ -205,9 +208,19 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
         }
     }
 
-    val voice = rememberInPageVoice(
-        languageTag = if (lang == "English") "en-US" else "zh-TW",
-    ) { transcript -> submitAnswer(transcript) }
+    var isTranscribing by remember { mutableStateOf(false) }
+    var pendingTranscript by remember { mutableStateOf<String?>(null) }
+    val transcribeRepo = remember { RemoteTranscribeRepository() }
+    val recorder = rememberInPageAudioRecorder(maxDurationMs = 120_000L) { file ->
+        isTranscribing = true
+        scope.launch {
+            transcribeRepo.transcribe(file)
+                .onSuccess { text -> pendingTranscript = text }
+                .onFailure { /* 轉錄失敗：先讓使用者看到麥克風按鈕重新出現，可以再錄一次 */ }
+            isTranscribing = false
+            file.delete()
+        }
+    }
     val fileLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent(),
     ) { uri -> if (uri != null) shared = true }
@@ -335,38 +348,72 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
                     }
                 }
                 else -> {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Row(
-                            Modifier.clip(RoundedCornerShape(999.dp)).background(Color(0x14FFFFFF))
-                                .clickable { fileLauncher.launch("*/*") }.padding(horizontal = 11.dp, vertical = 7.dp),
-                        ) { Text(t("上傳作品", "Share work"), color = Color(0xCCFFFFFF), fontSize = 11.sp) }
-                        if (shared) {
-                            Spacer(Modifier.width(8.dp))
-                            Row(
-                                Modifier.clip(RoundedCornerShape(999.dp)).background(Color(0x2910B981)).padding(horizontal = 10.dp, vertical = 7.dp),
-                            ) { Text(t("作品已分享", "Shared"), color = Color(0xFF34D399), fontSize = 11.sp, fontWeight = FontWeight.Bold) }
-                        }
-                        Spacer(Modifier.weight(1f))
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Box(
-                                Modifier.size(60.dp).clip(CircleShape)
-                                    .background(if (voice.isListening) BrandDeepOrange else if (answer.isBlank()) BrandOrange else Color(0x33FFFFFF))
-                                    .clickable {
-                                        if (voice.isListening) {
-                                            voice.stop()
-                                        } else if (answer.isBlank()) {
-                                            voice.start()
+                    val pending = pendingTranscript
+                    if (pending != null) {
+                        Column(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+                                .background(Color(0xFFFFF7EE)).padding(14.dp),
+                        ) {
+                            Text(t("確認這段回答內容：", "Confirm your answer:"), color = Color(0xFF9A6A3A), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(4.dp))
+                            Text(pending, color = Color(0xFF1F2937), fontSize = 13.sp, lineHeight = 20.sp)
+                            Spacer(Modifier.height(10.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Box(
+                                    Modifier.weight(1f).clip(RoundedCornerShape(999.dp))
+                                        .background(Color(0x14000000))
+                                        .clickable { pendingTranscript = null }
+                                        .padding(vertical = 10.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) { Text(t("重新錄音", "Re-record"), color = Color(0xFF6B5B4A), fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+                                Box(
+                                    Modifier.weight(1f).clip(RoundedCornerShape(999.dp))
+                                        .background(BrandOrange)
+                                        .clickable {
+                                            submitAnswer(pending)
+                                            pendingTranscript = null
                                         }
+                                        .padding(vertical = 10.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) { Text(t("確認送出", "Confirm & send"), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+                            }
+                        }
+                    } else {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                Modifier.clip(RoundedCornerShape(999.dp)).background(Color(0x14FFFFFF))
+                                    .clickable { fileLauncher.launch("*/*") }.padding(horizontal = 11.dp, vertical = 7.dp),
+                            ) { Text(t("分享工作", "Share work"), color = Color(0xCCFFFFFF), fontSize = 11.sp) }
+                            if (shared) {
+                                Spacer(Modifier.width(8.dp))
+                                Row(
+                                    Modifier.clip(RoundedCornerShape(999.dp)).background(Color(0x2910B981)).padding(horizontal = 10.dp, vertical = 7.dp),
+                                ) { Text(t("已分享", "Shared"), color = Color(0xFF34D399), fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+                            }
+                            Spacer(Modifier.weight(1f))
+                            if (isTranscribing) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    CircularProgressIndicator(
+                                        color = BrandOrange,
+                                        strokeWidth = 2.dp,
+                                        modifier = Modifier.size(28.dp),
+                                    )
+                                    Spacer(Modifier.height(6.dp))
+                                    Text(t("轉錄中...", "Transcribing..."), color = Color(0x99FFFFFF), fontSize = 11.sp)
+                                }
+                            } else {
+                                RecordingMicButton(
+                                    isRecording = recorder.isRecording,
+                                    amplitude = recorder.amplitude,
+                                    elapsedMs = recorder.elapsedMs,
+                                    maxDurationMs = 120_000L,
+                                    idleEnabled = answer.isBlank(),
+                                    onClick = {
+                                        if (recorder.isRecording) recorder.stop()
+                                        else if (answer.isBlank()) recorder.start()
                                     },
-                                contentAlignment = Alignment.Center,
-                            ) { Icon(if (voice.isListening) Icons.Filled.Stop else Icons.Filled.Mic, contentDescription = null, tint = Color.White, modifier = Modifier.size(26.dp)) }
-                            Spacer(Modifier.height(6.dp))
-                            Text(
-                                if (voice.isListening) t("點一下結束", "Tap to finish")
-                                else if (answer.isBlank()) t("輕點開始說話", "Tap to speak")
-                                else t("思考中…", "Thinking…"),
-                                color = Color(0x99FFFFFF), fontSize = 11.sp,
-                            )
+                                )
+                            }
                         }
                     }
                 }

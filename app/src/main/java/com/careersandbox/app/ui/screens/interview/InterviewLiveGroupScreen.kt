@@ -39,9 +39,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.*
-import com.careersandbox.app.ui.components.rememberInPageVoice
 import com.careersandbox.app.ui.theme.*
 import androidx.compose.material.icons.outlined.Stop
+import androidx.compose.material3.CircularProgressIndicator
+import com.careersandbox.app.data.repository.RemoteTranscribeRepository
+import com.careersandbox.app.ui.components.RecordingMicButton
+import com.careersandbox.app.ui.components.rememberInPageAudioRecorder
+import androidx.compose.foundation.clickable
 
 // 各角色河狸頭像(「你」維持色圈)
 private val ParticipantAvatars = mapOf(
@@ -102,7 +106,6 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
     LaunchedEffect(Unit) { while (true) { delay(1000); elapsedSec++ } }
     val timerText = "${(elapsedSec / 60).toString().padStart(2, '0')}:${(elapsedSec % 60).toString().padStart(2, '0')}"
     var interruptCount by remember { mutableIntStateOf(0) }
-    var lastVoiceResult by remember { mutableStateOf<com.careersandbox.app.ui.components.VoiceResult?>(null) }
     val currentSpeaker = if (isTyping) typingSpeaker
         else (messages.lastOrNull()?.speaker ?: if (panel) "用人主管" else "主考官")
 
@@ -113,10 +116,9 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
             speaker = "你",
             content = visible,
             isUser = true,
-            segments = lastVoiceResult?.segments ?: emptyList(),
-            segmentStartsMs = lastVoiceResult?.segmentStartsMs ?: emptyList(),
+            segments = emptyList(),
+            segmentStartsMs = emptyList(),
         )
-        lastVoiceResult = null
         messages.add(ChatMessage("u${messages.size}", "你", visible, isUser = true))
         val (rawWho, line) = com.careersandbox.app.data.mock.MockGroupDispatcher.dispatch(analyzed, followUpIdx)
         val who = if (panel && rawWho == "主考官") nextInterviewer() else rawWho
@@ -137,10 +139,19 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
     }
 
     // 頁內語音(SpeechRecognizer,需 RECORD_AUDIO,不跳 Google 框):逐字稿餵 dispatch 做同儕路由
-    val voice = rememberInPageVoice(
-        languageTag = "zh-TW",
-        onDetailedResult = { result -> lastVoiceResult = result },
-    ) { transcript -> submitGroup(transcript, transcript) }
+    var isTranscribing by remember { mutableStateOf(false) }
+    var pendingTranscript by remember { mutableStateOf<String?>(null) }
+    val transcribeRepo = remember { RemoteTranscribeRepository() }
+    val recorder = rememberInPageAudioRecorder(maxDurationMs = 120_000L) { file ->
+        isTranscribing = true
+        scope.launch {
+            transcribeRepo.transcribe(file)
+                .onSuccess { text -> pendingTranscript = text }
+                .onFailure { /* 轉錄失敗：畫面會回到可以重新錄音的狀態 */ }
+            isTranscribing = false
+            file.delete()
+        }
+    }
 
     LaunchedEffect(messages.size, isTyping) {
         val target = if (isTyping) messages.size else messages.size - 1
@@ -210,37 +221,56 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
         },
         bottomBar = {
             Column {
-                if (voice.isListening) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(BrandDeepOrange)
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                    ) {
-                        Text(
-                            "聆聽中（點麥克風結束）",
-                            color = Color.White.copy(alpha = 0.85f),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                        )
+                val pending = pendingTranscript
+                if (pending != null) {
+                    Column(Modifier.fillMaxWidth().background(PaperOff).padding(12.dp)) {
+                        Text("確認這段發言內容：", color = InkGray500, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(4.dp))
-                        Text(
-                            voice.partialText.ifBlank { "…" },
-                            color = Color.White,
-                            fontSize = 15.sp,
-                            lineHeight = 20.sp,
-                        )
+                        Text(pending, color = InkBlack, fontSize = 13.sp, lineHeight = 20.sp)
+                        Spacer(Modifier.height(10.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Box(
+                                Modifier.weight(1f).clip(RoundedCornerShape(999.dp))
+                                    .background(InkGray100)
+                                    .clickable { pendingTranscript = null }
+                                    .padding(vertical = 10.dp),
+                                contentAlignment = Alignment.Center,
+                            ) { Text("重新錄音", color = InkGray700, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+                            Box(
+                                Modifier.weight(1f).clip(RoundedCornerShape(999.dp))
+                                    .background(BrandOrange)
+                                    .clickable {
+                                        submitGroup(pending, pending)
+                                        pendingTranscript = null
+                                    }
+                                    .padding(vertical = 10.dp),
+                                contentAlignment = Alignment.Center,
+                            ) { Text("確認送出", color = PaperWhite, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+                        }
                     }
-                }
-                GroupBottomBar(
-                    input, { input = it },
-                    onVoice = { if (voice.isListening) voice.stop() else voice.start() },
-                    isListening = voice.isListening,
-                ) {
-                    if (input.isNotBlank() && !isTyping) {
-                        val said = input
-                        input = ""
-                        submitGroup(said, said)
+                } else if (isTranscribing) {
+                    Row(
+                        Modifier.fillMaxWidth().background(PaperOff).padding(16.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        CircularProgressIndicator(color = BrandOrange, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("轉錄中...", color = InkGray500, fontSize = 12.sp)
+                    }
+                } else {
+                    GroupBottomBar(
+                        input, { input = it },
+                        onVoice = { if (recorder.isRecording) recorder.stop() else recorder.start() },
+                        isListening = recorder.isRecording,
+                        amplitude = recorder.amplitude,
+                        elapsedMs = recorder.elapsedMs,
+                    ) {
+                        if (input.isNotBlank() && !isTyping) {
+                            val said = input
+                            input = ""
+                            submitGroup(said, said)
+                        }
                     }
                 }
             }
@@ -454,24 +484,20 @@ private fun GroupBottomBar(
     onChange: (String) -> Unit,
     onVoice: () -> Unit,
     isListening: Boolean,
+    amplitude: Float,
+    elapsedMs: Long,
     onSend: () -> Unit,
 ) {
     Column(Modifier.fillMaxWidth().background(PaperOff).padding(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(if (isListening) BrandDeepOrange else BrandPeach)
-                    .pressScale { onVoice() },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    if (isListening) Icons.Outlined.Stop else Icons.Outlined.Mic,
-                    contentDescription = null,
-                    tint = if (isListening) PaperWhite else BrandDeepOrange,
-                )
-            }
+            RecordingMicButton(
+                isRecording = isListening,
+                amplitude = amplitude,
+                elapsedMs = elapsedMs,
+                maxDurationMs = 120_000L,
+                size = 48.dp,
+                onClick = onVoice,
+            )
             Spacer(Modifier.width(8.dp))
             OutlinedTextField(
                 value = input, onValueChange = onChange,
