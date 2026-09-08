@@ -132,7 +132,7 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
         isTranscribing = true
         scope.launch {
             transcribeRepo.transcribe(file)
-                .onSuccess { text -> pendingTranscript = text }
+                .onSuccess { result -> pendingTranscript = result.text }
                 .onFailure { /* 轉錄失敗：先讓使用者看到麥克風按鈕重新出現，可以再錄一次 */ }
             isTranscribing = false
             file.delete()

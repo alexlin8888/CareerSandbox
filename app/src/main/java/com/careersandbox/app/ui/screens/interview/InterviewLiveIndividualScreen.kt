@@ -46,6 +46,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import com.careersandbox.app.data.repository.RemoteTranscribeRepository
 import com.careersandbox.app.ui.components.RecordingMicButton
 import com.careersandbox.app.ui.components.rememberInPageAudioRecorder
+import com.careersandbox.app.data.repository.TranscriptionResult
 
 /* =====================================================================
    1 對 1 面試(場景式,真流程)
@@ -172,10 +173,14 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
     val timerText = "${(elapsedSec / 60).toString().padStart(2, '0')}:${(elapsedSec % 60).toString().padStart(2, '0')}"
     val role = InterviewConfig.customRole.ifBlank { "Junior PM" }
 
-    fun submitAnswer(transcript: String) {
+    fun submitAnswer(
+        transcript: String,
+        segments: List<String> = emptyList(),
+        segmentStartsMs: List<Long> = emptyList(),
+    ) {
         if (phase != "MAIN" || transcript.isBlank() || answer.isNotBlank()) return
         answer = transcript
-        InterviewSession.record(question, transcript)
+        InterviewSession.record(question, transcript, segments, segmentStartsMs)
         reactingDelta = deltaFor(transcript)
         scope.launch {
             delay(1500)
@@ -209,13 +214,13 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
     }
 
     var isTranscribing by remember { mutableStateOf(false) }
-    var pendingTranscript by remember { mutableStateOf<String?>(null) }
+    var pendingResult by remember { mutableStateOf<TranscriptionResult?>(null) }
     val transcribeRepo = remember { RemoteTranscribeRepository() }
     val recorder = rememberInPageAudioRecorder(maxDurationMs = 120_000L) { file ->
         isTranscribing = true
         scope.launch {
             transcribeRepo.transcribe(file)
-                .onSuccess { text -> pendingTranscript = text }
+                .onSuccess { result -> pendingResult = result }
                 .onFailure { /* 轉錄失敗：先讓使用者看到麥克風按鈕重新出現，可以再錄一次 */ }
             isTranscribing = false
             file.delete()
@@ -348,7 +353,7 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
                     }
                 }
                 else -> {
-                    val pending = pendingTranscript
+                    val pending = pendingResult
                     if (pending != null) {
                         Column(
                             Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
@@ -356,13 +361,13 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
                         ) {
                             Text(t("確認這段回答內容：", "Confirm your answer:"), color = Color(0xFF9A6A3A), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(4.dp))
-                            Text(pending, color = Color(0xFF1F2937), fontSize = 13.sp, lineHeight = 20.sp)
+                            Text(pending.text, color = Color(0xFF1F2937), fontSize = 13.sp, lineHeight = 20.sp)
                             Spacer(Modifier.height(10.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 Box(
                                     Modifier.weight(1f).clip(RoundedCornerShape(999.dp))
                                         .background(Color(0x14000000))
-                                        .clickable { pendingTranscript = null }
+                                        .clickable { pendingResult = null }
                                         .padding(vertical = 10.dp),
                                     contentAlignment = Alignment.Center,
                                 ) { Text(t("重新錄音", "Re-record"), color = Color(0xFF6B5B4A), fontSize = 12.sp, fontWeight = FontWeight.Bold) }
@@ -370,8 +375,8 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
                                     Modifier.weight(1f).clip(RoundedCornerShape(999.dp))
                                         .background(BrandOrange)
                                         .clickable {
-                                            submitAnswer(pending)
-                                            pendingTranscript = null
+                                            submitAnswer(pending.text, pending.segmentTexts, pending.segmentStartsMs)
+                                            pendingResult = null
                                         }
                                         .padding(vertical = 10.dp),
                                     contentAlignment = Alignment.Center,

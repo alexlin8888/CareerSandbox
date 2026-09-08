@@ -20,4 +20,14 @@ interface InterviewApiService {
 // 之後如果要跟模型組確認的「segments/時間戳記」要加進來，就是在這裡加欄位
 data class TranscribeResponse(
     val text: String,
+    val duration: Double? = null,
+    val segments: List<TranscribeSegment> = emptyList(),
+)
+
+data class TranscribeSegment(
+    val start: Double,
+    val end: Double,
+    val text: String,
+    val avgLogprob: Double? = null,
+    val noSpeechProb: Double? = null,
 )
