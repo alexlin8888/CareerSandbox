@@ -8,8 +8,12 @@ package com.careersandbox.app.data.mock
    進入任何 live 頁時先 reset(),避免跨場殘留。
    ===================================================================== */
 object InterviewSession {
-    data class Turn(val question: String, val answer: String)
-
+    data class Turn(
+        val question: String,
+        val answer: String,
+        val answerSegments: List<String> = emptyList(),
+        val segmentStartsMs: List<Long> = emptyList(),
+    )
     /** 團體面試完整逐字稿:依實際發生順序記錄每一句話跟說話者(使用者或 AI 隊友)。*/
     data class GroupUtterance(
         val speaker: String,
@@ -32,9 +36,14 @@ object InterviewSession {
         groupTranscript.clear()
     }
 
-    fun record(question: String, answer: String) {
+    fun record(
+        question: String,
+        answer: String,
+        answerSegments: List<String> = emptyList(),
+        segmentStartsMs: List<Long> = emptyList(),
+    ) {
         if (answer.isBlank()) return
-        turns.add(Turn(question.trim(), answer.trim()))
+        turns.add(Turn(question.trim(), answer.trim(), answerSegments, segmentStartsMs))
     }
 
     fun recordGroupSay(text: String) {

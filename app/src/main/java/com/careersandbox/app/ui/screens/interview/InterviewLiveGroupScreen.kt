@@ -46,6 +46,7 @@ import com.careersandbox.app.data.repository.RemoteTranscribeRepository
 import com.careersandbox.app.ui.components.RecordingMicButton
 import com.careersandbox.app.ui.components.rememberInPageAudioRecorder
 import androidx.compose.foundation.clickable
+import com.careersandbox.app.data.repository.TranscriptionResult
 
 // 各角色河狸頭像(「你」維持色圈)
 private val ParticipantAvatars = mapOf(
@@ -109,15 +110,20 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
     val currentSpeaker = if (isTyping) typingSpeaker
         else (messages.lastOrNull()?.speaker ?: if (panel) "用人主管" else "主考官")
 
-    fun submitGroup(visible: String, analyzed: String) {
+    fun submitGroup(
+        visible: String,
+        analyzed: String,
+        segments: List<String> = emptyList(),
+        segmentStartsMs: List<Long> = emptyList(),
+    ) {
         if (isTyping) return
         com.careersandbox.app.data.mock.InterviewSession.recordGroupSay(visible)
         com.careersandbox.app.data.mock.InterviewSession.recordGroupUtterance(
             speaker = "你",
             content = visible,
             isUser = true,
-            segments = emptyList(),
-            segmentStartsMs = emptyList(),
+            segments = segments,
+            segmentStartsMs = segmentStartsMs,
         )
         messages.add(ChatMessage("u${messages.size}", "你", visible, isUser = true))
         val (rawWho, line) = com.careersandbox.app.data.mock.MockGroupDispatcher.dispatch(analyzed, followUpIdx)
@@ -140,13 +146,13 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
 
     // 頁內語音(SpeechRecognizer,需 RECORD_AUDIO,不跳 Google 框):逐字稿餵 dispatch 做同儕路由
     var isTranscribing by remember { mutableStateOf(false) }
-    var pendingTranscript by remember { mutableStateOf<String?>(null) }
+    var pendingResult by remember { mutableStateOf<TranscriptionResult?>(null) }
     val transcribeRepo = remember { RemoteTranscribeRepository() }
     val recorder = rememberInPageAudioRecorder(maxDurationMs = 120_000L) { file ->
         isTranscribing = true
         scope.launch {
             transcribeRepo.transcribe(file)
-                .onSuccess { text -> pendingTranscript = text }
+                .onSuccess { result -> pendingResult = result }
                 .onFailure { /* 轉錄失敗：畫面會回到可以重新錄音的狀態 */ }
             isTranscribing = false
             file.delete()
@@ -221,18 +227,18 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
         },
         bottomBar = {
             Column {
-                val pending = pendingTranscript
+                val pending = pendingResult
                 if (pending != null) {
                     Column(Modifier.fillMaxWidth().background(PaperOff).padding(12.dp)) {
                         Text("確認這段發言內容：", color = InkGray500, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(4.dp))
-                        Text(pending, color = InkBlack, fontSize = 13.sp, lineHeight = 20.sp)
+                        Text(pending.text, color = InkBlack, fontSize = 13.sp, lineHeight = 20.sp)
                         Spacer(Modifier.height(10.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             Box(
                                 Modifier.weight(1f).clip(RoundedCornerShape(999.dp))
                                     .background(InkGray100)
-                                    .clickable { pendingTranscript = null }
+                                    .clickable { pendingResult = null }
                                     .padding(vertical = 10.dp),
                                 contentAlignment = Alignment.Center,
                             ) { Text("重新錄音", color = InkGray700, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
@@ -240,8 +246,8 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
                                 Modifier.weight(1f).clip(RoundedCornerShape(999.dp))
                                     .background(BrandOrange)
                                     .clickable {
-                                        submitGroup(pending, pending)
-                                        pendingTranscript = null
+                                        submitGroup(pending.text, pending.text, pending.segmentTexts, pending.segmentStartsMs)
+                                        pendingResult = null
                                     }
                                     .padding(vertical = 10.dp),
                                 contentAlignment = Alignment.Center,
