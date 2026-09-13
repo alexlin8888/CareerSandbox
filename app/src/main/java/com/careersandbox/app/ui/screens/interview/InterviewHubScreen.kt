@@ -50,6 +50,8 @@ import com.careersandbox.app.data.model.InterviewRecord
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
+import androidx.compose.foundation.layout.navigationBarsPadding
+import com.careersandbox.app.ui.components.BottomNavSpace
 
 @Composable
 fun InterviewHubScreen(navController: NavHostController) {
@@ -93,8 +95,8 @@ fun InterviewHubScreen(navController: NavHostController) {
 
             // === 歷史紀錄(無框列表)===
             StaggeredAppear(delayMillis = 410) { HistorySection(navController) }
-
             Spacer(Modifier.height(48.dp))
+            Spacer(Modifier.navigationBarsPadding().height(BottomNavSpace))
         }
     }
 }

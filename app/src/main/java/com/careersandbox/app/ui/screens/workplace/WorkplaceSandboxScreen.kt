@@ -52,6 +52,8 @@ import com.careersandbox.app.ui.components.StaggeredAppear
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.navigationBarsPadding
+import com.careersandbox.app.ui.components.BottomNavSpace
 
 private enum class NodeKind { PLAY, PLANNED, CHEST }
 
@@ -177,7 +179,8 @@ fun WorkplaceSandboxScreen(navController: NavHostController) {
             modifier = Modifier.padding(horizontal = 24.dp),
         )
 
-        Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.navigationBarsPadding().height(BottomNavSpace))
         }
 
         // 入職介紹:第一次進沙盒播一次

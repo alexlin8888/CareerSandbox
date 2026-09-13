@@ -5,11 +5,16 @@ import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.viewinterop.AndroidView
+import android.widget.ImageView
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -55,6 +60,8 @@ import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
 import com.careersandbox.app.data.local.UserStore
+import androidx.compose.ui.unit.Dp
+
 
 @Composable
 fun HomeHubScreen(navController: NavHostController) {
@@ -64,7 +71,7 @@ fun HomeHubScreen(navController: NavHostController) {
         ) {
             StaggeredAppear(delayMillis = 0) { HeroSection(navController) }
             Spacer(Modifier.height(32.dp))
-            StaggeredAppear(delayMillis = 60) { ContinueJobCard(navController) }
+            StaggeredAppear(delayMillis = 60) { DashboardBentoSection(navController) }
             Spacer(Modifier.height(20.dp))
             StaggeredAppear(delayMillis = 90) { ArticleSection(navController) }
             Spacer(Modifier.height(24.dp))
@@ -95,7 +102,315 @@ fun HomeHubScreen(navController: NavHostController) {
                     )
                 }
             }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.navigationBarsPadding().height(BottomNavSpace))
+        }
+    }
+}
+
+@Composable
+private fun NinePatchBackground(
+    resId: Int,
+    tint: Color,
+    modifier: Modifier = Modifier,
+) {
+    AndroidView(
+        modifier = modifier,
+        factory = { context ->
+            ImageView(context).apply {
+                setImageResource(resId)
+                scaleType = ImageView.ScaleType.FIT_XY
+            }
+        },
+        update = { imageView ->
+            imageView.setImageResource(resId)
+            imageView.setColorFilter(tint.toArgb())
+        },
+    )
+}
+
+@Suppress("UnusedBoxWithConstraintsScope")
+@Composable
+private fun DashboardBentoSection(navController: NavHostController) {
+    val gap = 11.dp
+    val topAspectRatio = 183f / 165f
+    val bottomAspectRatio = 377f / 137f
+
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp),
+    ) {
+        val topCardWidth = (maxWidth - gap) / 2
+        val topCardHeight = topCardWidth / topAspectRatio
+        val bottomCardHeight = 125.dp
+        Column(verticalArrangement = Arrangement.spacedBy(gap)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+                Box(modifier = Modifier.weight(1f)) {
+                    ResumeMiniCard(navController, cardHeight = topCardHeight)
+                }
+                Box(modifier = Modifier.weight(1f)) {
+                    InterviewMiniCard(navController, cardHeight = topCardHeight)
+                }
+            }
+            LearningPathCard(navController, cardHeight = bottomCardHeight)
+        }
+
+        val beaverSize = 60.dp
+        Image(
+            painter = painterResource(R.drawable.beaver_head),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .offset(y = topCardHeight + gap / 2 - beaverSize / 2 - 6.dp)
+                .size(beaverSize)
+                .clip(CircleShape),
+        )
+    }
+}
+
+@Composable
+private fun ResumeMiniCard(navController: NavHostController, cardHeight: Dp) {
+    val job = MockData.jobApplications.firstOrNull() ?: return
+    val domain = companyDomain(job.company)
+    Box(
+        modifier = Modifier
+            .pressScale { navController.navigate(Routes.jobApplicationDetail(job.id)) }
+            .fillMaxWidth()
+            .height(cardHeight)
+            .clip(RoundedCornerShape(32.dp)),
+    ) {
+        NinePatchBackground(
+            resId = R.drawable.card_resume,
+            tint = BrandDeepOrange,
+            modifier = Modifier.matchParentSize(),
+        )
+        ScatteredDecorations(
+            modifier = Modifier
+                .matchParentSize()
+                .alpha(0.3f)
+        )
+        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            Text(
+                "適配度",
+                color = PaperWhite,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+            )
+            Text(
+                "${job.matchScore}%",
+                color = PaperWhite,
+                fontWeight = FontWeight.Black,
+                fontSize = 28.sp,
+            )
+            Spacer(Modifier.weight(1f))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(11.dp))
+                        .background(PaperWarm),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (domain != null) {
+                        AsyncImage(
+                            model = "https://www.google.com/s2/favicons?domain=$domain&sz=128",
+                            contentDescription = job.company,
+                            modifier = Modifier.size(22.dp),
+                            contentScale = ContentScale.Fit,
+                        )
+                    } else {
+                        Text(job.company.take(1), color = BrandDeepOrange, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                    }
+                }
+                Spacer(Modifier.width(10.dp))
+                Column {
+                    Text(
+                        job.position,
+                        color = PaperWhite,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 14.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        job.company,
+                        color = PaperWhite.copy(alpha = 0.7f),
+                        fontSize = 12.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(18.dp)
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(PaperWhite),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                Icons.Outlined.ChevronRight,
+                contentDescription = null,
+                tint = BrandDeepOrange,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun InterviewMiniCard(navController: NavHostController, cardHeight: Dp) {
+    Box(
+        modifier = Modifier
+            .pressScale { navController.navigate(Routes.INTERVIEW_HUB) }
+            .fillMaxWidth()
+            .height(cardHeight)
+            .clip(RoundedCornerShape(32.dp)),
+    ) {
+        NinePatchBackground(
+            resId = R.drawable.card_interview,
+            tint = InkCharcoal,
+            modifier = Modifier.matchParentSize(),
+        )
+        Image(
+            painter = painterResource(R.drawable.fire_svgrepo_com),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            colorFilter = ColorFilter.tint(AccentRed.copy(alpha = 0.5f)),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .offset(x = 20.dp, y = 8.dp)
+                .size(200.dp)
+                .graphicsLayer(rotationZ = -30f),
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 44.dp),
+            verticalArrangement = Arrangement.Bottom,
+        ) {
+            Text(
+                "面試準備度",
+                color = PaperWhite,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+            )
+            Spacer(Modifier.height(4.dp))
+            Row(
+                modifier = Modifier.offset(x = 10.dp, y = 12.dp),
+                verticalAlignment = Alignment.Bottom,
+            ) {
+                Text("78", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 30.sp)
+                Text(
+                    " 分（上次模擬）",
+                    color = PaperWhite.copy(alpha = 0.7f),
+                    fontSize = 11.sp,
+                    modifier = Modifier.padding(bottom = 4.dp),
+                )
+            }
+        }
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(18.dp)
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(BrandYellow),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                Icons.Outlined.ChevronRight,
+                contentDescription = "開始練習",
+                tint = InkCharcoal,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+        val notchGap = 11.dp
+        val notchRadius = 40.dp
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .offset(x = -(notchGap / 2 + notchRadius), y = notchGap / 2 + notchRadius)
+                .size(notchRadius * 2)
+                .clip(CircleShape)
+                .background(PaperWhite),
+        )
+    }
+}
+
+@Composable
+private fun LearningPathCard(navController: NavHostController, cardHeight: Dp) {
+    Box(
+        modifier = Modifier
+            .pressScale { navController.navigate(Routes.LEARNING_PATH) }
+            .fillMaxWidth()
+            .height(cardHeight)
+            .clip(RoundedCornerShape(32.dp)),
+    ) {
+        NinePatchBackground(
+            resId = R.drawable.card_path,
+            tint = BrandOrange,
+            modifier = Modifier.matchParentSize(),
+        )
+        Image(
+            painter = painterResource(R.drawable.undraw_stepping_up),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 8.dp, end = 8.dp)
+                .size(80.dp)
+                .alpha(0.95f),
+        )
+        Column(
+            modifier = Modifier
+                .matchParentSize()
+                .padding(18.dp),
+        ) {
+            Column(modifier = Modifier.padding(end = 90.dp)) {
+                Text(
+                    "學習路徑",
+                    color = PaperWhite.copy(alpha = 0.85f),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "今日目標：完成 2 個單元",
+                    color = PaperWhite,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                )
+            }
+            Spacer(Modifier.weight(1f))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(8.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(PaperWhite),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(0.5f)
+                            .clip(RoundedCornerShape(50))
+                            .background(BrandYellow),
+                    )
+                }
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    "50%",
+                    color = BrandYellow,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 13.sp,
+                )
+            }
         }
     }
 }
@@ -161,102 +476,43 @@ private fun JobProgressCard(navController: NavHostController) {
 }
 
 /** 接著做 — 美化版:白卡 + 公司 logo + 適配環 + 雙動作 */
+
 @Composable
-private fun ContinueJobCard(navController: NavHostController) {
-    val job = MockData.jobApplications.firstOrNull() ?: return
-    val domain = companyDomain(job.company)
-    Column(
-        modifier = Modifier
-            .padding(horizontal = 20.dp)
-            .fillMaxWidth()
-            .shadow(14.dp, RoundedCornerShape(24.dp))
-            .clip(RoundedCornerShape(24.dp))
-            .background(PaperWhite)
-            .pressScale { navController.navigate(Routes.jobApplicationDetail(job.id)) }
-            .padding(18.dp),
+private fun EqualizerMeter(score: Int, modifier: Modifier = Modifier) {
+    val segments = 9
+    val litCount = kotlin.math.ceil(score / 100f * segments).toInt().coerceIn(0, segments)
+    Row(
+        modifier = modifier.height(36.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        verticalAlignment = Alignment.Bottom,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(6.dp).clip(CircleShape).background(BrandDeepOrange))
-            Spacer(Modifier.width(7.dp))
-            Text(
-                "接著做",
-                color = BrandDeepOrange,
-                fontWeight = FontWeight.Black,
-                fontSize = 11.sp,
-                letterSpacing = 2.sp,
+        repeat(segments) { index ->
+            val position = index / (segments - 1).toFloat()
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(
+                        if (index < litCount) barColor(position) else PaperWhite.copy(alpha = 0.10f)
+                    ),
             )
-            Spacer(Modifier.weight(1f))
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(50))
-                    .background(BrandAmber.copy(alpha = 0.16f))
-                    .padding(horizontal = 10.dp, vertical = 4.dp),
-            ) {
-                Text("編輯中", color = Color(0xFFA76A00), fontWeight = FontWeight.Bold, fontSize = 10.sp)
-            }
-        }
-        Spacer(Modifier.height(15.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(PaperWarm)
-                    .border(1.dp, InkGray200, RoundedCornerShape(14.dp)),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (domain != null) {
-                    AsyncImage(
-                        model = "https://www.google.com/s2/favicons?domain=$domain&sz=128",
-                        contentDescription = job.company,
-                        modifier = Modifier.size(29.dp),
-                        contentScale = ContentScale.Fit,
-                    )
-                } else {
-                    Text(job.company.take(1), color = BrandDeepOrange, fontWeight = FontWeight.Black, fontSize = 17.sp)
-                }
-            }
-            Spacer(Modifier.width(13.dp))
-            Column(Modifier.weight(1f)) {
-                Text(job.position, color = InkBlack, fontWeight = FontWeight.Black, fontSize = 18.sp)
-                Spacer(Modifier.height(2.dp))
-                Text(job.company, color = InkGray500, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-            }
-            MatchRing(job.matchScore)
-        }
-        Spacer(Modifier.height(16.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(13.dp))
-                    .background(Brush.linearGradient(listOf(BrandOrange, BrandDeepOrange)))
-                    .pressScale { navController.navigate(Routes.INTERVIEW_SETUP_INDIVIDUAL) }
-                    .padding(vertical = 11.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(Icons.Outlined.Mic, contentDescription = null, tint = PaperWhite, modifier = Modifier.size(15.dp))
-                Spacer(Modifier.width(6.dp))
-                Text("練面試", color = PaperWhite, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
-            }
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(13.dp))
-                    .border(1.5.dp, BrandDeepOrange.copy(alpha = 0.35f), RoundedCornerShape(13.dp))
-                    .pressScale { navController.navigate(Routes.FIT_ANALYSIS) }
-                    .padding(vertical = 11.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(Icons.Outlined.Analytics, contentDescription = null, tint = BrandDeepOrange, modifier = Modifier.size(15.dp))
-                Spacer(Modifier.width(6.dp))
-                Text("還缺什麼", color = BrandDeepOrange, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
-            }
         }
     }
 }
+
+private fun barColor(position: Float): Color = if (position < 0.5f) {
+    androidx.compose.ui.graphics.lerp(AccentRed, BrandAmber, position / 0.5f)
+} else {
+    androidx.compose.ui.graphics.lerp(BrandAmber, AccentGreen, (position - 0.5f) / 0.5f)
+}
+
+private fun matchColor(score: Int): Color = when {
+    score >= 75 -> AccentGreen
+    score >= 50 -> BrandAmber
+    else -> AccentRed
+}
+
 
 @Composable
 private fun MatchRing(score: Int) {
@@ -264,7 +520,7 @@ private fun MatchRing(score: Int) {
         Canvas(modifier = Modifier.size(54.dp)) {
             val sw = 5.dp.toPx()
             drawArc(
-                color = InkGray200,
+                color = PaperWhite.copy(alpha = 0.18f),
                 startAngle = -90f,
                 sweepAngle = 360f,
                 useCenter = false,
@@ -279,10 +535,10 @@ private fun MatchRing(score: Int) {
             )
         }
         Row(verticalAlignment = Alignment.Bottom) {
-            Text("$score", color = BrandDeepOrange, fontWeight = FontWeight.Black, fontSize = 18.sp)
+            Text("$score", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 18.sp)
             Text(
                 "%",
-                color = BrandDeepOrange,
+                color = PaperWhite,
                 fontWeight = FontWeight.Black,
                 fontSize = 10.sp,
                 modifier = Modifier.padding(bottom = 2.dp),
@@ -306,40 +562,37 @@ private fun companyDomain(company: String): String? = when (company.trim().lower
 @Composable
 private fun HeroSection(navController: NavHostController) {
     val stat = MockData.homeStat
-    val user = UserStore.me // real user, loaded at login/splash
+    val user = UserStore.me
     val pct = rememberCountUp(stat.resumeCompletion)
     val greeting = remember {
         val h = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
         when {
-            h < 5 -> "夜深了"
+            h < 5 -> "凌晨好"
             h < 11 -> "早安"
             h < 18 -> "午安"
             else -> "晚安"
         }
     }
-    Box(modifier = Modifier.fillMaxWidth().height(360.dp)) {
-        // 1. wave 漸層背景(最底層)
+    Box(modifier = Modifier.fillMaxWidth().height(400.dp)) {
         WaveHeroBackground(
             gradient = Brush.linearGradient(
                 colors = listOf(BrandDeepOrange, BrandOrange, BrandAmber),
                 start = androidx.compose.ui.geometry.Offset(0f, 0f),
                 end = androidx.compose.ui.geometry.Offset(800f, 600f),
             ),
-            heightDp = 360,
+            heightDp = 400,
         )
 
-        // 2. 線稿裝飾(只在 hero 區內)
         ScatteredDecorations(
             modifier = Modifier.fillMaxSize().alpha(0.6f)
         )
 
-        // 3. 文字內容(避開右下插畫位置)
         Column(
             modifier = Modifier
+                .statusBarsPadding()
                 .padding(horizontal = 24.dp, vertical = 24.dp)
                 .fillMaxWidth(),
         ) {
-            // 頂部問候
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("$greeting,", color = PaperWhite.copy(alpha = 0.85f),
                     style = MaterialTheme.typography.bodyLarge)
@@ -352,7 +605,6 @@ private fun HeroSection(navController: NavHostController) {
                 )
             }
             Spacer(Modifier.height(4.dp))
-            // 姓名 + 年級
             Row(verticalAlignment = Alignment.Bottom) {
                 Box(modifier = Modifier.pressScale { navController.navigate(Routes.PROFILE) }) {
                     Text(user?.name ?: "",
@@ -382,12 +634,10 @@ private fun HeroSection(navController: NavHostController) {
 
             Spacer(Modifier.height(20.dp))
 
-            // 64% + chips 並排
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Bottom,
             ) {
-                // 左:64% 大數字(點擊→履歷頁)
                 Column(modifier = Modifier
                     .fillMaxWidth(0.55f)
                     .pressScale { navController.navigate(Routes.RESUME_HUB) }) {
@@ -426,7 +676,6 @@ private fun HeroSection(navController: NavHostController) {
 
                 Spacer(Modifier.weight(1f))
 
-                // 右:streak / 進步 chips(放頂部對齊文字)
                 Column(
                     modifier = Modifier.padding(bottom = 60.dp),
                     horizontalAlignment = Alignment.End,
@@ -448,7 +697,6 @@ private fun HeroSection(navController: NavHostController) {
             }
         }
 
-        // 4. 插畫破框(右下,但縮小避免擠到文字)
         Image(
             painter = painterResource(R.drawable.beaver_comfort),
             contentDescription = null,
@@ -461,7 +709,34 @@ private fun HeroSection(navController: NavHostController) {
         )
     }
 }
+@Composable
+private fun JobStatColumn(label: String, value: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            label,
+            color = PaperWhite.copy(alpha = 0.6f),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            value,
+            color = BrandOrange,
+            fontWeight = FontWeight.Black,
+            fontSize = 22.sp,
+        )
+    }
+}
 
+@Composable
+private fun StatDivider() {
+    Box(
+        Modifier
+            .width(1.dp)
+            .height(28.dp)
+            .background(PaperWhite.copy(alpha = 0.2f)),
+    )
+}
 /** Hero 右上 streak / 進步 chip — 白底實色,跟 hero 對比強 */
 @Composable
 private fun StreakChip(
@@ -906,6 +1181,8 @@ private fun ArticleBanner(
 private fun AnimatedBell(
     unreadCount: Int,
     onClick: () -> Unit,
+    bgColor: Color = Color(0x33FFFFFF),
+    iconTint: Color = PaperWhite,
 ) {
     val hasUnread = unreadCount > 0
 
@@ -935,14 +1212,14 @@ private fun AnimatedBell(
         Modifier
             .size(48.dp)
             .clip(CircleShape)
-            .background(Color(0x33FFFFFF))
+            .background(bgColor)
             .pressScale(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             Icons.Outlined.NotificationsNone,
             contentDescription = null,
-            tint = PaperWhite,
+            tint = iconTint,
             modifier = Modifier
                 .size(24.dp)
                 .graphicsLayer {

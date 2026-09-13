@@ -49,14 +49,18 @@ private fun navigateToTab(navController: NavHostController, route: String, curre
     }
 }
 
+/** 膠囊 72dp + 上下 14dp padding；頁面底部預留給浮動導覽列的空間 */
+val BottomNavSpace = 100.dp
+
 @Composable
-fun BottomNav(navController: NavHostController) {
+fun BottomNav(navController: NavHostController, modifier: Modifier = Modifier) {
     val currentEntry by navController.currentBackStackEntryAsState()
     val currentRoute = currentEntry?.destination?.route
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
+            .navigationBarsPadding()
             .padding(horizontal = 16.dp, vertical = 14.dp),
         contentAlignment = Alignment.Center,
     ) {
