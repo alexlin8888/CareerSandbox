@@ -47,7 +47,9 @@ interface InPageAudioRecorder {
 @Composable
 fun rememberInPageAudioRecorder(
     maxDurationMs: Long = 120_000L,
-    onStopped: (File) -> Unit,
+    // endedBy："user"（使用者自己按停止）或 "timeout"（錄滿 maxDurationMs 自動停止），
+    // 對應模型組合約裡 TurnRequest.endedBy 這個欄位
+    onStopped: (file: File, endedBy: String) -> Unit,
 ): InPageAudioRecorder {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -75,14 +77,14 @@ fun rememberInPageAudioRecorder(
         mediaRecorder = null
     }
 
-    fun finishAndDeliver(deliver: Boolean) {
+    fun finishAndDeliver(deliver: Boolean, endedBy: String) {
         recording = false
         amplitudeState = 0f
         releaseRecorder()
         val file = outputFile
         outputFile = null
         if (deliver && file != null && file.exists() && file.length() > 0) {
-            onStopped(file)
+            onStopped(file, endedBy)
         }
     }
 
@@ -122,7 +124,7 @@ fun rememberInPageAudioRecorder(
                 // 平滑：新值佔 6 成，反應比之前快一點
                 amplitudeState = amplitudeState * 0.4f + normalized * 0.6f
                 if (elapsed >= maxDurationMs) {
-                    finishAndDeliver(deliver = true)
+                    finishAndDeliver(deliver = true, endedBy = "timeout")
                 }
             }
         }
@@ -136,7 +138,7 @@ fun rememberInPageAudioRecorder(
     }
 
     DisposableEffect(Unit) {
-        onDispose { finishAndDeliver(deliver = false) }
+        onDispose { finishAndDeliver(deliver = false, endedBy = "unknown") }
     }
 
     return object : InPageAudioRecorder {
@@ -154,7 +156,7 @@ fun rememberInPageAudioRecorder(
         }
         override fun stop() {
             if (!recording) return
-            finishAndDeliver(deliver = true)
+            finishAndDeliver(deliver = true, endedBy = "user")
         }
     }
 }

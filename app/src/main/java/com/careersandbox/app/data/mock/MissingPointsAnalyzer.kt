@@ -40,18 +40,25 @@ interface MissingPointsAnalyzer {
  * 真接後端時整個物件換掉即可,介面與資料形狀不變。
  */
 object MockMissingPointsAnalyzer : MissingPointsAnalyzer {
-    override fun analyze(): List<MissingPoint> = listOf(
-        MissingPoint(
-            "SQL 把週報效率提升 4 倍",
-            "這份 JD 很重視數據能力,但你整場沒提到這段量化成果。",
-        ),
-        MissingPoint(
-            "社團 IG 從 0 經營到 1200 追蹤",
-            "能證明你的成長行銷實作,面試官通常很買單。",
-        ),
-        MissingPoint(
-            "帶 5 人團隊完成聯名專案",
-            "JD 要求協作與領導,這段沒帶到很可惜。",
-        ),
-    )
+    override fun analyze(): List<MissingPoint> {
+        val real = InterviewAiReport.response
+        if (real != null) {
+            if (!real.resumeGrounded) return emptyList()
+            return real.missingPoints.map { MissingPoint(it.point, it.why) }
+        }
+        return listOf(
+            MissingPoint(
+                "SQL 把週報效率提升 4 倍",
+                "這份 JD 很重視數據能力,但你整場沒提到這段量化成果。",
+            ),
+            MissingPoint(
+                "社團 IG 從 0 經營到 1200 追蹤",
+                "能證明你的成長行銷實作,面試官通常很買單。",
+            ),
+            MissingPoint(
+                "帶 5 人團隊完成聯名專案",
+                "JD 要求協作與領導,這段沒帶到很可惜。",
+            ),
+        )
+    }
 }

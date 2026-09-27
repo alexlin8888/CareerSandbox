@@ -148,7 +148,7 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
     var isTranscribing by remember { mutableStateOf(false) }
     var pendingResult by remember { mutableStateOf<TranscriptionResult?>(null) }
     val transcribeRepo = remember { RemoteTranscribeRepository() }
-    val recorder = rememberInPageAudioRecorder(maxDurationMs = 120_000L) { file ->
+    val recorder = rememberInPageAudioRecorder(maxDurationMs = 120_000L) { file, _ ->
         isTranscribing = true
         scope.launch {
             transcribeRepo.transcribe(file)

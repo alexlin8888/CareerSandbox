@@ -47,6 +47,12 @@ import com.careersandbox.app.data.repository.RemoteTranscribeRepository
 import com.careersandbox.app.ui.components.RecordingMicButton
 import com.careersandbox.app.ui.components.rememberInPageAudioRecorder
 import com.careersandbox.app.data.repository.TranscriptionResult
+import com.careersandbox.app.data.mock.InterviewAiSession
+import androidx.compose.runtime.mutableStateListOf
+import com.careersandbox.app.data.remote.InterviewAiApiClient
+import com.careersandbox.app.data.remote.InterviewContextDto
+import com.careersandbox.app.data.remote.TurnRequest
+import com.careersandbox.app.data.mock.InterviewAiReport
 
 /* =====================================================================
    1 對 1 面試(場景式,真流程)
@@ -149,7 +155,8 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
     val lang = InterviewConfig.language
     fun t(zh: String, en: String) = if (lang == "English") en else zh
 
-    val openingQ = t("先請你做一個簡短的自我介紹,大約一分鐘。", "Let's start. Give me a one-minute introduction — who you are, and why this role.")
+    val openingQ = InterviewAiSession.openingQuestion
+        ?: t("好，我們開始，先請你用一分鐘自我介紹，包含你是誰、為什麼想要這個職位。", "Let's start. Give me a one-minute introduction — who you are, and why this role.")
     val probes = when {
         lang == "English" -> englishProbes
         InterviewConfig.type == "技術" -> probesTechType
@@ -167,9 +174,10 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
     var repeatFired by remember { mutableStateOf(false) }
     var elapsedSec by remember { mutableIntStateOf(0) }
     var shared by remember { mutableStateOf(false) }
+    val askedTopics = remember { mutableStateListOf<String>() }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) { InterviewSession.reset(); while (true) { delay(1000); elapsedSec++ } }
+    LaunchedEffect(Unit) { InterviewSession.reset(); InterviewAiReport.reset(); while (true) { delay(1000); elapsedSec++ } }
     val timerText = "${(elapsedSec / 60).toString().padStart(2, '0')}:${(elapsedSec % 60).toString().padStart(2, '0')}"
     val role = InterviewConfig.customRole.ifBlank { "Junior PM" }
 
@@ -177,24 +185,59 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
         transcript: String,
         segments: List<String> = emptyList(),
         segmentStartsMs: List<Long> = emptyList(),
+        endedBy: String = "unknown",
     ) {
         if (phase != "MAIN" || transcript.isBlank() || answer.isNotBlank()) return
         answer = transcript
-        InterviewSession.record(question, transcript, segments, segmentStartsMs)
+        InterviewSession.record(question, transcript, segments, segmentStartsMs, "voice", endedBy)
         reactingDelta = deltaFor(transcript)
         scope.launch {
             delay(1500)
             val reply = when {
                 followUpIdx == 2 && !repeatFired -> {
                     repeatFired = true
-                    t("(他翻了下筆記)剛剛那題,我再問一次:$lastProbe", "(He flips back a page.) Let me ask that one again: $lastProbe")
+                    t("(他翻回上一頁。)讓我再問一次：$lastProbe", "(He flips back a page.) Let me ask that one again: $lastProbe")
                 }
                 followUpIdx >= 4 -> {
                     phase = "REVERSE"
-                    t("好,主要的問題就到這裡。最後,你有什麼想問我們的?", "Alright, that covers the main questions. One last thing: what would you like to ask us?")
+                    t("好，主要問題就先到這邊。最後想請問，你有什麼想問我們的嗎？", "Alright, that covers the main questions. One last thing: what would you like to ask us?")
+                }
+                InterviewAiSession.sessionId != null -> {
+                    val sessionId = InterviewAiSession.sessionId!!
+                    try {
+                        val res = InterviewAiApiClient.interviewAiApi.submitTurn(
+                            sessionId,
+                            TurnRequest(
+                                answer = transcript,
+                                followUpIdx = followUpIdx,
+                                question = question,
+                                fallback = InterviewAiSession.fallbackProbes,
+                                mode = "single",
+                                inputMode = "voice",
+                                endedBy = endedBy,
+                                context = InterviewContextDto(
+                                    round = InterviewConfig.round,
+                                    language = InterviewConfig.language,
+                                    type = InterviewConfig.type,
+                                    difficulty = InterviewConfig.difficulty,
+                                ),
+                                askedTopics = askedTopics.toList(),
+                            ),
+                        )
+                        if (res.isSuccessful && res.body() != null) {
+                            val body = res.body()!!
+                            if (body.topic.isNotBlank()) askedTopics.add(body.topic)
+                            body.nextQuestion
+                        } else {
+                            MockInterviewProber.probe(transcript, followUpIdx, probes).also { lastProbe = it }
+                        }
+                    } catch (e: Exception) {
+                        MockInterviewProber.probe(transcript, followUpIdx, probes).also { lastProbe = it }
+                    }
                 }
                 else -> MockInterviewProber.probe(transcript, followUpIdx, probes).also { lastProbe = it }
             }
+            lastProbe = reply
             question = reply
             answer = ""
             reactingDelta = 0
@@ -215,9 +258,11 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
 
     var isTranscribing by remember { mutableStateOf(false) }
     var pendingResult by remember { mutableStateOf<TranscriptionResult?>(null) }
+    var pendingEndedBy by remember { mutableStateOf("unknown") }
     val transcribeRepo = remember { RemoteTranscribeRepository() }
-    val recorder = rememberInPageAudioRecorder(maxDurationMs = 120_000L) { file ->
+    val recorder = rememberInPageAudioRecorder(maxDurationMs = 120_000L) { file, endedBy ->
         isTranscribing = true
+        pendingEndedBy = endedBy
         scope.launch {
             transcribeRepo.transcribe(file)
                 .onSuccess { result -> pendingResult = result }
@@ -375,7 +420,7 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
                                     Modifier.weight(1f).clip(RoundedCornerShape(999.dp))
                                         .background(BrandOrange)
                                         .clickable {
-                                            submitAnswer(pending.text, pending.segmentTexts, pending.segmentStartsMs)
+                                            submitAnswer(pending.text, pending.segmentTexts, pending.segmentStartsMs, pendingEndedBy)
                                             pendingResult = null
                                         }
                                         .padding(vertical = 10.dp),
