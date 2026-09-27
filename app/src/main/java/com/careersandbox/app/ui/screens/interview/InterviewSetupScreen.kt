@@ -40,12 +40,23 @@ import com.careersandbox.app.data.model.JobApplication
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+import com.careersandbox.app.data.mock.InterviewAiSession
+import com.careersandbox.app.data.remote.InterviewAiApiClient
+import com.careersandbox.app.data.remote.InterviewContextDto
+import com.careersandbox.app.data.remote.StartInterviewRequest
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 private data class Interviewer(val name: String, val angle: String, val drawable: Int)
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun InterviewSetupScreen(navController: NavHostController) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val jobs = MockData.jobApplications
     var selectedJobId by remember { mutableStateOf(jobs.firstOrNull()?.id ?: "custom") }
     var customRole by remember { mutableStateOf("") }
@@ -87,6 +98,7 @@ fun InterviewSetupScreen(navController: NavHostController) {
                             InterviewConfig.language = language
                             InterviewConfig.type = type
                             InterviewConfig.difficulty = difficulty
+                            InterviewConfig.format = format
                             if (isCustom) {
                                 InterviewConfig.customRole = customRole
                                 InterviewConfig.customCompany = customCompany
@@ -256,6 +268,35 @@ fun InterviewSetupScreen(navController: NavHostController) {
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(InkBlack)
                         .pressScale {
                             showWarmup = false
+                            @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
+                            GlobalScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+                                try {
+                                    val res = InterviewAiApiClient.interviewAiApi.startInterview(
+                                        StartInterviewRequest(
+                                            mode = format,
+                                            context = InterviewContextDto(
+                                                round = round,
+                                                language = language,
+                                                type = type,
+                                                difficulty = difficulty,
+                                            ),
+                                        )
+                                    )
+                                    if (res.isSuccessful && res.body() != null) {
+                                        val body = res.body()!!
+                                        InterviewAiSession.sessionId = body.sessionId
+                                        InterviewAiSession.openingQuestion = body.openingQuestion
+                                        InterviewAiSession.openingSpeaker = body.openingSpeaker
+                                        InterviewAiSession.openingTopic = body.openingTopic
+                                        InterviewAiSession.personas = body.personas
+                                        InterviewAiSession.fallbackProbes = body.fallbackProbes
+                                    } else {
+                                        InterviewAiSession.reset()
+                                    }
+                                } catch (e: Exception) {
+                                    InterviewAiSession.reset()
+                                }
+                            }
                             navController.navigate(
                                 if (format == "panel") Routes.INTERVIEW_LIVE_PANEL
                                 else Routes.INTERVIEW_LIVE_INDIVIDUAL

@@ -8,6 +8,9 @@ object InterviewConfig {
     var type: String = "行為"         // 行為 / 技術 / 情境
     var difficulty: String = "中等"   // 新手 / 中等 / 困難
     var groupInterviewers: Int = 1    // 團體面試:1 位主持 / 3 位 panel
+    var format: String = "single"     // single / panel，對應模型組合約的 mode
+    var groupSize: Int = 4            // 群面小組人數（含使用者本人），3–5
+    var groupRole: String = "一般應徵者"  // 一般應徵者 / 較資深應徵者 / 較資淺應徵者
     // 自訂職位脈絡(讓 AI 出題更準)
     var customRole: String = ""
     var customCompany: String = ""

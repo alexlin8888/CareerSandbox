@@ -13,6 +13,8 @@ object InterviewSession {
         val answer: String,
         val answerSegments: List<String> = emptyList(),
         val segmentStartsMs: List<Long> = emptyList(),
+        val inputMode: String = "voice",
+        val endedBy: String = "unknown",
     )
     /** 團體面試完整逐字稿:依實際發生順序記錄每一句話跟說話者(使用者或 AI 隊友)。*/
     data class GroupUtterance(
@@ -41,9 +43,11 @@ object InterviewSession {
         answer: String,
         answerSegments: List<String> = emptyList(),
         segmentStartsMs: List<Long> = emptyList(),
+        inputMode: String = "voice",
+        endedBy: String = "unknown",
     ) {
         if (answer.isBlank()) return
-        turns.add(Turn(question.trim(), answer.trim(), answerSegments, segmentStartsMs))
+        turns.add(Turn(question.trim(), answer.trim(), answerSegments, segmentStartsMs, inputMode, endedBy))
     }
 
     fun recordGroupSay(text: String) {

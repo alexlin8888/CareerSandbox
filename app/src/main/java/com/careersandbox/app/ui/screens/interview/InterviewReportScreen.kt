@@ -33,6 +33,17 @@ import com.careersandbox.app.data.mock.InterviewConfig
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
+import androidx.compose.material3.CircularProgressIndicator
+import com.careersandbox.app.data.mock.InterviewAiReport
+import com.careersandbox.app.data.mock.InterviewAiSession
+import com.careersandbox.app.data.mock.InterviewSession
+import com.careersandbox.app.data.remote.ExperienceDto
+import com.careersandbox.app.data.remote.InterviewAiApiClient
+import com.careersandbox.app.data.remote.InterviewContextDto
+import com.careersandbox.app.data.remote.ReportRequest
+import com.careersandbox.app.data.remote.TurnDto
+import com.careersandbox.app.data.repository.RemoteExperienceRepository
+import kotlinx.coroutines.launch
 
 @Composable
 fun InterviewReportScreen(navController: NavHostController) {
@@ -52,6 +63,66 @@ fun InterviewReportScreen(navController: NavHostController) {
         }
         ctx.startActivity(android.content.Intent.createChooser(intent, "分享面試報告"))
     }
+    var isLoadingReport by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        val sessionId = InterviewAiSession.sessionId
+        if (sessionId != null && InterviewAiReport.response == null) {
+            isLoadingReport = true
+            val experiences = RemoteExperienceRepository().listRaw()
+                .getOrDefault(emptyList())
+                .map {
+                    ExperienceDto(
+                        id = it.id, title = it.title, category = it.category, period = it.period,
+                        role = it.role, action = it.action, result = it.result, learning = it.learning,
+                        description = it.description, tags = it.tags,
+                    )
+                }
+            val turns = InterviewSession.turns.map {
+                TurnDto(
+                    question = it.question,
+                    answer = it.answer,
+                    inputMode = it.inputMode,
+                    answerSegments = it.answerSegments,
+                    segmentStartsMs = it.segmentStartsMs,
+                    endedBy = it.endedBy,
+                )
+            }
+            try {
+                val res = InterviewAiApiClient.interviewAiApi.getReport(
+                    sessionId,
+                    ReportRequest(
+                        mode = InterviewConfig.format,
+                        context = InterviewContextDto(
+                            round = InterviewConfig.round,
+                            language = InterviewConfig.language,
+                            type = InterviewConfig.type,
+                            difficulty = InterviewConfig.difficulty,
+                        ),
+                        experiences = experiences,
+                        turns = turns,
+                    ),
+                )
+                if (res.isSuccessful && res.body() != null) {
+                    InterviewAiReport.response = res.body()
+                }
+            } catch (e: Exception) {
+                // 失敗就維持 null，畫面會自動退回原本的假資料，不會卡住或閃退
+            }
+            isLoadingReport = false
+        }
+    }
+
+    if (isLoadingReport) {
+        Box(Modifier.fillMaxSize().background(InkCharcoal), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                CircularProgressIndicator(color = BrandOrange)
+                Spacer(Modifier.height(12.dp))
+                Text("正在產生你的面試報告...", color = PaperWhite, fontSize = 14.sp)
+            }
+        }
+        return
+    }
+
     Box(modifier = Modifier.fillMaxSize().background(InkCharcoal)) {
         // 光暈
         Box(
@@ -146,9 +217,15 @@ fun InterviewReportScreen(navController: NavHostController) {
                                     fontWeight = FontWeight.SemiBold,
                                     letterSpacing = 1.sp)
                             }
+                            val subScoresNow = com.careersandbox.app.data.mock.MockInterviewReportProvider.subScores()
+                            val overallScore = if (subScoresNow.isNotEmpty()) {
+                                subScoresNow.sumOf { it.score } / subScoresNow.size
+                            } else {
+                                74
+                            }
                             Spacer(Modifier.height(20.dp))
-                            // 超大數字
-                            Text("${rememberCountUp(74, durationMillis = 1200)}",
+                            // 超大數字（暫時用六項細分分數的平均值，正式算法待跟模型組/B對齊 overallScore）
+                            Text("${rememberCountUp(overallScore, durationMillis = 1200)}",
                                 color = PaperWhite,
                                 fontSize = 128.sp,
                                 fontWeight = FontWeight.Black,
@@ -170,16 +247,6 @@ fun InterviewReportScreen(navController: NavHostController) {
                                     color = InkCharcoal,
                                     fontWeight = FontWeight.Bold,
                                     style = MaterialTheme.typography.bodyMedium)
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Outlined.TrendingUp, contentDescription = null,
-                                    tint = AccentGreen, modifier = Modifier.size(14.dp))
-                                Spacer(Modifier.width(4.dp))
-                                Text("比上次進步 6 分",
-                                    color = AccentGreen,
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
@@ -272,45 +339,33 @@ fun InterviewReportScreen(navController: NavHostController) {
                 }
 
                 Spacer(Modifier.height(32.dp))
-            }
 
-            // 收尾鼓勵(誠實語氣,呼應 74 分「有基礎但還能更好」)
-            StaggeredAppear {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(Color(0x14FFFFFF))
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Image(
-                        painter = painterResource(R.drawable.beaver_thumbsup),
-                        contentDescription = null,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.size(84.dp),
-                    )
-                    Spacer(Modifier.width(14.dp))
-                    Column(modifier = Modifier.weight(1f)) {
+                // 收尾鼓勵：搬進可以捲動的內容裡，就不會固定佔用畫面、壓縮可視範圍，
+                // 捲到報告最下面才看得到，兩個按鈕維持固定不動
+                StaggeredAppear {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.beaver_thumbsup),
+                            contentDescription = null,
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.size(56.dp),
+                        )
+                        Spacer(Modifier.height(8.dp))
                         Text(
-                            "有基礎了,別停在這",
+                            "有基礎了，別停在這",
                             color = PaperWhite,
                             fontWeight = FontWeight.Black,
                             fontSize = 16.sp,
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            "把語速放慢一點、再來一次時把漏掉的經歷補上,分數會更穩。",
-                            color = InkGray300,
-                            fontSize = 13.sp,
-                            lineHeight = 19.sp,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                         )
                     }
                 }
-            }
 
-            Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(20.dp))
+            }
 
             // 底部按鈕
             Row(

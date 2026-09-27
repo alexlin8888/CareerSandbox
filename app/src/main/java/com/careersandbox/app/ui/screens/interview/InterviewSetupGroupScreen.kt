@@ -83,6 +83,8 @@ fun InterviewSetupGroupScreen(navController: NavHostController) {
                         .background(InkBlack)
                         .pressScale {
                             InterviewConfig.groupInterviewers = interviewers
+                            InterviewConfig.groupSize = groupSize
+                            InterviewConfig.groupRole = role.title
                             navController.navigate(Routes.INTERVIEW_LIVE_GROUP) {
                                 popUpTo(Routes.INTERVIEW_HUB)
                             }

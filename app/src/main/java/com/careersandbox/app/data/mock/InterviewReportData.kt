@@ -68,7 +68,17 @@ interface InterviewReportProvider {
 /** Mock 實作:代表性範例,讓 UI 在 demo / UIUX 階段可完整展示。真接後端時整個換掉。 */
 object MockInterviewReportProvider : InterviewReportProvider {
 
-    override fun faceDimensions(): List<FaceDimension> = listOf(
+    override fun faceDimensions(): List<FaceDimension> {
+        val real = InterviewAiReport.response
+        if (real != null && real.faceDimensions.isNotEmpty()) {
+            return real.faceDimensions.map { d ->
+                FaceDimension(
+                    letter = d.letter, name = d.name, score = d.score, verdict = d.verdict,
+                    points = d.points, prosody = d.prosody?.map { it.label to it.value },
+                )
+            }
+        }
+        return listOf(
         FaceDimension(
             letter = "內", name = "內容", score = 71,
             verdict = "有講到重點,但缺乏具體數字與亮點。",
@@ -100,19 +110,29 @@ object MockInterviewReportProvider : InterviewReportProvider {
                 "開口前思考" to "平均 4.2 秒 · 最長 11 秒",
             ),
         ),
-    )
+        )
+    }
 
-    override fun subScores(): List<SubScore> = listOf(
+    override fun subScores(): List<SubScore> {
+        val real = InterviewAiReport.response
+        if (real != null && real.subScores.isNotEmpty()) {
+            return real.subScores.map { SubScore(it.name, it.score) }
+        }
+        return listOf(
         SubScore("內容深度", 78),
         SubScore("邏輯清晰度", 82),
         SubScore("表達流暢度", 71),
         SubScore("互動能力", 68),
         SubScore("應變能力", 64),
         SubScore("自信程度", 80),
-    )
+        )
+    }
 
     override fun questionFeedbacks(): List<QuestionFeedback> {
-        // 有現場逐字記錄就顯示你真正講的;評分/更好講法待後端產生
+        val real = InterviewAiReport.response
+        if (real != null && real.questionFeedbacks.isNotEmpty()) {
+            return real.questionFeedbacks.map { QuestionFeedback(it.question, it.answer, it.comment, it.better) }
+        }
         val turns = InterviewSession.turns
         if (turns.isNotEmpty()) return turns.map {
             QuestionFeedback(
@@ -138,29 +158,76 @@ object MockInterviewReportProvider : InterviewReportProvider {
         )
     }
 
-    override fun starParts(): List<StarPart> = listOf(
-        StarPart("S", "情境 Situation", true, "「我們辦過一場聯名活動」", "有交代背景"),
-        StarPart("T", "任務 Task", true, "「前期要決定推廣規模」", "任務算清楚"),
-        StarPart("A", "行動 Action", true, "「沒先測試就直接全推」", "行動講了,但偏簡略"),
-        StarPart("R", "結果 Result", false, "", "缺這段:結果數字 + 你學到什麼"),
-    )
-
-    override fun videoDims(): List<VideoDim> = listOf(
-        VideoDim("眼神接觸", 78, "大部分時間看著鏡頭,中段低頭找詞時斷了幾次。下次想詞可以往上看。"),
-        VideoDim("姿態穩定度", 85, "坐得穩、沒有大幅晃動,給人沉穩的印象。"),
-        VideoDim("表情自然度", 70, "整體放鬆,但講到難題時眉頭會皺。練習時可留意一下。"),
-    )
-
-    override fun collabDims(): List<CollabDim> = listOf(
-        CollabDim("參與主動性", 74, "有主動發言、不會整場沉默。可在開頭就先表態,搶到定錨位置。（待後端依發言時機分析）"),
-        CollabDim("傾聽與回應", 68, "有接著別人的點講,但較常各說各話。試著明確回應前一位:「我同意 X,另外補充…」。（待後端依回應關聯度分析）"),
-        CollabDim("論點建構", 71, "論點清楚但偏短。可多用「因為…所以…」把推理講完整。（待後端依論證結構分析）"),
-        CollabDim("協作姿態", 70, "沒有壓過別人,姿態不錯;但也別只當附和者,適時收斂分歧、推進共識。（待後端依互動角色分析）"),
-    )
-
-    override fun improvements(): List<String> = listOf(
-        "回答前先重複問題一次,確認你聽對了",
-        "講失敗時用 STAR 結構,結尾一定要有「我從中學到」",
-        "互動性可以再強,主動問面試官「我這樣理解對嗎」",
-    )
+    override fun starParts(): List<StarPart> {
+        val real = InterviewAiReport.response
+        if (real != null && real.starParts.isNotEmpty()) {
+            return real.starParts.map {
+                StarPart(
+                    it.key,
+                    it.name,
+                    it.present,
+                    it.fromAnswer,
+                    it.hint
+                )
+            }
+        }
+        return listOf(
+            StarPart("S", "情境 Situation", true, "「我們辦過一場聯名活動」", "有交代背景"),
+            StarPart("T", "任務 Task", true, "「前期要決定推廣規模」", "任務算清楚"),
+            StarPart("A", "行動 Action", true, "「沒先測試就直接全推」", "行動講了,但偏簡略"),
+            StarPart("R", "結果 Result", false, "", "缺這段:結果數字 + 你學到什麼"),
+        )
+    }
+    override fun videoDims(): List<VideoDim> {
+        val real = InterviewAiReport.response
+        if (real != null && real.videoDims.isNotEmpty()) {
+            return real.videoDims.map { VideoDim(it.name, it.score, it.hint) }
+        }
+        return listOf(
+            VideoDim(
+                "眼神接觸",
+                78,
+                "大部分時間看著鏡頭,中段低頭找詞時斷了幾次。下次想詞可以往上看。"
+            ),
+            VideoDim("姿態穩定度", 85, "坐得穩、沒有大幅晃動,給人沉穩的印象。"),
+            VideoDim("表情自然度", 70, "整體放鬆,但講到難題時眉頭會皺。練習時可留意一下。"),
+        )
+    }
+    override fun collabDims(): List<CollabDim> {
+        val real = InterviewAiReport.response
+        if (real != null && real.collabDims.isNotEmpty()) {
+            return real.collabDims.map { CollabDim(it.name, it.score, it.hint) }
+        }
+        return listOf(
+            CollabDim(
+                "參與主動性",
+                74,
+                "有主動發言、不會整場沉默。可在開頭就先表態,搶到定錨位置。（待後端依發言時機分析）"
+            ),
+            CollabDim(
+                "傾聽與回應",
+                68,
+                "有接著別人的點講,但較常各說各話。試著明確回應前一位:「我同意 X,另外補充…」。（待後端依回應關聯度分析）"
+            ),
+            CollabDim(
+                "論點建構",
+                71,
+                "論點清楚但偏短。可多用「因為…所以…」把推理講完整。（待後端依論證結構分析）"
+            ),
+            CollabDim(
+                "協作姿態",
+                70,
+                "沒有壓過別人,姿態不錯;但也別只當附和者,適時收斂分歧、推進共識。（待後端依互動角色分析）"
+            ),
+        )
+    }
+    override fun improvements(): List<String> {
+        val real = InterviewAiReport.response
+        if (real != null && real.improvements.isNotEmpty()) return real.improvements
+        return listOf(
+            "回答前先重複問題一次,確認你聽對了",
+            "講失敗時用 STAR 結構,結尾一定要有「我從中學到」",
+            "互動性可以再強,主動問面試官「我這樣理解對嗎」",
+        )
+    }
 }
