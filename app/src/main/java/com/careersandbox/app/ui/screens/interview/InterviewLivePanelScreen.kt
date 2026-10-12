@@ -46,6 +46,12 @@ import androidx.compose.material3.CircularProgressIndicator
 import com.careersandbox.app.data.repository.RemoteTranscribeRepository
 import com.careersandbox.app.ui.components.RecordingMicButton
 import com.careersandbox.app.ui.components.rememberInPageAudioRecorder
+import androidx.compose.runtime.mutableStateListOf
+import com.careersandbox.app.data.mock.InterviewAiReport
+import com.careersandbox.app.data.mock.InterviewAiSession
+import com.careersandbox.app.data.remote.InterviewAiApiClient
+import com.careersandbox.app.data.remote.InterviewContextDto
+import com.careersandbox.app.data.remote.TurnRequest
 
 /* =====================================================================
    主管 panel 面試(場景式,真流程)
@@ -62,6 +68,9 @@ import com.careersandbox.app.ui.components.rememberInPageAudioRecorder
 
 private const val OPENING_Q =
     "我們先從你開始。可以用一分鐘介紹一下自己,以及為什麼想加入我們嗎?"
+
+// 一場面試的總提問輪數（含開場題）。三位面試官各問兩次，整場約 10 分鐘。
+private const val PANEL_MAX_ROUNDS = 6
 
 private data class PanelSeat(val who: String, val accent: Color)
 
@@ -96,29 +105,85 @@ private fun reactionText(d: Int): String = when {
 
 @Composable
 fun InterviewLivePanelScreen(navController: NavHostController) {
-    var currentAsker by remember { mutableStateOf("HR 主管") }
-    var question by remember { mutableStateOf(OPENING_Q) }
+    var currentAsker by remember {
+        mutableStateOf(InterviewAiSession.openingSpeaker.ifBlank { "HR 主管" })
+    }
+    var question by remember { mutableStateOf(InterviewAiSession.openingQuestion ?: OPENING_Q) }
     var answer by remember { mutableStateOf("") }
     var reactingDelta by remember { mutableIntStateOf(0) }
     var followUpIdx by remember { mutableIntStateOf(0) }
     var shared by remember { mutableStateOf(false) }
     var elapsedSec by remember { mutableIntStateOf(0) }
+    val askedTopics = remember { mutableStateListOf<String>() }
+    val spokenBy = remember { mutableStateListOf<String>() }
+    var finished by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) { InterviewSession.reset(); while (true) { delay(1000); elapsedSec++ } }
+    LaunchedEffect(Unit) { InterviewSession.reset(); InterviewAiReport.reset(); while (true) { delay(1000); elapsedSec++ } }
     val timerText = "${(elapsedSec / 60).toString().padStart(2, '0')}:${(elapsedSec % 60).toString().padStart(2, '0')}"
     val role = InterviewConfig.customRole.ifBlank { "Junior PM" }
 
-    fun submitAnswer(transcript: String) {
+    fun submitAnswer(transcript: String, endedBy: String = "unknown") {
         if (transcript.isBlank() || answer.isNotBlank()) return
         answer = transcript
-        InterviewSession.record(question, transcript)
+        InterviewSession.record(question, transcript, endedBy = endedBy)
         reactingDelta = deltaFor(transcript)
-        val (nextWho, nextQ) = MockPanelDispatcher.dispatch(transcript, followUpIdx)
         scope.launch {
             delay(1700)
-            currentAsker = nextWho
-            question = nextQ
+            // followUpIdx 從 0 開始，答第 6 題時是 5。最後一題不再呼叫 /turns，直接收尾。
+            if (followUpIdx >= PANEL_MAX_ROUNDS - 1) {
+                question = "好，今天的面試就到這裡，謝謝你的分享。"
+                answer = ""
+                reactingDelta = 0
+                finished = true
+                return@launch
+            }
+            if (InterviewAiSession.sessionId != null) {
+                val sessionId = InterviewAiSession.sessionId!!
+                try {
+                    val res = InterviewAiApiClient.interviewAiApi.submitTurn(
+                        sessionId,
+                        TurnRequest(
+                            answer = transcript,
+                            followUpIdx = followUpIdx,
+                            question = question,
+                            fallback = InterviewAiSession.fallbackProbes,
+                            mode = "panel",
+                            inputMode = "voice",
+                            endedBy = endedBy,
+                            context = InterviewContextDto(
+                                round = InterviewConfig.round,
+                                language = InterviewConfig.language,
+                                type = InterviewConfig.type,
+                                difficulty = InterviewConfig.difficulty,
+                            ),
+                            spokenBy = spokenBy.toList(),
+                            askedTopics = askedTopics.toList(),
+                        ),
+                    )
+                    if (res.isSuccessful && res.body() != null) {
+                        val body = res.body()!!
+                        if (body.speaker.isNotBlank()) {
+                            currentAsker = body.speaker
+                            spokenBy.add(body.speaker)
+                        }
+                        if (body.topic.isNotBlank()) askedTopics.add(body.topic)
+                        question = body.nextQuestion
+                    } else {
+                        val (nextWho, nextQ) = MockPanelDispatcher.dispatch(transcript, followUpIdx)
+                        currentAsker = nextWho
+                        question = nextQ
+                    }
+                } catch (e: Exception) {
+                    val (nextWho, nextQ) = MockPanelDispatcher.dispatch(transcript, followUpIdx)
+                    currentAsker = nextWho
+                    question = nextQ
+                }
+            } else {
+                val (nextWho, nextQ) = MockPanelDispatcher.dispatch(transcript, followUpIdx)
+                currentAsker = nextWho
+                question = nextQ
+            }
             answer = ""
             reactingDelta = 0
             followUpIdx += 1
@@ -127,9 +192,11 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
 
     var isTranscribing by remember { mutableStateOf(false) }
     var pendingTranscript by remember { mutableStateOf<String?>(null) }
+    var pendingEndedBy by remember { mutableStateOf("unknown") }
     val transcribeRepo = remember { RemoteTranscribeRepository() }
-    val recorder = rememberInPageAudioRecorder(maxDurationMs = 120_000L) { file, _ ->
+    val recorder = rememberInPageAudioRecorder(maxDurationMs = 120_000L) { file, endedBy ->
         isTranscribing = true
+        pendingEndedBy = endedBy
         scope.launch {
             transcribeRepo.transcribe(file)
                 .onSuccess { result -> pendingTranscript = result.text }
@@ -270,7 +337,19 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
 
             Spacer(Modifier.height(12.dp))
             val pending = pendingTranscript
-            if (pending != null) {
+            if (finished) {
+                Box(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(999.dp))
+                        .background(BrandOrange)
+                        .clickable {
+                            navController.navigate(Routes.INTERVIEW_REPORT) {
+                                popUpTo(Routes.INTERVIEW_HUB)
+                            }
+                        }
+                        .padding(vertical = 14.dp),
+                    contentAlignment = Alignment.Center,
+                ) { Text("查看報告", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold) }
+            } else if (pending != null) {
                 Column(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
                         .background(Color(0xFFFFF7EE)).padding(14.dp),
@@ -291,7 +370,7 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
                             Modifier.weight(1f).clip(RoundedCornerShape(999.dp))
                                 .background(BrandOrange)
                                 .clickable {
-                                    submitAnswer(pending)
+                                    submitAnswer(pending, pendingEndedBy)
                                     pendingTranscript = null
                                 }
                                 .padding(vertical = 10.dp),
@@ -300,7 +379,7 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
                     }
                 }
             } else {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                     if (isTranscribing) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             CircularProgressIndicator(
@@ -324,8 +403,6 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
                             },
                         )
                     }
-                    Spacer(Modifier.weight(1f))
-                    Text("等待其他小組成員發言", color = Color(0x73FFFFFF), fontSize = 11.sp)
                 }
             }
         }

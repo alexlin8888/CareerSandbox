@@ -23,7 +23,24 @@ object InterviewSession {
         val isUser: Boolean,
         val segments: List<String> = emptyList(),
         val segmentStartsMs: List<Long> = emptyList(),
+        val inputMode: String = "unknown",
+        val endedBy: String = "unknown",
     )
+
+    fun recordGroupUtterance(
+        speaker: String,
+        content: String,
+        isUser: Boolean,
+        segments: List<String> = emptyList(),
+        segmentStartsMs: List<Long> = emptyList(),
+        inputMode: String = "unknown",
+        endedBy: String = "unknown",
+    ) {
+        if (content.isBlank()) return
+        groupTranscript.add(
+            GroupUtterance(speaker.trim(), content.trim(), isUser, segments, segmentStartsMs, inputMode, endedBy)
+        )
+    }
 
     val turns = mutableListOf<Turn>()
 

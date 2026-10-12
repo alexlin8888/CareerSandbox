@@ -1,5 +1,7 @@
 package com.careersandbox.app.data.remote
 
+import com.careersandbox.app.data.mock.InterviewSession
+
 /* =====================================================================
    對應 CareerSandboxInterview 的 app/schemas/interview.py。
    Python 那邊用 alias_generator=to_camel，JSON 欄位是 camelCase，
@@ -80,6 +82,7 @@ data class TurnRequest(
     val context: InterviewContextDto = InterviewContextDto(),
     val spokenBy: List<String> = emptyList(),
     val askedTopics: List<String> = emptyList(),
+    val groupSays: List<UtteranceDto> = emptyList(),
 )
 
 // 對應 TurnResponse —— 後端回傳這輪的結果跟下一題
@@ -199,3 +202,38 @@ data class ReportResponse(
     val resumeGrounded: Boolean = false,
     val notices: List<String> = emptyList(),
 )
+
+// Converts a locally recorded group utterance into the request format.
+fun InterviewSession.GroupUtterance.toDto() = UtteranceDto(
+    speaker = speaker,
+    content = content,
+    isUser = isUser,
+    segments = segments,
+    segmentStartsMs = segmentStartsMs,
+    inputMode = inputMode,
+)
+
+// Group sessions have no per-question turns, but the report endpoint rejects an empty `turns`.
+// Each user utterance is paired with the most recent line from anyone else, which is what
+// the user was responding to.
+fun List<InterviewSession.GroupUtterance>.toGroupTurns(): List<TurnDto> {
+    val turns = mutableListOf<TurnDto>()
+    var lastOther = ""
+    for (u in this) {
+        if (u.isUser) {
+            turns.add(
+                TurnDto(
+                    question = lastOther,
+                    answer = u.content,
+                    inputMode = u.inputMode,
+                    answerSegments = u.segments,
+                    segmentStartsMs = u.segmentStartsMs,
+                    endedBy = u.endedBy,
+                )
+            )
+        } else {
+            lastOther = u.content
+        }
+    }
+    return turns
+}

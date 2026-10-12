@@ -44,6 +44,8 @@ import com.careersandbox.app.data.remote.ReportRequest
 import com.careersandbox.app.data.remote.TurnDto
 import com.careersandbox.app.data.repository.RemoteExperienceRepository
 import kotlinx.coroutines.launch
+import com.careersandbox.app.data.remote.toDto
+import com.careersandbox.app.data.remote.toGroupTurns
 
 @Composable
 fun InterviewReportScreen(navController: NavHostController) {
@@ -77,29 +79,45 @@ fun InterviewReportScreen(navController: NavHostController) {
                         description = it.description, tags = it.tags,
                     )
                 }
-            val turns = InterviewSession.turns.map {
-                TurnDto(
-                    question = it.question,
-                    answer = it.answer,
-                    inputMode = it.inputMode,
-                    answerSegments = it.answerSegments,
-                    segmentStartsMs = it.segmentStartsMs,
-                    endedBy = it.endedBy,
-                )
+            val isGroup = InterviewConfig.format == "group"
+            val turns = if (isGroup) {
+                InterviewSession.groupTranscript.toGroupTurns()
+            } else {
+                InterviewSession.turns.map {
+                    TurnDto(
+                        question = it.question,
+                        answer = it.answer,
+                        inputMode = it.inputMode,
+                        answerSegments = it.answerSegments,
+                        segmentStartsMs = it.segmentStartsMs,
+                        endedBy = it.endedBy,
+                    )
+                }
             }
+            // Group-only fields are sent only for group sessions, so stale values from an
+            // earlier group run never leak into a single or panel report.
+            val baseContext = InterviewContextDto(
+                round = InterviewConfig.round,
+                language = InterviewConfig.language,
+                type = InterviewConfig.type,
+                difficulty = InterviewConfig.difficulty,
+            )
+            val reportContext = if (isGroup) {
+                baseContext.copy(
+                    groupInterviewers = InterviewConfig.groupInterviewers,
+                    groupSize = InterviewConfig.groupSize,
+                    groupRole = InterviewConfig.groupRole,
+                )
+            } else baseContext
             try {
                 val res = InterviewAiApiClient.interviewAiApi.getReport(
                     sessionId,
                     ReportRequest(
                         mode = InterviewConfig.format,
-                        context = InterviewContextDto(
-                            round = InterviewConfig.round,
-                            language = InterviewConfig.language,
-                            type = InterviewConfig.type,
-                            difficulty = InterviewConfig.difficulty,
-                        ),
+                        context = reportContext,
                         experiences = experiences,
                         turns = turns,
+                        groupSays = if (isGroup) InterviewSession.groupTranscript.map { it.toDto() } else emptyList(),
                     ),
                 )
                 if (res.isSuccessful && res.body() != null) {
@@ -122,6 +140,15 @@ fun InterviewReportScreen(navController: NavHostController) {
         }
         return
     }
+
+    // Read on every composition so they reflect the report once loading finishes.
+    val report = InterviewAiReport.response
+    // The backend states in `notices` when collaboration scoring is switched off; its scores
+    // are then placeholders and must not be shown.
+    val collabEnabled = report == null || report.notices.none { it.contains("協作評分尚未啟用") }
+    // A real report without missing points (for example, no saved experiences) hides the block
+    // instead of falling back to mock content.
+    val showOmission = report == null || report.missingPoints.isNotEmpty()
 
     Box(modifier = Modifier.fillMaxSize().background(InkCharcoal)) {
         // 光暈
@@ -293,7 +320,9 @@ fun InterviewReportScreen(navController: NavHostController) {
                 // === STAR 結構拆解(把回答標成四色塊,缺哪塊一眼看到)===
                 SectionTitleDark("STAR 結構拆解")
                 Spacer(Modifier.height(6.dp))
-                Text("以你「做不太好的決定」那題為例,看你的回答補了 STAR 的哪幾段。",
+                Text(
+                    if (report != null) "依你的回答標出 STAR 各段，缺少的部分會標示「缺」。"
+                    else "以你「做不太好的決定」那題為例,看你的回答補了 STAR 的哪幾段。",
                     color = PaperWhite.copy(alpha = 0.55f), fontSize = 12.sp, lineHeight = 18.sp)
                 Spacer(Modifier.height(12.dp))
                 StarBreakdown()
@@ -312,7 +341,7 @@ fun InterviewReportScreen(navController: NavHostController) {
                 }
 
                 // === 協作維度（只在剛做完團體面試時顯示）===
-                if (showCollab) {
+                if (showCollab && collabEnabled) {
                     SectionTitleDark("協作維度")
                     Spacer(Modifier.height(6.dp))
                     Text("這是團體面試的協作參考——看的是你在討論中怎麼互動,不是排名,也不是評分。",
@@ -323,11 +352,12 @@ fun InterviewReportScreen(navController: NavHostController) {
                 }
 
                 // === #5 該提、但沒提到 ===
-                SectionTitleDark("該提、但你沒提到")
-                Spacer(Modifier.height(12.dp))
-                OmissionSection()
-
-                Spacer(Modifier.height(32.dp))
+                if (showOmission) {
+                    SectionTitleDark("該提、但你沒提到")
+                    Spacer(Modifier.height(12.dp))
+                    OmissionSection()
+                    Spacer(Modifier.height(32.dp))
+                }
 
                 // 下次可以試試
                 SectionTitleDark("下次可以試試")
@@ -827,26 +857,34 @@ private fun VideoDimensionSection() {
     }
 }
 
+private data class CollabRow(val name: String, val score: Int, val hint: String, val evidence: String)
+
 @Composable
 private fun CollabDimensionSection() {
-    val says = com.careersandbox.app.data.mock.InterviewSession.groupSays
-    val dims = com.careersandbox.app.data.mock.MockInterviewReportProvider.collabDims()
+    val userSays = InterviewSession.groupTranscript.filter { it.isUser }
+    val real = InterviewAiReport.response?.collabDims.orEmpty()
+    val usingReal = real.isNotEmpty()
+    val rows = if (usingReal) {
+        real.map { CollabRow(it.name, it.score, it.hint, it.evidence) }
+    } else {
+        com.careersandbox.app.data.mock.MockInterviewReportProvider.collabDims()
+            .map { CollabRow(it.name, it.score, it.hint, "") }
+    }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        // 事實摘要(真資料:你在這場討論實際發言幾次、講了什麼)
+        // Factual summary from the recorded transcript.
         Column(
             Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
                 .background(Color(0x14FFFFFF)).padding(16.dp),
         ) {
-            Text("你在這場討論中發言 ${says.size} 次。", color = PaperWhite, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            if (says.isNotEmpty()) {
+            Text("你在這場討論中發言 ${userSays.size} 次。", color = PaperWhite, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            if (userSays.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
-                says.takeLast(3).forEach {
-                    Text("· $it", color = PaperWhite.copy(alpha = 0.65f), fontSize = 12.sp, lineHeight = 18.sp)
+                userSays.takeLast(3).forEach {
+                    Text("· ${it.content}", color = PaperWhite.copy(alpha = 0.65f), fontSize = 12.sp, lineHeight = 18.sp)
                 }
             }
         }
-        // 協作維度(mock;待後端真實分析)
-        dims.forEach { d ->
+        rows.forEach { d ->
             val color = when {
                 d.score >= 80 -> AccentGreen
                 d.score >= 65 -> BrandOrange
@@ -875,14 +913,24 @@ private fun CollabDimensionSection() {
                 }
                 Spacer(Modifier.height(8.dp))
                 Text(d.hint, color = PaperWhite.copy(alpha = 0.7f), fontSize = 12.sp, lineHeight = 18.sp)
+                if (d.evidence.isNotBlank()) {
+                    Spacer(Modifier.height(6.dp))
+                    Text("依據：${d.evidence}", color = PaperWhite.copy(alpha = 0.5f), fontSize = 11.sp, lineHeight = 16.sp)
+                }
             }
         }
-        // 聲明
+        if (usingReal) {
+            Text("四個維度在同一場練習裡通常一起升降，不是互相獨立的分數。",
+                color = PaperWhite.copy(alpha = 0.55f), fontSize = 11.sp, lineHeight = 16.sp)
+        }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(5.dp).clip(CircleShape).background(AccentGreen))
             Spacer(Modifier.width(6.dp))
-            Text("發言次數為真實記錄;協作分數待後端真實分析,以上為示意。",
-                color = PaperWhite.copy(alpha = 0.4f), fontSize = 10.sp)
+            Text(
+                if (usingReal) "發言次數與協作分數都來自整場逐字稿。"
+                else "發言次數為真實記錄;協作分數待後端真實分析,以上為示意。",
+                color = PaperWhite.copy(alpha = 0.4f), fontSize = 10.sp,
+            )
         }
     }
 }
