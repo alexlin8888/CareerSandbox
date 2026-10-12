@@ -2,11 +2,16 @@ package com.careersandbox.app
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.core.view.WindowCompat
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
+import com.careersandbox.app.ui.components.BottomNavSpace
+import androidx.compose.ui.Alignment
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -31,10 +36,13 @@ import androidx.lifecycle.lifecycleScope
 import com.careersandbox.app.data.local.SessionManager
 import com.careersandbox.app.data.local.SettingsStore
 import kotlinx.coroutines.launch
+import com.careersandbox.app.ui.theme.PaperWhite
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         SessionManager.init(applicationContext)
         SettingsStore.init(applicationContext)
         lifecycleScope.launch { SessionManager.load() }
@@ -42,7 +50,7 @@ class MainActivity : ComponentActivity() {
             CareerSandboxTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background,
+                    color = PaperWhite
                 ) {
                     CareerSandboxApp()
                 }
@@ -81,20 +89,24 @@ fun CareerSandboxApp() {
         if (TourState.forceShow) { tourVisible = true; TourState.forceShow = false }
     }
 
+    val showNav = shouldShowBottomNav(currentRoute)
+    val isHome = currentRoute == Routes.HOME
     Box(Modifier.fillMaxSize()) {
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            containerColor = MaterialTheme.colorScheme.background,
-            bottomBar = {
-                if (shouldShowBottomNav(currentRoute)) {
-                    BottomNav(navController)
-                }
-            },
-        ) { innerPadding ->
-            Box(Modifier.fillMaxSize().padding(innerPadding)) {
-                CareerSandboxNavHost(navController = navController)
-            }
+        Box(
+            Modifier
+                .fillMaxSize()
+                .then(if (isHome) Modifier else Modifier.statusBarsPadding()),
+        ) {
+            CareerSandboxNavHost(navController = navController)
         }
+
+        if (showNav) {
+            BottomNav(
+                navController = navController,
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
+        }
+
         FeatureTourOverlay(visible = tourVisible) {
             tourVisible = false
             TourState.markSeen(context)

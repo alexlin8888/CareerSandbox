@@ -44,6 +44,8 @@ import com.careersandbox.app.ui.components.ScatteredDecorations
 import com.careersandbox.app.ui.components.WaveHeroBackground
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
+import androidx.compose.foundation.layout.navigationBarsPadding
+import com.careersandbox.app.ui.components.*
 
 /**
  * Resume hub — Evora-inspired redesign (final).
@@ -74,6 +76,7 @@ fun ResumeHubScreen(navController: NavHostController) {
                 Spacer(Modifier.height(22.dp))
                 AnimatedSection(visible = visible, delayMs = 200) { JobApplicationsSection(navController) }
                 Spacer(Modifier.height(44.dp))
+                Spacer(Modifier.navigationBarsPadding().height(BottomNavSpace))
             }
         }
     }

@@ -203,7 +203,7 @@ private fun NextActionsSection(navController: NavHostController) {
                 tint = PaperWhite, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
             Column {
-                Text("練這個職缺的面試",
+                Text("練此職缺的面試",
                     color = PaperWhite,
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp)
