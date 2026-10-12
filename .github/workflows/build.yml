@@ -24,7 +24,10 @@ jobs:
           java-version: '17'
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
+        with:
+          # Google 已下架舊的 'tools' 套件，預設值 'tools platform-tools' 會讓 sdkmanager 失敗
+          packages: platform-tools
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v3
