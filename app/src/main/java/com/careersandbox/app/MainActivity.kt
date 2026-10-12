@@ -95,7 +95,8 @@ fun CareerSandboxApp() {
         Box(
             Modifier
                 .fillMaxSize()
-                .then(if (isHome) Modifier else Modifier.statusBarsPadding()),
+                .then(if (isHome) Modifier else Modifier.statusBarsPadding())
+                .then(if (showNav) Modifier else Modifier.navigationBarsPadding()),
         ) {
             CareerSandboxNavHost(navController = navController)
         }
