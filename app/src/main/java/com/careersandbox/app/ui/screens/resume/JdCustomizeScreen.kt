@@ -64,7 +64,10 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.foundation.border
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.zIndex
+
 private enum class JdPhase { SELECT_JOB, ANALYZING, RESULT }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -618,6 +621,7 @@ private fun ResultPhase(
                     // 關閉按鈕
                     Box(
                         modifier = Modifier
+                            .zIndex(1f)
                             .align(Alignment.TopEnd)
                             .padding(20.dp)
                             .clip(CircleShape)
@@ -647,13 +651,9 @@ private fun ResultPhase(
                             modifier = Modifier.align(Alignment.Center),
                         )
                     } else {
-                        Image(
+                        com.careersandbox.app.ui.components.ZoomableImage(
                             bitmap = bitmap.asImageBitmap(),
                             contentDescription = "客製化履歷預覽",
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .fillMaxWidth(0.94f)
-                                .verticalScroll(rememberScrollState()),
                         )
                     }
                 }
