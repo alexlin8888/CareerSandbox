@@ -64,6 +64,7 @@ fun ProfileScreen(navController: NavHostController) {
             Spacer(Modifier.height(32.dp))
             MenuSection(navController)
             Spacer(Modifier.height(48.dp))
+            Spacer(Modifier.navigationBarsPadding().height(BottomNavSpace))
         }
     }
 }

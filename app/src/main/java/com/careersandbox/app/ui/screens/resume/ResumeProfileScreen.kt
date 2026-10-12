@@ -49,6 +49,7 @@ import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.zIndex
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
@@ -586,6 +587,7 @@ fun ResumeProfileScreen(navController: NavHostController) {
             ) {
                 Box(
                     modifier = Modifier
+                        .zIndex(1f)
                         .align(Alignment.TopEnd)
                         .padding(20.dp)
                         .clip(CircleShape)
@@ -606,13 +608,9 @@ fun ResumeProfileScreen(navController: NavHostController) {
                         color = PaperWhite,
                         modifier = Modifier.align(Alignment.Center),
                     )
-                    else -> androidx.compose.foundation.Image(
+                    else -> com.careersandbox.app.ui.components.ZoomableImage(
                         bitmap = masterPreviewBitmap!!.asImageBitmap(),
                         contentDescription = "母版履歷預覽",
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .fillMaxWidth(0.94f)
-                            .verticalScroll(rememberScrollState()),
                     )
                 }
             }

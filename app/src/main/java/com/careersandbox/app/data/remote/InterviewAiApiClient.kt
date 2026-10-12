@@ -26,6 +26,9 @@ object InterviewAiApiClient {
 
     private val okHttp = OkHttpClient.Builder()
         .addInterceptor(logging)
+        .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+        .readTimeout(90, java.util.concurrent.TimeUnit.SECONDS)
+        .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
         .build()
 
     private val retrofit: Retrofit by lazy {

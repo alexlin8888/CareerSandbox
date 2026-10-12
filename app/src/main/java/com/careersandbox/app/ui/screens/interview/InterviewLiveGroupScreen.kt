@@ -47,40 +47,97 @@ import com.careersandbox.app.ui.components.RecordingMicButton
 import com.careersandbox.app.ui.components.rememberInPageAudioRecorder
 import androidx.compose.foundation.clickable
 import com.careersandbox.app.data.repository.TranscriptionResult
+import androidx.compose.ui.text.style.TextOverflow
+import com.careersandbox.app.data.mock.InterviewAiSession
+import com.careersandbox.app.data.remote.PersonaDto
+import com.careersandbox.app.data.remote.InterviewAiApiClient
+import com.careersandbox.app.data.remote.InterviewContextDto
+import com.careersandbox.app.data.remote.TurnRequest
+import com.careersandbox.app.data.remote.toDto
 
-// 各角色河狸頭像(「你」維持色圈)
+private const val USER_KEY = "你"
+
+// Group discussions are time-boxed. Set to 60 temporarily when testing the wrap-up.
+private const val GROUP_MAX_SECONDS = 15 * 60
+
+// Avatars keyed by persona id (PersonaDto.id from POST /interviews).
+// Unknown ids, such as generated competitor candidates, fall back to a colored circle.
 private val ParticipantAvatars = mapOf(
-    "主考官" to R.drawable.interviewer_hr,
-    "HR 主管" to R.drawable.interviewer_hr,
-    "技術主管" to R.drawable.interviewer_tech,
-    "用人主管" to R.drawable.interviewer_lead,
-    "AI-強勢" to R.drawable.peer_assertive,
-    "AI-邏輯" to R.drawable.peer_logical,
-    "AI-親切" to R.drawable.peer_friendly,
-    "AI-沉默" to R.drawable.peer_quiet,
+    "moderator" to R.drawable.interviewer_hr,
+    "hr" to R.drawable.interviewer_hr,
+    "tech" to R.drawable.interviewer_tech,
+    "hiring" to R.drawable.interviewer_lead,
+    "peer_assertive" to R.drawable.peer_assertive,
+    "peer_logic" to R.drawable.peer_logical,
+    "peer_friendly" to R.drawable.peer_friendly,
+    "peer_quiet" to R.drawable.peer_quiet,
 )
 
-// 各角色色票
 private val ParticipantColors = mapOf(
-    "主考官" to BrandOrange,
-    "HR 主管" to BrandOrange,
-    "技術主管" to InkCharcoal,
-    "用人主管" to BrandDeepOrange,
-    "你" to BrandDeepOrange,
-    "AI-強勢" to Color(0xFF7A8C5A),
-    "AI-邏輯" to InkGray700,
-    "AI-親切" to Color(0xFFD4A574),
-    "AI-沉默" to InkGray400,
+    "moderator" to BrandOrange,
+    "hr" to BrandOrange,
+    "tech" to InkCharcoal,
+    "hiring" to BrandDeepOrange,
+    USER_KEY to BrandDeepOrange,
+    "peer_assertive" to Color(0xFF7A8C5A),
+    "peer_logic" to InkGray700,
+    "peer_friendly" to Color(0xFFD4A574),
+    "peer_quiet" to InkGray400,
 )
 
-private val baseRoster = listOf("主考官", "你", "AI-強勢", "AI-邏輯", "AI-親切", "AI-沉默")
-private val panelRoster = listOf("HR 主管", "技術主管", "用人主管", "你", "AI-強勢", "AI-邏輯", "AI-親切", "AI-沉默")
+// Used when no group session personas are available (mock flow).
+private val fallbackSolo = listOf(
+    PersonaDto("moderator", "主考官", "moderator"),
+    PersonaDto("peer_assertive", "AI-強勢", "peer"),
+    PersonaDto("peer_logic", "AI-邏輯", "peer"),
+    PersonaDto("peer_friendly", "AI-親切", "peer"),
+    PersonaDto("peer_quiet", "AI-沉默", "peer"),
+)
+private val fallbackPanel = listOf(
+    PersonaDto("hiring", "用人主管", "moderator"),
+    PersonaDto("tech", "技術主管", "moderator"),
+    PersonaDto("hr", "HR 主管", "moderator"),
+    PersonaDto("peer_assertive", "AI-強勢", "peer"),
+    PersonaDto("peer_logic", "AI-邏輯", "peer"),
+    PersonaDto("peer_friendly", "AI-親切", "peer"),
+    PersonaDto("peer_quiet", "AI-沉默", "peer"),
+)
+
+// A speaker string may arrive as a persona id or a display name; resolve either one.
+private fun List<PersonaDto>.idOf(key: String): String =
+    firstOrNull { it.id == key || it.displayName == key }?.id ?: key
+
+private fun List<PersonaDto>.nameOf(key: String): String =
+    firstOrNull { it.id == key || it.displayName == key }?.displayName ?: key
+
+private fun List<PersonaDto>.isInterviewer(key: String): Boolean =
+    firstOrNull { it.id == key || it.displayName == key }?.role?.let { it != "peer" } ?: false
+// Interviewers first, then the user, then peers. Order follows the persona list.
+private fun rosterOf(personas: List<PersonaDto>): List<String> =
+    personas.filter { it.role != "peer" }.map { it.id } +
+            USER_KEY +
+            personas.filter { it.role == "peer" }.map { it.id }
 private val panelNames = listOf("用人主管", "技術主管", "HR 主管")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InterviewLiveGroupScreen(navController: NavHostController) {
     val panel = InterviewConfig.groupInterviewers == 3
+    // Only trust session personas that came from a group start. Stale panel or single
+    // data has no peers, so it is ignored here.
+    val personas = remember {
+        InterviewAiSession.personas.takeIf { list -> list.any { it.role == "peer" } }
+            ?: if (panel) fallbackPanel else fallbackSolo
+    }
+    val useAi = remember { InterviewAiSession.sessionId != null }
+    var finished by remember { mutableStateOf(false) }
+    val askedTopics = remember { mutableStateListOf<String>() }
+    val spokenBy = remember { mutableStateListOf<String>() }
+    var lastQuestion by remember { mutableStateOf(InterviewAiSession.openingQuestion.orEmpty()) }
+    val interruptLines = remember { InterviewAiSession.interruptLines }
+    val interruptCap =
+        if (useAi && interruptLines.isNotEmpty()) minOf(InterviewAiSession.interruptCap, interruptLines.size)
+        else com.careersandbox.app.data.mock.MockGroupDispatcher.interruptCap()
     var panelIdx by remember { mutableIntStateOf(0) }
     fun nextInterviewer(): String {
         val n = panelNames[panelIdx % panelNames.size]
@@ -89,11 +146,19 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
     }
     val messages = remember {
         mutableStateListOf<ChatMessage>().apply {
-            addAll(
-                MockData.groupInterviewScript.map {
-                    if (panel && it.speaker == "主考官") it.copy(speaker = "用人主管") else it
+            val opening = InterviewAiSession.openingQuestion
+            if (useAi && !opening.isNullOrBlank()) {
+                val who = InterviewAiSession.openingSpeaker.ifBlank {
+                    personas.firstOrNull { it.role != "peer" }?.displayName ?: "主考官"
                 }
-            )
+                add(ChatMessage("open", who, opening, isUser = false, isInterviewer = personas.isInterviewer(who)))
+            } else {
+                addAll(
+                    MockData.groupInterviewScript.map {
+                        if (panel && it.speaker == "主考官") it.copy(speaker = "用人主管") else it
+                    }
+                )
+            }
         }
     }
     var input by remember { mutableStateOf("") }
@@ -107,6 +172,8 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
     LaunchedEffect(Unit) { while (true) { delay(1000); elapsedSec++ } }
     val timerText = "${(elapsedSec / 60).toString().padStart(2, '0')}:${(elapsedSec % 60).toString().padStart(2, '0')}"
     var interruptCount by remember { mutableIntStateOf(0) }
+    // Index of the exchange after which the last interruption happened; -1 means none yet.
+    var lastInterruptAtIdx by remember { mutableIntStateOf(-1) }
     val currentSpeaker = if (isTyping) typingSpeaker
         else (messages.lastOrNull()?.speaker ?: if (panel) "用人主管" else "主考官")
 
@@ -115,6 +182,8 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
         analyzed: String,
         segments: List<String> = emptyList(),
         segmentStartsMs: List<Long> = emptyList(),
+        inputMode: String = "typed",
+        endedBy: String = "unknown",
     ) {
         if (isTyping) return
         com.careersandbox.app.data.mock.InterviewSession.recordGroupSay(visible)
@@ -124,16 +193,67 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
             isUser = true,
             segments = segments,
             segmentStartsMs = segmentStartsMs,
+            inputMode = inputMode,
+            endedBy = endedBy,
         )
         messages.add(ChatMessage("u${messages.size}", "你", visible, isUser = true))
-        val (rawWho, line) = com.careersandbox.app.data.mock.MockGroupDispatcher.dispatch(analyzed, followUpIdx)
-        val who = if (panel && rawWho == "主考官") nextInterviewer() else rawWho
-        typingSpeaker = who
         isTyping = true
         scope.launch {
-            delay(1400)
+            val sessionId = InterviewAiSession.sessionId
+            val aiReply: Pair<String, String>? = if (useAi && sessionId != null) {
+                // The speaker is unknown until the reply arrives, so the typing bubble starts as the moderator.
+                typingSpeaker = personas.firstOrNull { it.role != "peer" }?.displayName ?: "主考官"
+                try {
+                    val res = InterviewAiApiClient.interviewAiApi.submitTurn(
+                        sessionId,
+                        TurnRequest(
+                            answer = analyzed,
+                            followUpIdx = followUpIdx,
+                            question = lastQuestion,
+                            fallback = InterviewAiSession.fallbackProbes,
+                            mode = "group",
+                            inputMode = inputMode,
+                            endedBy = endedBy,
+                            context = InterviewContextDto(
+                                round = InterviewConfig.round,
+                                language = InterviewConfig.language,
+                                type = InterviewConfig.type,
+                                difficulty = InterviewConfig.difficulty,
+                                groupInterviewers = InterviewConfig.groupInterviewers,
+                                groupSize = InterviewConfig.groupSize,
+                                groupRole = InterviewConfig.groupRole,
+                            ),
+                            spokenBy = spokenBy.toList(),
+                            askedTopics = askedTopics.toList(),
+                            groupSays = com.careersandbox.app.data.mock.InterviewSession
+                                .groupTranscript.map { it.toDto() },
+                        ),
+                    )
+                    val body = res.body()
+                    if (res.isSuccessful && body != null) {
+                        if (body.topic.isNotBlank()) askedTopics.add(body.topic)
+                        val speaker = body.speaker.ifBlank { typingSpeaker }
+                        spokenBy.add(speaker)
+                        lastQuestion = body.nextQuestion
+                        speaker to body.nextQuestion
+                    } else null
+                } catch (e: Exception) {
+                    null
+                }
+            } else null
+
+            // No session, or the request failed: fall back to the local mock dispatcher.
+            val (who, line) = aiReply ?: run {
+                val (rawWho, mockLine) =
+                    com.careersandbox.app.data.mock.MockGroupDispatcher.dispatch(analyzed, followUpIdx)
+                val mockWho = if (panel && rawWho == "主考官") nextInterviewer() else rawWho
+                typingSpeaker = mockWho
+                delay(1400)
+                mockWho to mockLine
+            }
+            typingSpeaker = who
             com.careersandbox.app.data.mock.InterviewSession.recordGroupUtterance(who, line, isUser = false)
-            messages.add(ChatMessage("g${messages.size}", who, line, isUser = false))
+            messages.add(ChatMessage("g${messages.size}", who, line, isUser = false, isInterviewer = personas.isInterviewer(who)))
             followUpIdx++
             isTyping = false
         }
@@ -141,15 +261,28 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
 
     LaunchedEffect(Unit) {
         com.careersandbox.app.data.mock.InterviewSession.reset()
+        com.careersandbox.app.data.mock.InterviewAiReport.reset()
         com.careersandbox.app.data.mock.InterviewConfig.lastWasGroup = true
+        if (useAi) {
+            // The opening question belongs in the transcript so the model sees the full dialogue.
+            messages.firstOrNull()?.let {
+                com.careersandbox.app.data.mock.InterviewSession.recordGroupUtterance(
+                    it.speaker, it.content, isUser = false,
+                )
+                spokenBy.add(it.speaker)
+            }
+            InterviewAiSession.openingTopic.takeIf { it.isNotBlank() }?.let { askedTopics.add(it) }
+        }
     }
 
     // 頁內語音(SpeechRecognizer,需 RECORD_AUDIO,不跳 Google 框):逐字稿餵 dispatch 做同儕路由
     var isTranscribing by remember { mutableStateOf(false) }
     var pendingResult by remember { mutableStateOf<TranscriptionResult?>(null) }
+    var pendingEndedBy by remember { mutableStateOf("unknown") }
     val transcribeRepo = remember { RemoteTranscribeRepository() }
-    val recorder = rememberInPageAudioRecorder(maxDurationMs = 120_000L) { file, _ ->
+    val recorder = rememberInPageAudioRecorder(maxDurationMs = 120_000L) { file, endedBy ->
         isTranscribing = true
+        pendingEndedBy = endedBy
         scope.launch {
             transcribeRepo.transcribe(file)
                 .onSuccess { result -> pendingResult = result }
@@ -158,25 +291,50 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
             file.delete()
         }
     }
+    val timeUp = elapsedSec >= GROUP_MAX_SECONDS
+    LaunchedEffect(timeUp, isTyping, isTranscribing, recorder.isRecording, pendingResult) {
+        if (timeUp && !finished && !isTyping && !isTranscribing &&
+            !recorder.isRecording && pendingResult == null
+        ) {
+            val who = personas.firstOrNull { it.role != "peer" }?.displayName ?: "主考官"
+            messages.add(
+                ChatMessage("end", who, "時間到了，今天的討論就到這裡，謝謝大家。", isUser = false, isInterviewer = true)
+            )
+            finished = true
+        }
+    }
 
     LaunchedEffect(messages.size, isTyping) {
         val target = if (isTyping) messages.size else messages.size - 1
         if (target >= 0) listState.animateScrollToItem(target)
     }
 
-    // 你打字停頓超過 2.6 秒,AI-強勢會接著發言
+    // Fires a peer interruption after the user pauses typing.
+    // The effect restarts whenever `input` changes, so try/finally guarantees
+    // isTyping is cleared even when it is cancelled mid-flight.
     LaunchedEffect(input) {
-        if (input.length >= 14 && !isTyping && com.careersandbox.app.data.mock.MockGroupDispatcher.interruptCap() > interruptCount) {
+        // followUpIdx grows once per user answer, so a gap of 2 means at least one answer in between.
+        fun canInterrupt() =
+            !finished && !isTyping && input.length >= 14 &&
+                    interruptCap > interruptCount && followUpIdx - lastInterruptAtIdx >= 2
+        if (canInterrupt()) {
             delay(2600)
-            if (!isTyping && input.length >= 14) {
-                val line = com.careersandbox.app.data.mock.MockGroupDispatcher.interruptLine(interruptCount)
-                interruptCount++
-                typingSpeaker = "AI-強勢"
+            if (canInterrupt()) {
+                val idx = interruptCount
+                val line = if (useAi && idx < interruptLines.size) interruptLines[idx]
+                else com.careersandbox.app.data.mock.MockGroupDispatcher.interruptLine(idx)
+                val interrupter = personas.firstOrNull { it.role == "peer" }?.displayName ?: "AI-強勢"
+                typingSpeaker = interrupter
                 isTyping = true
-                delay(700)
-                com.careersandbox.app.data.mock.InterviewSession.recordGroupUtterance("AI-強勢", line, isUser = false)
-                messages.add(ChatMessage("int${messages.size}", "AI-強勢", line, isUser = false))
-                isTyping = false
+                try {
+                    delay(700)
+                    com.careersandbox.app.data.mock.InterviewSession.recordGroupUtterance(interrupter, line, isUser = false)
+                    messages.add(ChatMessage("int${messages.size}", interrupter, line, isUser = false))
+                    interruptCount++
+                    lastInterruptAtIdx = followUpIdx
+                } finally {
+                    isTyping = false
+                }
             }
         }
     }
@@ -218,7 +376,11 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
                         }
                     }
                     Spacer(Modifier.width(8.dp))
-                    TextButton(onClick = { navController.navigate(Routes.INTERVIEW_REPORT) }) {
+                    TextButton(onClick = {
+                        navController.navigate(Routes.INTERVIEW_REPORT) {
+                            popUpTo(Routes.INTERVIEW_HUB)
+                        }
+                    }) {
                         Text("結束", color = BrandOrange, fontWeight = FontWeight.SemiBold)
                     }
                 },
@@ -228,7 +390,21 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
         bottomBar = {
             Column {
                 val pending = pendingResult
-                if (pending != null) {
+                if (finished) {
+                    Box(Modifier.fillMaxWidth().background(PaperOff).padding(16.dp)) {
+                        Box(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(999.dp))
+                                .background(BrandOrange)
+                                .clickable {
+                                    navController.navigate(Routes.INTERVIEW_REPORT) {
+                                        popUpTo(Routes.INTERVIEW_HUB)
+                                    }
+                                }
+                                .padding(vertical = 14.dp),
+                            contentAlignment = Alignment.Center,
+                        ) { Text("查看報告", color = PaperWhite, fontWeight = FontWeight.Bold) }
+                    }
+                } else if (pending != null) {
                     Column(Modifier.fillMaxWidth().background(PaperOff).padding(12.dp)) {
                         Text("確認這段發言內容：", color = InkGray500, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(4.dp))
@@ -246,7 +422,11 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
                                 Modifier.weight(1f).clip(RoundedCornerShape(999.dp))
                                     .background(BrandOrange)
                                     .clickable {
-                                        submitGroup(pending.text, pending.text, pending.segmentTexts, pending.segmentStartsMs)
+                                        submitGroup(
+                                            pending.text, pending.text,
+                                            pending.segmentTexts, pending.segmentStartsMs,
+                                            inputMode = "voice", endedBy = pendingEndedBy,
+                                        )
                                         pendingResult = null
                                     }
                                     .padding(vertical = 10.dp),
@@ -283,7 +463,7 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
         }
     ) { pad ->
         Column(Modifier.padding(pad)) {
-            ParticipantsRow(currentSpeaker, panel)
+            ParticipantsRow(personas, currentSpeaker)
 
             // 觀察面板
             AnimatedVisibility(visible = showObservation) {
@@ -319,10 +499,10 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 items(messages, key = { it.id }) { m ->
-                    Box(Modifier.animateItem()) { GroupMessageBubble(m) }
+                    Box(Modifier.animateItem()) { GroupMessageBubble(m, personas) }
                 }
                 if (isTyping) {
-                    item(key = "typing") { GroupTypingBubble(typingSpeaker) }
+                    item(key = "typing") { GroupTypingBubble(typingSpeaker, personas) }
                 }
                 item { Spacer(Modifier.height(8.dp)) }
             }
@@ -331,18 +511,21 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
 }
 
 @Composable
-private fun ParticipantsRow(currentSpeaker: String, panel: Boolean) {
+private fun ParticipantsRow(personas: List<PersonaDto>, currentSpeaker: String) {
+    val currentId = personas.idOf(currentSpeaker)
+    val roster = remember(personas) { rosterOf(personas) }
     LazyRow(
         modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
         contentPadding = PaddingValues(horizontal = 20.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        items(if (panel) panelRoster else baseRoster) { name ->
-            val color = ParticipantColors[name] ?: BrandOrange
-            val isCurrent = name == currentSpeaker
-            val avatar = ParticipantAvatars[name]
+        items(roster, key = { it }) { id ->
+            val label = if (id == USER_KEY) USER_KEY else personas.nameOf(id)
+            val color = ParticipantColors[id] ?: BrandOrange
+            val isCurrent = id == currentId
+            val avatar = ParticipantAvatars[id]
             val tileAlpha by animateFloatAsState(
-                targetValue = if (isCurrent) 1f else 0.5f, label = "pa-$name")
+                targetValue = if (isCurrent) 1f else 0.5f, label = "pa-$id")
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 if (avatar != null) {
                     Image(
@@ -357,16 +540,19 @@ private fun ParticipantsRow(currentSpeaker: String, panel: Boolean) {
                             .background(color).alpha(tileAlpha),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text(name.takeLast(1), color = PaperWhite,
+                        Text(label.take(1), color = PaperWhite,
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold)
                     }
                 }
                 Spacer(Modifier.height(4.dp))
-                Text(name,
+                Text(label,
                     style = MaterialTheme.typography.labelSmall,
                     color = if (isCurrent) InkBlack else InkGray500,
-                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium)
+                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.widthIn(max = 72.dp))
                 if (isCurrent) {
                     Text("發言中", style = MaterialTheme.typography.labelSmall,
                         color = BrandOrange, fontWeight = FontWeight.SemiBold)
@@ -424,14 +610,16 @@ private fun ObservationRow(label: String, value: String) {
 }
 
 @Composable
-private fun GroupMessageBubble(m: ChatMessage) {
-    val speakerColor = ParticipantColors[m.speaker] ?: InkGray500
+private fun GroupMessageBubble(m: ChatMessage, personas: List<PersonaDto>) {
+    val speakerId = personas.idOf(m.speaker)
+    val speakerName = personas.nameOf(m.speaker)
+    val speakerColor = ParticipantColors[speakerId] ?: InkGray500
     Row(
         Modifier.fillMaxWidth(),
         horizontalArrangement = if (m.isUser) Arrangement.End else Arrangement.Start,
     ) {
         if (!m.isUser) {
-            val avatar = ParticipantAvatars[m.speaker]
+            val avatar = ParticipantAvatars[speakerId]
             if (avatar != null) {
                 Image(
                     painter = painterResource(avatar),
@@ -444,7 +632,7 @@ private fun GroupMessageBubble(m: ChatMessage) {
                     Modifier.size(32.dp).clip(CircleShape).background(speakerColor),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(m.speaker.takeLast(1), color = PaperWhite,
+                    Text(speakerName.take(1), color = PaperWhite,
                         style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                 }
             }
@@ -470,7 +658,7 @@ private fun GroupMessageBubble(m: ChatMessage) {
         ) {
             Column {
                 if (!m.isUser) {
-                    Text(m.speaker, style = MaterialTheme.typography.labelSmall,
+                    Text(speakerName, style = MaterialTheme.typography.labelSmall,
                         color = if (isInterviewer) BrandDeepOrange else speakerColor,
                         fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.height(2.dp))
@@ -478,7 +666,7 @@ private fun GroupMessageBubble(m: ChatMessage) {
                 Text(m.content,
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (m.isUser) PaperWhite
-                        else if (isInterviewer) BrandDeepOrange else InkBlack)
+                    else if (isInterviewer) BrandDeepOrange else InkBlack)
             }
         }
     }
@@ -554,11 +742,12 @@ private fun ActionButton(label: String, icon: ImageVector, modifier: Modifier, o
 }
 
 @Composable
-private fun GroupTypingBubble(speaker: String) {
-    val color = ParticipantColors[speaker] ?: InkGray500
+private fun GroupTypingBubble(speaker: String, personas: List<PersonaDto>) {
+    val speakerId = personas.idOf(speaker)
+    val color = ParticipantColors[speakerId] ?: InkGray500
     val t = rememberInfiniteTransition(label = "gtyping")
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
-        val avatar = ParticipantAvatars[speaker]
+        val avatar = ParticipantAvatars[speakerId]
         if (avatar != null) {
             Image(
                 painter = painterResource(avatar),
@@ -572,7 +761,7 @@ private fun GroupTypingBubble(speaker: String) {
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    speaker.takeLast(1), color = PaperWhite,
+                    personas.nameOf(speaker).take(1), color = PaperWhite,
                     style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold,
                 )
             }

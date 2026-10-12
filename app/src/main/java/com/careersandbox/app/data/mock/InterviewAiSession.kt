@@ -15,6 +15,8 @@ object InterviewAiSession {
     var openingTopic: String = ""
     var personas: List<PersonaDto> = emptyList()
     var fallbackProbes: List<String> = emptyList()
+    var interruptLines: List<String> = emptyList()
+    var interruptCap: Int = 0
 
     fun reset() {
         sessionId = null
@@ -23,5 +25,7 @@ object InterviewAiSession {
         openingTopic = ""
         personas = emptyList()
         fallbackProbes = emptyList()
+        interruptLines = emptyList()
+        interruptCap = 0
     }
 }

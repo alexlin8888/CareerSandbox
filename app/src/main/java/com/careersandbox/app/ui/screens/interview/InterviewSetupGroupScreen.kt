@@ -31,6 +31,11 @@ import com.careersandbox.app.data.model.JobApplication
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
+import com.careersandbox.app.data.mock.InterviewAiSession
+import com.careersandbox.app.data.remote.InterviewAiApiClient
+import com.careersandbox.app.data.remote.InterviewContextDto
+import com.careersandbox.app.data.remote.StartInterviewRequest
+import kotlinx.coroutines.launch
 
 private data class PeerPersona(val name: String, val trait: String, val drawable: Int)
 
@@ -59,6 +64,8 @@ fun InterviewSetupGroupScreen(navController: NavHostController) {
     var groupSize by remember { mutableIntStateOf(4) } // 含你
     var interviewers by remember { mutableIntStateOf(InterviewConfig.groupInterviewers) }
     var role by remember { mutableStateOf(roleOptions[0]) }
+    var starting by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         containerColor = PaperWhite,
@@ -81,17 +88,59 @@ fun InterviewSetupGroupScreen(navController: NavHostController) {
                         .height(56.dp)
                         .clip(RoundedCornerShape(16.dp))
                         .background(InkBlack)
-                        .pressScale {
+                        .pressScale(enabled = !starting) {
                             InterviewConfig.groupInterviewers = interviewers
                             InterviewConfig.groupSize = groupSize
                             InterviewConfig.groupRole = role.title
-                            navController.navigate(Routes.INTERVIEW_LIVE_GROUP) {
-                                popUpTo(Routes.INTERVIEW_HUB)
+                            InterviewConfig.format = "group"
+                            val job = jobs.firstOrNull { it.id == selectedJobId }
+                            val jobTitle = if (customSelected) customJob else job?.position.orEmpty()
+                            val jobCompany = if (customSelected) "" else job?.company.orEmpty()
+                            starting = true
+                            // Wait for the opening response before navigating, so the live screen
+                            // never reads a half-filled session. Any failure falls back to the mock flow.
+                            scope.launch {
+                                InterviewAiSession.reset()
+                                try {
+                                    val res = InterviewAiApiClient.interviewAiApi.startInterview(
+                                        StartInterviewRequest(
+                                            mode = "group",
+                                            context = InterviewContextDto(
+                                                round = InterviewConfig.round,
+                                                language = InterviewConfig.language,
+                                                type = InterviewConfig.type,
+                                                difficulty = InterviewConfig.difficulty,
+                                                groupInterviewers = interviewers,
+                                                groupSize = groupSize,
+                                                groupRole = role.title,
+                                                customRole = jobTitle,
+                                                customCompany = jobCompany,
+                                            ),
+                                        )
+                                    )
+                                    val body = res.body()
+                                    if (res.isSuccessful && body != null) {
+                                        InterviewAiSession.sessionId = body.sessionId
+                                        InterviewAiSession.openingQuestion = body.openingQuestion
+                                        InterviewAiSession.openingSpeaker = body.openingSpeaker
+                                        InterviewAiSession.openingTopic = body.openingTopic
+                                        InterviewAiSession.personas = body.personas
+                                        InterviewAiSession.fallbackProbes = body.fallbackProbes
+                                        InterviewAiSession.interruptLines = body.interruptLines
+                                        InterviewAiSession.interruptCap = body.interruptCap
+                                    }
+                                } catch (e: Exception) {
+                                    InterviewAiSession.reset()
+                                }
+                                starting = false
+                                navController.navigate(Routes.INTERVIEW_LIVE_GROUP) {
+                                    popUpTo(Routes.INTERVIEW_HUB)
+                                }
                             }
                         },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("開始團體面試",
+                    Text(if (starting) "準備中..." else "開始團體面試",
                         color = PaperWhite,
                         fontWeight = FontWeight.Black,
                         style = MaterialTheme.typography.titleMedium)
