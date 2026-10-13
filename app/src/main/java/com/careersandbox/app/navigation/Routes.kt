@@ -12,6 +12,7 @@ object Routes {
     const val RESUME_ARCH_INTRO = "resume_arch_intro"
     const val INTERVIEW_HUB = "interview_hub"
     const val WORKPLACE_SANDBOX = "workplace_sandbox"
+    const val WORKPLACE_SANDBOX_LEGACY = "workplace_sandbox_legacy"
     const val WORKPLACE_CHAT = "workplace_chat"
     const val WORKPLACE_EMAIL = "workplace_email"
     const val WORKPLACE_MEETING = "workplace_meeting"

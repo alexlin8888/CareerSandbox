@@ -51,6 +51,8 @@ import kotlinx.coroutines.launch
 import com.careersandbox.app.data.local.SessionManager
 import com.careersandbox.app.data.local.UserStore
 import com.careersandbox.app.ui.screens.onboarding.ForgotPasswordScreen
+import com.careersandbox.app.ui.screens.sandbox2.SandboxFlags
+import com.careersandbox.app.ui.screens.sandbox2.SandboxV2Entry
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -136,7 +138,12 @@ fun CareerSandboxNavHost(
         composable(Routes.RESUME_HIERARCHY) { ResumeHierarchyScreen(navController) }
         composable(Routes.RESUME_ARCH_INTRO) { ResumeArchIntroScreen(navController) }
         composable(Routes.INTERVIEW_HUB) { InterviewHubScreen(navController) }
-        composable(Routes.WORKPLACE_SANDBOX) { WorkplaceSandboxScreen(navController) }
+        composable(Routes.WORKPLACE_SANDBOX) {
+            if (SandboxFlags.USE_V2) SandboxV2Entry(navController)
+            else WorkplaceSandboxScreen(navController)
+        }
+// Legacy entry kept for debugging; not linked from the UI
+        composable(Routes.WORKPLACE_SANDBOX_LEGACY) { WorkplaceSandboxScreen(navController) }
         composable(Routes.WORKPLACE_CHAT) { Day1OneOnOneScreen(navController) }
         composable(Routes.WORKPLACE_MEETING) { Day3MeetingScreen(navController) }
         composable(Routes.WORKPLACE_LUNCH) { Day4LunchScreen(navController) }
