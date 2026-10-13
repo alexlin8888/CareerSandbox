@@ -18,6 +18,7 @@ object Routes {
     const val SANDBOX_V2_DESK = "sandbox_v2_desk"
     const val SANDBOX_V2_RESULT = "sandbox_v2_result"
     const val SANDBOX_V2_MSG = "sandbox_v2_msg"
+    const val SANDBOX_V2_DATA = "sandbox_v2_data"
     const val WORKPLACE_CHAT = "workplace_chat"
     const val WORKPLACE_EMAIL = "workplace_email"
     const val WORKPLACE_MEETING = "workplace_meeting"
