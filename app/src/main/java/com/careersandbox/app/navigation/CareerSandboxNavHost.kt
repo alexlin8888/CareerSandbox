@@ -57,6 +57,7 @@ import com.careersandbox.app.ui.screens.sandbox2.SandboxDeskScreen
 import com.careersandbox.app.ui.screens.sandbox2.SandboxBriefScreen
 import com.careersandbox.app.ui.screens.sandbox2.SandboxResultScreen
 import com.careersandbox.app.ui.screens.sandbox2.sampleResult
+import com.careersandbox.app.ui.screens.sandbox2.SandboxMsgScreen
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -164,6 +165,7 @@ fun CareerSandboxNavHost(
             })
         }
         composable(Routes.SANDBOX_V2_DESK) { SandboxDeskScreen(navController) }
+        composable(Routes.SANDBOX_V2_MSG) { SandboxMsgScreen(navController) }
         composable(Routes.WORKPLACE_CHAT) { Day1OneOnOneScreen(navController) }
         composable(Routes.WORKPLACE_MEETING) { Day3MeetingScreen(navController) }
         composable(Routes.WORKPLACE_LUNCH) { Day4LunchScreen(navController) }

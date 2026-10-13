@@ -21,6 +21,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,19 +43,22 @@ import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.BrandDeepOrange
 
-private data class DockItem(val id: Int, val label: String, val hasDot: Boolean = false)
+private data class DockItem(val id: Int, val label: String, val key: String)
 
 private val dock = listOf(
-    DockItem(R.drawable.ic_sb_msg, "訊息", hasDot = true),
-    DockItem(R.drawable.ic_sb_data, "資料"),
-    DockItem(R.drawable.ic_sb_ana, "分析"),
-    DockItem(R.drawable.ic_sb_out, "產出"),
+    DockItem(R.drawable.ic_sb_msg, "訊息", "msg"),
+    DockItem(R.drawable.ic_sb_data, "資料", "data"),
+    DockItem(R.drawable.ic_sb_ana, "分析", "ana"),
+    DockItem(R.drawable.ic_sb_out, "產出", "out"),
 )
 
 /** Workstation main screen: pixel desk background with overlaid UI. */
 @Composable
 fun SandboxDeskScreen(navController: NavHostController) {
     var showExitDialog by remember { mutableStateOf(false) }
+
+    // Sends the opening messages once per day
+    LaunchedEffect(Unit) { SandboxV2State.beginDay() }
 
     // The system back gesture asks for confirmation instead of leaving at once
     BackHandler { showExitDialog = true }
@@ -97,7 +101,7 @@ fun SandboxDeskScreen(navController: NavHostController) {
             }
         }
 
-        // Clock (top-right)
+        // Clock (top-right); follows the current station
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
@@ -110,7 +114,7 @@ fun SandboxDeskScreen(navController: NavHostController) {
                 .padding(horizontal = 9.dp, vertical = 4.dp),
         ) {
             Text(
-                "09:12", color = Color.White, fontSize = 13.sp,
+                SandboxV2State.clockText, color = Color.White, fontSize = 13.sp,
                 fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold,
             )
         }
@@ -121,21 +125,32 @@ fun SandboxDeskScreen(navController: NavHostController) {
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             dock.forEach { item ->
-                DockIcon(item = item, onClick = { /* TODO: open the window for this icon */ })
+                DockIcon(
+                    item = item,
+                    hasDot = item.key == "msg" && SandboxV2State.hasUnread,
+                    onClick = {
+                        when (item.key) {
+                            "msg" -> navController.navigate(Routes.SANDBOX_V2_MSG)
+                            else -> { /* TODO: data / analysis / output windows */ }
+                        }
+                    },
+                )
             }
         }
 
-        // Bottom hint
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .navigationBarsPadding()
-                .padding(bottom = 26.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xE61F2937))
-                .padding(horizontal = 12.dp, vertical = 7.dp),
-        ) {
-            Text("小昀傳了訊息給你", color = Color.White, fontSize = 12.sp)
+        // Bottom hint, only while there are unread messages
+        if (SandboxV2State.hasUnread) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(bottom = 26.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0xE61F2937))
+                    .padding(horizontal = 12.dp, vertical = 7.dp),
+            ) {
+                Text("小昀傳了訊息給你", color = Color.White, fontSize = 12.sp)
+            }
         }
     }
 
@@ -159,7 +174,7 @@ fun SandboxDeskScreen(navController: NavHostController) {
 }
 
 @Composable
-private fun DockIcon(item: DockItem, onClick: () -> Unit) {
+private fun DockIcon(item: DockItem, hasDot: Boolean, onClick: () -> Unit) {
     Column(
         modifier = Modifier.pressScale { onClick() },
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -170,7 +185,7 @@ private fun DockIcon(item: DockItem, onClick: () -> Unit) {
                 contentDescription = item.label,
                 modifier = Modifier.size(56.dp),
             )
-            if (item.hasDot) {
+            if (hasDot) {
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)

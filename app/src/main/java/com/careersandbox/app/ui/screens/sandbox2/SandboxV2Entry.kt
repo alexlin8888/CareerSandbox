@@ -17,6 +17,7 @@ object SandboxAudio {
 fun SandboxV2Entry(navController: NavHostController) {
     val context = LocalContext.current
     SandboxSelectScreen(onStart = {
+        SandboxV2State.reset()
         SoundManager.playBgm(context, SandboxAudio.BGM)
         navController.navigate(Routes.SANDBOX_V2_BRIEF)
     })
