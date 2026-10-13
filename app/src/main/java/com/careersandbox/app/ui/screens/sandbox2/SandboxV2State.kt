@@ -10,6 +10,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.mutableStateMapOf
 
 enum class Who { PM, ME }
 enum class Clarity { CLEAR, PARTIAL, VAGUE }
@@ -42,6 +43,8 @@ object SandboxV2State {
     val lines = mutableStateListOf<ChatLine>()
     val asked = mutableStateListOf<String>()
     val taskList = mutableStateListOf<String>()
+    val openedCols = mutableStateListOf<Int>()
+    val limitHandled = mutableStateMapOf<Int, Int>()   // column index -> chosen option index
 
     var askCount by mutableStateOf(0)
         private set
@@ -58,6 +61,8 @@ object SandboxV2State {
     var optionsReady by mutableStateOf(false)
         private set
     var introCardVisible by mutableStateOf(false)
+        private set
+    var dataOpened by mutableStateOf(false)
         private set
     private var openingStarted = false
     var typing by mutableStateOf(false)
@@ -91,6 +96,8 @@ object SandboxV2State {
         optionsReady = false
         openingStarted = false
         introCardVisible = false
+        openedCols.clear(); limitHandled.clear()
+        dataOpened = false
     }
 
     /** Called when the desk screen appears; sends the opening messages once. */
@@ -132,6 +139,42 @@ object SandboxV2State {
         asked.add(key)
         post(Who.ME, q.text)
         if (askClosed) lateAsk(q) else firstRoundAsk(q)
+    }
+
+    fun markColumnOpened(col: Int) { if (col !in openedCols) openedCols.add(col) }
+
+    /** choice: 0 ask engineer, 1 note it, 2 analyze anyway, 3 ask PM. */
+    fun handleLimit(col: Int, choice: Int) {
+        if (col in limitHandled) return
+        val c = SandboxDataset.columns[col]
+        val lim = c.limit ?: return
+        limitHandled[col] = choice
+        if (choice == 3) {
+            post(Who.ME, "「${c.name}」那欄有個問題：${lim.prompt} 這欄必要嗎？")
+            if (inMeeting) {
+                post(Who.PM, "會議中")
+                scope.launch { delay(15_000); post(Who.PM, lim.pmReply) }
+            } else {
+                scope.launch { pmSay(lim.pmReply) }
+            }
+        }
+    }
+
+    fun finishData() { if (station < 3) station = 3 }
+
+    /** Called when the data window opens. If the PM conversation was left unfinished, wrap it up. */
+    fun onDataOpened() {
+        dataOpened = true
+        if (askClosed || busy) return
+        if (askCount == 0) {
+            skipAsking()
+        } else {
+            scope.launch {
+                busy = true
+                closeAsk()
+                busy = false
+            }
+        }
     }
 
     fun skipAsking() {
@@ -190,6 +233,7 @@ object SandboxV2State {
     private suspend fun closeAsk() {
         askClosed = true
         updateClarity()
+        rebuildTaskList()
         when (clarity) {
             Clarity.CLEAR -> {
                 pmSay("那你幫我看這幾個")

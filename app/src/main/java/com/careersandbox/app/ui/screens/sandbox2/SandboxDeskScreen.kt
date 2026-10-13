@@ -127,10 +127,15 @@ fun SandboxDeskScreen(navController: NavHostController) {
             dock.forEach { item ->
                 DockIcon(
                     item = item,
-                    hasDot = item.key == "msg" && SandboxV2State.hasUnread,
+                    hasDot = when (item.key) {
+                        "msg" -> SandboxV2State.hasUnread
+                        "data" -> SandboxV2State.optionsReady && !SandboxV2State.dataOpened
+                        else -> false
+                    },
                     onClick = {
                         when (item.key) {
                             "msg" -> navController.navigate(Routes.SANDBOX_V2_MSG)
+                            "data" -> if (SandboxV2State.optionsReady) navController.navigate(Routes.SANDBOX_V2_DATA)
                             else -> { /* TODO: data / analysis / output windows */ }
                         }
                     },
@@ -139,7 +144,13 @@ fun SandboxDeskScreen(navController: NavHostController) {
         }
 
         // Bottom hint, only while there are unread messages
-        if (SandboxV2State.hasUnread) {
+        val hintText: String? = when {
+            SandboxV2State.hasUnread -> "<keep your current hint text here>"
+            SandboxV2State.optionsReady && !SandboxV2State.dataOpened -> "資料已經放在「資料」裡，先去看看"
+            else -> null
+        }
+        if (hintText != null) {
+            // your existing hint bar, with its Text(...) showing hintText
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
