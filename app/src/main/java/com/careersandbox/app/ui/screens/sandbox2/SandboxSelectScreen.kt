@@ -35,6 +35,8 @@ import com.careersandbox.app.ui.theme.BrandPeach
 import com.careersandbox.app.ui.theme.InkGray500
 import com.careersandbox.app.ui.theme.InkSlate
 import com.careersandbox.app.ui.theme.PaperWarm
+import androidx.compose.runtime.LaunchedEffect
+import com.careersandbox.app.ui.screens.workplace.SoundManager
 
 private data class IndustryItem(val name: String, val enabled: Boolean)
 
@@ -47,6 +49,8 @@ private val industries = listOf(
 
 @Composable
 fun SandboxSelectScreen(onStart: () -> Unit) {
+    // Entering the select screen always stops the sandbox music
+    LaunchedEffect(Unit) { SoundManager.stopBgm() }
     var selected by remember { mutableStateOf("軟體業") }
 
     Column(

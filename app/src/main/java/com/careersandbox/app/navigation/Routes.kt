@@ -13,6 +13,10 @@ object Routes {
     const val INTERVIEW_HUB = "interview_hub"
     const val WORKPLACE_SANDBOX = "workplace_sandbox"
     const val WORKPLACE_SANDBOX_LEGACY = "workplace_sandbox_legacy"
+
+    const val SANDBOX_V2_BRIEF = "sandbox_v2_brief"
+    const val SANDBOX_V2_DESK = "sandbox_v2_desk"
+    const val SANDBOX_V2_RESULT = "sandbox_v2_result"
     const val WORKPLACE_CHAT = "workplace_chat"
     const val WORKPLACE_EMAIL = "workplace_email"
     const val WORKPLACE_MEETING = "workplace_meeting"

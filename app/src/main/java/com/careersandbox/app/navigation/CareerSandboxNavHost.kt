@@ -53,6 +53,10 @@ import com.careersandbox.app.data.local.UserStore
 import com.careersandbox.app.ui.screens.onboarding.ForgotPasswordScreen
 import com.careersandbox.app.ui.screens.sandbox2.SandboxFlags
 import com.careersandbox.app.ui.screens.sandbox2.SandboxV2Entry
+import com.careersandbox.app.ui.screens.sandbox2.SandboxDeskScreen
+import com.careersandbox.app.ui.screens.sandbox2.SandboxBriefScreen
+import com.careersandbox.app.ui.screens.sandbox2.SandboxResultScreen
+import com.careersandbox.app.ui.screens.sandbox2.sampleResult
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -142,8 +146,24 @@ fun CareerSandboxNavHost(
             if (SandboxFlags.USE_V2) SandboxV2Entry(navController)
             else WorkplaceSandboxScreen(navController)
         }
+        composable(Routes.SANDBOX_V2_RESULT) {
+            SandboxResultScreen(
+                result = sampleResult(),
+                onGapClick = { /* TODO: open the learning path screen */ },
+                onFinish = { navController.popBackStack(Routes.WORKPLACE_SANDBOX, false) },
+            )
+        }
 // Legacy entry kept for debugging; not linked from the UI
         composable(Routes.WORKPLACE_SANDBOX_LEGACY) { WorkplaceSandboxScreen(navController) }
+        composable(Routes.SANDBOX_V2_BRIEF) {
+            SandboxBriefScreen(onEnter = {
+                navController.navigate(Routes.SANDBOX_V2_DESK) {
+                    // Back from the desk returns to the select screen, not the brief
+                    popUpTo(Routes.SANDBOX_V2_BRIEF) { inclusive = true }
+                }
+            })
+        }
+        composable(Routes.SANDBOX_V2_DESK) { SandboxDeskScreen(navController) }
         composable(Routes.WORKPLACE_CHAT) { Day1OneOnOneScreen(navController) }
         composable(Routes.WORKPLACE_MEETING) { Day3MeetingScreen(navController) }
         composable(Routes.WORKPLACE_LUNCH) { Day4LunchScreen(navController) }
