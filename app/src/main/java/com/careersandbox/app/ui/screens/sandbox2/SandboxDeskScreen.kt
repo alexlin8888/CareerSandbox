@@ -130,12 +130,14 @@ fun SandboxDeskScreen(navController: NavHostController) {
                     hasDot = when (item.key) {
                         "msg" -> SandboxV2State.hasUnread
                         "data" -> SandboxV2State.optionsReady && !SandboxV2State.dataOpened
+                        "ana" -> SandboxV2State.station >= 3 && !SandboxV2State.analysisOpened
                         else -> false
                     },
                     onClick = {
                         when (item.key) {
                             "msg" -> navController.navigate(Routes.SANDBOX_V2_MSG)
                             "data" -> if (SandboxV2State.optionsReady) navController.navigate(Routes.SANDBOX_V2_DATA)
+                            "ana" -> if (SandboxV2State.station >= 3) navController.navigate(Routes.SANDBOX_V2_ANALYSIS)
                             else -> { /* TODO: data / analysis / output windows */ }
                         }
                     },
@@ -143,14 +145,14 @@ fun SandboxDeskScreen(navController: NavHostController) {
             }
         }
 
-        // Bottom hint, only while there are unread messages
+        // Bottom hint, follows the player's progress
         val hintText: String? = when {
-            SandboxV2State.hasUnread -> "<keep your current hint text here>"
+            SandboxV2State.hasUnread -> "小昀傳了訊息給你"
             SandboxV2State.optionsReady && !SandboxV2State.dataOpened -> "資料已經放在「資料」裡，先去看看"
+            SandboxV2State.station >= 3 && !SandboxV2State.analysisOpened -> "資料看完了，去「分析」畫圖回答小昀的問題"
             else -> null
         }
         if (hintText != null) {
-            // your existing hint bar, with its Text(...) showing hintText
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -160,7 +162,7 @@ fun SandboxDeskScreen(navController: NavHostController) {
                     .background(Color(0xE61F2937))
                     .padding(horizontal = 12.dp, vertical = 7.dp),
             ) {
-                Text("小昀傳了訊息給你", color = Color.White, fontSize = 12.sp)
+                Text(hintText, color = Color.White, fontSize = 12.sp)
             }
         }
     }

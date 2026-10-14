@@ -45,6 +45,7 @@ object SandboxV2State {
     val taskList = mutableStateListOf<String>()
     val openedCols = mutableStateListOf<Int>()
     val limitHandled = mutableStateMapOf<Int, Int>()   // column index -> chosen option index
+    val pins = mutableStateListOf<ChartPin>()
 
     var askCount by mutableStateOf(0)
         private set
@@ -63,6 +64,8 @@ object SandboxV2State {
     var introCardVisible by mutableStateOf(false)
         private set
     var dataOpened by mutableStateOf(false)
+        private set
+    var analysisOpened by mutableStateOf(false)
         private set
     private var openingStarted = false
     var typing by mutableStateOf(false)
@@ -98,6 +101,7 @@ object SandboxV2State {
         introCardVisible = false
         openedCols.clear(); limitHandled.clear()
         dataOpened = false
+        pins.clear(); analysisOpened = false
     }
 
     /** Called when the desk screen appears; sends the opening messages once. */
@@ -161,6 +165,11 @@ object SandboxV2State {
     }
 
     fun finishData() { if (station < 3) station = 3 }
+    fun onAnalysisOpened() { analysisOpened = true }
+
+    fun pinChart(pin: ChartPin) { if (pins.size < 3) pins.add(pin) }
+
+    fun finishAnalysis() { if (station < 4) station = 4 }
 
     /** Called when the data window opens. If the PM conversation was left unfinished, wrap it up. */
     fun onDataOpened() {
