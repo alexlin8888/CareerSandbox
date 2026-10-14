@@ -7,7 +7,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -51,6 +50,8 @@ import com.careersandbox.app.ui.theme.InkGray500
 import com.careersandbox.app.ui.theme.InkSlate
 import com.careersandbox.app.ui.theme.PaperWarm
 import kotlinx.coroutines.launch
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 
 private val LineColor = Color(0xFFEADFD6)
 private val HeaderH = 52.dp
@@ -67,18 +68,25 @@ fun SandboxMsgScreen(navController: NavHostController) {
     }
 
     val remaining = state.questions.filter { it.key !in state.asked }
-    val canAsk = state.optionsReady && !state.busy &&
+    val canAsk = state.optionsReady && !state.busy && !state.changePending &&
             state.lines.isNotEmpty() && remaining.isNotEmpty()
     val listState = rememberLazyListState()
 
     // Keep the newest content in view once the chat grows past the screen.
-    LaunchedEffect(state.lines.size, state.typing, canAsk) {
+    LaunchedEffect(state.lines.size, state.typing, canAsk, state.changePending) {
         val count = listState.layoutInfo.totalItemsCount
         if (count > 0) listState.animateScrollToItem(count - 1)
     }
 
-    BoxWithConstraints(Modifier.fillMaxSize().background(PaperWarm)) {
-        val fullHeight = maxHeight
+    var fullHeightPx by remember { mutableStateOf(0) }
+    val density = LocalDensity.current
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(PaperWarm)
+            .onSizeChanged { fullHeightPx = it.height },
+    ) {
+        val fullHeight = with(density) { fullHeightPx.toDp() }
 
         Column(Modifier.fillMaxSize()) {
             // Header
@@ -138,6 +146,9 @@ fun SandboxMsgScreen(navController: NavHostController) {
                         Text("小昀 輸入中…", color = InkGray500, fontSize = 11.sp, modifier = Modifier.padding(start = 42.dp, top = 8.dp))
                     }
                 }
+                item(key = "change") {
+                    if (state.changePending) ChangeCard()
+                }
                 item(key = "options") {
                     if (canAsk) OptionsCard(remaining)
                 }
@@ -145,7 +156,7 @@ fun SandboxMsgScreen(navController: NavHostController) {
         }
 
         // Full-screen task card that collapses into the banner slot
-        if (state.introCardVisible && !state.optionsReady) {
+        if (state.introCardVisible && !state.optionsReady && fullHeightPx > 0) {
             TaskIntroCard(fullHeight = fullHeight, onSettled = { state.confirmTask() })
         }
     }
@@ -245,6 +256,34 @@ private fun OptionsCard(remaining: List<PmQuestion>) {
                     .pressScale { state.skipAsking() }
                     .padding(vertical = 6.dp),
             )
+        }
+    }
+}
+
+@Composable
+private fun ChangeCard() {
+    val state = SandboxV2State
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 14.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color.White)
+            .border(1.dp, LineColor, RoundedCornerShape(14.dp))
+            .padding(12.dp),
+    ) {
+        Text("回小昀", color = InkGray500, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
+        state.changeReplies.forEachIndexed { i, text ->
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 6.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(PaperWarm)
+                    .border(1.dp, LineColor, RoundedCornerShape(10.dp))
+                    .pressScale { state.answerChange(i) }
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+            ) { Text(text, color = InkSlate, fontSize = 13.sp, lineHeight = 20.sp) }
         }
     }
 }

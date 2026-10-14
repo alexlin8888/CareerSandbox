@@ -67,6 +67,20 @@ object SandboxV2State {
         private set
     var analysisOpened by mutableStateOf(false)
         private set
+    var changePending by mutableStateOf(false)
+        private set
+    var changeChoice by mutableStateOf<Int?>(null)   // 0 finish first, 1 switch, 2 tomorrow, 3 ask PM
+        private set
+    private var changeStarted = false
+    private var extraMin = 0
+    private var retentionHot = false
+
+    val changeReplies = listOf(
+        "我先照原本的做完，重度使用者那個我再補一張。",
+        "好，那我把重度使用者拉出來看。",
+        "原本那幾題我先做，重度使用者這個明天可以嗎？",
+        "等一下，你下週一要決定的到底是什麼？設計師想知道的跟老闆要看的是同一件事嗎？",
+    )
     private var openingStarted = false
     var typing by mutableStateOf(false)
         private set
@@ -81,13 +95,12 @@ object SandboxV2State {
     val inMeeting: Boolean get() = askCount >= 3 || station >= 3
 
     val clockText: String
-        get() = when (station) {
-            1 -> "09:12"
-            2 -> "10:40"
-            3 -> "13:20"
-            4 -> "15:05"
-            5 -> "17:30"
-            else -> "18:00"
+        get() {
+            val base = listOf(9 * 60 + 12, 10 * 60 + 40, 13 * 60 + 20, 15 * 60 + 5, 17 * 60 + 30, 18 * 60)
+            val i = (station - 1).coerceIn(0, base.lastIndex)
+            // Finishing the original questions first costs 30 minutes at the summary station
+            val m = base[i] + if (station == 4) extraMin else 0
+            return "%02d:%02d".format(m / 60, m % 60)
         }
 
     fun reset() {
@@ -102,6 +115,8 @@ object SandboxV2State {
         openedCols.clear(); limitHandled.clear()
         dataOpened = false
         pins.clear(); analysisOpened = false
+        changePending = false; changeChoice = null; changeStarted = false
+        extraMin = 0; retentionHot = false
     }
 
     /** Called when the desk screen appears; sends the opening messages once. */
@@ -167,9 +182,56 @@ object SandboxV2State {
     fun finishData() { if (station < 3) station = 3 }
     fun onAnalysisOpened() { analysisOpened = true }
 
-    fun pinChart(pin: ChartPin) { if (pins.size < 3) pins.add(pin) }
+    fun pinChart(pin: ChartPin) {
+        if (pins.size >= 3) return
+        pins.add(pin)
+        if (pins.size == 1) startChangeEvent()
+    }
 
-    fun finishAnalysis() { if (station < 4) station = 4 }
+    fun finishAnalysis() {
+        changePending = false   // an unanswered change request just expires
+        if (station < 4) station = 4
+    }
+
+    /** After the first pinned chart, the PM relays a request change from the designer. */
+    private fun startChangeEvent() {
+        if (changeStarted) return
+        changeStarted = true
+        scope.launch {
+            delay(1500)
+            pmSay("我剛跟設計師聊過 他們比較想知道重度使用者會不會用")
+            pmSay("這個你今天看得出來嗎", 600)
+            changePending = true
+        }
+    }
+
+    fun answerChange(choice: Int) {
+        if (!changePending) return
+        changePending = false
+        changeChoice = choice
+        post(Who.ME, changeReplies[choice])
+        when (choice) {
+            0 -> {
+                extraMin = 30
+                rebuildTaskList()
+                scope.launch { pmSay("好 那你看時間", 600) }
+            }
+            1 -> {
+                rebuildTaskList()
+                scope.launch { pmSay("好", 500) }
+            }
+            2 -> scope.launch { pmSay("…可以啦 但老闆問到我就說還在看", 900) }
+            3 -> {
+                post(Who.PM, "會議中")
+                scope.launch {
+                    delay(15_000)
+                    post(Who.PM, "老闆比較在意留存啦 設計師那個先不用")
+                    retentionHot = true
+                    rebuildTaskList()
+                }
+            }
+        }
+    }
 
     /** Called when the data window opens. If the PM conversation was left unfinished, wrap it up. */
     fun onDataOpened() {
@@ -285,6 +347,24 @@ object SandboxV2State {
                 Clarity.VAGUE -> listOf("收藏清單值不值得做？")
             }
         )
+        applyChangeToTaskList()
+    }
+
+    /** Re-applies the player's answer to the request change after every rebuild. */
+    private fun applyChangeToTaskList() {
+        if (clarity == Clarity.VAGUE) return   // free mode has no question list to edit
+        val heavy = "重度使用者會不會用？"
+        when (changeChoice) {
+            0 -> if (heavy !in taskList) taskList.add(heavy)
+            1 -> {
+                val i = taskList.indexOf("誰會用這個功能？")
+                if (i >= 0) taskList[i] = heavy else if (heavy !in taskList) taskList.add(heavy)
+            }
+        }
+        if (retentionHot) {
+            val i = taskList.indexOfFirst { it.startsWith("用的人，留存") }
+            if (i >= 0 && !taskList[i].endsWith("）")) taskList[i] = taskList[i] + "（小昀說這題最重要）"
+        }
     }
 
     private suspend fun pmSay(text: String, typingMs: Long = 700) {
