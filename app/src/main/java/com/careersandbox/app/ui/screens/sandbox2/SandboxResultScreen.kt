@@ -148,7 +148,6 @@ fun SandboxResultScreen(result: SandboxResult, onGapClick: () -> Unit, onFinish:
                 Text("看補強路徑", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }
         }
-        Text("再體驗一次，這裡會加上兩次紀錄的比較。", color = InkGray500, fontSize = 11.sp)
         Spacer(Modifier.height(18.dp))
         Box(
             modifier = Modifier
