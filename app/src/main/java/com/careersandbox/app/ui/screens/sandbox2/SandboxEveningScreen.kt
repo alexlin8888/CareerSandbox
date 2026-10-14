@@ -56,14 +56,14 @@ private val EveningText = Color(0xFFE8E4DE)
 private val EveningMuted = Color(0xFF8A93A6)
 private val FriendColor = Color(0xFF7C9A92)
 
-private val MoodOptions = listOf(
+val MoodOptions = listOf(
     "被 PM 一直逼 很煩",
     "一直在翻資料 有點無聊",
     "還行 寫報告那段滿順的",
     "其實蠻有趣的",
 )
 
-private val HardestOptions = listOf(
+val HardestOptions = listOf(
     "一早搞不清楚小昀要什麼",
     "看資料表那段",
     "做到一半需求變了",

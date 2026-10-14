@@ -5,4 +5,6 @@ object SandboxFlags {
     // true  = bottom-nav sandbox tab opens the new flow
     // false = bottom-nav sandbox tab opens the legacy WorkplaceSandboxScreen
     val USE_V2: Boolean = true
+    // true = the result screen shows the fixed sample; false = built from the recorded day
+    val USE_SAMPLE_RESULT: Boolean = false
 }

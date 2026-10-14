@@ -62,6 +62,8 @@ import com.careersandbox.app.ui.screens.sandbox2.SandboxDataScreen
 import com.careersandbox.app.ui.screens.sandbox2.SandboxAnalysisScreen
 import com.careersandbox.app.ui.screens.sandbox2.SandboxOutputScreen
 import com.careersandbox.app.ui.screens.sandbox2.SandboxEveningScreen
+import androidx.compose.runtime.remember
+import com.careersandbox.app.ui.screens.sandbox2.SandboxResultBuilder
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -153,7 +155,7 @@ fun CareerSandboxNavHost(
         }
         composable(Routes.SANDBOX_V2_RESULT) {
             SandboxResultScreen(
-                result = sampleResult(),
+                result = remember { if (SandboxFlags.USE_SAMPLE_RESULT) sampleResult() else SandboxResultBuilder.build() },
                 onGapClick = { /* TODO: open the learning path screen */ },
                 onFinish = { navController.popBackStack(Routes.WORKPLACE_SANDBOX, false) },
             )

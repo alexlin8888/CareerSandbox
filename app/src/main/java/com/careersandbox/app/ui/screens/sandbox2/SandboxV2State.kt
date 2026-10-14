@@ -93,6 +93,35 @@ object SandboxV2State {
         private set
     var eveningMood by mutableStateOf<Int?>(null)      // index of the first answer to 阿哲
         private set
+    // ---- records for the result screen ----
+    var followPrompt: String = ""
+        private set
+    var followFirstText: String? = null
+        private set
+    var followSecondText: String? = null
+        private set
+    var bossText: String? = null
+        private set
+    /** How long the player took to answer a PM message, in ms, in order. */
+    val replyDelaysMs = mutableListOf<Long>()
+    private val stageStart = mutableMapOf<String, Long>()
+    private val stageEnd = mutableMapOf<String, Long>()
+    private var lastIncomingAt = 0L
+
+    private fun markStart(name: String) {
+        if (name !in stageStart) stageStart[name] = System.currentTimeMillis()
+    }
+
+    private fun markEnd(name: String) {
+        if (name !in stageEnd) stageEnd[name] = System.currentTimeMillis()
+    }
+
+    /** Time between first opening a window and finishing it. Null if either end is missing. */
+    fun stageMs(name: String): Long? {
+        val s = stageStart[name] ?: return null
+        val e = stageEnd[name] ?: return null
+        return e - s
+    }
     var eveningHardest by mutableStateOf<Int?>(null)   // index of the event picked as the most annoying
         private set
     private var followStarted = false
@@ -154,6 +183,8 @@ object SandboxV2State {
         followFirst = null; followSecond = null
         followStarted = false; followStage = 0; firstCats = emptyList(); secondCloses = emptyList()
         eveningMood = null; eveningHardest = null
+        replyDelaysMs.clear(); stageStart.clear(); stageEnd.clear(); lastIncomingAt = 0L
+        followPrompt = ""; followFirstText = null; followSecondText = null; bossText = null
     }
 
     /** Called when the desk screen appears; sends the opening messages once. */
@@ -216,8 +247,8 @@ object SandboxV2State {
         }
     }
 
-    fun finishData() { if (station < 3) station = 3 }
-    fun onAnalysisOpened() { analysisOpened = true }
+    fun finishData() { markEnd("data"); if (station < 3) station = 3 }
+    fun onAnalysisOpened() { analysisOpened = true; markStart("analysis") }
 
     fun pinChart(pin: ChartPin) {
         if (pins.size >= 3) return
@@ -226,12 +257,14 @@ object SandboxV2State {
     }
 
     fun finishAnalysis() {
+        markEnd("analysis")
         changePending = false   // an unanswered change request just expires
         if (station < 4) station = 4
     }
     /** First open of the output window pre-ticks the limitations the player already handled in the data window. */
     fun onOutputOpened() {
         outputOpened = true
+        markStart("output")
         if (outputInit) return
         outputInit = true
         SandboxAnalysis.summaryLimits.forEachIndexed { i, l ->
@@ -250,11 +283,14 @@ object SandboxV2State {
     fun submitOutput() {
         if (followStarted) return
         followStarted = true
+        markEnd("output")
         station = 5
         scope.launch {
             delay(1500)
             val step = firstFollowStep()
             followScenario = step.scenario
+            followPrompt = step.prompt
+            followPrompt = step.prompt
             firstCats = step.cats
             pmSay(step.prompt, 900)
             followStage = 1
@@ -272,6 +308,7 @@ object SandboxV2State {
         if (followStage == 1) {
             followStage = 2
             followFirst = i
+            followFirstText = opts[i]
             val cat = firstCats.getOrElse(i) { 0 }
             scope.launch {
                 val step = secondFollowStep(cat)
@@ -282,10 +319,13 @@ object SandboxV2State {
         } else {
             followStage = 3
             followSecond = i
+            followSecondText = opts[i]
             scope.launch {
                 pmSay(secondCloses.getOrElse(i) { "好" }, 700)
                 delay(2500)
-                post(Who.BOSS, bossLine())
+                val boss = bossLine()
+                bossText = boss
+                post(Who.BOSS, boss)
                 delay(1500)
                 station = 6
                 dayOver = true
@@ -293,16 +333,16 @@ object SandboxV2State {
         }
     }
 
-    private fun selectedCandidates(): List<Candidate> = selectedCands.mapNotNull { key ->
+    fun selectedCandidates(): List<Candidate> = selectedCands.mapNotNull { key ->
         val parts = key.split("-")
         val pin = pins.getOrNull(parts[0].toInt()) ?: return@mapNotNull null
         SandboxAnalysis.candidates(pin).getOrNull(parts[1].toInt())
     }
 
-    private fun causalCandidates() = selectedCandidates().filter { it.kind == 'c' || it.kind == 'x' }
+    fun causalCandidates() = selectedCandidates().filter { it.kind == 'c' || it.kind == 'x' }
 
     /** Questions in the task list that no fitting chart answers. Empty in free mode. */
-    private fun unansweredQuestions(): List<Int> {
+    fun unansweredQuestions(): List<Int> {
         if (clarity == Clarity.VAGUE) return emptyList()
         return taskList.indices.filter { qi ->
             pins.none { it.questionIndex == qi && SandboxAnalysis.fits(it, taskList) }
@@ -501,6 +541,7 @@ object SandboxV2State {
     /** Called when the data window opens. If the PM conversation was left unfinished, wrap it up. */
     fun onDataOpened() {
         dataOpened = true
+        markStart("data")
         if (askClosed || busy) return
         if (askCount == 0) {
             skipAsking()
@@ -640,6 +681,16 @@ object SandboxV2State {
     }
 
     private fun post(who: Who, text: String) {
+        val now = System.currentTimeMillis()
+        if (who == Who.ME) {
+            // Reply latency: from the last incoming message to this one
+            if (lastIncomingAt > 0L) {
+                replyDelaysMs.add(now - lastIncomingAt)
+                lastIncomingAt = 0L
+            }
+        } else {
+            lastIncomingAt = now
+        }
         lines.add(ChatLine(nextId++, who, text))
         if (who != Who.ME && !msgScreenOpen) hasUnread = true
     }
