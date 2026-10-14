@@ -52,6 +52,7 @@ import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.MockData
+import com.careersandbox.app.data.repository.RemoteResumeHierarchyProvider
 import com.careersandbox.app.data.mock.MockResumeHierarchyProvider
 import com.careersandbox.app.data.mock.SubmissionStatus
 import com.careersandbox.app.data.model.Article
@@ -418,7 +419,8 @@ private fun LearningPathCard(navController: NavHostController, cardHeight: Dp) {
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun JobProgressCard(navController: NavHostController) {
-    val targets = MockResumeHierarchyProvider.jobTargets()
+    LaunchedEffect(Unit) { RemoteResumeHierarchyProvider.refresh() }
+    val targets = RemoteResumeHierarchyProvider.jobTargets()
     val allVersions = targets.flatMap { it.versions }
     if (allVersions.isEmpty()) return
     val counts = SubmissionStatus.values()

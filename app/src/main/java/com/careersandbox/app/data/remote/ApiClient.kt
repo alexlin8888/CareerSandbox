@@ -52,4 +52,7 @@ object ApiClient {
     val experienceChatApi: ExperienceChatApiService by lazy { retrofit.create(ExperienceChatApiService::class.java) }
 
     val interviewApi: InterviewApiService by lazy { retrofit.create(InterviewApiService::class.java) }
+
+    // Resume hierarchy: master -> job targets -> versions (/resume/*)
+    val resumeApi: ResumeApiService by lazy { retrofit.create(ResumeApiService::class.java) }
 }

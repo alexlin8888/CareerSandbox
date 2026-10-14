@@ -18,22 +18,34 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.data.mock.JobTarget
-import com.careersandbox.app.data.mock.MockResumeHierarchyProvider
 import com.careersandbox.app.data.mock.ResumeMaster
 import com.careersandbox.app.data.mock.ResumeVersion
 import com.careersandbox.app.data.mock.SubmissionStatus
+import com.careersandbox.app.data.repository.RemoteResumeHierarchyProvider
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ResumeHierarchyScreen(navController: NavHostController) {
-    val master = MockResumeHierarchyProvider.master()
-    val targets = MockResumeHierarchyProvider.jobTargets()
+    val store = RemoteResumeHierarchyProvider
+    val master = store.master()
+    val targets = store.jobTargets()
     var showAddDialog by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val snackbar = remember { SnackbarHostState() }
+    val showError: (String) -> Unit = { msg -> scope.launch { snackbar.showSnackbar(msg) } }
+
+    // Load job_targets (and their versions) from the server every time this screen opens.
+    LaunchedEffect(Unit) {
+        store.refresh().onFailure { showError(it.message ?: "讀取失敗") }
+    }
+
     Scaffold(
         containerColor = PaperOff,
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
                 title = { Text("職缺與版本", fontWeight = FontWeight.Bold, color = InkBlack) },
@@ -93,8 +105,14 @@ fun ResumeHierarchyScreen(navController: NavHostController) {
                     }
                 }
             }
-            items(targets, key = { it.id }) { target -> JobTargetCard(target) }
-            if (targets.isEmpty()) {
+            items(targets, key = { it.id }) { target -> JobTargetCard(target, onError = showError) }
+            if (targets.isEmpty() && store.loading) {
+                item {
+                    Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = BrandOrange, strokeWidth = 2.dp)
+                    }
+                }
+            } else if (targets.isEmpty()) {
                 item {
                     Column(
                         modifier = Modifier
@@ -114,8 +132,11 @@ fun ResumeHierarchyScreen(navController: NavHostController) {
         if (showAddDialog) {
             AddTargetDialog(
                 onAdd = { t, c ->
-                    MockResumeHierarchyProvider.addJobTarget(t, c)
-                    showAddDialog = false
+                    scope.launch {
+                        store.addJobTarget(title = t, company = c)
+                            .onSuccess { showAddDialog = false }
+                            .onFailure { showError(it.message ?: "建立失敗") }
+                    }
                 },
                 onDismiss = { showAddDialog = false },
             )
@@ -162,7 +183,13 @@ private fun InfoPill(text: String) {
 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun JobTargetCard(target: JobTarget) {
+private fun JobTargetCard(target: JobTarget, onError: (String) -> Unit) {
+    val store = RemoteResumeHierarchyProvider
+    val scope = rememberCoroutineScope()
+    // Runs a server call and surfaces its error message; the list only changes on success.
+    val perform: (suspend () -> Result<Unit>) -> Unit = { call ->
+        scope.launch { call().onFailure { onError(it.message ?: "操作失敗") } }
+    }
     var expanded by remember { mutableStateOf(false) }
     var editingVersion by remember { mutableStateOf<ResumeVersion?>(null) }
     var versionToDelete by remember { mutableStateOf<ResumeVersion?>(null) }
@@ -217,7 +244,7 @@ private fun JobTargetCard(target: JobTarget) {
                         VersionRow(
                             v = v,
                             onEditStatus = { editingVersion = it },
-                            onDuplicate = { MockResumeHierarchyProvider.duplicateVersion(v.id) },
+                            onDuplicate = { perform { store.duplicateVersion(v.id) } },
                             onDelete = { versionToDelete = v },
                         )
                         if (idx < target.versions.size - 1) Spacer(Modifier.height(12.dp))
@@ -243,7 +270,7 @@ private fun JobTargetCard(target: JobTarget) {
         StatusPickerDialog(
             current = ver.status,
             onPick = { newStatus ->
-                MockResumeHierarchyProvider.updateVersionStatus(ver.id, newStatus)
+                perform { store.updateVersionStatus(ver.id, newStatus) }
                 editingVersion = null
             },
             onDismiss = { editingVersion = null },
@@ -254,7 +281,7 @@ private fun JobTargetCard(target: JobTarget) {
             onDismissRequest = { versionToDelete = null },
             confirmButton = {
                 TextButton(onClick = {
-                    MockResumeHierarchyProvider.removeVersion(ver.id)
+                    perform { store.removeVersion(ver.id) }
                     versionToDelete = null
                 }) { Text("刪除") }
             },
@@ -270,7 +297,7 @@ private fun JobTargetCard(target: JobTarget) {
             onDismissRequest = { showDeleteTarget = false },
             confirmButton = {
                 TextButton(onClick = {
-                    MockResumeHierarchyProvider.removeJobTarget(target.id)
+                    perform { store.removeJobTarget(target.id) }
                     showDeleteTarget = false
                 }) { Text("刪除") }
             },

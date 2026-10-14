@@ -17,9 +17,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.careersandbox.app.data.repository.RemoteResumeHierarchyProvider
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,7 +30,11 @@ fun NewJobApplicationScreen(navController: NavHostController) {
     var position by remember { mutableStateOf("") }
     var jdText by remember { mutableStateOf("") }
 
-    val canSubmit = company.isNotBlank() && position.isNotBlank()
+    var saving by remember { mutableStateOf(false) }
+    var errorMsg by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+
+    val canSubmit = company.isNotBlank() && position.isNotBlank() && !saving
 
     Scaffold(
         containerColor = PaperWhite,
@@ -170,9 +176,20 @@ fun NewJobApplicationScreen(navController: NavHostController) {
                     .clip(RoundedCornerShape(16.dp))
                     .background(if (canSubmit) InkBlack else InkGray300)
                     .pressScale(enabled = canSubmit) {
-                        // 模擬建立 — 跳到 JD 客製化頁
-                        navController.navigate(Routes.JD_CUSTOMIZE) {
-                            popUpTo(Routes.RESUME_HUB) { inclusive = false }
+                        // Save to job_targets first; only move on once the server has it.
+                        // A typed-in target has no jobId, and the pasted JD becomes jdSnapshot.
+                        saving = true
+                        errorMsg = null
+                        scope.launch {
+                            RemoteResumeHierarchyProvider
+                                .addJobTarget(title = position, company = company, jdSnapshot = jdText)
+                                .onSuccess {
+                                    navController.navigate(Routes.JD_CUSTOMIZE) {
+                                        popUpTo(Routes.RESUME_HUB) { inclusive = false }
+                                    }
+                                }
+                                .onFailure { errorMsg = it.message ?: "建立失敗,請稍後再試" }
+                            saving = false
                         }
                     },
                 contentAlignment = Alignment.Center,
@@ -186,14 +203,23 @@ fun NewJobApplicationScreen(navController: NavHostController) {
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        "建立並 AI 生第一版",
+                        if (saving) "建立中…" else "建立並 AI 生第一版",
                         color = if (canSubmit) PaperWhite else InkGray500,
                         fontWeight = FontWeight.Black,
                         style = MaterialTheme.typography.titleMedium,
                     )
                 }
             }
-            if (!canSubmit) {
+            errorMsg?.let {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    it,
+                    color = AccentRed,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                )
+            }
+            if (!canSubmit && !saving) {
                 Spacer(Modifier.height(8.dp))
                 Text(
                     "先填:" + buildList {
