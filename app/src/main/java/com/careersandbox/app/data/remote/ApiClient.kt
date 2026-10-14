@@ -31,7 +31,10 @@ object ApiClient {
     private val okHttp = OkHttpClient.Builder()
         .addInterceptor(authInterceptor)
         .addInterceptor(logging)
+        .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+        .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
         .build()
+
 
     private val retrofit: Retrofit by lazy {
         Retrofit.Builder()
@@ -45,6 +48,7 @@ object ApiClient {
     val userApi: UserApiService by lazy { retrofit.create(UserApiService::class.java) }
     val experienceApi: ExperienceApiService by lazy { retrofit.create(ExperienceApiService::class.java) }
 
+    val aiApi: AiApiService by lazy { retrofit.create(AiApiService::class.java) }
     val experienceChatApi: ExperienceChatApiService by lazy { retrofit.create(ExperienceChatApiService::class.java) }
 
     val interviewApi: InterviewApiService by lazy { retrofit.create(InterviewApiService::class.java) }

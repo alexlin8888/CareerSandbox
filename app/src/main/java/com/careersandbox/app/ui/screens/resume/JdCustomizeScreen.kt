@@ -384,12 +384,20 @@ private fun ResultPhase(
     contentPadding: PaddingValues,
 ) {
     var experiences by remember { mutableStateOf<List<com.careersandbox.app.data.model.Experience>?>(null) }
-    LaunchedEffect(Unit) {
-        experiences = com.careersandbox.app.data.repository.RemoteExperienceRepository().list().getOrNull() ?: emptyList()
+    // AI result for this job; null means "not available, fall back to the local mock"
+    var aiResult by remember { mutableStateOf<com.careersandbox.app.data.repository.CustomizeResult?>(null) }
+    var loaded by remember { mutableStateOf(false) }
+    LaunchedEffect(job?.id) {
+        val list = com.careersandbox.app.data.repository.RemoteExperienceRepository().list().getOrNull() ?: emptyList()
+        experiences = list
+        aiResult = job?.id?.let {
+            com.careersandbox.app.data.repository.RemoteAiRepository().customizeResume(it).getOrNull()
+        }
+        loaded = true
     }
     val exp = experiences
 
-    if (exp == null) {
+    if (exp == null || !loaded) {
         Box(
             modifier = Modifier.padding(contentPadding).fillMaxSize(),
             contentAlignment = Alignment.Center,
@@ -408,14 +416,21 @@ private fun ResultPhase(
     ) {
         Spacer(Modifier.height(8.dp))
 
-        val jdKeywords = job?.jdKeywords ?: emptyList()
-        val customized = remember(exp, jdKeywords) { MockJdCustomizer.customize(exp, jdKeywords) }
-        val highlights = remember(exp) {
+        // Real path: AI service. Fallback: local mock, so the screen still renders offline.
+        val ai = aiResult
+        val jdKeywords = ai?.jdKeywords ?: (job?.jdKeywords ?: emptyList())
+        val customized = remember(exp, ai, jdKeywords) {
+            ai?.items ?: MockJdCustomizer.customize(exp, jdKeywords)
+        }
+        val highlights = remember(customized) {
             customized.filter { it.highlighted }.map { it.text to it.matchedKeywords }
         }
-        val covered = remember(exp, jdKeywords) { MockJdCustomizer.coveredKeywords(exp, jdKeywords) }
+        val covered = remember(exp, ai, jdKeywords) {
+            ai?.coveredKeywords ?: MockJdCustomizer.coveredKeywords(exp, jdKeywords)
+        }
         val totalKw = jdKeywords.size
-        val matchScore = remember(exp) { if (totalKw == 0) 0 else covered.size * 100 / totalKw }
+        val matchScore = remember(covered, totalKw) { if (totalKw == 0) 0 else covered.size * 100 / totalKw }
+        val missingKeywords = remember(jdKeywords, covered) { jdKeywords.filterNot { it in covered } }
         var showPreview by remember { mutableStateOf(false) }
         var showSaveSheet by remember { mutableStateOf(false) }
         var savedTo by remember { mutableStateOf<String?>(null) }
@@ -496,7 +511,7 @@ private fun ResultPhase(
 
         // 缺失關鍵字
         SectionTitle("建議補強", "這些 JD 關鍵字你的檔案沒提到")
-        MissingChips(listOf("PRD 撰寫", "user story", "SaaS 邏輯"))
+        MissingChips(missingKeywords)
 
         Spacer(Modifier.height(36.dp))
 
@@ -558,7 +573,7 @@ private fun ResultPhase(
                 .pressScale {
                     exportScope.launch {
                         com.careersandbox.app.data.pdf.PendingCustomExport.data =
-                            buildCustomResumeDataFromCustomization(customized, restoredItems.toSet(), exp)
+                            buildCustomResumeDataFromCustomization(customized, restoredItems.toSet(), exp, covered)
                         onExport()
                     }
                 },
@@ -600,7 +615,7 @@ private fun ResultPhase(
             var previewError by remember { mutableStateOf(false) }
 
             LaunchedEffect(Unit) {
-                val data = buildCustomResumeDataFromCustomization(customized, restoredItems.toSet(), exp)
+                val data = buildCustomResumeDataFromCustomization(customized, restoredItems.toSet(), exp, covered)
                 if (data == null) {
                     previewError = true
                 } else {
