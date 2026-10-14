@@ -7,7 +7,11 @@ data class Candidate(val text: String, val kind: Char)   // o observation, c cau
 /** A limitation checkbox in the summary. col is the dataset column it comes from, null for decoys. */
 data class SummaryLimit(val text: String, val col: Int?)
 
-private class FitRule(val ok: (String) -> Boolean, val needsSeg: Boolean)
+private class FitRule(
+    val ok: (String) -> Boolean,
+    val needsSeg: Boolean,
+    val segOk: ((String) -> Boolean)? = null,   // extra check on the segmentation
+)
 /** One pinned chart. questionIndex is set in question mode, intent in free mode. */
 data class ChartPin(
     val metric: String,
@@ -33,7 +37,7 @@ object SandboxAnalysis {
         AnalysisOption("付費轉換率", "免費轉付費的比例"),
     )
 
-    val segs = listOf("依方案", "依註冊時間", "依活躍程度", "不分群")
+    val segs = listOf("依方案", "依註冊時間", "依活躍程度","不分群")
 
     val methods = listOf(
         AnalysisOption("對比", "兩群人放一起比高低"),
@@ -56,6 +60,13 @@ object SandboxAnalysis {
         "依活躍程度" -> listOf("低", "中", "高")
         else -> listOf("全體")
     }
+    /** Which dataset column each segmentation is built from. */
+    fun segSource(seg: String): String = when (seg) {
+        "依方案" -> "用「方案」欄分成 free、plus、pro"
+        "依註冊時間" -> "用「註冊日」欄分成六月前、六～七月、八月後"
+        "依活躍程度" -> "用「最近活躍」欄，依最後開啟日分成低、中、高"
+        else -> "全部使用者合在一起算"
+    }
 
     /** Deterministic fake percentages so the same choice always draws the same chart. */
     fun values(metric: String, seg: String): List<Int> {
@@ -65,7 +76,11 @@ object SandboxAnalysis {
             val b = 20 + h % 40
             return listOf(b, b + 8 + (h % 13), b - 5 + (h % 9)).map { it.coerceIn(6, 92) }
         }
-        return if (seg == "不分群") listOf(fake(metric, "all")[0]) else fake(metric, seg)
+        return when (seg) {
+            "不分群" -> listOf(fake(metric, "all")[0])
+            "依活躍程度" -> fake(metric, seg).sorted()   // more active users use it more
+            else -> fake(metric, seg)
+        }
     }
     val relevantMetrics = setOf("稍後再看使用率", "次月留存", "客服詢問比例", "人均使用次數", "付費轉換率")
 
@@ -84,11 +99,17 @@ object SandboxAnalysis {
     private val ruleAlt = FitRule({ it in setOf("客服詢問比例", "稍後再看使用率") }, false)
     private val ruleAny = FitRule({ it in relevantMetrics }, false)
 
+    private val ruleHeavy = FitRule(
+        { it in setOf("稍後再看使用率", "人均使用次數") },
+        true,
+        { it == "依活躍程度" },
+    )
+
     private fun ruleForQuestion(q: String): FitRule = when {
         q.startsWith("誰會用") -> ruleWho
         q.startsWith("用的人，留存") -> ruleRet
         q.startsWith("現在沒這功能") -> ruleAlt
-        q.startsWith("重度使用者") -> ruleWho
+        q.startsWith("重度使用者") -> ruleHeavy
         else -> ruleAny
     }
 
@@ -97,6 +118,7 @@ object SandboxAnalysis {
         p.intent == "哪些使用者可能比較需要" -> ruleWho
         p.intent == "使用行為和留存有沒有關係" -> ruleRet
         p.intent == "使用者是否已經有替代做法" -> ruleAlt
+        p.intent == "重度使用者會不會用" -> ruleHeavy
         else -> ruleAny
     }
 
@@ -105,6 +127,8 @@ object SandboxAnalysis {
         val rule = ruleForPin(p, taskList)
         if (!rule.ok(p.metric)) return false
         if (rule.needsSeg && p.seg == "不分群") return false
+        val segOk = rule.segOk
+        if (segOk != null && !segOk(p.seg)) return false
         return true
     }
 
@@ -116,6 +140,8 @@ object SandboxAnalysis {
             val q = (p.questionIndex?.let { taskList.getOrNull(it) } ?: "").substringBefore("（").replace("？", "")
             return "這張只有一個數字，看不出「$q」欸"
         }
+        val segOk = rule.segOk
+        if (segOk != null && !segOk(p.seg)) return "這張沒有依活躍程度分，看不出重度使用者會不會用"
         return "這張圖跟你說要回答的那題好像對不太上"
     }
 

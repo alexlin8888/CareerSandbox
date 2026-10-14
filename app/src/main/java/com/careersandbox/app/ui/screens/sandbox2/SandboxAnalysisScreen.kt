@@ -52,11 +52,11 @@ fun SandboxAnalysisScreen(navController: NavHostController) {
     var qSel by remember { mutableStateOf<Int?>(null) }
     var metric by remember { mutableStateOf<String?>(null) }
     var seg by remember { mutableStateOf<String?>(null) }
-    var method by remember { mutableStateOf<String?>(null) }
     var intent by remember { mutableStateOf<String?>(null) }
 
-    val canBuild = !questionMode || qSel != null
-    val full = state.pins.size >= 3
+    val locked = state.station >= 5   // the summary is already sent, this window is read-only
+    val canBuild = !locked && (!questionMode || qSel != null)
+    val full = state.pins.size >= SandboxV2State.MAX_PINS
 
     Column(Modifier.fillMaxSize().background(PaperWarm)) {
         Row(
@@ -114,8 +114,10 @@ fun SandboxAnalysisScreen(navController: NavHostController) {
                 }
             }
 
-            if (full) {
-                Text("最多釘三張", color = InkGray500, fontSize = 12.sp, modifier = Modifier.padding(top = 14.dp))
+            if (locked) {
+                Text("摘要已經送出，這裡只能看。", color = InkGray500, fontSize = 12.sp, modifier = Modifier.padding(top = 14.dp))
+            } else if (full) {
+                Text("最多釘四張。要換圖，先取消其中一張。", color = InkGray500, fontSize = 12.sp, modifier = Modifier.padding(top = 14.dp))
             } else if (canBuild) {
                 // Metric
                 Section("指標")
@@ -125,11 +127,7 @@ fun SandboxAnalysisScreen(navController: NavHostController) {
                 // Segmentation
                 Section("分群")
                 ChipRow(SandboxAnalysis.segs, seg) { seg = it }
-
-                // Method (optional)
-                Section("比較方式（可不選）")
-                ChipRow(SandboxAnalysis.methods.map { it.name }, method) { method = it }
-                SandboxAnalysis.methods.firstOrNull { it.name == method }?.let { Explain(it.explain) }
+                seg?.let { Explain(SandboxAnalysis.segSource(it)) }
 
                 // Chart
                 val m = metric
@@ -150,7 +148,7 @@ fun SandboxAnalysisScreen(navController: NavHostController) {
                             .padding(14.dp),
                     ) {
                         Text(
-                            "$m · $s" + (method?.let { " · $it" } ?: ""),
+                            "$m · $s",
                             color = InkSlate, fontSize = 13.sp, fontWeight = FontWeight.Bold,
                         )
                         Spacer(Modifier.height(10.dp))
@@ -159,79 +157,102 @@ fun SandboxAnalysisScreen(navController: NavHostController) {
                             Text("此欄自 6/1 起記錄", color = InkGray500, fontSize = 11.sp, modifier = Modifier.padding(top = 8.dp))
                         }
                     }
+                    val duplicate = state.pins.any { it.metric == m && it.seg == s }
 
                     // Pin
-                    if (!questionMode) {
+                    if (!questionMode && !duplicate) {
                         Section("這張圖主要想確認（可不填）")
                         ChipRow(SandboxAnalysis.intents, intent) { intent = it }
                     }
-                    Box(
-                        modifier = Modifier
-                            .padding(top = 14.dp)
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(24.dp))
-                            .background(BrandOrange)
-                            .pressScale {
-                                state.pinChart(
-                                    ChartPin(
-                                        metric = m, seg = s, method = method,
-                                        questionIndex = if (questionMode) qSel else null,
-                                        intent = if (questionMode) null else intent,
-                                        labels = labels, values = values,
+                    if (duplicate) {
+                        Text(
+                            "這張圖已經釘過了。換一個指標或分群。",
+                            color = InkGray500, fontSize = 12.sp, modifier = Modifier.padding(top = 14.dp),
+                        )
+                    } else {
+                        Box(
+                            // keep the existing pin button as it is
+                            modifier = Modifier
+                                .padding(top = 14.dp)
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(24.dp))
+                                .background(BrandOrange)
+                                .pressScale {
+                                    state.pinChart(
+                                        ChartPin(
+                                            metric = m, seg = s, method = null,
+                                            questionIndex = if (questionMode) qSel else null,
+                                            intent = if (questionMode) null else intent,
+                                            labels = labels, values = values,
+                                        )
                                     )
-                                )
-                                qSel = null; metric = null; seg = null; method = null; intent = null
-                            }
-                            .padding(vertical = 12.dp),
-                        contentAlignment = Alignment.Center,
-                    ) { Text("釘選這張圖", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold) }
+                                    qSel = null; metric = null; seg = null; intent = null
+                                }
+                                .padding(vertical = 12.dp),
+                            contentAlignment = Alignment.Center,
+                        ) { Text("釘選這張圖", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)  }
+                    }
                 }
             }
 
             // Pinned charts
             if (state.pins.isNotEmpty()) {
                 Section("已釘 ${state.pins.size} 張")
-                state.pins.forEach { p ->
+                state.pins.forEachIndexed { i, p ->
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 6.dp)
+                            .padding(bottom = 8.dp)
                             .clip(RoundedCornerShape(10.dp))
                             .background(Color.White)
                             .border(1.dp, AnaLine, RoundedCornerShape(10.dp))
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
                     ) {
-                        Text(
-                            "${p.metric} · ${p.seg}" + (p.method?.let { " · $it" } ?: ""),
-                            color = InkSlate, fontSize = 13.sp, fontWeight = FontWeight.Bold,
-                        )
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(
+                                "${p.metric} · ${p.seg}",
+                                color = InkSlate, fontSize = 13.sp, fontWeight = FontWeight.Bold,
+                                modifier = Modifier.weight(1f),
+                            )
+                            if (!locked) {
+                                Text(
+                                    "取消釘選", color = InkGray500, fontSize = 12.sp,
+                                    modifier = Modifier.pressScale { state.unpinChart(i) }.padding(start = 12.dp),
+                                )
+                            }
+                        }
                         val target = when {
                             p.questionIndex != null -> "回答：" + (state.taskList.getOrNull(p.questionIndex) ?: "")
                             p.intent != null -> "想確認：${p.intent}"
                             else -> "沒有標記想確認什麼"
                         }
                         Text(target, color = InkGray500, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
+                        Spacer(Modifier.height(8.dp))
+                        BarChart(p.labels, p.values)
                     }
                 }
             }
-
-            // Finish
-            Box(
-                modifier = Modifier
-                    .padding(top = 20.dp, bottom = 24.dp)
-                    .fillMaxWidth()
-                    .alpha(if (state.pins.isEmpty()) 0.4f else 1f)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(BrandOrange)
-                    .pressScale {
-                        if (state.pins.isNotEmpty()) {
-                            state.finishAnalysis()
-                            navController.popBackStack()
+            if (!locked) {
+                Box(
+                    // keep the existing modifier chain and content as they are
+                    modifier = Modifier
+                        .padding(top = 20.dp, bottom = 24.dp)
+                        .fillMaxWidth()
+                        .alpha(if (state.pins.isEmpty()) 0.4f else 1f)
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(BrandOrange)
+                        .pressScale {
+                            if (state.pins.isNotEmpty()) {
+                                state.finishAnalysis()
+                                navController.popBackStack()
+                            }
                         }
-                    }
-                    .padding(vertical = 13.dp),
-                contentAlignment = Alignment.Center,
-            ) { Text("分析做完了", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold) }
+                        .padding(vertical = 13.dp),
+                    contentAlignment = Alignment.Center,
+                ) { Text("分析做完了", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold) }
+            }
+            Spacer(Modifier.height(24.dp))
+
         }
     }
 }

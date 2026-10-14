@@ -1,7 +1,15 @@
 package com.careersandbox.app.ui.screens.sandbox2
 
+import com.careersandbox.app.data.local.UserStore
+
 /** One skill row of an occupation: what to show in the gap line when it is missing or partial. */
-data class SkillSpec(val name: String, val missingGap: String, val partialGap: String)
+data class SkillSpec(
+    val name: String,
+    val missingGap: String,
+    val partialGap: String,
+    // Matched against the skill tags in the profile. A keyword starting with "=" must match a whole tag.
+    val keywords: List<String> = emptyList(),
+)
 
 /** Per-occupation content of the result screen. The rules below read the recorded day. */
 data class ResultConfig(
@@ -15,19 +23,25 @@ data class ResultConfig(
 )
 
 /** Skills taken from the player's master resume. TODO: read the real resume instead of this default. */
+/** Reads the player's skill tags from the master resume profile. */
 object ResumeSkills {
-    var names: Set<String> = setOf("SQL", "Excel", "基礎統計")
+    fun has(spec: SkillSpec): Boolean {
+        val tags = UserStore.me?.skillsHave.orEmpty().map { it.trim().lowercase() }
+        return spec.keywords.any { k ->
+            if (k.startsWith("=")) tags.any { it == k.drop(1) } else tags.any { it.contains(k) }
+        }
+    }
 }
 
 val AnalystConfig = ResultConfig(
     occupation = "資料分析師",
     company = "NovaPay",
     skills = listOf(
-        SkillSpec("SQL", "SQL", "SQL"),
-        SkillSpec("Excel", "Excel", "Excel"),
-        SkillSpec("基礎統計", "基礎統計", "區分相關與因果的寫法"),
-        SkillSpec("圖表呈現", "圖表呈現", "選圖時對應問題的判斷"),
-        SkillSpec("Python／R", "Python 或 R（入門程度）", "Python 或 R"),
+        SkillSpec("SQL", "SQL", "SQL", listOf("sql")),
+        SkillSpec("Excel", "Excel", "Excel", listOf("excel")),
+        SkillSpec("基礎統計", "基礎統計", "區分相關與因果的寫法", listOf("統計", "statistic")),
+        SkillSpec("圖表呈現", "圖表呈現", "選圖時對應問題的判斷", listOf("圖表", "視覺化", "tableau", "power bi", "powerbi", "visualiz")),
+        SkillSpec("Python／R", "Python 或 R（入門程度）", "Python 或 R", listOf("python", "=r")),
     ),
     skillNote = "已具備依你的母版履歷，「部分」來自今天選圖與寫摘要的表現。門檻依 O*NET、104 職缺整理。",
     challengeNote = "從業者經驗文常提到：需求不清時要自己先補問，這在資料分析師的日常裡很常見。",
@@ -82,7 +96,7 @@ object SandboxResultBuilder {
             else -> 0
         }
         return config.skills.map { spec ->
-            val base = if (spec.name in ResumeSkills.names) SkillStatus.HAVE else SkillStatus.MISSING
+            val base = if (ResumeSkills.has(spec)) SkillStatus.HAVE else SkillStatus.MISSING
             val evidence = when (spec.name) {
                 "圖表呈現" -> chartEvidence
                 "基礎統計" -> statEvidence

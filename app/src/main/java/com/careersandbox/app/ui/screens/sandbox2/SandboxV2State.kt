@@ -24,6 +24,7 @@ data class PmQuestion(val key: String, val text: String, val reply: String)
  * is on another screen.
  */
 object SandboxV2State {
+    const val MAX_PINS = 4
 
     val questions = listOf(
         PmQuestion("pilot", "你最後要拿這份分析決定什麼？要不要開發，還是先爭取試點？",
@@ -127,6 +128,7 @@ object SandboxV2State {
     private var followStarted = false
     private var followStage = 0                     // 0 idle, 1 first answer pending, 2 second answer pending
     private var firstCats: List<Int> = emptyList()  // 0 pilot, 1 just do it, 2 depends on the boss
+    private var firstGeneric = true   // true when the first question was "so do we build it", false for a specific weakness
     private var secondCloses: List<String> = emptyList()
 
     private class FollowStep(val scenario: String, val prompt: String, val options: List<String>, val cats: List<Int>)
@@ -152,7 +154,7 @@ object SandboxV2State {
     private val scope = CoroutineScope(job + Dispatchers.Main)
 
     /** PM is "in a meeting" after three questions, or once the player is past the data station. */
-    val inMeeting: Boolean get() = askCount >= 3 || station >= 3
+    val inMeeting: Boolean get() = askCount >= 3
 
     val clockText: String
         get() {
@@ -185,6 +187,7 @@ object SandboxV2State {
         eveningMood = null; eveningHardest = null
         replyDelaysMs.clear(); stageStart.clear(); stageEnd.clear(); lastIncomingAt = 0L
         followPrompt = ""; followFirstText = null; followSecondText = null; bossText = null
+        firstGeneric = true
     }
 
     /** Called when the desk screen appears; sends the opening messages once. */
@@ -251,9 +254,32 @@ object SandboxV2State {
     fun onAnalysisOpened() { analysisOpened = true; markStart("analysis") }
 
     fun pinChart(pin: ChartPin) {
-        if (pins.size >= 3) return
+        if (pins.size >= MAX_PINS) return
+        if (pins.any { it.metric == pin.metric && it.seg == pin.seg }) return
         pins.add(pin)
         if (pins.size == 1) startChangeEvent()
+    }
+
+    /** Removes a pinned chart and keeps the summary picks that point at pin indexes consistent. */
+    fun unpinChart(index: Int) {
+        if (station >= 5 || index !in pins.indices) return
+        pins.removeAt(index)
+        val kept = selectedCands.mapNotNull { key ->
+            val parts = key.split("-").map { it.toInt() }
+            when {
+                parts[0] == index -> null
+                parts[0] > index -> "${parts[0] - 1}-${parts[1]}"
+                else -> key
+            }
+        }
+        selectedCands.clear()
+        selectedCands.addAll(kept)
+        val k = keyChart
+        keyChart = when {
+            k == null || k == index -> null
+            k > index -> k - 1
+            else -> k
+        }
     }
 
     fun finishAnalysis() {
@@ -292,6 +318,7 @@ object SandboxV2State {
             followPrompt = step.prompt
             followPrompt = step.prompt
             firstCats = step.cats
+            firstGeneric = step.scenario == "clean" || step.scenario == "default"
             pmSay(step.prompt, 900)
             followStage = 1
             followOptions = step.options
@@ -311,7 +338,7 @@ object SandboxV2State {
             followFirstText = opts[i]
             val cat = firstCats.getOrElse(i) { 0 }
             scope.launch {
-                val step = secondFollowStep(cat)
+                val step = secondFollowStep(cat, firstGeneric)
                 secondCloses = listOf("好 那我這樣報", "好吧", "…行")
                 pmSay(step.prompt, 900)
                 followOptions = step.options
@@ -373,6 +400,23 @@ object SandboxV2State {
         return listOf(a, "那就先做吧，至少下週一有東西可以報。", "要看老闆願意承擔多少不確定性。如果一定要今天決定，我會說$short。")
     }
 
+    private fun limitFollowOptions(col: Int?): List<String> = when (col) {
+        3 -> listOf(
+            "不行，只能說六月以後註冊的人。這個範圍我應該寫進摘要。",
+            "可以，六月以前的人應該也差不多。",
+            "不確定，要問阿凱有沒有更早的資料。",
+        )
+        5 -> listOf(
+            "我會在摘要裡註明用的是哪個定義，數字不一樣是因為算法不同。",
+            "差不多吧，老闆應該不會細看。",
+            "我再跟阿凱確認，改成跟營運報表同一個定義。",
+        )
+        else -> listOf(
+            "沒有。需求這部分只能說近三個月，更早的看不到。",
+            "近三個月就夠代表了。",
+            "我再問客服有沒有更早的工單紀錄。",
+        )
+    }
     private fun firstFollowStep(): FollowStep {
         val rec = recommendation ?: "小規模試點"
         val causal = causalCandidates()
@@ -429,13 +473,21 @@ object SandboxV2State {
         if (unanswered.isNotEmpty()) {
             return FollowStep(
                 "unanswered", "你前面不是說要看${shortQuestion(taskList[unanswered.first()])}嗎？那題現在有答案嗎？",
-                genericFirstOptions(rec), listOf(0, 1, 2),
+                listOf(
+                    "這題我沒有畫出能回答的圖，目前沒有答案。我會在摘要裡標出來，不當成已經確認。",
+                    "有，整體來看應該是可以的。",
+                    "資料裡看不太出來，可能要補資料或換個切法，我下週再看。",
+                ), listOf(0, 1, 2),
             )
         }
         if (causal.isNotEmpty()) {
             return FollowStep(
                 "causal", "你寫「${causal.first().text.removeSuffix("。")}」。這兩件事真的有關嗎？",
-                genericFirstOptions(rec), listOf(0, 1, 2),
+                listOf(
+                    "資料只能看出兩件事一起出現，沒辦法說是哪個造成哪個。這句我應該改成觀察。",
+                    "我覺得有關，用的人通常本來就比較需要這個功能。",
+                    "不一定，要做了才知道。這句我先留著，你看要不要拿掉。",
+                ), listOf(0, 1, 2),
             )
         }
         val loose = SandboxAnalysis.summaryLimits.withIndex().firstOrNull { (i, l) ->
@@ -447,7 +499,7 @@ object SandboxV2State {
                 5 -> "留存的算法跟營運報表不一樣，老闆拿去對數字的時候怎麼辦？"
                 else -> "客服詢問只有近三個月，你說的需求，有比這更長的資料嗎？"
             }
-            return FollowStep("limit", prompt, genericFirstOptions(rec), listOf(0, 1, 2))
+            return FollowStep("limit", prompt, limitFollowOptions(loose.value.col), listOf(0, 1, 2))
         }
         val clean = rec == "小規模試點" || rec == "先補資料再評估"
         return FollowStep(
@@ -457,9 +509,31 @@ object SandboxV2State {
         )
     }
 
-    private fun secondFollowStep(cat: Int): SecondStep {
+    private fun secondFollowStep(cat: Int, generic: Boolean): SecondStep {
         val rec = recommendation ?: "小規模試點"
+        if (!generic) {
+            // The first answer was about a specific weakness, not about the recommendation
+            when (cat) {
+                0 -> return SecondStep(
+                    "好，這個我會跟老闆講。你的建議最後是${rec}，我簡報就這樣寫嗎？",
+                    listOf(
+                        "對，照摘要寫，資料看不出來的那段也一起放進簡報。",
+                        "我想再改一下。資料不夠的話，建議先補資料。",
+                        "你看老闆想要什麼，我這邊可以調整建議。",
+                    ),
+                )
+                1 -> return SecondStep(
+                    "你確定嗎？老闆如果問你憑什麼這樣說，我要拿什麼回他？",
+                    listOf(
+                        "拿摘要裡那幾張圖。但圖只能支持到差異，不能保證功能做了就會有人用。",
+                        "你就說資料顯示有需求，細節我再補給你。",
+                        "我再補一張圖，明天一早給你。",
+                    ),
+                )
+            }
+        }
         return when (cat) {
+            // ...the existing body stays as it is
             0 -> SecondStep(
                 "試點我懂，但老闆可能會問，為什麼不直接做完整？",
                 listOf(
@@ -526,14 +600,16 @@ object SandboxV2State {
                 scope.launch { pmSay("好", 500) }
             }
             2 -> scope.launch { pmSay("…可以啦 但老闆問到我就說還在看", 900) }
-            3 -> {
-                post(Who.PM, "會議中")
-                scope.launch {
+            3 -> scope.launch {
+                if (inMeeting) {
+                    post(Who.PM, "會議中")
                     delay(15_000)
                     post(Who.PM, "老闆比較在意留存啦 設計師那個先不用")
-                    retentionHot = true
-                    rebuildTaskList()
+                } else {
+                    pmSay("老闆比較在意留存啦 設計師那個先不用")
                 }
+                retentionHot = true
+                rebuildTaskList()
             }
         }
     }
@@ -615,12 +691,12 @@ object SandboxV2State {
             Clarity.CLEAR -> {
                 pmSay("那你幫我看這幾個")
                 pmSay("1 誰會用 2 用的人留存有沒有比較高 3 現在沒這功能大家是不是在用別的方式存")
-                pmSay("下班前給我 我進會議了")
+                pmSay(if (inMeeting) "下班前給我 我進會議了" else "下班前給我 有事敲我")
             }
             Clarity.PARTIAL -> {
                 val one = if ("who" in asked) "誰會用" else "用的人留存有沒有比較高"
                 pmSay("那你幫我看 1 $one 2 整體有沒有人需要")
-                pmSay("我進會議了")
+                pmSay(if (inMeeting) "我進會議了" else "我在位子上 有事敲我")
             }
             Clarity.VAGUE -> {
                 pmSay("那就先幫我看有沒有人需要")
