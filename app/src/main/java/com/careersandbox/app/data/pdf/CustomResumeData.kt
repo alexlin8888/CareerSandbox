@@ -1,11 +1,11 @@
 package com.careersandbox.app.data.pdf
 
-import com.careersandbox.app.data.mock.MockData
 import com.careersandbox.app.data.local.UserStore
 import com.careersandbox.app.data.mock.CustomizedItem
 import com.careersandbox.app.data.mock.MockJdCustomizer
-import com.careersandbox.app.data.repository.RemoteExperienceRepository
 import com.careersandbox.app.data.model.JobApplication
+import com.careersandbox.app.data.repository.RemoteAiRepository
+import com.careersandbox.app.data.repository.RemoteExperienceRepository
 
 /** 客製化結果頁按下「匯出」的那一刻，把當下畫面算好的資料先存在這裡，
  *  匯出流程直接讀這份，避免重新計算跟預覽對不起來。用完即清空。 */
@@ -29,7 +29,7 @@ data class CustomResumeData(
     val linkedin: String,
     val github: String,
     val portfolio: String,
-    val coveredSkills: List<String>,    // 此職缺看重且已具備；來源：未來 B1 API 的 coveredKeywords
+    val coveredSkills: List<String>,    // 此職缺看重且已具備；來源：B1 API 的 coveredKeywords
     val otherSkills: List<String>,      // 對應 User.skillsHave 減去 coveredSkills
     val languages: List<Pair<String, String>>,
     val experienceItems: List<CustomResumeItem>,
@@ -38,20 +38,21 @@ data class CustomResumeData(
 data class CustomResumeItem(
     val title: String,       // 取自 Experience.title
     val timeRange: String,   // 取自 Experience.timeRange
-    val text: String,        // 目前用 Experience.description；未來換成 B1 客製化後的 item.text
+    val text: String,        // B1 客製化後的 item.text（AI 不可用時為 Experience.description）
 )
 
 /**
  * 用真實登入使用者資料(UserStore.me)+ 真實經歷(RemoteExperienceRepository)+ 實際客製化結果組資料。
+ * coveredKeywords 由呼叫端提供（AI 服務回傳，或 Mock 算出的），這裡不再自行計算。
  * 回傳 null 代表使用者資料或經歷資料任一項拿不到,呼叫端要自行處理。
  */
 suspend fun buildCustomResumeDataFromCustomization(
     customized: List<CustomizedItem>,
     includedTexts: Set<String>,
     experiences: List<com.careersandbox.app.data.model.Experience>,
+    coveredKeywords: List<String>,
 ): CustomResumeData? {
     val user = UserStore.me ?: return null
-    val coveredSkills = MockJdCustomizer.coveredKeywords(experiences, MockJdCustomizer.defaultJdKeywords)
     return CustomResumeData(
         name = user.name,
         schoolLine = "${user.school} · ${user.department} · ${user.year}",
@@ -62,9 +63,11 @@ suspend fun buildCustomResumeDataFromCustomization(
         linkedin = user.linkedin,
         github = user.github,
         portfolio = user.portfolio,
-        coveredSkills = coveredSkills,
-        otherSkills = user.skillsHave.filterNot { it in coveredSkills },
+        coveredSkills = coveredKeywords,
+        otherSkills = user.skillsHave.filterNot { it in coveredKeywords },
         languages = user.languages.map { it.language to it.level },
+        // items[i] pairs with experiences[i]: the Node API sends experiences to the
+        // AI service in the same createdAt-desc order that /experiences returns them.
         experienceItems = experiences.mapIndexedNotNull { i, exp ->
             val item = customized.getOrNull(i) ?: return@mapIndexedNotNull null
             if (item.highlighted || item.text in includedTexts) {
@@ -75,19 +78,34 @@ suspend fun buildCustomResumeDataFromCustomization(
 }
 
 /**
- * 匯出流程專用:抓真實經歷 + 用真實使用者資料 + 預設客製化結果(全部收錄)組資料。
+ * 匯出流程專用:抓真實經歷 + 用真實使用者資料 + 客製化結果(全部收錄)組資料。
+ * 先打 AI 服務；AI 不可用（無網路、逾時、jobId 不存在）時退回本機 Mock，匯出仍可完成。
  * 經歷資料抓取失敗時回傳 null。
  */
 suspend fun buildCustomResumeDataForExport(
     job: JobApplication?,
 ): CustomResumeData? {
     val experiences = RemoteExperienceRepository().list().getOrNull() ?: return null
-    val jdKeywords = job?.jdKeywords?.takeIf { it.isNotEmpty() } ?: MockJdCustomizer.defaultJdKeywords
-    val customized = MockJdCustomizer.customize(experiences, jdKeywords)
+
+    val jobId = job?.id
+    val aiResult = if (jobId != null) RemoteAiRepository().customizeResume(jobId).getOrNull() else null
+
+    val customized: List<CustomizedItem>
+    val coveredKeywords: List<String>
+    if (aiResult != null) {
+        customized = aiResult.items
+        coveredKeywords = aiResult.coveredKeywords
+    } else {
+        val jdKeywords = job?.jdKeywords?.takeIf { it.isNotEmpty() } ?: MockJdCustomizer.defaultJdKeywords
+        customized = MockJdCustomizer.customize(experiences, jdKeywords)
+        coveredKeywords = MockJdCustomizer.coveredKeywords(experiences, jdKeywords)
+    }
+
     return buildCustomResumeDataFromCustomization(
         customized = customized,
         includedTexts = customized.filter { it.highlighted }.map { it.text }.toSet(),
         experiences = experiences,
+        coveredKeywords = coveredKeywords,
     )
 }
 
