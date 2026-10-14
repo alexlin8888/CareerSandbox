@@ -92,7 +92,7 @@ fun CareerSandboxApp() {
     val showNav = shouldShowBottomNav(currentRoute)
     val isHome = currentRoute == Routes.HOME
     // The sandbox v2 desk screen draws behind the system bars
-    val isFullBleed = currentRoute == Routes.SANDBOX_V2_DESK
+    val isFullBleed = currentRoute == Routes.SANDBOX_V2_DESK || currentRoute == Routes.SANDBOX_V2_EVENING
     Box(Modifier.fillMaxSize()) {
         Box(
             Modifier

@@ -156,8 +156,7 @@ fun SandboxOutputScreen(navController: NavHostController) {
                     .pressScale {
                         if (ready) {
                             state.submitOutput()
-                            // TODO: station 5 follow-up goes here; for now jump to the result screen
-                            navController.navigate(Routes.SANDBOX_V2_RESULT)
+                            navController.popBackStack()
                         }
                     }
                     .padding(vertical = 13.dp),

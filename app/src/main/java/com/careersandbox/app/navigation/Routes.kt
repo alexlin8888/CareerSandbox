@@ -21,6 +21,7 @@ object Routes {
     const val SANDBOX_V2_DATA = "sandbox_v2_data"
     const val SANDBOX_V2_ANALYSIS = "sandbox_v2_analysis"
     const val SANDBOX_V2_OUTPUT = "sandbox_v2_output"
+    const val SANDBOX_V2_EVENING = "sandbox_v2_evening"
     const val WORKPLACE_CHAT = "workplace_chat"
     const val WORKPLACE_EMAIL = "workplace_email"
     const val WORKPLACE_MEETING = "workplace_meeting"

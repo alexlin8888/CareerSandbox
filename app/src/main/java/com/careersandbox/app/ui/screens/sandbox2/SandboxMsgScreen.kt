@@ -52,11 +52,14 @@ import com.careersandbox.app.ui.theme.PaperWarm
 import kotlinx.coroutines.launch
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import com.careersandbox.app.navigation.Routes
 
 private val LineColor = Color(0xFFEADFD6)
 private val HeaderH = 52.dp
 private val BannerH = 56.dp
 private val TaskCardColor = BrandPeach.copy(alpha = 0.6f).compositeOver(PaperWarm)
+
+private val BossColor = Color(0xFF6B7A8F)
 
 @Composable
 fun SandboxMsgScreen(navController: NavHostController) {
@@ -68,12 +71,12 @@ fun SandboxMsgScreen(navController: NavHostController) {
     }
 
     val remaining = state.questions.filter { it.key !in state.asked }
-    val canAsk = state.optionsReady && !state.busy && !state.changePending &&
+    val canAsk = state.optionsReady && !state.busy && !state.changePending && state.station < 5 &&
             state.lines.isNotEmpty() && remaining.isNotEmpty()
     val listState = rememberLazyListState()
 
     // Keep the newest content in view once the chat grows past the screen.
-    LaunchedEffect(state.lines.size, state.typing, canAsk, state.changePending) {
+    LaunchedEffect(state.lines.size, state.typing, canAsk, state.changePending, state.followOptions.size, state.dayOver) {
         val count = listState.layoutInfo.totalItemsCount
         if (count > 0) listState.animateScrollToItem(count - 1)
     }
@@ -139,7 +142,11 @@ fun SandboxMsgScreen(navController: NavHostController) {
                 itemsIndexed(state.lines, key = { _, line -> line.id }) { index, line ->
                     val older = state.lines.getOrNull(index - 1)
                     val showHead = older?.who != line.who
-                    if (line.who == Who.ME) MyBubble(line.text, showHead) else PmBubble(line.text, showHead)
+                    when (line.who) {
+                        Who.ME -> MyBubble(line.text, showHead)
+                        Who.PM -> PmBubble(line.text, showHead)
+                        Who.BOSS -> PmBubble(line.text, showHead, "周經理 · 主管", "周", BossColor)
+                    }
                 }
                 item(key = "typing") {
                     if (state.typing) {
@@ -148,6 +155,12 @@ fun SandboxMsgScreen(navController: NavHostController) {
                 }
                 item(key = "change") {
                     if (state.changePending) ChangeCard()
+                }
+                item(key = "follow") {
+                    if (state.followOptions.isNotEmpty()) ReplyCard(state.followOptions) { state.answerFollow(it) }
+                }
+                item(key = "end") {
+                    if (state.dayOver) EndCard { navController.navigate(Routes.SANDBOX_V2_EVENING) }
                 }
                 item(key = "options") {
                     if (canAsk) OptionsCard(remaining)
@@ -287,25 +300,76 @@ private fun ChangeCard() {
         }
     }
 }
+@Composable
+private fun ReplyCard(options: List<String>, onPick: (Int) -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 14.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color.White)
+            .border(1.dp, LineColor, RoundedCornerShape(14.dp))
+            .padding(12.dp),
+    ) {
+        Text("回小昀", color = InkGray500, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
+        options.forEachIndexed { i, text ->
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 6.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(PaperWarm)
+                    .border(1.dp, LineColor, RoundedCornerShape(10.dp))
+                    .pressScale { onPick(i) }
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+            ) { Text(text, color = InkSlate, fontSize = 13.sp, lineHeight = 20.sp) }
+        }
+    }
+}
+
+/** TODO: replaced by the evening chat with 阿哲 in the next step. */
+@Composable
+private fun EndCard(onEnd: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(top = 18.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text("18:00", color = InkGray500, fontSize = 12.sp)
+        Box(
+            modifier = Modifier
+                .padding(top = 10.dp)
+                .clip(RoundedCornerShape(24.dp))
+                .background(BrandOrange)
+                .pressScale { onEnd() }
+                .padding(horizontal = 40.dp, vertical = 12.dp),
+        ) { Text("下班", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold) }
+    }
+}
 
 @Composable
-private fun PmBubble(text: String, showHead: Boolean) {
+private fun PmBubble(
+    text: String,
+    showHead: Boolean,
+    name: String = "小昀 · 產品經理",
+    initial: String = "昀",
+    avatarColor: Color = BrandAmber,
+) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(top = if (showHead) 12.dp else 4.dp),
         verticalAlignment = Alignment.Top,
     ) {
         if (showHead) {
             Box(
-                modifier = Modifier.size(34.dp).clip(CircleShape).background(BrandAmber),
+                modifier = Modifier.size(34.dp).clip(CircleShape).background(avatarColor),
                 contentAlignment = Alignment.Center,
-            ) { Text("昀", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold) }
+            ) { Text(initial, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold) }
         } else {
             Spacer(Modifier.width(34.dp))
         }
         Spacer(Modifier.width(8.dp))
         Column(Modifier.widthIn(max = 270.dp)) {
             if (showHead) {
-                Text("小昀 · 產品經理", color = InkGray500, fontSize = 11.sp, modifier = Modifier.padding(bottom = 3.dp))
+                Text(name, color = InkGray500, fontSize = 11.sp, modifier = Modifier.padding(bottom = 3.dp))
             }
             val shape = RoundedCornerShape(4.dp, 14.dp, 14.dp, 14.dp)
             Box(
