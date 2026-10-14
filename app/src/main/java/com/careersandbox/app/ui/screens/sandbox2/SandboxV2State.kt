@@ -46,6 +46,15 @@ object SandboxV2State {
     val openedCols = mutableStateListOf<Int>()
     val limitHandled = mutableStateMapOf<Int, Int>()   // column index -> chosen option index
     val pins = mutableStateListOf<ChartPin>()
+    val selectedCands = mutableStateListOf<String>()   // "pinIndex-candidateIndex"
+    val selectedLimits = mutableStateListOf<Int>()     // indexes into SandboxAnalysis.summaryLimits
+    var keyChart by mutableStateOf<Int?>(null)
+        private set
+    var recommendation by mutableStateOf<String?>(null)
+        private set
+    var outputOpened by mutableStateOf(false)
+        private set
+    private var outputInit = false
 
     var askCount by mutableStateOf(0)
         private set
@@ -117,6 +126,8 @@ object SandboxV2State {
         pins.clear(); analysisOpened = false
         changePending = false; changeChoice = null; changeStarted = false
         extraMin = 0; retentionHot = false
+        selectedCands.clear(); selectedLimits.clear()
+        keyChart = null; recommendation = null; outputOpened = false; outputInit = false
     }
 
     /** Called when the desk screen appears; sends the opening messages once. */
@@ -192,6 +203,24 @@ object SandboxV2State {
         changePending = false   // an unanswered change request just expires
         if (station < 4) station = 4
     }
+    /** First open of the output window pre-ticks the limitations the player already handled in the data window. */
+    fun onOutputOpened() {
+        outputOpened = true
+        if (outputInit) return
+        outputInit = true
+        SandboxAnalysis.summaryLimits.forEachIndexed { i, l ->
+            val col = l.col
+            if (col != null && limitHandled[col] in setOf(0, 1, 3)) selectedLimits.add(i)
+        }
+    }
+
+    fun toggleCand(key: String) { if (!selectedCands.remove(key)) selectedCands.add(key) }
+    fun toggleLimit(i: Int) { if (!selectedLimits.remove(i)) selectedLimits.add(i) }
+    fun chooseKeyChart(i: Int) { keyChart = i }
+    fun chooseRecommendation(r: String) { recommendation = r }
+
+    /** TODO: station 5 (follow-up questions) goes between submit and the result screen. */
+    fun submitOutput() { if (station < 6) station = 6 }
 
     /** After the first pinned chart, the PM relays a request change from the designer. */
     private fun startChangeEvent() {

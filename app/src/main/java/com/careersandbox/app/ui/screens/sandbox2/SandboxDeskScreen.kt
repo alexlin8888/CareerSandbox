@@ -131,6 +131,7 @@ fun SandboxDeskScreen(navController: NavHostController) {
                         "msg" -> SandboxV2State.hasUnread
                         "data" -> SandboxV2State.optionsReady && !SandboxV2State.dataOpened
                         "ana" -> SandboxV2State.station >= 3 && !SandboxV2State.analysisOpened
+                        "out" -> SandboxV2State.station >= 4 && !SandboxV2State.outputOpened
                         else -> false
                     },
                     onClick = {
@@ -138,7 +139,7 @@ fun SandboxDeskScreen(navController: NavHostController) {
                             "msg" -> navController.navigate(Routes.SANDBOX_V2_MSG)
                             "data" -> if (SandboxV2State.optionsReady) navController.navigate(Routes.SANDBOX_V2_DATA)
                             "ana" -> if (SandboxV2State.station >= 3) navController.navigate(Routes.SANDBOX_V2_ANALYSIS)
-                            else -> { /* TODO: data / analysis / output windows */ }
+                            "out" -> if (SandboxV2State.station >= 4) navController.navigate(Routes.SANDBOX_V2_OUTPUT)
                         }
                     },
                 )
@@ -150,6 +151,7 @@ fun SandboxDeskScreen(navController: NavHostController) {
             SandboxV2State.hasUnread -> "小昀傳了訊息給你"
             SandboxV2State.optionsReady && !SandboxV2State.dataOpened -> "資料已經放在「資料」裡，先去看看"
             SandboxV2State.station >= 3 && !SandboxV2State.analysisOpened -> "資料看完了，去「分析」畫圖回答小昀的問題"
+            SandboxV2State.station >= 4 && !SandboxV2State.outputOpened -> "分析做完了，去「產出」把圖整理成給小昀的摘要"
             else -> null
         }
         if (hintText != null) {
