@@ -91,7 +91,7 @@ object MockData {
             ),
         ),
         JobApplication(
-            id = "j2",
+            id = "fit_93bo9",
             company = "KKday",
             position = "資料分析師",
             jdSnippet = "需熟悉 SQL，協助業務團隊產出週報、洞察客群行為。",
