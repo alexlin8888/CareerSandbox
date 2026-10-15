@@ -55,4 +55,6 @@ object ApiClient {
 
     // Resume hierarchy: master -> job targets -> versions (/resume/*)
     val resumeApi: ResumeApiService by lazy { retrofit.create(ResumeApiService::class.java) }
+
+    val jobApi: JobApiService by lazy { retrofit.create(JobApiService::class.java) }
 }

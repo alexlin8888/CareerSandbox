@@ -34,6 +34,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
@@ -42,22 +43,20 @@ import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.StickyNote
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
-import com.careersandbox.app.data.mock.MockData
+import com.careersandbox.app.data.mock.JobTarget
 import com.careersandbox.app.data.mock.MockJdCustomizer
-import com.careersandbox.app.data.mock.MockResumeHierarchyProvider
+import com.careersandbox.app.data.repository.CustomizeResult
+import com.careersandbox.app.data.repository.RemoteAiRepository
+import com.careersandbox.app.data.repository.RemoteExperienceRepository
+import com.careersandbox.app.data.repository.RemoteResumeHierarchyProvider
 import kotlinx.coroutines.delay
 import android.graphics.Bitmap
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.platform.LocalContext
 import com.careersandbox.app.data.pdf.DeviceCustomResumePdfGenerator
 import com.careersandbox.app.data.pdf.buildCustomResumeDataFromCustomization
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material.icons.outlined.WorkOutline
 import androidx.compose.material.icons.outlined.Add
@@ -76,7 +75,12 @@ fun JdCustomizeScreen(navController: NavHostController, preselectedJobId: String
         mutableStateOf(if (preselectedJobId != null) JdPhase.ANALYZING else JdPhase.SELECT_JOB)
     }
     var selectedJobId by rememberSaveable { mutableStateOf(preselectedJobId) }
-    val selectedJob = remember(selectedJobId) { MockData.jobApplications.find { it.id == selectedJobId } }
+
+    // Targets come from job_targets on the server (RemoteResumeHierarchyProvider keeps
+    // them in snapshot state, so this screen recomposes when the list lands).
+    LaunchedEffect(Unit) { RemoteResumeHierarchyProvider.refresh() }
+    val targets = RemoteResumeHierarchyProvider.jobTargets()
+    val selectedJob = targets.find { it.id == selectedJobId }
 
     Scaffold(
         containerColor = PaperWhite,
@@ -133,11 +137,12 @@ fun JdCustomizeScreen(navController: NavHostController, preselectedJobId: String
 // ========== 階段 1: 選擇職缺 ==========
 @Composable
 private fun SelectJobPhase(
-    onSelect: (com.careersandbox.app.data.model.JobApplication) -> Unit,
+    onSelect: (JobTarget) -> Unit,
     onAddNewJob: () -> Unit,
     contentPadding: PaddingValues,
 ) {
-    val jobs = MockData.jobApplications
+    val jobs = RemoteResumeHierarchyProvider.jobTargets()
+    val loading = RemoteResumeHierarchyProvider.loading
 
     Column(
         modifier = Modifier
@@ -177,8 +182,14 @@ private fun SelectJobPhase(
 
         Spacer(Modifier.height(24.dp))
 
-        if (jobs.isEmpty()) {
-            Column(
+        when {
+            loading && jobs.isEmpty() -> Box(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator(color = BrandDeepOrange)
+            }
+            jobs.isEmpty() -> Column(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
@@ -189,37 +200,40 @@ private fun SelectJobPhase(
                 Spacer(Modifier.height(4.dp))
                 Text("先新增一個職缺，才能開始客製化履歷", color = InkGray400, fontSize = 13.sp)
             }
-        } else {
-            Text("選擇職缺",
-                color = InkGray500,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 3.sp)
-            Spacer(Modifier.height(10.dp))
-            jobs.forEach { job ->
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(InkGray100)
-                        .pressScale { onSelect(job) }
-                        .padding(18.dp),
-                ) {
-                    Column {
-                        Text(job.position, color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        Spacer(Modifier.height(2.dp))
-                        Text(job.company, color = InkGray500, fontSize = 13.sp)
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            job.jdSnippet,
-                            color = InkGray700,
-                            fontSize = 12.sp,
-                            lineHeight = 18.sp,
-                            maxLines = 2,
-                        )
-                    }
-                }
+            else -> {
+                Text("選擇職缺",
+                    color = InkGray500,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 3.sp)
                 Spacer(Modifier.height(10.dp))
+                jobs.forEach { job ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(InkGray100)
+                            .pressScale { onSelect(job) }
+                            .padding(18.dp),
+                    ) {
+                        Column {
+                            Text(job.title, color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Spacer(Modifier.height(2.dp))
+                            Text(job.company, color = InkGray500, fontSize = 13.sp)
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                if (job.jdKeywords.isNotEmpty()) job.jdKeywords.joinToString(" · ")
+                                else "${job.versions.size} 個版本",
+                                color = InkGray700,
+                                fontSize = 12.sp,
+                                lineHeight = 18.sp,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                }
             }
         }
 
@@ -238,7 +252,7 @@ private fun SelectJobPhase(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Outlined.Add, contentDescription = null, tint = BrandDeepOrange, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("新增職缺", color = BrandDeepOrange, fontWeight = FontWeight.Bold)
+                Text("新增或查詢職缺", color = BrandDeepOrange, fontWeight = FontWeight.Bold)
             }
         }
 
@@ -377,22 +391,21 @@ private fun AnalyzingPhase(onDone: () -> Unit, contentPadding: PaddingValues) {
 // ========== 階段 3:結果 ==========
 @Composable
 private fun ResultPhase(
-    job: com.careersandbox.app.data.model.JobApplication?,
+    job: JobTarget?,
     onBack: () -> Unit,
     onExport: () -> Unit,
     onViewThisJob: () -> Unit,
     contentPadding: PaddingValues,
 ) {
     var experiences by remember { mutableStateOf<List<com.careersandbox.app.data.model.Experience>?>(null) }
-    // AI result for this job; null means "not available, fall back to the local mock"
-    var aiResult by remember { mutableStateOf<com.careersandbox.app.data.repository.CustomizeResult?>(null) }
+    // AI result for this target; null means "not available, fall back to the local mock".
+    // job.id is the job_targets _id: the AI service resolves it to the crawled job or the pasted JD.
+    var aiResult by remember { mutableStateOf<CustomizeResult?>(null) }
     var loaded by remember { mutableStateOf(false) }
     LaunchedEffect(job?.id) {
-        val list = com.careersandbox.app.data.repository.RemoteExperienceRepository().list().getOrNull() ?: emptyList()
+        val list = RemoteExperienceRepository().list().getOrNull() ?: emptyList()
         experiences = list
-        aiResult = job?.id?.let {
-            com.careersandbox.app.data.repository.RemoteAiRepository().customizeResume(it).getOrNull()
-        }
+        aiResult = job?.id?.let { RemoteAiRepository().customizeResume(it).getOrNull() }
         loaded = true
     }
     val exp = experiences
@@ -444,7 +457,7 @@ private fun ResultPhase(
                 Text("客製化完成", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 22.sp)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    if (job != null) "已依「${job.position}・${job.company}」調整好這份履歷"
+                    if (job != null) "已依「${job.title}・${job.company}」調整好這份履歷"
                     else "已根據 JD 調整好這份履歷",
                     color = InkGray500, fontSize = 13.sp,
                 )
@@ -483,7 +496,7 @@ private fun ResultPhase(
 
         // 已弱化(減法)— 使用者可主動拉回
         val restoredItems = remember { mutableStateListOf<String>() }
-        val allDimmed = remember(exp, jdKeywords) { customized.filter { !it.highlighted }.map { it.text } }
+        val allDimmed = remember(customized) { customized.filter { !it.highlighted }.map { it.text } }
         if (allDimmed.isNotEmpty()) {
             Box(modifier = Modifier.fillMaxWidth().padding(end = 64.dp)) {
                 SectionTitle("已弱化 ${allDimmed.size} 段", "移除無關經歷,讓 recruiter 30 秒抓到重點")
@@ -533,6 +546,7 @@ private fun ResultPhase(
         Spacer(Modifier.height(10.dp))
 
         // 存成某職缺的新版本(接履歷階層架構)
+        // TODO: wire to POST /resume/targets/{id}/versions with the previewed items.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -543,7 +557,7 @@ private fun ResultPhase(
                     if (job != null) {
                         val note = "依 JD 客製：保留 ${highlights.size} 段重點" +
                                 if (restoredItems.isNotEmpty()) "、額外拉回 ${restoredItems.size} 段" else ""
-                        savedTo = "${job.position}・${job.company}"
+                        savedTo = "${job.title}・${job.company}"
                     }
                 },
             contentAlignment = Alignment.Center,
@@ -553,7 +567,7 @@ private fun ResultPhase(
                     tint = PaperWhite, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    if (job != null) "存成「${job.position}」的新版本" else "存成新版本",
+                    if (job != null) "存成「${job.title}」的新版本" else "存成新版本",
                     color = PaperWhite, fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.titleSmall,
                 )
@@ -900,6 +914,12 @@ private fun DimmedItem(text: String, isRestored: Boolean, onRestore: () -> Unit)
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun MissingChips(keywords: List<String>) {
+    if (keywords.isEmpty()) {
+        Text("太好了,這份 JD 的關鍵字你都有提到。",
+            color = InkGray500,
+            style = MaterialTheme.typography.bodySmall)
+        return
+    }
     androidx.compose.foundation.layout.FlowRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
