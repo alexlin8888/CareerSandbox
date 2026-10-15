@@ -371,7 +371,7 @@ private fun AddTargetDialog(onAdd: (String, String) -> Unit, onDismiss: () -> Un
             ) { Text("新增") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
-        title = { Text("新增職缺") },
+        title = { Text("新增或查詢職缺") },
         text = {
             Column {
                 Text("先建職缺,之後在 JD 客製化把客製存成它的版本",

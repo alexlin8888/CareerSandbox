@@ -37,8 +37,6 @@ import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.MockData
-import com.careersandbox.app.data.model.JobApplication
-import com.careersandbox.app.data.model.VersionStatus
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.ScatteredDecorations
 import com.careersandbox.app.ui.components.WaveHeroBackground
@@ -46,6 +44,9 @@ import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 import androidx.compose.foundation.layout.navigationBarsPadding
 import com.careersandbox.app.ui.components.*
+import com.careersandbox.app.data.mock.JobTarget
+import com.careersandbox.app.data.mock.SubmissionStatus
+import com.careersandbox.app.data.repository.RemoteResumeHierarchyProvider
 
 /**
  * Resume hub — Evora-inspired redesign (final).
@@ -357,9 +358,15 @@ private fun ToolTile(icon: ImageVector, label: String, modifier: Modifier = Modi
     }
 }
 
-/* ===== job list — real company favicons + status pill ===== */
+/* ===== job list — job_targets from the server, company favicon + status pill ===== */
 @Composable
 private fun JobApplicationsSection(navController: NavHostController) {
+    // Pull the user's targets once per visit; the provider keeps them in snapshot
+    // state so this section recomposes when the list lands or changes.
+    LaunchedEffect(Unit) { RemoteResumeHierarchyProvider.refresh() }
+    val targets = RemoteResumeHierarchyProvider.jobTargets()
+    val loading = RemoteResumeHierarchyProvider.loading
+
     Column(modifier = Modifier.padding(horizontal = 20.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -382,8 +389,14 @@ private fun JobApplicationsSection(navController: NavHostController) {
         }
         Spacer(Modifier.height(13.dp))
 
-        if (MockData.jobApplications.isEmpty()) {
-            Column(
+        when {
+            loading && targets.isEmpty() -> Box(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator(color = BrandDeepOrange)
+            }
+            targets.isEmpty() -> Column(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
@@ -398,10 +411,9 @@ private fun JobApplicationsSection(navController: NavHostController) {
                 Spacer(Modifier.height(4.dp))
                 Text("從母版,為第一家公司生成客製版本", color = InkGray500, fontSize = 12.sp)
             }
-        } else {
-            MockData.jobApplications.forEachIndexed { idx, job ->
-                JobRow(job = job, index = idx) {
-                    navController.navigate(Routes.jobApplicationDetail(job.id))
+            else -> targets.forEachIndexed { idx, target ->
+                JobRow(target = target, index = idx) {
+                    navController.navigate(Routes.jobApplicationDetail(target.id))
                 }
                 Spacer(Modifier.height(11.dp))
             }
@@ -412,10 +424,11 @@ private fun JobApplicationsSection(navController: NavHostController) {
 }
 
 @Composable
-private fun JobRow(job: JobApplication, index: Int, onClick: () -> Unit) {
-    val latest = job.versions.maxByOrNull { it.versionNumber }
-    val domain = companyDomain(job.company)
-    val initial = job.company.firstOrNull()?.toString() ?: "?"
+private fun JobRow(target: JobTarget, index: Int, onClick: () -> Unit) {
+    // Versions arrive oldest-first from the server; the last one is the current state.
+    val latest = target.versions.lastOrNull()
+    val domain = companyDomain(target.company)
+    val initial = target.company.firstOrNull()?.toString() ?: "?"
     val accentColors = listOf(Color(0xFFEC9430), Color(0xFF83B81A), Color(0xFF5B9BD5))
     val accent = accentColors[index % accentColors.size]
 
@@ -440,7 +453,7 @@ private fun JobRow(job: JobApplication, index: Int, onClick: () -> Unit) {
             if (domain != null) {
                 AsyncImage(
                     model = "https://www.google.com/s2/favicons?domain=$domain&sz=128",
-                    contentDescription = job.company,
+                    contentDescription = target.company,
                     modifier = Modifier.size(28.dp),
                     contentScale = ContentScale.Fit,
                 )
@@ -450,16 +463,18 @@ private fun JobRow(job: JobApplication, index: Int, onClick: () -> Unit) {
         }
         Spacer(Modifier.width(13.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(job.position, color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Text(target.title, color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 15.sp)
             Spacer(Modifier.height(3.dp))
-            Text("${job.company} · ${job.versions.size} 個版本", color = InkGray500, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            Text("${target.company} · ${target.versions.size} 個版本", color = InkGray500, fontSize = 12.sp, fontWeight = FontWeight.Medium)
         }
         Spacer(Modifier.width(10.dp))
         when (latest?.status) {
-            VersionStatus.SUBMITTED -> StatusPill("已投遞", Color(0xFFDDF3E9), Color(0xFF0E7A4F))
-            VersionStatus.EDITING -> StatusPill("編輯中", Color(0xFFFCEFD3), Color(0xFFA06A00))
-            VersionStatus.DRAFT -> StatusPill("草稿", InkGray100, InkGray500)
-            VersionStatus.ARCHIVED -> StatusPill("封存", InkGray100, InkGray500)
+            SubmissionStatus.SUBMITTED -> StatusPill("已投遞", Color(0xFFDDF3E9), Color(0xFF0E7A4F))
+            SubmissionStatus.INTERVIEWING -> StatusPill("面試中", Color(0xFFDCEBFA), Color(0xFF1F5FA8))
+            SubmissionStatus.WAITING -> StatusPill("等回覆", Color(0xFFFCEFD3), Color(0xFFA06A00))
+            SubmissionStatus.OFFER -> StatusPill("錄取", Color(0xFFDDF3E9), Color(0xFF0E7A4F))
+            SubmissionStatus.REJECTED -> StatusPill("未錄取", Color(0xFFFBE3E3), Color(0xFFB03A2E))
+            SubmissionStatus.DRAFT -> StatusPill("草稿", InkGray100, InkGray500)
             null -> StatusPill("無版本", InkGray100, InkGray500)
         }
     }
@@ -491,7 +506,7 @@ private fun AddJobRow(onClick: () -> Unit) {
     ) {
         Icon(Icons.Outlined.Add, contentDescription = null, tint = BrandDeepOrange, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(7.dp))
-        Text("新增職缺", color = BrandDeepOrange, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+        Text("新增或查詢職缺", color = BrandDeepOrange, fontWeight = FontWeight.Bold, fontSize = 13.sp)
     }
 }
 
