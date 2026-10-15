@@ -17,6 +17,7 @@ import com.careersandbox.app.data.remote.JobTargetDto
 import com.careersandbox.app.data.remote.ResumeApiService
 import com.careersandbox.app.data.remote.ResumeVersionDto
 import com.careersandbox.app.data.remote.UpdateVersionStatusRequest
+import com.careersandbox.app.data.remote.ResumeItemRequest
 
 /**
  * Real implementation of [ResumeHierarchyProvider], backed by the /resume routes on the
@@ -155,6 +156,28 @@ object RemoteResumeHierarchyProvider : ResumeHierarchyProvider {
      * The API has no copy endpoint yet, so this creates a new version carrying
      * the note only; the customized items are not duplicated.
      */
+    /**
+     * Save a customization result as a new draft version under [targetId].
+     * [items] is the full customized list in experience order, with [highlighted]
+     * reflecting what the user kept (AI picks plus anything they pulled back).
+     */
+    suspend fun saveVersion(
+        targetId: String,
+        note: String,
+        items: List<ResumeItemRequest>,
+    ): Result<ResumeVersion> = try {
+        val res = api.createVersion(targetId, CreateVersionRequest(note = note, items = items))
+        val created = res.body()?.toModel()
+        if (res.isSuccessful && created != null) {
+            val i = _targets.indexOfFirst { it.id == targetId }
+            if (i >= 0) _targets[i] = _targets[i].copy(versions = _targets[i].versions + created)
+            Result.success(created)
+        } else {
+            httpError(res.code(), "儲存版本")
+        }
+    } catch (e: Exception) {
+        Result.failure(Exception("無法連線到伺服器"))
+    }
     suspend fun duplicateVersion(versionId: String): Result<Unit> {
         val target = _targets.firstOrNull { t -> t.versions.any { it.id == versionId } }
             ?: return Result.failure(Exception("找不到這個版本"))
@@ -208,9 +231,13 @@ private fun JobTargetDto.toModel(): JobTarget? {
         company = company.orEmpty(),
         jdKeywords = jdKeywords ?: emptyList(),
         versions = (versions ?: emptyList()).mapNotNull { it.toModel() },
+        jdSnippet = jdSnippet.orEmpty(),
+        matchScore = matchScore,
+        styleTag = styleTag.orEmpty(),
+        requiredSkills = requiredSkills ?: emptyList(),
+        createdAt = createdAt.orEmpty(),
     )
 }
-
 private fun ResumeVersionDto.toModel(): ResumeVersion? {
     val versionId = id ?: return null
     return ResumeVersion(
