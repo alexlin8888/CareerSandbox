@@ -447,6 +447,9 @@ private fun ResultPhase(
         var showPreview by remember { mutableStateOf(false) }
         var showSaveSheet by remember { mutableStateOf(false) }
         var savedTo by remember { mutableStateOf<String?>(null) }
+        var saving by remember { mutableStateOf(false) }
+        var saveError by remember { mutableStateOf<String?>(null) }
+        val saveScope = rememberCoroutineScope()
 
         // 完成慶祝(品牌大使)
         Row(
@@ -545,33 +548,59 @@ private fun ResultPhase(
         }
         Spacer(Modifier.height(10.dp))
 
-        // 存成某職缺的新版本(接履歷階層架構)
-        // TODO: wire to POST /resume/targets/{id}/versions with the previewed items.
+        // 存成某職缺的新版本 → POST /resume/targets/{id}/versions (resume_versions)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .background(BrandOrange)
-                .pressScale {
-                    if (job != null) {
-                        val note = "依 JD 客製：保留 ${highlights.size} 段重點" +
-                                if (restoredItems.isNotEmpty()) "、額外拉回 ${restoredItems.size} 段" else ""
-                        savedTo = "${job.title}・${job.company}"
+                .background(if (saving) BrandOrange.copy(alpha = 0.5f) else BrandOrange)
+                .pressScale(enabled = job != null && !saving) {
+                    val target = job ?: return@pressScale
+                    saving = true
+                    saveError = null
+                    val note = "依 JD 客製：保留 ${highlights.size} 段重點" +
+                            if (restoredItems.isNotEmpty()) "、額外拉回 ${restoredItems.size} 段" else ""
+                    // items[i] pairs with exp[i]; highlighted = AI pick, or the user pulled it back
+                    val items = customized.mapIndexed { i, it ->
+                        com.careersandbox.app.data.remote.ResumeItemRequest(
+                            experienceId = exp.getOrNull(i)?.id,
+                            text = it.text,
+                            matchedKeywords = it.matchedKeywords,
+                            highlighted = it.highlighted || it.text in restoredItems,
+                        )
+                    }
+                    saveScope.launch {
+                        RemoteResumeHierarchyProvider.saveVersion(target.id, note, items)
+                            .onSuccess { savedTo = "${target.title}・${target.company}" }
+                            .onFailure { saveError = it.message ?: "儲存失敗,請稍後再試" }
+                        saving = false
                     }
                 },
             contentAlignment = Alignment.Center,
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            ) {
                 Icon(Icons.Outlined.Check, contentDescription = null,
                     tint = PaperWhite, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    if (job != null) "存成「${job.title}」的新版本" else "存成新版本",
+                    when {
+                        saving -> "儲存中…"
+                        job != null -> "存成「${job.title}」的新版本"
+                        else -> "存成新版本"
+                    },
                     color = PaperWhite, fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
             }
+        }
+        saveError?.let {
+            Spacer(Modifier.height(6.dp))
+            Text(it, color = AccentRed, style = MaterialTheme.typography.bodySmall)
         }
         Spacer(Modifier.height(10.dp))
 

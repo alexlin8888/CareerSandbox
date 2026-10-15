@@ -42,10 +42,15 @@ data class ResumeVersion(
 /** 職缺:一個應徵目標 + 其下多個版本 */
 data class JobTarget(
     val id: String,
-    val title: String,             // 職位名稱
+    val title: String,
     val company: String,
-    val jdKeywords: List<String>,  // 這個 JD 重視的關鍵字(客製依據)
+    val jdKeywords: List<String>,
     val versions: List<ResumeVersion>,
+    val jdSnippet: String = "",
+    val matchScore: Int? = null,           // null = not scored yet
+    val styleTag: String = "",
+    val requiredSkills: List<String> = emptyList(),
+    val createdAt: String = "",            // "MM/dd"
 )
 
 /** 母版:完整履歷(素材庫) */

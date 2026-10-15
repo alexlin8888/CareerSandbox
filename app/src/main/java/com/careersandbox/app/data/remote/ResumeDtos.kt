@@ -24,6 +24,11 @@ data class JobTargetDto(
     val company: String?,
     val jdKeywords: List<String>?,
     val versions: List<ResumeVersionDto>?,
+    val jdSnippet: String?,
+    val matchScore: Int?,
+    val styleTag: String?,
+    val requiredSkills: List<String>?,
+    val createdAt: String?,
 )
 
 // POST /resume/targets
@@ -38,13 +43,22 @@ data class CreateJobTargetRequest(
     val jdKeywords: List<String> = emptyList(),
 )
 
-// POST /resume/targets/{id}/versions — label is auto-assigned (版本 A/B/C) when null
 data class CreateVersionRequest(
     val label: String? = null,
-    val note: String? = null,
+    val note: String = "",
+    val items: List<ResumeItemRequest> = emptyList(),
+)
+
+// Mirrors resumeItemSchema on the server
+data class ResumeItemRequest(
+    val experienceId: String?,
+    val text: String,
+    val matchedKeywords: List<String>,
+    val highlighted: Boolean,
 )
 
 // PATCH /resume/versions/{vid}/status
 data class UpdateVersionStatusRequest(
     val status: String,
 )
+
