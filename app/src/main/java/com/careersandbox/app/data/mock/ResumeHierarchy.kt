@@ -38,7 +38,13 @@ data class ResumeVersion(
     val submittedDate: String?,    // 投遞日期;草稿為 null
     val note: String,              // 這版的差異(強調了什麼)
 )
+private val AUTO_LABEL = Regex("版本 ?[A-Za-z]")
 
+/** Name shown for a version: the user's label, or "V<number>" if it was never renamed. */
+fun ResumeVersion.displayName(number: Int): String =
+    if (label.isBlank() || AUTO_LABEL.matches(label.trim())) "V$number" else label
+
+/** 職缺:一個應徵目標 + 其下多個版本 */
 /** 職缺:一個應徵目標 + 其下多個版本 */
 data class JobTarget(
     val id: String,

@@ -9,7 +9,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 object ApiClient {
     // 10.0.2.2 = your computer's localhost, as seen from the Android emulator
-    private const val BASE_URL = "http://10.0.2.2:8000/"
+    private const val BASE_URL = "http://10.126.137.70:8000/"
 
     // Attaches "Authorization: Bearer <token>" to every request, when we have one
     private val authInterceptor = Interceptor { chain ->

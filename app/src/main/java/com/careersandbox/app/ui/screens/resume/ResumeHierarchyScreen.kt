@@ -192,6 +192,7 @@ private fun JobTargetCard(target: JobTarget, onError: (String) -> Unit) {
     }
     var expanded by remember { mutableStateOf(false) }
     var editingVersion by remember { mutableStateOf<ResumeVersion?>(null) }
+    var renamingVersion by remember { mutableStateOf<ResumeVersion?>(null) }
     var versionToDelete by remember { mutableStateOf<ResumeVersion?>(null) }
     var showDeleteTarget by remember { mutableStateOf(false) }
     WhiteCard(onClick = { expanded = !expanded }) {
@@ -244,6 +245,7 @@ private fun JobTargetCard(target: JobTarget, onError: (String) -> Unit) {
                         VersionRow(
                             v = v,
                             onEditStatus = { editingVersion = it },
+                            onRename = { renamingVersion = v },
                             onDuplicate = { perform { store.duplicateVersion(v.id) } },
                             onDelete = { versionToDelete = v },
                         )
@@ -274,6 +276,16 @@ private fun JobTargetCard(target: JobTarget, onError: (String) -> Unit) {
                 editingVersion = null
             },
             onDismiss = { editingVersion = null },
+        )
+    }
+    renamingVersion?.let { ver ->
+        RenameVersionDialog(
+            initial = ver.label,
+            onConfirm = { newLabel ->
+                perform { store.renameVersion(ver.id, newLabel) }
+                renamingVersion = null
+            },
+            onDismiss = { renamingVersion = null },
         )
     }
     versionToDelete?.let { ver ->
@@ -314,6 +326,7 @@ private fun JobTargetCard(target: JobTarget, onError: (String) -> Unit) {
 private fun VersionRow(
     v: ResumeVersion,
     onEditStatus: (ResumeVersion) -> Unit,
+    onRename: () -> Unit,
     onDuplicate: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -338,6 +351,10 @@ private fun VersionRow(
                         tint = InkGray400, modifier = Modifier.size(18.dp))
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    DropdownMenuItem(
+                        text = { Text("重新命名") },
+                        onClick = { menuOpen = false; onRename() },
+                    )
                     DropdownMenuItem(
                         text = { Text("複製為新版本") },
                         onClick = { menuOpen = false; onDuplicate() },
@@ -393,6 +410,36 @@ private fun AddTargetDialog(onAdd: (String, String) -> Unit, onDismiss: () -> Un
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
+        },
+    )
+}
+
+@Composable
+internal fun RenameVersionDialog(
+    initial: String,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var text by remember { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(text.trim()) },
+                enabled = text.isNotBlank(),
+            ) { Text("儲存") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
+        title = { Text("版本名稱") },
+        text = {
+            OutlinedTextField(
+                value = text,
+                // The backend caps the label at 100 characters.
+                onValueChange = { if (it.length <= 100) text = it },
+                label = { Text("名稱") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
         },
     )
 }

@@ -62,6 +62,9 @@ object Routes {
     fun articleDetail(articleId: String) = "article_detail/$articleId"
 
     const val RESUME_PROFILE = "resume_profile"
+    // Same screen, optionally opened for one version so the title shows its name.
+    const val RESUME_PROFILE_ROUTE = "resume_profile?versionId={versionId}"
+    fun resumeProfile(versionId: String) = "resume_profile?versionId=$versionId"
     const val RESUME_UPLOAD_PROCESSING = "resume_upload_processing"
     const val CAREER_EXPLORATION = "career_exploration"
     const val LEARNING_PATH = "learning_path"

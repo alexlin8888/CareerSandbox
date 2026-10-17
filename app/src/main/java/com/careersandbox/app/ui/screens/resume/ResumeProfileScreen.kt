@@ -37,7 +37,10 @@ import com.careersandbox.app.data.model.LanguageProficiency
 import com.careersandbox.app.data.remote.ExperienceResponse
 import com.careersandbox.app.data.remote.LanguageDto
 import com.careersandbox.app.data.remote.UpdateProfileRequest
+import com.careersandbox.app.data.mock.displayName
+import com.careersandbox.app.data.mock.displayName
 import com.careersandbox.app.data.repository.RemoteExperienceRepository
+import com.careersandbox.app.data.repository.RemoteResumeHierarchyProvider
 import com.careersandbox.app.data.repository.RemoteUserRepository
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.SectionDivider
@@ -53,7 +56,7 @@ import androidx.compose.ui.zIndex
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-fun ResumeProfileScreen(navController: NavHostController) {
+fun ResumeProfileScreen(navController: NavHostController, versionId: String? = null) {
     // Real user from the backend; guard while the session loads
     val user = UserStore.me
     if (user == null) {
@@ -121,11 +124,19 @@ fun ResumeProfileScreen(navController: NavHostController) {
             .onFailure { expError = it.message }
     }
 
+    // Opened from a version card: show that version's name. Master keeps "個人檔案".
+    val versionTitle: String? = versionId?.let { id ->
+        RemoteResumeHierarchyProvider.jobTargets().firstNotNullOfOrNull { t ->
+            val idx = t.versions.indexOfFirst { it.id == id }
+            if (idx >= 0) t.versions[idx].displayName(idx + 1) else null
+        }
+    }
+
     Scaffold(
         containerColor = PaperWhite,
         topBar = {
             TopAppBar(
-                title = { Text("個人檔案", fontWeight = FontWeight.Bold, color = InkBlack) },
+                title = { Text(versionTitle ?: "個人檔案", fontWeight = FontWeight.Bold, color = InkBlack) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Outlined.ArrowBack, contentDescription = null, tint = InkBlack)

@@ -178,7 +178,16 @@ fun CareerSandboxNavHost(
             val jobId = backStackEntry.arguments?.getString("jobId")
             JdCustomizeScreen(navController, preselectedJobId = jobId)
         }
-        composable(Routes.RESUME_PROFILE) { ResumeProfileScreen(navController) }
+        composable(
+            route = Routes.RESUME_PROFILE_ROUTE,
+            arguments = listOf(navArgument("versionId") {
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            }),
+        ) { entry ->
+            ResumeProfileScreen(navController, entry.arguments?.getString("versionId"))
+        }
         composable(Routes.RESUME_UPLOAD_PROCESSING) { ResumeUploadProcessingScreen(navController) }
         composable(Routes.CAREER_EXPLORATION) { CareerExplorationScreen(navController) }
         composable(Routes.LEARNING_PATH) { LearningPathScreen(navController) }

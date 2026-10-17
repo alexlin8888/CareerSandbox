@@ -62,3 +62,8 @@ data class UpdateVersionStatusRequest(
     val status: String,
 )
 
+// Renames a version; the server caps the label at 100 characters.
+data class UpdateVersionLabelRequest(
+    val label: String,
+)
+
