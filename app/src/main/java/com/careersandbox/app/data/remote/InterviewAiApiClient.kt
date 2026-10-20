@@ -18,7 +18,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 object InterviewAiApiClient {
     // 10.0.2.2 = 從模擬器角度看你電腦的 localhost；實機測試時要換成區網 IP，
     // 做法跟 ApiClient.kt 的 BASE_URL 完全一樣
-    private const val BASE_URL = "http://10.126.137.70:8001/"
+    private const val BASE_URL = "http://10.0.2.2:8001/"
 
     private val logging = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY

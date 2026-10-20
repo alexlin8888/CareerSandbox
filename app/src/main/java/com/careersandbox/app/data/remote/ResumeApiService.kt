@@ -42,4 +42,13 @@ interface ResumeApiService {
         @Path("vid") versionId: String,
         @Body body: UpdateVersionLabelRequest,
     ): Response<Unit>
+
+    @GET("resume-versions/{vid}")
+    suspend fun getVersion(@Path("vid") versionId: String): Response<SavedResumeVersionDto>
+
+    @PATCH("resume-versions/{vid}")
+    suspend fun updateVersionItems(
+        @Path("vid") versionId: String,
+        @Body body: UpdateVersionItemsRequest,
+    ): Response<Unit>
 }
