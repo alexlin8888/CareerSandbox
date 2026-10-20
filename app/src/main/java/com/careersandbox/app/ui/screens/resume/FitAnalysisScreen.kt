@@ -33,6 +33,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -57,13 +58,16 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.MockData
-import com.careersandbox.app.data.mock.MockFitAnalysisService
 import com.careersandbox.app.data.mock.JobFit
+import com.careersandbox.app.data.mock.JobTarget
+import com.careersandbox.app.data.repository.RemoteResumeHierarchyProvider
+import kotlinx.coroutines.launch
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.ScatteredDecorations
 import com.careersandbox.app.ui.components.WaveHeroBackground
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
+import androidx.compose.foundation.horizontalScroll
 
 private data class Capability(
     val label: String,
@@ -139,9 +143,29 @@ fun FitAnalysisScreen(navController: NavHostController) {
             )
         )
     }
-    val jobs = remember { MockFitAnalysisService.availableJobs() }
-    var selectedJobId by remember { mutableStateOf(jobs.first().jobId) }
-    val fit = remember(selectedJobId) { MockFitAnalysisService.fitFor(selectedJobId) }
+    // Top section reads the user's own job targets (job_targets). The fit score,
+    // styleTag and requiredSkills come from B2 via the Node API and are cached on
+    // each target; selecting a chip recomputes it so the number reflects the
+    // experiences as they are now. Everything below the hero card stays mock.
+    LaunchedEffect(Unit) {
+        if (RemoteResumeHierarchyProvider.jobTargets().isEmpty()) RemoteResumeHierarchyProvider.refresh()
+    }
+    val targets = RemoteResumeHierarchyProvider.jobTargets()
+    val jobs = remember(targets) { targets.map { it.toJobFit() } }
+    var selectedJobId by rememberSaveable { mutableStateOf<String?>(null) }
+    if (selectedJobId == null || jobs.none { it.jobId == selectedJobId }) {
+        selectedJobId = jobs.firstOrNull()?.jobId
+    }
+    val fit = jobs.firstOrNull { it.jobId == selectedJobId }
+
+    var scoring by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(selectedJobId) {
+        val id = selectedJobId ?: return@LaunchedEffect
+        scoring = true
+        RemoteResumeHierarchyProvider.fit(id)   // failure keeps the cached value
+        scoring = false
+    }
 
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { visible = true }
@@ -156,11 +180,19 @@ fun FitAnalysisScreen(navController: NavHostController) {
 
             Column(modifier = Modifier.padding(horizontal = 24.dp).padding(top = 20.dp, bottom = 40.dp)) {
                 AnimatedSection(visible = visible, delayMs = 0) {
-                    JobSelectorRow(jobs = jobs, selectedId = selectedJobId, onSelect = { selectedJobId = it })
+                    JobSelectorRow(
+                        jobs = jobs,
+                        selectedId = selectedJobId,
+                        loading = RemoteResumeHierarchyProvider.loading,
+                        onSelect = { selectedJobId = it },
+                        onAddJob = { navController.navigate(Routes.NEW_JOB_APPLICATION) },
+                    )
                 }
                 Spacer(Modifier.height(14.dp))
-                AnimatedSection(visible = visible, delayMs = 60) {
-                    FitHeroJobCard(fit)
+                if (fit != null) {
+                    AnimatedSection(visible = visible, delayMs = 60) {
+                        FitHeroJobCard(fit, scoring = scoring)
+                    }
                 }
                 Spacer(Modifier.height(20.dp))
 
@@ -177,7 +209,7 @@ fun FitAnalysisScreen(navController: NavHostController) {
                 when (activeTab) {
                     0 -> {
                         // === #20 技能差距(文氏圖,強調差集)===
-                        SkillGapSection(fit.requiredSkills)
+                        SkillGapSection(fit?.requiredSkills ?: emptyList())
                         Spacer(Modifier.height(20.dp))
                         Box(Modifier.fillMaxWidth().height(1.dp).background(InkGray200))
                         Spacer(Modifier.height(20.dp))
@@ -296,14 +328,15 @@ private fun AnimatedSection(visible: Boolean, delayMs: Int, content: @Composable
     AnimatedVisibility(
         visible = visible,
         enter = fadeIn(animationSpec = tween(550, delayMillis = delayMs, easing = FastOutSlowInEasing)) +
-            slideInVertically(
-                initialOffsetY = { it / 4 },
-                animationSpec = tween(550, delayMillis = delayMs, easing = FastOutSlowInEasing),
-            ),
+                slideInVertically(
+                    initialOffsetY = { it / 4 },
+                    animationSpec = tween(550, delayMillis = delayMs, easing = FastOutSlowInEasing),
+                ),
     ) {
         content()
     }
 }
+
 
 @Composable
 private fun FitHeroSection(onBack: () -> Unit) {
@@ -367,10 +400,27 @@ private fun FitHeroSection(onBack: () -> Unit) {
     }
 }
 
+// JobTarget (job_targets) -> the JobFit shape this screen was built around.
+// tags := requiredSkills so the orange chips show what the posting asks for.
+// matchScore -1 = not scored yet (shown as "—" instead of 0).
+private fun JobTarget.toJobFit() = JobFit(
+    jobId = id,
+    title = title,
+    company = company,
+    tags = requiredSkills,
+    salary = salary.ifBlank { "面議" },
+    deadline = "長期招募",
+    matchScore = matchScore ?: -1,
+    styleTag = styleTag,
+    requiredSkills = requiredSkills,
+)
+
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun FitHeroJobCard(fit: JobFit) {
+private fun FitHeroJobCard(fit: JobFit, scoring: Boolean = false) {
+    val scored = fit.matchScore >= 0
     val animScore by animateIntAsState(
-        targetValue = fit.matchScore,
+        targetValue = if (scored) fit.matchScore else 0,
         animationSpec = tween(1200, easing = FastOutSlowInEasing),
         label = "hero_score",
     )
@@ -401,15 +451,22 @@ private fun FitHeroJobCard(fit: JobFit) {
         }
         Spacer(Modifier.height(14.dp))
 
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            fit.tags.forEach { chip ->
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(BrandPeach)
-                        .padding(horizontal = 10.dp, vertical = 4.dp),
-                ) {
-                    Text(chip, color = BrandDeepOrange, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
+        if (fit.tags.isEmpty()) {
+            Text("這份職缺沒有列出結構化技能", color = InkGray400, fontSize = 11.sp)
+        } else {
+            androidx.compose.foundation.layout.FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                fit.tags.forEach { chip ->
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(BrandPeach)
+                            .padding(horizontal = 10.dp, vertical = 4.dp),
+                    ) {
+                        Text(chip, color = BrandDeepOrange, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
+                    }
                 }
             }
         }
@@ -430,17 +487,32 @@ private fun FitHeroJobCard(fit: JobFit) {
                     fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Text("$animScore", color = BrandDeepOrange, fontWeight = FontWeight.Black, fontSize = 48.sp, lineHeight = 48.sp)
-                    Text("%", color = BrandDeepOrange, fontWeight = FontWeight.Black, fontSize = 20.sp, modifier = Modifier.padding(bottom = 4.dp))
+                    Text(
+                        if (scored) "$animScore" else "—",
+                        color = if (scored) BrandDeepOrange else InkGray400,
+                        fontWeight = FontWeight.Black, fontSize = 48.sp, lineHeight = 48.sp,
+                    )
+                    if (scored) {
+                        Text("%", color = BrandDeepOrange, fontWeight = FontWeight.Black, fontSize = 20.sp, modifier = Modifier.padding(bottom = 4.dp))
+                    }
+                    if (scoring) {
+                        Spacer(Modifier.width(8.dp))
+                        CircularProgressIndicator(
+                            color = BrandDeepOrange, strokeWidth = 2.dp,
+                            modifier = Modifier.size(16.dp).padding(bottom = 2.dp),
+                        )
+                    }
                 }
                 Spacer(Modifier.height(6.dp))
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(AccentGreen.copy(alpha = 0.15f))
-                        .padding(horizontal = 8.dp, vertical = 3.dp),
-                ) {
-                    Text(fit.styleTag, color = AccentGreen, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
+                if (fit.styleTag.isNotBlank()) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(AccentGreen.copy(alpha = 0.15f))
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                    ) {
+                        Text(fit.styleTag, color = AccentGreen, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
+                    }
                 }
             }
             Column(horizontalAlignment = Alignment.End) {
@@ -454,37 +526,65 @@ private fun FitHeroJobCard(fit: JobFit) {
     }
 }
 
-@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun JobSelectorRow(jobs: List<JobFit>, selectedId: String, onSelect: (String) -> Unit) {
+private fun JobSelectorRow(
+    jobs: List<JobFit>,
+    selectedId: String?,
+    loading: Boolean,
+    onSelect: (String) -> Unit,
+    onAddJob: () -> Unit,
+) {
     Column {
         Text(
-            "選一份職缺,看你的母版對它的適配",
+            "選一份你加入的職缺,看你的母版對它的適配",
             color = InkGray500,
             fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold,
         )
         Spacer(Modifier.height(8.dp))
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            jobs.forEach { job ->
-                val sel = job.jobId == selectedId
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(if (sel) InkBlack else PaperWhite)
-                        .pressScale { onSelect(job.jobId) }
-                        .padding(horizontal = 14.dp, vertical = 8.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        job.title,
-                        color = if (sel) PaperWhite else InkGray700,
-                        fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium,
-                        fontSize = 12.sp,
-                    )
+        when {
+            loading && jobs.isEmpty() -> CircularProgressIndicator(
+                color = BrandDeepOrange, strokeWidth = 2.dp, modifier = Modifier.size(20.dp),
+            )
+            jobs.isEmpty() -> Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(PaperWhite)
+                    .pressScale(onClick = onAddJob)
+                    .padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Outlined.Add, contentDescription = null, tint = BrandDeepOrange, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("還沒有職缺,先新增一個再來看適配", color = InkGray700, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            }
+            else -> Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                jobs.forEach { job ->
+                    val sel = job.jobId == selectedId
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(if (sel) InkBlack else PaperWhite)
+                            .pressScale { onSelect(job.jobId) }
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            job.title,
+                            color = if (sel) PaperWhite else InkGray700,
+                            fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium,
+                            fontSize = 12.sp,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            modifier = Modifier.widthIn(max = 180.dp),
+                        )
+                    }
                 }
             }
         }

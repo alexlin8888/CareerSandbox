@@ -51,6 +51,7 @@ data class JobTarget(
     val styleTag: String = "",
     val requiredSkills: List<String> = emptyList(),
     val createdAt: String = "",            // "MM/dd"
+    val salary: String = "",
 )
 
 /** 母版:完整履歷(素材庫) */
@@ -144,6 +145,8 @@ object MockResumeHierarchyProvider : ResumeHierarchyProvider {
             )
         )
     }
+
+
 
     /** 刪除某個職缺(連同其下所有版本)。後端接點:刪除職缺與其版本紀錄。 */
     fun removeJobTarget(targetId: String) {
