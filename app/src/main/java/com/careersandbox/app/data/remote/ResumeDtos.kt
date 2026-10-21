@@ -63,6 +63,29 @@ data class UpdateVersionStatusRequest(
     val status: String,
 )
 
+// Renames a version; the server caps the label at 100 characters.
+data class UpdateVersionLabelRequest(
+    val label: String,
+)
+
+// GET /resume-versions/{id}: the saved customization. Gson ignores the other fields.
+data class SavedResumeItemDto(
+    val experienceId: String?,
+    val text: String?,
+    val matchedKeywords: List<String>?,
+    val highlighted: Boolean?,
+)
+
+data class SavedResumeVersionDto(
+    val label: String?,
+    val items: List<SavedResumeItemDto>?,
+)
+
+// PATCH /resume-versions/{id} with { items }: replaces the whole list.
+data class UpdateVersionItemsRequest(
+    val items: List<ResumeItemRequest>,
+)
+
 data class FitTargetResponse(
     val target: JobTargetDto?,
     val requiredSkills: List<String>?,

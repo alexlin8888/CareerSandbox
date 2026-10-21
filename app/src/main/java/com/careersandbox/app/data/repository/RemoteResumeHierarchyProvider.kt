@@ -16,6 +16,8 @@ import com.careersandbox.app.data.remote.CreateVersionRequest
 import com.careersandbox.app.data.remote.JobTargetDto
 import com.careersandbox.app.data.remote.ResumeApiService
 import com.careersandbox.app.data.remote.ResumeVersionDto
+import com.careersandbox.app.data.remote.UpdateVersionItemsRequest
+import com.careersandbox.app.data.remote.UpdateVersionLabelRequest
 import com.careersandbox.app.data.remote.UpdateVersionStatusRequest
 import com.careersandbox.app.data.remote.ResumeItemRequest
 import com.careersandbox.app.data.remote.FitTargetResponse
@@ -145,6 +147,52 @@ object RemoteResumeHierarchyProvider : ResumeHierarchyProvider {
         } else {
             httpError(res.code(), "更新狀態")
         }
+    } catch (e: Exception) {
+        Result.failure(Exception("無法連線到伺服器"))
+    }
+
+    /**
+     * Rename a version. The label is applied locally from what we sent,
+     * so this does not depend on the shape of the PATCH response body.
+     */
+    suspend fun renameVersion(versionId: String, label: String): Result<Unit> = try {
+        val res = api.updateVersionLabel(versionId, UpdateVersionLabelRequest(label))
+        if (res.isSuccessful) {
+            replaceVersion(versionId) { it.copy(label = label) }
+            Result.success(Unit)
+        } else {
+            httpError(res.code(), "重新命名")
+        }
+    } catch (e: Exception) {
+        Result.failure(Exception("無法連線到伺服器"))
+    }
+
+    /** Load the saved customization (items) of one version. */
+    suspend fun loadVersionItems(versionId: String): Result<List<ResumeItemRequest>> = try {
+        val res = api.getVersion(versionId)
+        val body = res.body()
+        if (res.isSuccessful && body != null) {
+            Result.success(
+                (body.items ?: emptyList()).map {
+                    ResumeItemRequest(
+                        experienceId = it.experienceId,
+                        text = it.text.orEmpty(),
+                        matchedKeywords = it.matchedKeywords ?: emptyList(),
+                        highlighted = it.highlighted ?: false,
+                    )
+                }
+            )
+        } else {
+            httpError(res.code(), "讀取版本內容")
+        }
+    } catch (e: Exception) {
+        Result.failure(Exception("無法連線到伺服器"))
+    }
+
+    /** Replace the version's items with the edited list. */
+    suspend fun saveVersionItems(versionId: String, items: List<ResumeItemRequest>): Result<Unit> = try {
+        val res = api.updateVersionItems(versionId, UpdateVersionItemsRequest(items))
+        if (res.isSuccessful) Result.success(Unit) else httpError(res.code(), "儲存版本內容")
     } catch (e: Exception) {
         Result.failure(Exception("無法連線到伺服器"))
     }

@@ -4,6 +4,7 @@ import com.careersandbox.app.data.local.UserStore
 import com.careersandbox.app.data.mock.CustomizedItem
 import com.careersandbox.app.data.mock.MockJdCustomizer
 import com.careersandbox.app.data.model.JobApplication
+import com.careersandbox.app.data.remote.ResumeItemRequest
 import com.careersandbox.app.data.repository.RemoteAiRepository
 import com.careersandbox.app.data.repository.RemoteExperienceRepository
 
@@ -132,6 +133,46 @@ suspend fun buildCustomResumeDataForMasterExport(): CustomResumeData? {
         languages = user.languages.map { it.language to it.level },
         experienceItems = experiences.map { exp ->
             CustomResumeItem(title = exp.title, timeRange = exp.timeRange, text = exp.description)
+        },
+    )
+}
+
+
+/**
+ * Saved version: the stored items matched to the real experiences by experienceId
+ * (not by position), keeping only the highlighted ones.
+ * Returns null when the user profile or the experiences cannot be loaded.
+ */
+suspend fun buildCustomResumeDataForVersion(
+    items: List<ResumeItemRequest>,
+    jdKeywords: List<String>,
+): CustomResumeData? {
+    val user = UserStore.me ?: UserStore.refresh().let { UserStore.me } ?: return null
+    val experiences = RemoteExperienceRepository().list().getOrNull() ?: return null
+    val byId = experiences.associateBy { it.id }
+    val kept = items.filter { it.highlighted }
+    val used = kept.flatMap { it.matchedKeywords }.toSet()
+    val covered = if (jdKeywords.isEmpty()) used.toList() else jdKeywords.filter { it in used }
+    return CustomResumeData(
+        name = user.name,
+        schoolLine = "${user.school} · ${user.department} · ${user.year}",
+        bio = user.bio,
+        keywords = user.interests,
+        email = user.email,
+        phone = user.phone,
+        linkedin = user.linkedin,
+        github = user.github,
+        portfolio = user.portfolio,
+        coveredSkills = covered,
+        otherSkills = user.skillsHave.filterNot { it in covered },
+        languages = user.languages.map { it.language to it.level },
+        experienceItems = kept.map { item ->
+            val exp = item.experienceId?.let { byId[it] }
+            CustomResumeItem(
+                title = exp?.title.orEmpty(),
+                timeRange = exp?.timeRange.orEmpty(),
+                text = item.text,
+            )
         },
     )
 }

@@ -38,4 +38,20 @@ interface ResumeApiService {
 
     @DELETE("resume/versions/{vid}")
     suspend fun deleteVersion(@Path("vid") versionId: String): Response<Unit>
+
+    // Lives under /resume-versions (resumeVersions.js), not /resume; accepts { label }.
+    @PATCH("resume-versions/{vid}")
+    suspend fun updateVersionLabel(
+        @Path("vid") versionId: String,
+        @Body body: UpdateVersionLabelRequest,
+    ): Response<Unit>
+
+    @GET("resume-versions/{vid}")
+    suspend fun getVersion(@Path("vid") versionId: String): Response<SavedResumeVersionDto>
+
+    @PATCH("resume-versions/{vid}")
+    suspend fun updateVersionItems(
+        @Path("vid") versionId: String,
+        @Body body: UpdateVersionItemsRequest,
+    ): Response<Unit>
 }

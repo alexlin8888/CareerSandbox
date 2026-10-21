@@ -31,6 +31,7 @@ import androidx.navigation.NavHostController
 import com.careersandbox.app.data.mock.JobTarget
 import com.careersandbox.app.data.mock.ResumeVersion
 import com.careersandbox.app.data.mock.SubmissionStatus
+import com.careersandbox.app.data.mock.displayName
 import com.careersandbox.app.data.repository.RemoteResumeHierarchyProvider
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.ScatteredDecorations
@@ -318,6 +319,7 @@ private fun VersionsSection(
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var busyId by remember { mutableStateOf<String?>(null) }
+    var renaming by remember { mutableStateOf<ResumeVersion?>(null) }
 
     fun setStatus(ver: ResumeVersion, status: SubmissionStatus) {
         busyId = ver.id
@@ -362,15 +364,31 @@ private fun VersionsSection(
         job.versions.forEachIndexed { idx, ver ->
             VersionCard(
                 version = ver,
-                number = idx + 1,
+                name = ver.displayName(idx + 1),
                 busy = busyId == ver.id,
-                onClick = { navController.navigate(Routes.RESUME_PROFILE) },
+                onClick = { navController.navigate(Routes.resumeProfile(ver.id)) },
+                onRename = { renaming = ver },
                 onExport = { navController.navigate(Routes.pdfExportDialog(ver.id)) },
                 onMarkSubmitted = { setStatus(ver, SubmissionStatus.SUBMITTED) },
                 onChangeStatus = { setStatus(ver, it) },
             )
             Spacer(Modifier.height(12.dp))
         }
+    }
+
+    renaming?.let { ver ->
+        val number = job.versions.indexOfFirst { it.id == ver.id } + 1
+        RenameVersionDialog(
+            initial = ver.displayName(number),
+            onConfirm = { newLabel ->
+                renaming = null
+                scope.launch {
+                    RemoteResumeHierarchyProvider.renameVersion(ver.id, newLabel)
+                        .onFailure { Toast.makeText(ctx, it.message ?: "重新命名失敗", Toast.LENGTH_SHORT).show() }
+                }
+            },
+            onDismiss = { renaming = null },
+        )
     }
 }
 
@@ -386,9 +404,10 @@ private fun statusStyle(status: SubmissionStatus): Pair<Color, String> = when (s
 @Composable
 private fun VersionCard(
     version: ResumeVersion,
-    number: Int,
+    name: String,
     busy: Boolean,
     onClick: () -> Unit,
+    onRename: () -> Unit,
     onExport: () -> Unit,
     onMarkSubmitted: () -> Unit,
     onChangeStatus: (SubmissionStatus) -> Unit,
@@ -407,15 +426,31 @@ private fun VersionCard(
     ) {
         // 頭:版本標籤 + 狀態 + 日期
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                "v$number",
-                color = statusColor.copy(alpha = 0.6f),
-                fontWeight = FontWeight.Black,
-                fontSize = 32.sp,
-                lineHeight = 32.sp,
-                modifier = Modifier.width(54.dp),
-            )
             Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        name,
+                        color = InkBlack,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 22.sp,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Icon(
+                        Icons.Outlined.Edit,
+                        contentDescription = "重新命名",
+                        tint = InkGray400,
+                        modifier = Modifier
+                            .size(18.dp)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                            ) { onRename() },
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
                 // Tapping the status opens a picker for all six states.
                 Box {
                     Row(

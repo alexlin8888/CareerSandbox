@@ -34,7 +34,12 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.careersandbox.app.data.local.UserStore
 import com.careersandbox.app.data.model.LanguageProficiency
+import com.careersandbox.app.data.mock.displayName
 import com.careersandbox.app.data.remote.ExperienceResponse
+import com.careersandbox.app.data.remote.ResumeItemRequest
+import com.careersandbox.app.data.repository.RemoteResumeHierarchyProvider
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import com.careersandbox.app.data.remote.LanguageDto
 import com.careersandbox.app.data.remote.UpdateProfileRequest
 import com.careersandbox.app.data.repository.RemoteExperienceRepository
@@ -53,7 +58,7 @@ import androidx.compose.ui.zIndex
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-fun ResumeProfileScreen(navController: NavHostController) {
+fun ResumeProfileScreen(navController: NavHostController, versionId: String? = null) {
     // Real user from the backend; guard while the session loads
     val user = UserStore.me
     if (user == null) {
@@ -121,18 +126,65 @@ fun ResumeProfileScreen(navController: NavHostController) {
             .onFailure { expError = it.message }
     }
 
+    // Version mode: the page shows one saved customization instead of the master profile.
+    val versionItems = remember { mutableStateListOf<ResumeItemRequest>() }
+    var versionLoaded by remember { mutableStateOf(versionId == null) }
+    var versionError by remember { mutableStateOf<String?>(null) }
+    var editingItemIndex by remember { mutableStateOf<Int?>(null) }
+    LaunchedEffect(versionId) {
+        if (versionId == null) return@LaunchedEffect
+        if (RemoteResumeHierarchyProvider.jobTargets().isEmpty()) RemoteResumeHierarchyProvider.refresh()
+        RemoteResumeHierarchyProvider.loadVersionItems(versionId)
+            .onSuccess { versionItems.clear(); versionItems.addAll(it) }
+            .onFailure { versionError = it.message ?: "讀取失敗" }
+        versionLoaded = true
+    }
+    val versionTarget = versionId?.let { id ->
+        RemoteResumeHierarchyProvider.jobTargets().firstOrNull { t -> t.versions.any { it.id == id } }
+    }
+    val versionTitle: String? = versionTarget?.let { t ->
+        val idx = t.versions.indexOfFirst { it.id == versionId }
+        if (idx >= 0) t.versions[idx].displayName(idx + 1) else null
+    }
+    // Edits are written back right away, like the other fields on this page.
+    fun saveVersionItems() {
+        val id = versionId ?: return
+        scope.launch {
+            RemoteResumeHierarchyProvider.saveVersionItems(id, versionItems.toList())
+                .onFailure {
+                    Toast.makeText(ctxScreen, it.message ?: "儲存失敗,請稍後再試", Toast.LENGTH_SHORT).show()
+                }
+        }
+    }
+
     Scaffold(
         containerColor = PaperWhite,
         topBar = {
             TopAppBar(
-                title = { Text("個人檔案", fontWeight = FontWeight.Bold, color = InkBlack) },
+                title = { Text(versionTitle ?: "個人檔案", fontWeight = FontWeight.Bold, color = InkBlack) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Outlined.ArrowBack, contentDescription = null, tint = InkBlack)
                     }
                 },
                 actions = {
-                    IconButton(onClick = { navController.navigate(Routes.pdfExportDialog("master")) }) {
+                    IconButton(onClick = {
+                        if (versionId == null) {
+                            navController.navigate(Routes.pdfExportDialog("master"))
+                        } else {
+                            scope.launch {
+                                val data = com.careersandbox.app.data.pdf.buildCustomResumeDataForVersion(
+                                    versionItems.toList(), versionTarget?.jdKeywords.orEmpty(),
+                                )
+                                if (data == null) {
+                                    Toast.makeText(ctxScreen, "找不到你的個人資料，請稍後再試", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    com.careersandbox.app.data.pdf.PendingCustomExport.data = data
+                                    navController.navigate(Routes.pdfExportDialog("custom"))
+                                }
+                            }
+                        }
+                    }) {
                         Icon(Icons.Outlined.Download, contentDescription = "下載履歷", tint = InkBlack)
                     }
                 },
@@ -323,10 +375,26 @@ fun ResumeProfileScreen(navController: NavHostController) {
 
             // === 經歷(真資料:經驗收集存進資料庫的內容) ===
             StaggeredAppear(delayMillis = 320) {
-                Column { SectionLabel("經歷", onEdit = { navController.navigate(Routes.EXPERIENCE_LIST) }) }
+                Column {
+                    SectionLabel(
+                        "經歷",
+                        onEdit = if (versionId == null) ({ navController.navigate(Routes.EXPERIENCE_LIST) }) else null,
+                    )
+                }
             }
             val exps = expList
             when {
+                versionId != null -> VersionExperienceSection(
+                    items = versionItems,
+                    loaded = versionLoaded,
+                    error = versionError,
+                    experiences = exps,
+                    onEdit = { editingItemIndex = it },
+                    onToggle = { i ->
+                        versionItems[i] = versionItems[i].copy(highlighted = !versionItems[i].highlighted)
+                        saveVersionItems()
+                    },
+                )
                 exps == null && expError == null -> {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
@@ -563,9 +631,30 @@ fun ResumeProfileScreen(navController: NavHostController) {
             Spacer(Modifier.height(40.dp))
         }
     }
+    editingItemIndex?.let { i ->
+        val current = versionItems.getOrNull(i)
+        if (current != null) {
+            EditExperienceTextDialog(
+                initial = current.text,
+                onConfirm = { t ->
+                    versionItems[i] = current.copy(text = t)
+                    editingItemIndex = null
+                    saveVersionItems()
+                },
+                onDismiss = { editingItemIndex = null },
+            )
+        }
+    }
+
     if (showMasterPreview) {
         LaunchedEffect(Unit) {
-            val data = com.careersandbox.app.data.pdf.buildCustomResumeDataForMasterExport()
+            val data = if (versionId == null) {
+                com.careersandbox.app.data.pdf.buildCustomResumeDataForMasterExport()
+            } else {
+                com.careersandbox.app.data.pdf.buildCustomResumeDataForVersion(
+                    versionItems.toList(), versionTarget?.jdKeywords.orEmpty(),
+                )
+            }
             if (data == null) {
                 masterPreviewError = true
             } else {
@@ -847,6 +936,141 @@ fun ResumeProfileScreen(navController: NavHostController) {
             },
         )
     }
+}
+
+@Composable
+private fun VersionExperienceSection(
+    items: List<ResumeItemRequest>,
+    loaded: Boolean,
+    error: String?,
+    experiences: List<ExperienceResponse>?,
+    onEdit: (Int) -> Unit,
+    onToggle: (Int) -> Unit,
+) {
+    when {
+        !loaded -> Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            CircularProgressIndicator(color = BrandOrange, modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
+        }
+        error != null -> Text(error, color = BrandDeepOrange, style = MaterialTheme.typography.bodyMedium)
+        items.isEmpty() -> Text(
+            "這個版本沒有客製內容。複製出來的版本只帶備註,不含經歷內容。",
+            color = InkGray400,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        else -> {
+            val kept = items.indices.filter { items[it].highlighted }
+            val dimmed = items.indices.filter { !items[it].highlighted }
+            kept.forEachIndexed { n, i ->
+                val item = items[i]
+                val exp = experiences?.firstOrNull { it.id == item.experienceId }
+                Column(modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
+                    if (exp != null) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(exp.title,
+                                color = InkBlack,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                modifier = Modifier.weight(1f))
+                            Text(exp.period,
+                                color = InkGray500,
+                                style = MaterialTheme.typography.labelSmall)
+                        }
+                        if (exp.role.isNotBlank()) {
+                            Spacer(Modifier.height(4.dp))
+                            Text(exp.role,
+                                color = BrandDeepOrange,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold)
+                        }
+                        Spacer(Modifier.height(8.dp))
+                    }
+                    Text(item.text,
+                        color = InkGray700,
+                        style = MaterialTheme.typography.bodyMedium,
+                        lineHeight = 22.sp)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        Text("編輯",
+                            color = BrandDeepOrange,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            modifier = Modifier.pressScale { onEdit(i) }.padding(10.dp))
+                        Text("弱化",
+                            color = InkGray500,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            modifier = Modifier.pressScale { onToggle(i) }.padding(10.dp))
+                    }
+                }
+                if (n != kept.lastIndex) SectionDivider(modifier = Modifier.padding(vertical = 4.dp))
+            }
+            if (dimmed.isNotEmpty()) {
+                Spacer(Modifier.height(16.dp))
+                Text("已弱化 ${dimmed.size} 段,不會出現在這個版本",
+                    color = InkGray500,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(8.dp))
+                dimmed.forEach { i ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(InkGray100)
+                            .padding(start = 14.dp, top = 10.dp, end = 8.dp, bottom = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(items[i].text,
+                            color = InkGray500,
+                            style = MaterialTheme.typography.bodyMedium,
+                            textDecoration = TextDecoration.LineThrough,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f))
+                        Spacer(Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(BrandPeach)
+                                .pressScale { onToggle(i) }
+                                .padding(horizontal = 12.dp, vertical = 5.dp),
+                        ) {
+                            Text("拉回", color = BrandDeepOrange, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EditExperienceTextDialog(
+    initial: String,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var draft by remember { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("編輯這段內容", fontWeight = FontWeight.Black) },
+        text = {
+            OutlinedTextField(
+                value = draft,
+                onValueChange = { draft = it },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 4,
+                shape = RoundedCornerShape(12.dp),
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(draft.trim()) }, enabled = draft.isNotBlank()) { Text("儲存") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
+    )
 }
 
 @Composable

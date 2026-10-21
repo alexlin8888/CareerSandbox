@@ -2,8 +2,6 @@ package com.careersandbox.app.ui.screens.interview
 
 import android.content.Intent
 import android.speech.RecognizerIntent
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -14,6 +12,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material.icons.outlined.Send
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -61,7 +62,7 @@ import com.careersandbox.app.data.remote.TurnRequest
    - 多代理路由用既有 MockPanelDispatcher(數據→技術、團隊→HR、成果→用人、不會→HR 接住),
      真接 LangGraph dispatcher 時換掉 MockPanelDispatcher 即可,本頁不動。
    - 作答用頁內語音(SpeechRecognizer,需 RECORD_AUDIO 權限,不跳 Google 框)→ 逐字稿餵 dispatch 做語意路由
-     (比舊 mock 語音傳空字串更準);可上傳作品;不打字。
+          (比舊 mock 語音傳空字串更準);可語音或文字作答。
    - 表情依回答啟發式換(報告評分目前為 mock;接後端評分後可改吃真分數)。
    - 結束 → 既有 INTERVIEW_REPORT(三維評分報告頁不動)。
    ===================================================================== */
@@ -110,9 +111,10 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
     }
     var question by remember { mutableStateOf(InterviewAiSession.openingQuestion ?: OPENING_Q) }
     var answer by remember { mutableStateOf("") }
+    var input by remember { mutableStateOf("") }
+    var answerMode by remember { mutableStateOf("voice") }   // voice / typed
     var reactingDelta by remember { mutableIntStateOf(0) }
     var followUpIdx by remember { mutableIntStateOf(0) }
-    var shared by remember { mutableStateOf(false) }
     var elapsedSec by remember { mutableIntStateOf(0) }
     val askedTopics = remember { mutableStateListOf<String>() }
     val spokenBy = remember { mutableStateListOf<String>() }
@@ -123,10 +125,11 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
     val timerText = "${(elapsedSec / 60).toString().padStart(2, '0')}:${(elapsedSec % 60).toString().padStart(2, '0')}"
     val role = InterviewConfig.customRole.ifBlank { "Junior PM" }
 
-    fun submitAnswer(transcript: String, endedBy: String = "unknown") {
+    fun submitAnswer(transcript: String, endedBy: String = "unknown", inputMode: String = "voice") {
         if (transcript.isBlank() || answer.isNotBlank()) return
         answer = transcript
-        InterviewSession.record(question, transcript, endedBy = endedBy)
+        answerMode = inputMode
+        InterviewSession.record(question, transcript, inputMode = inputMode, endedBy = endedBy)
         reactingDelta = deltaFor(transcript)
         scope.launch {
             delay(1700)
@@ -149,7 +152,7 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
                             question = question,
                             fallback = InterviewAiSession.fallbackProbes,
                             mode = "panel",
-                            inputMode = "voice",
+                            inputMode = inputMode,
                             endedBy = endedBy,
                             context = InterviewContextDto(
                                 round = InterviewConfig.round,
@@ -205,9 +208,6 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
             file.delete()
         }
     }
-    val fileLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent(),
-    ) { uri -> if (uri != null) shared = true }
 
     Box(Modifier.fillMaxSize().background(Color(0xFF14100B))) {
         Image(
@@ -236,7 +236,8 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
                 Column(Modifier.weight(1f)) {
                     Text("主管 panel 面試 · $role", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                     Text(
-                        "三位主管輪流提問 · ${InterviewConfig.round} · ${InterviewConfig.difficulty}難度",
+                        "三位主管輪流提問 · ${InterviewConfig.difficulty}難度" +
+                                InterviewConfig.resumeVersionLabel.let { if (it.isBlank()) "" else " · 履歷 $it" },
                         color = Color(0x99FFFFFF), fontSize = 11.sp,
                     )
                 }
@@ -315,23 +316,12 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
                 Column(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color(0xFFFFF7EE)).padding(13.dp),
                 ) {
-                    Text("你的回答（語音）", color = Color(0xFF9A6A3A), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        if (answerMode == "typed") "你的回答（文字）" else "你的回答（語音）",
+                        color = Color(0xFF9A6A3A), fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                    )
                     Spacer(Modifier.height(4.dp))
                     Text(answer, color = Color(0xFF1F2937), fontSize = 13.sp, lineHeight = 20.sp)
-                }
-            }
-
-            Spacer(Modifier.height(12.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Row(
-                    Modifier.clip(RoundedCornerShape(999.dp)).background(Color(0x14FFFFFF))
-                        .clickable { fileLauncher.launch("*/*") }.padding(horizontal = 11.dp, vertical = 7.dp),
-                ) { Text("上傳作品給主考官", color = Color(0xCCFFFFFF), fontSize = 11.sp) }
-                if (shared) {
-                    Spacer(Modifier.width(8.dp))
-                    Row(
-                        Modifier.clip(RoundedCornerShape(999.dp)).background(Color(0x2910B981)).padding(horizontal = 10.dp, vertical = 7.dp),
-                    ) { Text("作品已分享", color = Color(0xFF34D399), fontSize = 11.sp, fontWeight = FontWeight.Bold) }
                 }
             }
 
@@ -378,30 +368,70 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
                         ) { Text("確認送出", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
                     }
                 }
+            } else if (isTranscribing) {
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CircularProgressIndicator(
+                        color = BrandOrange,
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(22.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("轉錄中...", color = Color(0x99FFFFFF), fontSize = 12.sp)
+                }
             } else {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                    if (isTranscribing) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator(
-                                color = BrandOrange,
-                                strokeWidth = 2.dp,
-                                modifier = Modifier.size(28.dp),
-                            )
-                            Spacer(Modifier.height(6.dp))
-                            Text("轉錄中...", color = Color(0x99FFFFFF), fontSize = 11.sp)
-                        }
-                    } else {
-                        RecordingMicButton(
-                            isRecording = recorder.isRecording,
-                            amplitude = recorder.amplitude,
-                            elapsedMs = recorder.elapsedMs,
-                            maxDurationMs = 120_000L,
-                            idleEnabled = answer.isBlank(),
-                            onClick = {
-                                if (recorder.isRecording) recorder.stop()
-                                else if (answer.isBlank()) recorder.start()
+                val canSend = input.isNotBlank() && answer.isBlank()
+                Row(verticalAlignment = Alignment.Bottom) {
+                    RecordingMicButton(
+                        isRecording = recorder.isRecording,
+                        amplitude = recorder.amplitude,
+                        elapsedMs = recorder.elapsedMs,
+                        maxDurationMs = 120_000L,
+                        size = 48.dp,
+                        idleEnabled = answer.isBlank(),
+                        onClick = {
+                            if (recorder.isRecording) recorder.stop()
+                            else if (answer.isBlank()) recorder.start()
+                        },
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    OutlinedTextField(
+                        value = input,
+                        onValueChange = { input = it },
+                        enabled = answer.isBlank() && !recorder.isRecording,
+                        modifier = Modifier.weight(1f),
+                        placeholder = {
+                            Text("輸入你的回答", color = Color(0x80FFFFFF), fontSize = 13.sp)
+                        },
+                        maxLines = 4,
+                        shape = RoundedCornerShape(24.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            disabledTextColor = Color(0x99FFFFFF),
+                            focusedBorderColor = BrandOrange,
+                            unfocusedBorderColor = Color(0x55FFFFFF),
+                            disabledBorderColor = Color(0x33FFFFFF),
+                            cursorColor = BrandOrange,
+                            focusedContainerColor = Color(0x14FFFFFF),
+                            unfocusedContainerColor = Color(0x14FFFFFF),
+                            disabledContainerColor = Color(0x0AFFFFFF),
+                        ),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Box(
+                        Modifier.size(48.dp).clip(CircleShape)
+                            .background(if (canSend) BrandOrange else Color(0x33FFFFFF))
+                            .clickable(enabled = canSend) {
+                                submitAnswer(input.trim(), inputMode = "typed")
+                                input = ""
                             },
-                        )
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(Icons.Outlined.Send, contentDescription = "送出", tint = Color.White)
                     }
                 }
             }
