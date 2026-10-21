@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavHostController
 import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.InterviewConfig
@@ -54,6 +55,10 @@ fun InterviewReportScreen(navController: NavHostController) {
     val showVideoDims = remember { InterviewConfig.lastWasVideo }
     // 只有剛做完團體面試才顯示協作維度;同樣讀取後重置。
     val showCollab = remember { InterviewConfig.lastWasGroup }
+    // A report only makes sense when the user answered at least one question.
+    val hasAnswers = remember {
+        InterviewSession.turns.isNotEmpty() || InterviewSession.groupTranscript.any { it.isUser }
+    }
     LaunchedEffect(Unit) {
         InterviewConfig.lastWasVideo = false
         InterviewConfig.lastWasGroup = false
@@ -61,14 +66,15 @@ fun InterviewReportScreen(navController: NavHostController) {
     val onShare: () -> Unit = {
         val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
             type = "text/plain"
-            putExtra(android.content.Intent.EXTRA_TEXT, "我在 CareerSandbox 完成了一場模擬面試,整體 74 分,還在持續練習中。")
+            putExtra(android.content.Intent.EXTRA_TEXT, "我在 CareerSandbox 完成了一場模擬面試,還在持續練習中。")
         }
         ctx.startActivity(android.content.Intent.createChooser(intent, "分享面試報告"))
     }
     var isLoadingReport by remember { mutableStateOf(false) }
+    var showStar by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         val sessionId = InterviewAiSession.sessionId
-        if (sessionId != null && InterviewAiReport.response == null) {
+        if (sessionId != null && hasAnswers && InterviewAiReport.response == null) {
             isLoadingReport = true
             val experiences = RemoteExperienceRepository().listRaw()
                 .getOrDefault(emptyList())
@@ -136,6 +142,32 @@ fun InterviewReportScreen(navController: NavHostController) {
                 CircularProgressIndicator(color = BrandOrange)
                 Spacer(Modifier.height(12.dp))
                 Text("正在產生你的面試報告...", color = PaperWhite, fontSize = 14.sp)
+            }
+        }
+        return
+    }
+
+    if (!hasAnswers) {
+        Box(Modifier.fillMaxSize().background(InkCharcoal), contentAlignment = Alignment.Center) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(horizontal = 32.dp),
+            ) {
+                Text("沒有作答紀錄", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 22.sp)
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "這場面試還沒回答任何問題,所以沒有報告。",
+                    color = PaperWhite.copy(alpha = 0.6f), fontSize = 14.sp,
+                )
+                Spacer(Modifier.height(24.dp))
+                Box(
+                    Modifier.clip(RoundedCornerShape(16.dp)).background(BrandYellow)
+                        .pressScale { navController.popBackStack(Routes.INTERVIEW_HUB, false) }
+                        .padding(horizontal = 28.dp, vertical = 14.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("回到面試首頁", color = InkCharcoal, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                }
             }
         }
         return
@@ -318,7 +350,18 @@ fun InterviewReportScreen(navController: NavHostController) {
                 Spacer(Modifier.height(32.dp))
 
                 // === STAR 結構拆解(把回答標成四色塊,缺哪塊一眼看到)===
-                SectionTitleDark("STAR 結構拆解")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    SectionTitleDark("STAR 結構拆解")
+                    Spacer(Modifier.width(10.dp))
+                    Box(
+                        Modifier.size(24.dp).clip(CircleShape).background(Color(0x33FFFFFF))
+                            .pressScale { showStar = true },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text("?", color = PaperWhite, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                    }
+                }
+                if (showStar) StarInfoDialog { showStar = false }
                 Spacer(Modifier.height(6.dp))
                 Text(
                     if (report != null) "依你的回答標出 STAR 各段，缺少的部分會標示「缺」。"
@@ -931,6 +974,70 @@ private fun CollabDimensionSection() {
                 else "發言次數為真實記錄;協作分數待後端真實分析,以上為示意。",
                 color = PaperWhite.copy(alpha = 0.4f), fontSize = 10.sp,
             )
+        }
+    }
+}
+
+@Composable
+internal fun StarInfoDialog(onDismiss: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(24.dp))
+                .background(PaperWhite)
+                .padding(24.dp),
+        ) {
+            Text("STAR 結構", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 22.sp)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "回答經歷題時照這四步講,面試官比較容易聽出你實際做了什麼。",
+                color = InkGray500, fontSize = 13.sp, lineHeight = 20.sp,
+            )
+            Spacer(Modifier.height(16.dp))
+            StarRow("S", "情境", "當時的背景,在哪個專案、遇到什麼狀況。")
+            StarRow("T", "任務", "你負責的部分,要達成什麼目標。")
+            StarRow("A", "行動", "你實際做了什麼。這段最重要,講「我」做了哪些事,不只是「我們」。")
+            StarRow("R", "結果", "最後的成果,盡量有數字,再補一句學到什麼。")
+            Spacer(Modifier.height(14.dp))
+            Column(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                    .background(InkGray100).padding(12.dp),
+            ) {
+                Text("範例", color = InkGray500, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "校內專題我負責前端(S、T)。我重畫了登入流程,做了兩輪使用者測試(A),登入失敗率從 18% 降到 6%(R)。",
+                    color = InkGray700, fontSize = 12.sp, lineHeight = 19.sp,
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "時間分配:S 和 T 簡單帶過,A 佔一半以上。",
+                color = InkGray500, fontSize = 12.sp,
+            )
+            Spacer(Modifier.height(16.dp))
+            Box(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(InkBlack)
+                    .pressScale(onClick = onDismiss)
+                    .padding(vertical = 13.dp),
+                contentAlignment = Alignment.Center,
+            ) { Text("知道了", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 15.sp) }
+        }
+    }
+}
+
+@Composable
+private fun StarRow(letter: String, name: String, desc: String) {
+    Row(Modifier.padding(vertical = 5.dp), verticalAlignment = Alignment.Top) {
+        Box(
+            Modifier.size(28.dp).clip(CircleShape).background(BrandOrange),
+            contentAlignment = Alignment.Center,
+        ) { Text(letter, color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 13.sp) }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(name, color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(desc, color = InkGray700, fontSize = 13.sp, lineHeight = 20.sp)
         }
     }
 }
