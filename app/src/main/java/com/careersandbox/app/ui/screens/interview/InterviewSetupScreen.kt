@@ -1,6 +1,7 @@
 package com.careersandbox.app.ui.screens.interview
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -36,7 +37,9 @@ import androidx.navigation.NavHostController
 import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.InterviewConfig
 import com.careersandbox.app.data.mock.MockData
-import com.careersandbox.app.data.model.JobApplication
+import com.careersandbox.app.data.mock.JobTarget
+import com.careersandbox.app.data.mock.displayName
+import com.careersandbox.app.data.repository.RemoteResumeHierarchyProvider
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
@@ -57,8 +60,12 @@ private data class Interviewer(val name: String, val angle: String, val drawable
 fun InterviewSetupScreen(navController: NavHostController) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val jobs = MockData.jobApplications
-    var selectedJobId by remember { mutableStateOf(jobs.firstOrNull()?.id ?: "custom") }
+    val targets = RemoteResumeHierarchyProvider.jobTargets()
+    LaunchedEffect(Unit) { RemoteResumeHierarchyProvider.refresh() }
+    var pickedJobId by remember { mutableStateOf("") }
+    var pickedVersionId by remember { mutableStateOf("") }
+    val selectedJobId = pickedJobId.ifEmpty { targets.firstOrNull()?.id ?: "custom" }
+    val selectedTarget = targets.firstOrNull { it.id == selectedJobId }
     var customRole by remember { mutableStateOf("") }
     var customCompany by remember { mutableStateOf("") }
     var customSeniority by remember { mutableStateOf("新鮮人") }
@@ -67,9 +74,6 @@ fun InterviewSetupScreen(navController: NavHostController) {
     var format by remember { mutableStateOf("single") }   // single | panel
     var difficulty by remember { mutableStateOf(InterviewConfig.difficulty) }
     var showWarmup by remember { mutableStateOf(false) }
-    var round by remember { mutableStateOf(InterviewConfig.round) }
-    var language by remember { mutableStateOf(InterviewConfig.language) }
-    var type by remember { mutableStateOf(InterviewConfig.type) }
     val isCustom = selectedJobId == "custom"
 
     Scaffold(
@@ -94,10 +98,13 @@ fun InterviewSetupScreen(navController: NavHostController) {
                         .clip(RoundedCornerShape(16.dp))
                         .background(InkBlack)
                         .pressScale {
-                            InterviewConfig.round = round
-                            InterviewConfig.language = language
-                            InterviewConfig.type = type
                             InterviewConfig.difficulty = difficulty
+                            InterviewConfig.resumeVersionId = pickedVersionId
+                            InterviewConfig.resumeVersionLabel = selectedTarget?.versions
+                                ?.withIndex()
+                                ?.firstOrNull { it.value.id == pickedVersionId }
+                                ?.let { it.value.displayName(it.index + 1) }
+                                .orEmpty()
                             InterviewConfig.format = format
                             if (isCustom) {
                                 InterviewConfig.customRole = customRole
@@ -135,9 +142,23 @@ fun InterviewSetupScreen(navController: NavHostController) {
                 color = InkGray500, style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.height(16.dp))
 
-            jobs.forEach { job ->
+            targets.forEach { job ->
                 JobTargetCard(job = job, selected = selectedJobId == job.id) {
-                    selectedJobId = job.id
+                    pickedJobId = job.id
+                    pickedVersionId = ""
+                }
+                AnimatedVisibility(visible = selectedJobId == job.id && job.versions.isNotEmpty()) {
+                    Column(Modifier.padding(start = 24.dp, top = 8.dp)) {
+                        VersionOptionRow("不指定", "不套用特定版本", pickedVersionId.isEmpty()) {
+                            pickedVersionId = ""
+                        }
+                        job.versions.forEachIndexed { i, v ->
+                            Spacer(Modifier.height(8.dp))
+                            VersionOptionRow(v.displayName(i + 1), v.note, v.id == pickedVersionId) {
+                                pickedVersionId = v.id
+                            }
+                        }
+                    }
                 }
                 Spacer(Modifier.height(10.dp))
             }
@@ -148,7 +169,7 @@ fun InterviewSetupScreen(navController: NavHostController) {
                 seniority = customSeniority, onSeniority = { customSeniority = it },
                 industry = customIndustry, onIndustry = { customIndustry = it },
                 jd = customJd, onJd = { customJd = it },
-                onSelect = { selectedJobId = "custom" },
+                onSelect = { pickedJobId = "custom"; pickedVersionId = "" },
             )
 
             Spacer(Modifier.height(28.dp))
@@ -181,70 +202,11 @@ fun InterviewSetupScreen(navController: NavHostController) {
                     PillChip(it, selected = it == difficulty) { difficulty = it }
                 }
             }
-
-            Spacer(Modifier.height(28.dp))
-
-            SectionLabel("輪次")
-            Spacer(Modifier.height(10.dp))
-            androidx.compose.foundation.layout.FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                listOf("初試", "複試", "主管面").forEach {
-                    PillChip(it, selected = it == round) { round = it }
-                }
-            }
-
-            Spacer(Modifier.height(28.dp))
-
-            SectionLabel("面試類型")
-            Spacer(Modifier.height(10.dp))
-            androidx.compose.foundation.layout.FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                listOf("行為", "技術", "情境").forEach {
-                    PillChip(it, selected = it == type) { type = it }
-                }
-            }
-            Spacer(Modifier.height(10.dp))
-            Text(
-                when (type) {
-                    "技術" -> "追問會偏向工具、查錯與驗證,講得出細節才算會。"
-                    "情境" -> "丟突發狀況給你:衝突指令、資源砍半、上線前爆雷。"
-                    else -> "從你的經歷出題,追 STAR 的細節與反思。"
-                },
-                color = InkGray500, style = MaterialTheme.typography.bodySmall, lineHeight = 18.sp,
-            )
-
-            Spacer(Modifier.height(28.dp))
-
-            SectionLabel("語言")
-            Spacer(Modifier.height(10.dp))
-            androidx.compose.foundation.layout.FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                listOf("中文", "English").forEach {
-                    PillChip(it, selected = it == language) { language = it }
-                }
-            }
-            if (language == "English") {
-                Spacer(Modifier.height(10.dp))
-                Text("面試官全程用英文提問,你的回答也請用英文。",
-                    color = InkGray500, style = MaterialTheme.typography.bodySmall)
-            }
-
             Spacer(Modifier.height(32.dp))
         }
     }
 
     if (showWarmup) {
-        val roundLabel = when (round) {
-            "初試" -> "初試 · 暖身關"
-            "複試" -> "複試 · 深入問經歷"
-            else -> "主管面 · 壓力測試"
-        }
         Dialog(onDismissRequest = { showWarmup = false }) {
             Column(
                 modifier = Modifier
@@ -254,11 +216,6 @@ fun InterviewSetupScreen(navController: NavHostController) {
                     .padding(24.dp),
             ) {
                 Text("準備好了嗎", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 22.sp)
-                Spacer(Modifier.height(14.dp))
-                Box(
-                    Modifier.clip(RoundedCornerShape(50)).background(BrandPeach.copy(alpha = 0.5f))
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                ) { Text(roundLabel, color = BrandDeepOrange, fontSize = 12.sp, fontWeight = FontWeight.Black) }
                 Spacer(Modifier.height(16.dp))
                 WarmupLine("這場大概問 3-4 題,答錯不扣分,這裡只是練習。")
                 WarmupLine("講經歷時想一下 STAR:情境、任務、行動、結果。")
@@ -275,9 +232,9 @@ fun InterviewSetupScreen(navController: NavHostController) {
                                         StartInterviewRequest(
                                             mode = format,
                                             context = InterviewContextDto(
-                                                round = round,
-                                                language = language,
-                                                type = type,
+                                                round = InterviewConfig.round,
+                                                language = InterviewConfig.language,
+                                                type = InterviewConfig.type,
                                                 difficulty = difficulty,
                                             ),
                                         )
@@ -323,7 +280,7 @@ private fun SectionLabel(text: String) {
 }
 
 @Composable
-private fun JobTargetCard(job: JobApplication, selected: Boolean, onClick: () -> Unit) {
+private fun JobTargetCard(job: JobTarget, selected: Boolean, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -342,16 +299,18 @@ private fun JobTargetCard(job: JobApplication, selected: Boolean, onClick: () ->
         }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(job.position,
+            Text(job.title,
                 color = if (selected) BrandDeepOrange else InkBlack,
                 fontWeight = FontWeight.Bold, fontSize = 16.sp)
             Spacer(Modifier.height(2.dp))
             Text(job.company, color = InkGray500, style = MaterialTheme.typography.bodySmall)
         }
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("${job.matchScore}",
-                color = BrandOrange, fontWeight = FontWeight.Black, fontSize = 20.sp)
-            Text("契合", color = InkGray400, style = MaterialTheme.typography.labelSmall)
+        job.matchScore?.let { score ->
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("$score",
+                    color = BrandOrange, fontWeight = FontWeight.Black, fontSize = 20.sp)
+                Text("契合", color = InkGray400, style = MaterialTheme.typography.labelSmall)
+            }
         }
     }
 }
@@ -588,6 +547,41 @@ private fun InterviewerTile(p: Interviewer, big: Boolean, modifier: Modifier = M
     }
 }
 
+@Composable
+private fun VersionOptionRow(name: String, sub: String, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(if (selected) BrandOrange.copy(alpha = 0.12f) else InkGray50)
+            .border(
+                width = if (selected) 1.5.dp else 1.dp,
+                color = if (selected) BrandOrange else InkGray200,
+                shape = RoundedCornerShape(14.dp),
+            )
+            .pressScale(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier.size(16.dp).clip(CircleShape)
+                .background(if (selected) BrandOrange else InkGray300),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (selected) Box(Modifier.size(6.dp).clip(CircleShape).background(PaperWhite))
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(name,
+                color = if (selected) BrandDeepOrange else InkBlack,
+                fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            if (sub.isNotBlank()) {
+                Text(sub, color = InkGray500, style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1)
+            }
+        }
+    }
+}
 
 @Composable
 private fun WarmupLine(text: String) {

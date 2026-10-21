@@ -11,6 +11,9 @@ object InterviewConfig {
     var format: String = "single"     // single / panel，對應模型組合約的 mode
     var groupSize: Int = 4            // 群面小組人數（含使用者本人），3–5
     var groupRole: String = "一般應徵者"  // 一般應徵者 / 較資深應徵者 / 較資淺應徵者
+    // Resume version picked on the setup page; empty means none
+    var resumeVersionId: String = ""
+    var resumeVersionLabel: String = ""
     // 自訂職位脈絡(讓 AI 出題更準)
     var customRole: String = ""
     var customCompany: String = ""
