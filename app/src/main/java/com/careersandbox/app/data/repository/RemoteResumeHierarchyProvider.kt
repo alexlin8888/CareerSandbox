@@ -20,6 +20,7 @@ import com.careersandbox.app.data.remote.UpdateVersionItemsRequest
 import com.careersandbox.app.data.remote.UpdateVersionLabelRequest
 import com.careersandbox.app.data.remote.UpdateVersionStatusRequest
 import com.careersandbox.app.data.remote.ResumeItemRequest
+import com.careersandbox.app.data.remote.FitTargetResponse
 
 /**
  * Real implementation of [ResumeHierarchyProvider], backed by the /resume routes on the
@@ -104,6 +105,21 @@ object RemoteResumeHierarchyProvider : ResumeHierarchyProvider {
             Result.success(created)
         } else {
             httpError(res.code(), "建立職缺")
+        }
+    } catch (e: Exception) {
+        Result.failure(Exception("無法連線到伺服器"))
+    }
+
+    /** Recompute the B2 fit score for one target; the server caches it on the target. */
+    suspend fun fit(targetId: String): Result<JobTarget> = try {
+        val res = api.fitTarget(targetId)
+        val updated = res.body()?.target?.toModel()
+        if (res.isSuccessful && updated != null) {
+            val i = _targets.indexOfFirst { it.id == targetId }
+            if (i >= 0) _targets[i] = updated
+            Result.success(updated)
+        } else {
+            httpError(res.code(), "計算適配度")
         }
     } catch (e: Exception) {
         Result.failure(Exception("無法連線到伺服器"))
@@ -284,6 +300,7 @@ private fun JobTargetDto.toModel(): JobTarget? {
         styleTag = styleTag.orEmpty(),
         requiredSkills = requiredSkills ?: emptyList(),
         createdAt = createdAt.orEmpty(),
+        salary = salary.orEmpty(),
     )
 }
 private fun ResumeVersionDto.toModel(): ResumeVersion? {

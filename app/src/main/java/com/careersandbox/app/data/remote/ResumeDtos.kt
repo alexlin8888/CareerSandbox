@@ -29,6 +29,7 @@ data class JobTargetDto(
     val styleTag: String?,
     val requiredSkills: List<String>?,
     val createdAt: String?,
+    val salary: String?
 )
 
 // POST /resume/targets
@@ -85,3 +86,8 @@ data class UpdateVersionItemsRequest(
     val items: List<ResumeItemRequest>,
 )
 
+data class FitTargetResponse(
+    val target: JobTargetDto?,
+    val requiredSkills: List<String>?,
+    val tags: List<String>?,
+)

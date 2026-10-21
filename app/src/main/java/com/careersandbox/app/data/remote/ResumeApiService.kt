@@ -27,6 +27,9 @@ interface ResumeApiService {
         @Body body: CreateVersionRequest,
     ): Response<ResumeVersionDto>
 
+    @POST("resume/targets/{id}/fit")
+    suspend fun fitTarget(@Path("id") targetId: String): Response<FitTargetResponse>
+
     @PATCH("resume/versions/{vid}/status")
     suspend fun updateVersionStatus(
         @Path("vid") versionId: String,
