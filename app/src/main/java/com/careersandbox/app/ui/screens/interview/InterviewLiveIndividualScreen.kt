@@ -2,8 +2,6 @@ package com.careersandbox.app.ui.screens.interview
 
 import android.content.Intent
 import android.speech.RecognizerIntent
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -13,7 +11,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.outlined.Send
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -173,7 +174,8 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
     var lastProbe by remember { mutableStateOf("") }
     var repeatFired by remember { mutableStateOf(false) }
     var elapsedSec by remember { mutableIntStateOf(0) }
-    var shared by remember { mutableStateOf(false) }
+    var input by remember { mutableStateOf("") }
+    var answerMode by remember { mutableStateOf("voice") }   // voice / typed
     val askedTopics = remember { mutableStateListOf<String>() }
     val scope = rememberCoroutineScope()
 
@@ -186,10 +188,12 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
         segments: List<String> = emptyList(),
         segmentStartsMs: List<Long> = emptyList(),
         endedBy: String = "unknown",
+        inputMode: String = "voice",
     ) {
         if (phase != "MAIN" || transcript.isBlank() || answer.isNotBlank()) return
         answer = transcript
-        InterviewSession.record(question, transcript, segments, segmentStartsMs, "voice", endedBy)
+        answerMode = inputMode
+        InterviewSession.record(question, transcript, segments, segmentStartsMs, inputMode, endedBy)
         reactingDelta = deltaFor(transcript)
         scope.launch {
             delay(1500)
@@ -213,7 +217,7 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
                                 question = question,
                                 fallback = InterviewAiSession.fallbackProbes,
                                 mode = "single",
-                                inputMode = "voice",
+                                inputMode = inputMode,
                                 endedBy = endedBy,
                                 context = InterviewContextDto(
                                     round = InterviewConfig.round,
@@ -271,10 +275,6 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
             file.delete()
         }
     }
-    val fileLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent(),
-    ) { uri -> if (uri != null) shared = true }
-
     Box(Modifier.fillMaxSize().background(Color(0xFF14100B))) {
         Image(
             painter = painterResource(R.drawable.bg_scene_1on1),
@@ -301,7 +301,8 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
                 Column(Modifier.weight(1f)) {
                     Text(t("1 對 1 面試 · $role", "1-on-1 · $role"), color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                     Text(
-                        "${InterviewConfig.type} · ${InterviewConfig.round} · ${InterviewConfig.difficulty}",
+                        "${InterviewConfig.difficulty}難度" +
+                                InterviewConfig.resumeVersionLabel.let { if (it.isBlank()) "" else " · 履歷 $it" },
                         color = Color(0x99FFFFFF), fontSize = 11.sp,
                     )
                 }
@@ -355,7 +356,14 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
                 Column(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color(0xFFFFF7EE)).padding(13.dp),
                 ) {
-                    Text(if (phase == "CLOSING") t("你的提問", "Your question") else t("你的回答（語音）", "Your answer (voice)"), color = Color(0xFF9A6A3A), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        when {
+                            phase == "CLOSING" -> t("你的提問", "Your question")
+                            answerMode == "typed" -> t("你的回答（文字）", "Your answer (typed)")
+                            else -> t("你的回答（語音）", "Your answer (voice)")
+                        },
+                        color = Color(0xFF9A6A3A), fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                    )
                     Spacer(Modifier.height(4.dp))
                     Text(answer, color = Color(0xFF1F2937), fontSize = 13.sp, lineHeight = 20.sp)
                 }
@@ -428,41 +436,70 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
                                 ) { Text(t("確認送出", "Confirm & send"), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
                             }
                         }
+                    } else if (isTranscribing) {
+                        Row(
+                            Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            CircularProgressIndicator(
+                                color = BrandOrange,
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(22.dp),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(t("轉錄中...", "Transcribing..."), color = Color(0x99FFFFFF), fontSize = 12.sp)
+                        }
                     } else {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Row(
-                                Modifier.clip(RoundedCornerShape(999.dp)).background(Color(0x14FFFFFF))
-                                    .clickable { fileLauncher.launch("*/*") }.padding(horizontal = 11.dp, vertical = 7.dp),
-                            ) { Text(t("分享工作", "Share work"), color = Color(0xCCFFFFFF), fontSize = 11.sp) }
-                            if (shared) {
-                                Spacer(Modifier.width(8.dp))
-                                Row(
-                                    Modifier.clip(RoundedCornerShape(999.dp)).background(Color(0x2910B981)).padding(horizontal = 10.dp, vertical = 7.dp),
-                                ) { Text(t("已分享", "Shared"), color = Color(0xFF34D399), fontSize = 11.sp, fontWeight = FontWeight.Bold) }
-                            }
-                            Spacer(Modifier.weight(1f))
-                            if (isTranscribing) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    CircularProgressIndicator(
-                                        color = BrandOrange,
-                                        strokeWidth = 2.dp,
-                                        modifier = Modifier.size(28.dp),
-                                    )
-                                    Spacer(Modifier.height(6.dp))
-                                    Text(t("轉錄中...", "Transcribing..."), color = Color(0x99FFFFFF), fontSize = 11.sp)
-                                }
-                            } else {
-                                RecordingMicButton(
-                                    isRecording = recorder.isRecording,
-                                    amplitude = recorder.amplitude,
-                                    elapsedMs = recorder.elapsedMs,
-                                    maxDurationMs = 120_000L,
-                                    idleEnabled = answer.isBlank(),
-                                    onClick = {
-                                        if (recorder.isRecording) recorder.stop()
-                                        else if (answer.isBlank()) recorder.start()
+                        val canSend = input.isNotBlank() && answer.isBlank()
+                        Row(verticalAlignment = Alignment.Bottom) {
+                            RecordingMicButton(
+                                isRecording = recorder.isRecording,
+                                amplitude = recorder.amplitude,
+                                elapsedMs = recorder.elapsedMs,
+                                maxDurationMs = 120_000L,
+                                size = 48.dp,
+                                idleEnabled = answer.isBlank(),
+                                onClick = {
+                                    if (recorder.isRecording) recorder.stop()
+                                    else if (answer.isBlank()) recorder.start()
+                                },
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            OutlinedTextField(
+                                value = input,
+                                onValueChange = { input = it },
+                                enabled = answer.isBlank() && !recorder.isRecording,
+                                modifier = Modifier.weight(1f),
+                                placeholder = {
+                                    Text(t("輸入你的回答", "Type your answer"), color = Color(0x80FFFFFF), fontSize = 13.sp)
+                                },
+                                maxLines = 4,
+                                shape = RoundedCornerShape(24.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White,
+                                    disabledTextColor = Color(0x99FFFFFF),
+                                    focusedBorderColor = BrandOrange,
+                                    unfocusedBorderColor = Color(0x55FFFFFF),
+                                    disabledBorderColor = Color(0x33FFFFFF),
+                                    cursorColor = BrandOrange,
+                                    focusedContainerColor = Color(0x14FFFFFF),
+                                    unfocusedContainerColor = Color(0x14FFFFFF),
+                                    disabledContainerColor = Color(0x0AFFFFFF),
+                                ),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Box(
+                                Modifier.size(48.dp).clip(CircleShape)
+                                    .background(if (canSend) BrandOrange else Color(0x33FFFFFF))
+                                    .clickable(enabled = canSend) {
+                                        submitAnswer(input.trim(), inputMode = "typed")
+                                        input = ""
                                     },
-                                )
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(Icons.Outlined.Send, contentDescription = t("送出", "Send"), tint = Color.White)
                             }
                         }
                     }
