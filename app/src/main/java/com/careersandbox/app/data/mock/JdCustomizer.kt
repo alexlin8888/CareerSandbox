@@ -14,6 +14,7 @@ import com.careersandbox.app.data.model.Experience
 
 /** 客製化後的一段履歷項目 */
 data class CustomizedItem(
+    val id: String? = null,
     val text: String,                   // 經歷描述(來自母版)
     val matchedKeywords: List<String>,  // 命中的 JD 關鍵字
     val highlighted: Boolean,           // true=強化, false=弱化

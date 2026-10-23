@@ -7,6 +7,7 @@ data class CustomizeResumeRequest(
 )
 
 data class CustomizedItemResponse(
+    val id: String?,
     val text: String?,
     val matchedKeywords: List<String>?,
     val highlighted: Boolean?,
