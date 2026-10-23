@@ -43,6 +43,7 @@ import com.careersandbox.app.data.remote.InterviewAiApiClient
 import com.careersandbox.app.data.remote.InterviewContextDto
 import com.careersandbox.app.data.remote.ReportRequest
 import com.careersandbox.app.data.remote.TurnDto
+import com.careersandbox.app.data.remote.toContextDto
 import com.careersandbox.app.data.repository.RemoteExperienceRepository
 import kotlinx.coroutines.launch
 import com.careersandbox.app.data.remote.toDto
@@ -70,13 +71,23 @@ fun InterviewReportScreen(navController: NavHostController) {
         }
         ctx.startActivity(android.content.Intent.createChooser(intent, "分享面試報告"))
     }
+    // Debug builds only: dump the recorded session as JSON for the model team
+    val isDebuggable = (ctx.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+    val exportSession: () -> Unit = {
+        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(android.content.Intent.EXTRA_SUBJECT, "interview-session.json")
+            putExtra(android.content.Intent.EXTRA_TEXT, buildSessionExportJson())
+        }
+        ctx.startActivity(android.content.Intent.createChooser(intent, "匯出逐字稿"))
+    }
     var isLoadingReport by remember { mutableStateOf(false) }
     var showStar by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         val sessionId = InterviewAiSession.sessionId
         if (sessionId != null && hasAnswers && InterviewAiReport.response == null) {
             isLoadingReport = true
-            val experiences = RemoteExperienceRepository().listRaw()
+            val loadedExperiences = RemoteExperienceRepository().listRaw()
                 .getOrDefault(emptyList())
                 .map {
                     ExperienceDto(
@@ -85,6 +96,8 @@ fun InterviewReportScreen(navController: NavHostController) {
                         description = it.description, tags = it.tags,
                     )
                 }
+            // Same experiences the interview used (version-filtered); fall back to the full list
+            val experiences = InterviewAiSession.experiences.ifEmpty { loadedExperiences }
             val isGroup = InterviewConfig.format == "group"
             val turns = if (isGroup) {
                 InterviewSession.groupTranscript.toGroupTurns()
@@ -96,18 +109,14 @@ fun InterviewReportScreen(navController: NavHostController) {
                         inputMode = it.inputMode,
                         answerSegments = it.answerSegments,
                         segmentStartsMs = it.segmentStartsMs,
+                        segmentEndsMs = it.segmentEndsMs,
                         endedBy = it.endedBy,
                     )
                 }
             }
             // Group-only fields are sent only for group sessions, so stale values from an
             // earlier group run never leak into a single or panel report.
-            val baseContext = InterviewContextDto(
-                round = InterviewConfig.round,
-                language = InterviewConfig.language,
-                type = InterviewConfig.type,
-                difficulty = InterviewConfig.difficulty,
-            )
+            val baseContext = InterviewConfig.toContextDto()
             val reportContext = if (isGroup) {
                 baseContext.copy(
                     groupInterviewers = InterviewConfig.groupInterviewers,
@@ -238,6 +247,15 @@ fun InterviewReportScreen(navController: NavHostController) {
                     fontWeight = FontWeight.Bold,
                     fontSize = 20.sp,
                     modifier = Modifier.weight(1f))
+                if (isDebuggable) {
+                    Box(
+                        Modifier.clip(CircleShape).background(Color(0x1AFFFFFF))
+                            .pressScale { exportSession() }
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        contentAlignment = Alignment.Center,
+                    ) { Text("匯出逐字稿", color = PaperWhite, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+                    Spacer(Modifier.width(8.dp))
+                }
                 Box(
                     Modifier.size(40.dp).clip(CircleShape)
                         .background(Color(0x1AFFFFFF))
@@ -276,15 +294,15 @@ fun InterviewReportScreen(navController: NavHostController) {
                                     fontWeight = FontWeight.SemiBold,
                                     letterSpacing = 1.sp)
                             }
-                            val subScoresNow = com.careersandbox.app.data.mock.MockInterviewReportProvider.subScores()
-                            val overallScore = if (subScoresNow.isNotEmpty()) {
-                                subScoresNow.sumOf { it.score } / subScoresNow.size
-                            } else {
-                                74
-                            }
+                            val scored = com.careersandbox.app.data.mock.MockInterviewReportProvider
+                                .subScores().mapNotNull { it.score }
+                            // Prefer the backend's overallScore; a real report with nothing scored shows "—"
+                            val overallScore: Int? = report?.overallScore
+                                ?: if (scored.isNotEmpty()) scored.sum() / scored.size
+                                else if (report == null) 74 else null
                             Spacer(Modifier.height(20.dp))
                             // 超大數字（暫時用六項細分分數的平均值，正式算法待跟模型組/B對齊 overallScore）
-                            Text("${rememberCountUp(overallScore, durationMillis = 1200)}",
+                            Text(if (overallScore != null) "${rememberCountUp(overallScore, durationMillis = 1200)}" else "—",
                                 color = PaperWhite,
                                 fontSize = 128.sp,
                                 fontWeight = FontWeight.Black,
@@ -295,6 +313,12 @@ fun InterviewReportScreen(navController: NavHostController) {
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 letterSpacing = 2.sp)
+                            report?.scoreBasis?.takeIf { it.isNotBlank() }?.let {
+                                Spacer(Modifier.height(8.dp))
+                                Text(it, color = InkGray400, fontSize = 12.sp, lineHeight = 18.sp,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                    modifier = Modifier.padding(horizontal = 16.dp))
+                            }
                             Spacer(Modifier.height(20.dp))
                             Box(
                                 Modifier
@@ -332,7 +356,7 @@ fun InterviewReportScreen(navController: NavHostController) {
                 Spacer(Modifier.height(12.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     com.careersandbox.app.data.mock.MockInterviewReportProvider.subScores().forEach {
-                        DimensionRow(it.name, it.score)
+                        DimensionRow(it.name, it.score, it.basis)
                     }
                 }
 
@@ -486,6 +510,33 @@ fun InterviewReportScreen(navController: NavHostController) {
     }
 }
 
+// Debug export: everything the model team needs to replay a session offline
+private fun buildSessionExportJson(): String {
+    val payload = linkedMapOf<String, Any?>(
+        "exportedAtMs" to System.currentTimeMillis(),
+        "mode" to InterviewConfig.format,
+        "context" to InterviewConfig.toContextDto(group = InterviewConfig.format == "group"),
+        "resumeVersion" to InterviewConfig.resumeVersionLabel,
+        "jdSkills" to InterviewAiSession.jdSkills,
+        "openingQuestion" to InterviewAiSession.openingQuestion,
+        "askedQuestions" to InterviewAiSession.askedQuestions.toList(),
+        "turns" to InterviewSession.turns.map {
+            TurnDto(
+                question = it.question,
+                answer = it.answer,
+                inputMode = it.inputMode,
+                answerSegments = it.answerSegments,
+                segmentStartsMs = it.segmentStartsMs,
+                segmentEndsMs = it.segmentEndsMs,
+                endedBy = it.endedBy,
+            )
+        },
+        "groupSays" to InterviewSession.groupTranscript.map { it.toDto() },
+        "report" to InterviewAiReport.response,
+    )
+    return com.google.gson.GsonBuilder().setPrettyPrinting().create().toJson(payload)
+}
+
 @Composable
 private fun SectionTitleDark(text: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -500,8 +551,10 @@ private fun SectionTitleDark(text: String) {
 }
 
 @Composable
-private fun DimensionRow(name: String, score: Int) {
-    val color = when {
+private fun DimensionRow(name: String, rawScore: Int?, basis: String = "") {
+    val score = rawScore ?: 0
+    val note = basis.ifBlank { if (rawScore == null) "這場資料不足,暫不評分" else "" }
+    val color = if (rawScore == null) InkGray400 else when {
         score >= 80 -> AccentGreen
         score >= 65 -> BrandOrange
         else -> AccentRed
@@ -518,11 +571,15 @@ private fun DimensionRow(name: String, score: Int) {
                 color = PaperWhite,
                 style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.weight(1f))
-            Text("${rememberCountUp(score)}",
+            Text(if (rawScore == null) "—" else "${rememberCountUp(score)}",
                 color = color,
                 fontWeight = FontWeight.Black,
                 fontSize = 22.sp,
                 letterSpacing = (-0.5).sp)
+        }
+        if (note.isNotBlank()) {
+            Spacer(Modifier.height(4.dp))
+            Text(note, color = InkGray400, fontSize = 11.sp, lineHeight = 16.sp)
         }
         Spacer(Modifier.height(10.dp))
         Box(
@@ -535,7 +592,7 @@ private fun DimensionRow(name: String, score: Int) {
             Box(
                 Modifier
                     .fillMaxHeight()
-                    .fillMaxWidth(rememberProgressFill(score / 100f))
+                    .fillMaxWidth(rememberProgressFill(if (rawScore == null) 0f else score / 100f))
                     .clip(RoundedCornerShape(50))
                     .background(SolidColor(color))
             )
@@ -599,9 +656,10 @@ private fun QuestionReview(q: String, a: String, comment: String, better: String
                     style = MaterialTheme.typography.bodySmall)
             }
         }
-        Spacer(Modifier.height(8.dp))
-        // 改寫版
-        Box(
+        if (better.isNotBlank()) {
+            Spacer(Modifier.height(8.dp))
+            // 改寫版
+            Box(
             Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(14.dp))
@@ -621,6 +679,7 @@ private fun QuestionReview(q: String, a: String, comment: String, better: String
                 Spacer(Modifier.height(6.dp))
                 Text(better, color = PaperWhite.copy(alpha = 0.85f),
                     style = MaterialTheme.typography.bodySmall)
+            }
             }
         }
     }

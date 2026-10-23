@@ -1,5 +1,6 @@
 package com.careersandbox.app.data.remote
 
+import com.careersandbox.app.data.mock.InterviewConfig
 import com.careersandbox.app.data.mock.InterviewSession
 
 /* =====================================================================
@@ -66,6 +67,8 @@ data class StartInterviewResponse(
     val personas: List<PersonaDto> = emptyList(),
     val interruptLines: List<String> = emptyList(),
     val interruptCap: Int = 0,
+    val jdSkills: List<String>? = null,
+    val openingIntro: String? = null,
     val fallbackProbes: List<String> = emptyList(),
     val notices: List<String> = emptyList(),
 )
@@ -82,6 +85,11 @@ data class TurnRequest(
     val context: InterviewContextDto = InterviewContextDto(),
     val spokenBy: List<String> = emptyList(),
     val askedTopics: List<String> = emptyList(),
+    val askedQuestions: List<String> = emptyList(),
+    val probeGap: String = "",
+    val probeDepth: Int = 0,
+    val jdSkills: List<String> = emptyList(),
+    val experiences: List<ExperienceDto> = emptyList(),
     val groupSays: List<UtteranceDto> = emptyList(),
 )
 
@@ -92,6 +100,9 @@ data class TurnResponse(
     val reaction: String = "",
     val isFollowUp: Boolean = false,
     val shouldAdvance: Boolean = false,
+    // Nullable: Gson leaves absent fields null even when the Kotlin type is non-null.
+    val probeGap: String? = null,
+    val probeDepth: Int? = null,
     val topic: String = "",
     val notices: List<String> = emptyList(),
 )
@@ -104,6 +115,7 @@ data class UtteranceDto(
     val segments: List<String> = emptyList(),
     val segmentStartsMs: List<Long> = emptyList(),
     val inputMode: String = "unknown",
+    val segmentEndsMs: List<Long> = emptyList(),
     val startMs: Long = 0,
     val endMs: Long = 0,
 )
@@ -117,6 +129,7 @@ data class TurnDto(
     val answerSegments: List<String> = emptyList(),
     val segmentStartsMs: List<Long> = emptyList(),
     val endedBy: String = "unknown",
+    val segmentEndsMs: List<Long> = emptyList(),
 )
 
 // 對應 ReportRequest
@@ -146,6 +159,7 @@ data class FaceDimensionDto(
 
 // 對應 SubScoreDTO
 data class SubScoreDto(
+    val basis: String? = null,
     val name: String,
     val score: Int,
 )
@@ -190,6 +204,8 @@ data class MissingPointDto(
 
 // 對應 ReportResponse
 data class ReportResponse(
+    val overallScore: Int? = null,
+    val scoreBasis: String? = null,
     val mode: String,
     val faceDimensions: List<FaceDimensionDto> = emptyList(),
     val subScores: List<SubScoreDto> = emptyList(),
@@ -210,6 +226,7 @@ fun InterviewSession.GroupUtterance.toDto() = UtteranceDto(
     isUser = isUser,
     segments = segments,
     segmentStartsMs = segmentStartsMs,
+    segmentEndsMs = segmentEndsMs,
     inputMode = inputMode,
 )
 
@@ -228,6 +245,7 @@ fun List<InterviewSession.GroupUtterance>.toGroupTurns(): List<TurnDto> {
                     inputMode = u.inputMode,
                     answerSegments = u.segments,
                     segmentStartsMs = u.segmentStartsMs,
+                    segmentEndsMs = u.segmentEndsMs,
                     endedBy = u.endedBy,
                 )
             )
@@ -237,3 +255,21 @@ fun List<InterviewSession.GroupUtterance>.toGroupTurns(): List<TurnDto> {
     }
     return turns
 }
+
+
+// Builds the request context from the setup page choices.
+// Group-only fields are included only for group sessions so stale values never leak.
+fun InterviewConfig.toContextDto(group: Boolean = false) = InterviewContextDto(
+    round = round,
+    language = language,
+    type = type,
+    difficulty = difficulty,
+    groupInterviewers = if (group) groupInterviewers else 1,
+    groupSize = if (group) groupSize else 4,
+    groupRole = if (group) groupRole else "一般應徵者",
+    customRole = customRole,
+    customCompany = customCompany,
+    customSeniority = customSeniority,
+    customIndustry = customIndustry,
+    customJd = customJd,
+)

@@ -184,6 +184,7 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
         segmentStartsMs: List<Long> = emptyList(),
         inputMode: String = "typed",
         endedBy: String = "unknown",
+        segmentEndsMs: List<Long> = emptyList(),
     ) {
         if (isTyping) return
         com.careersandbox.app.data.mock.InterviewSession.recordGroupSay(visible)
@@ -193,6 +194,7 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
             isUser = true,
             segments = segments,
             segmentStartsMs = segmentStartsMs,
+            segmentEndsMs = segmentEndsMs,
             inputMode = inputMode,
             endedBy = endedBy,
         )
@@ -426,6 +428,7 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
                                             pending.text, pending.text,
                                             pending.segmentTexts, pending.segmentStartsMs,
                                             inputMode = "voice", endedBy = pendingEndedBy,
+                                            segmentEndsMs = pending.segmentEndsMs,
                                         )
                                         pendingResult = null
                                     }

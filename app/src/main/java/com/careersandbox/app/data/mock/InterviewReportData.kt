@@ -29,7 +29,7 @@ data class FaceDimension(
 )
 
 /** 一項細分能力分數 */
-data class SubScore(val name: String, val score: Int)
+data class SubScore(val name: String, val score: Int?, val basis: String = "")
 
 /** 逐題回顧:你的回答 + 點評 + 更好的講法 */
 data class QuestionFeedback(
@@ -116,7 +116,7 @@ object MockInterviewReportProvider : InterviewReportProvider {
     override fun subScores(): List<SubScore> {
         val real = InterviewAiReport.response
         if (real != null && real.subScores.isNotEmpty()) {
-            return real.subScores.map { SubScore(it.name, it.score) }
+            return real.subScores.map { SubScore(it.name, it.score, it.basis.orEmpty()) }
         }
         return listOf(
         SubScore("內容深度", 78),

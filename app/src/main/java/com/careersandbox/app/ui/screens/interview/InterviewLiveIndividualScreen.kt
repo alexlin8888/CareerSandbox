@@ -51,7 +51,7 @@ import com.careersandbox.app.data.repository.TranscriptionResult
 import com.careersandbox.app.data.mock.InterviewAiSession
 import androidx.compose.runtime.mutableStateListOf
 import com.careersandbox.app.data.remote.InterviewAiApiClient
-import com.careersandbox.app.data.remote.InterviewContextDto
+import com.careersandbox.app.data.remote.toContextDto
 import com.careersandbox.app.data.remote.TurnRequest
 import com.careersandbox.app.data.mock.InterviewAiReport
 
@@ -172,7 +172,6 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
     var reactingDelta by remember { mutableIntStateOf(0) }
     var followUpIdx by remember { mutableIntStateOf(0) }
     var lastProbe by remember { mutableStateOf("") }
-    var repeatFired by remember { mutableStateOf(false) }
     var elapsedSec by remember { mutableIntStateOf(0) }
     var input by remember { mutableStateOf("") }
     var answerMode by remember { mutableStateOf("voice") }   // voice / typed
@@ -189,19 +188,16 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
         segmentStartsMs: List<Long> = emptyList(),
         endedBy: String = "unknown",
         inputMode: String = "voice",
+        segmentEndsMs: List<Long> = emptyList(),
     ) {
         if (phase != "MAIN" || transcript.isBlank() || answer.isNotBlank()) return
         answer = transcript
         answerMode = inputMode
-        InterviewSession.record(question, transcript, segments, segmentStartsMs, inputMode, endedBy)
+        InterviewSession.record(question, transcript, segments, segmentStartsMs, inputMode, endedBy, segmentEndsMs)
         reactingDelta = deltaFor(transcript)
         scope.launch {
             delay(1500)
             val reply = when {
-                followUpIdx == 2 && !repeatFired -> {
-                    repeatFired = true
-                    t("(他翻回上一頁。)讓我再問一次：$lastProbe", "(He flips back a page.) Let me ask that one again: $lastProbe")
-                }
                 followUpIdx >= 4 -> {
                     phase = "REVERSE"
                     t("好，主要問題就先到這邊。最後想請問，你有什麼想問我們的嗎？", "Alright, that covers the main questions. One last thing: what would you like to ask us?")
@@ -219,18 +215,22 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
                                 mode = "single",
                                 inputMode = inputMode,
                                 endedBy = endedBy,
-                                context = InterviewContextDto(
-                                    round = InterviewConfig.round,
-                                    language = InterviewConfig.language,
-                                    type = InterviewConfig.type,
-                                    difficulty = InterviewConfig.difficulty,
-                                ),
+                                context = InterviewConfig.toContextDto(),
                                 askedTopics = askedTopics.toList(),
+                                askedQuestions = InterviewAiSession.askedQuestions.toList(),
+                                probeGap = InterviewAiSession.probeGap,
+                                probeDepth = InterviewAiSession.probeDepth,
+                                jdSkills = InterviewAiSession.jdSkills,
+                                experiences = InterviewAiSession.experiences,
                             ),
                         )
                         if (res.isSuccessful && res.body() != null) {
                             val body = res.body()!!
                             if (body.topic.isNotBlank()) askedTopics.add(body.topic)
+                            // Echo the model's probe state back next turn (store-and-echo)
+                            InterviewAiSession.probeGap = body.probeGap.orEmpty()
+                            InterviewAiSession.probeDepth = body.probeDepth ?: 0
+                            if (body.nextQuestion.isNotBlank()) InterviewAiSession.askedQuestions.add(body.nextQuestion)
                             body.nextQuestion
                         } else {
                             MockInterviewProber.probe(transcript, followUpIdx, probes).also { lastProbe = it }
@@ -428,7 +428,10 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
                                     Modifier.weight(1f).clip(RoundedCornerShape(999.dp))
                                         .background(BrandOrange)
                                         .clickable {
-                                            submitAnswer(pending.text, pending.segmentTexts, pending.segmentStartsMs, pendingEndedBy)
+                                            submitAnswer(
+                                                pending.text, pending.segmentTexts, pending.segmentStartsMs, pendingEndedBy,
+                                                segmentEndsMs = pending.segmentEndsMs,
+                                            )
                                             pendingResult = null
                                         }
                                         .padding(vertical = 10.dp),

@@ -13,6 +13,7 @@ data class TranscriptionResult(
     val text: String,
     val segmentTexts: List<String>,
     val segmentStartsMs: List<Long>,
+    val segmentEndsMs: List<Long> = emptyList(),
 )
 
 interface TranscribeRepository {
@@ -37,7 +38,12 @@ class RemoteTranscribeRepository(
                         segmentTexts = body.segments.map { it.text },
                         // 後端給的 start 是秒（可能有小數），轉成毫秒的 Long 才能跟
                         // 模型組要的 segmentStartsMs 格式對齊
-                        segmentStartsMs = body.segments.map { (it.start * 1000).toLong() },
+                        segmentStartsMs = body.segments.map { Math.round(it.start * 1000) },
+                        // Sent only when the backend really returned ends: a missing field is
+                        // read as 0.0 by Gson, which would pass for a valid timestamp.
+                        segmentEndsMs = if (body.segments.isNotEmpty() && body.segments.all { it.end > it.start })
+                            body.segments.map { Math.round(it.end * 1000) }
+                        else emptyList(),
                     )
                 )
             }

@@ -49,6 +49,10 @@ import com.careersandbox.app.data.mock.InterviewAiSession
 import com.careersandbox.app.data.remote.InterviewAiApiClient
 import com.careersandbox.app.data.remote.InterviewContextDto
 import com.careersandbox.app.data.remote.StartInterviewRequest
+import com.careersandbox.app.data.remote.toContextDto
+import com.careersandbox.app.data.remote.ExperienceDto
+import com.careersandbox.app.data.remote.ExperienceResponse
+import com.careersandbox.app.data.repository.RemoteExperienceRepository
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -74,6 +78,7 @@ fun InterviewSetupScreen(navController: NavHostController) {
     var format by remember { mutableStateOf("single") }   // single | panel
     var difficulty by remember { mutableStateOf(InterviewConfig.difficulty) }
     var showWarmup by remember { mutableStateOf(false) }
+    var starting by remember { mutableStateOf(false) }
     val isCustom = selectedJobId == "custom"
 
     Scaffold(
@@ -112,6 +117,13 @@ fun InterviewSetupScreen(navController: NavHostController) {
                                 InterviewConfig.customSeniority = customSeniority
                                 InterviewConfig.customIndustry = customIndustry
                                 InterviewConfig.customJd = customJd
+                            } else {
+                                // Saved job: pass its details so the interviewer asks about this role
+                                InterviewConfig.customRole = selectedTarget?.title.orEmpty()
+                                InterviewConfig.customCompany = selectedTarget?.company.orEmpty()
+                                InterviewConfig.customSeniority = "新鮮人"
+                                InterviewConfig.customIndustry = ""
+                                InterviewConfig.customJd = selectedTarget?.jdSnippet.orEmpty()
                             }
                             showWarmup = true
                         },
@@ -207,7 +219,7 @@ fun InterviewSetupScreen(navController: NavHostController) {
     }
 
     if (showWarmup) {
-        Dialog(onDismissRequest = { showWarmup = false }) {
+        Dialog(onDismissRequest = { if (!starting) showWarmup = false }) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -224,19 +236,20 @@ fun InterviewSetupScreen(navController: NavHostController) {
                 Box(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(InkBlack)
                         .pressScale {
-                            showWarmup = false
-                            @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
-                            GlobalScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+                            if (starting) return@pressScale
+                            starting = true
+                            // Wait for the opening question before entering the live screen, so the
+                            // screen never shows the hard-coded opener while the model already
+                            // counts its own question as asked.
+                            scope.launch {
                                 try {
+                                    val exps = loadInterviewExperiences(InterviewConfig.resumeVersionId)
+                                    InterviewAiSession.experiences = exps
                                     val res = InterviewAiApiClient.interviewAiApi.startInterview(
                                         StartInterviewRequest(
                                             mode = format,
-                                            context = InterviewContextDto(
-                                                round = InterviewConfig.round,
-                                                language = InterviewConfig.language,
-                                                type = InterviewConfig.type,
-                                                difficulty = difficulty,
-                                            ),
+                                            context = InterviewConfig.toContextDto(),
+                                            experiences = exps,
                                         )
                                     )
                                     if (res.isSuccessful && res.body() != null) {
@@ -247,21 +260,32 @@ fun InterviewSetupScreen(navController: NavHostController) {
                                         InterviewAiSession.openingTopic = body.openingTopic
                                         InterviewAiSession.personas = body.personas
                                         InterviewAiSession.fallbackProbes = body.fallbackProbes
+                                        // Own skills from the saved job win; fall back to what the model extracted from the JD
+                                        InterviewAiSession.jdSkills = selectedTarget?.requiredSkills
+                                            ?.takeIf { it.isNotEmpty() }
+                                            ?: body.jdSkills.orEmpty()
+                                        InterviewAiSession.openingIntro = body.openingIntro.orEmpty()
+                                        InterviewAiSession.probeGap = ""
+                                        InterviewAiSession.probeDepth = 0
+                                        InterviewAiSession.askedQuestions.clear()
+                                        InterviewAiSession.askedQuestions.add(body.openingQuestion)
                                     } else {
                                         InterviewAiSession.reset()
                                     }
                                 } catch (e: Exception) {
                                     InterviewAiSession.reset()
                                 }
+                                starting = false
+                                showWarmup = false
+                                navController.navigate(
+                                    if (format == "panel") Routes.INTERVIEW_LIVE_PANEL
+                                    else Routes.INTERVIEW_LIVE_INDIVIDUAL
+                                ) { popUpTo(Routes.INTERVIEW_HUB) }
                             }
-                            navController.navigate(
-                                if (format == "panel") Routes.INTERVIEW_LIVE_PANEL
-                                else Routes.INTERVIEW_LIVE_INDIVIDUAL
-                            ) { popUpTo(Routes.INTERVIEW_HUB) }
                         }
                         .padding(vertical = 13.dp),
                     contentAlignment = Alignment.Center,
-                ) { Text("開始", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 15.sp) }
+                ) { Text(if (starting) "準備面試官中…" else "開始", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 15.sp) }
                 Spacer(Modifier.height(8.dp))
                 Text("再看一下設定", color = InkGray500, fontSize = 13.sp,
                     modifier = Modifier
@@ -583,8 +607,36 @@ private fun VersionOptionRow(name: String, sub: String, selected: Boolean, onCli
     }
 }
 
+// Experiences sent to the interview model. With a version picked, only that version's
+// highlighted items go (all of its items if none is highlighted); otherwise everything.
+// Any load failure falls back to the full list, and to empty if even that fails.
+private suspend fun loadInterviewExperiences(versionId: String): List<ExperienceDto> {
+    val all = RemoteExperienceRepository().listRaw().getOrNull() ?: return emptyList()
+    if (versionId.isEmpty()) return all.map { it.toInterviewDto() }
+    val items = RemoteResumeHierarchyProvider.loadVersionItems(versionId).getOrNull()
+        ?: return all.map { it.toInterviewDto() }
+    val highlighted = items.filter { it.highlighted }.mapNotNull { it.experienceId }.toSet()
+    val keep = highlighted.ifEmpty { items.mapNotNull { it.experienceId }.toSet() }
+    if (keep.isEmpty()) return all.map { it.toInterviewDto() }
+    return all.filter { it.id in keep }.map { it.toInterviewDto() }
+}
+
+private fun ExperienceResponse.toInterviewDto() = ExperienceDto(
+    id = id.orEmpty(),
+    title = title.orEmpty(),
+    category = category.orEmpty(),
+    period = period.orEmpty(),
+    role = role.orEmpty(),
+    action = action.orEmpty(),
+    result = result.orEmpty(),
+    learning = learning.orEmpty(),
+    description = description.orEmpty(),
+    tags = tags ?: emptyList(),
+)
+
 @Composable
 private fun WarmupLine(text: String) {
+
     Row(Modifier.padding(vertical = 5.dp), verticalAlignment = Alignment.Top) {
         Box(Modifier.padding(top = 5.dp).size(6.dp).clip(CircleShape).background(BrandOrange))
         Spacer(Modifier.width(10.dp))
