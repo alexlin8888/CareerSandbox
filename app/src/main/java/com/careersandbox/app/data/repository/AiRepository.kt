@@ -31,6 +31,7 @@ class RemoteAiRepository(
                         coveredKeywords = b.coveredKeywords ?: emptyList(),
                         items = (b.items ?: emptyList()).map {
                             CustomizedItem(
+                                id = it.id,
                                 text = it.text.orEmpty(),
                                 matchedKeywords = it.matchedKeywords ?: emptyList(),
                                 highlighted = it.highlighted ?: false,

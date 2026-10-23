@@ -562,9 +562,10 @@ private fun ResultPhase(
                     val note = "依 JD 客製：保留 ${highlights.size} 段重點" +
                             if (restoredItems.isNotEmpty()) "、額外拉回 ${restoredItems.size} 段" else ""
                     // items[i] pairs with exp[i]; highlighted = AI pick, or the user pulled it back
+                    // items[i].id pairs directly with the experience; fall back to index only if the AI didn't echo an id
                     val items = customized.mapIndexed { i, it ->
                         com.careersandbox.app.data.remote.ResumeItemRequest(
-                            experienceId = exp.getOrNull(i)?.id,
+                            experienceId = it.id ?: exp.getOrNull(i)?.id,
                             text = it.text,
                             matchedKeywords = it.matchedKeywords,
                             highlighted = it.highlighted || it.text in restoredItems,
