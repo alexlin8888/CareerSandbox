@@ -57,4 +57,5 @@ object ApiClient {
     val resumeApi: ResumeApiService by lazy { retrofit.create(ResumeApiService::class.java) }
 
     val jobApi: JobApiService by lazy { retrofit.create(JobApiService::class.java) }
+    val competitionApi: CompetitionApiService by lazy { retrofit.create(CompetitionApiService::class.java) }
 }

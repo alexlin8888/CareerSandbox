@@ -52,6 +52,7 @@ import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.MockData
+import com.careersandbox.app.data.repository.RemoteCompetitionRepository
 import com.careersandbox.app.data.repository.RemoteResumeHierarchyProvider
 import com.careersandbox.app.data.mock.MockResumeHierarchyProvider
 import com.careersandbox.app.data.mock.SubmissionStatus
@@ -170,13 +171,21 @@ private fun DashboardBentoSection(navController: NavHostController) {
     }
 }
 
+// 適配度 card: the job target with the highest cached fit score (job_targets.matchScore).
+// Tapping opens 適配分析 with that target already selected.
 @Composable
 private fun ResumeMiniCard(navController: NavHostController, cardHeight: Dp) {
-    val job = MockData.jobApplications.firstOrNull() ?: return
-    val domain = companyDomain(job.company)
+    // Shared with the resume / fit screens; load it here if nothing has yet.
+    LaunchedEffect(Unit) {
+        if (RemoteResumeHierarchyProvider.jobTargets().isEmpty()) RemoteResumeHierarchyProvider.refresh()
+    }
+    val best = RemoteResumeHierarchyProvider.jobTargets()
+        .filter { it.matchScore != null }
+        .maxByOrNull { it.matchScore ?: 0 }
+    val loading = RemoteResumeHierarchyProvider.loading
     Box(
         modifier = Modifier
-            .pressScale { navController.navigate(Routes.jobApplicationDetail(job.id)) }
+            .pressScale { navController.navigate(Routes.fitAnalysis(best?.id)) }
             .fillMaxWidth()
             .height(cardHeight)
             .clip(RoundedCornerShape(32.dp)),
@@ -199,49 +208,62 @@ private fun ResumeMiniCard(navController: NavHostController, cardHeight: Dp) {
                 fontWeight = FontWeight.Medium,
             )
             Text(
-                "${job.matchScore}%",
+                if (best != null) "${best.matchScore}%" else "—",
                 color = PaperWhite,
                 fontWeight = FontWeight.Black,
                 fontSize = 28.sp,
             )
             Spacer(Modifier.weight(1f))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(11.dp))
-                        .background(PaperWarm),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    if (domain != null) {
-                        AsyncImage(
-                            model = "https://www.google.com/s2/favicons?domain=$domain&sz=128",
-                            contentDescription = job.company,
-                            modifier = Modifier.size(22.dp),
-                            contentScale = ContentScale.Fit,
+            if (best != null) {
+                val domain = companyDomain(best.company)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(11.dp))
+                            .background(PaperWarm),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (domain != null) {
+                            AsyncImage(
+                                model = "https://www.google.com/s2/favicons?domain=$domain&sz=128",
+                                contentDescription = best.company,
+                                modifier = Modifier.size(22.dp),
+                                contentScale = ContentScale.Fit,
+                            )
+                        } else {
+                            Text(
+                                (best.company.ifBlank { best.title }).take(1),
+                                color = BrandDeepOrange, fontWeight = FontWeight.Black, fontSize = 14.sp,
+                            )
+                        }
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            best.title,
+                            color = PaperWhite,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 14.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
-                    } else {
-                        Text(job.company.take(1), color = BrandDeepOrange, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                        Text(
+                            best.company,
+                            color = PaperWhite.copy(alpha = 0.7f),
+                            fontSize = 12.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
                 }
-                Spacer(Modifier.width(10.dp))
-                Column {
-                    Text(
-                        job.position,
-                        color = PaperWhite,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 14.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        job.company,
-                        color = PaperWhite.copy(alpha = 0.7f),
-                        fontSize = 12.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+            } else {
+                Text(
+                    if (loading) "載入中…" else "還沒有算過適配度的職缺",
+                    color = PaperWhite.copy(alpha = 0.85f),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
             }
         }
         Box(
@@ -896,8 +918,8 @@ private fun ModuleSection(navController: NavHostController) {
 
         BorderlessModuleRow(
             number = "04",
-            title = "競賽組隊媒合",
-            subtitle = "找一起參賽的夥伴",
+            title = "競賽總覽",
+            subtitle = "增強你的實戰經驗",
             tag = null,
             tagColor = Color.Transparent,
             accent = AccentGreen,
@@ -1275,25 +1297,58 @@ private fun CompetitionSection(navController: NavHostController) {
             )
         }
         Spacer(Modifier.height(4.dp))
-        Text(
-            "從興趣 / 系所推薦,組隊找夥伴",
-            color = InkGray500,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(horizontal = 24.dp),
-        )
         Spacer(Modifier.height(12.dp))
 
-        val lazyListState = androidx.compose.foundation.lazy.rememberLazyListState()
-        val flingBehavior = androidx.compose.foundation.gestures.snapping
-            .rememberSnapFlingBehavior(lazyListState = lazyListState)
-        LazyRow(
-            state = lazyListState,
-            flingBehavior = flingBehavior,
-            contentPadding = PaddingValues(horizontal = 24.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            items(MockData.competitions) { competition ->
-                CompetitionCard(competition, navController)
+        // GET /competitions/recommended: 5 open competitions ranked by the user's
+        // interests, skills and department. The last result shows while it refreshes.
+        var comps by remember { mutableStateOf(RemoteCompetitionRepository.lastRecommended) }
+        var loading by remember { mutableStateOf(true) }
+        var loadError by remember { mutableStateOf<String?>(null) }
+        var retry by remember { mutableStateOf(0) }
+        LaunchedEffect(retry) {
+            loading = true
+            loadError = null
+            RemoteCompetitionRepository.recommended(5)
+                .onSuccess { comps = it }
+                .onFailure { loadError = it.message }
+            loading = false
+        }
+
+        if (comps.isEmpty()) {
+            // Same height as a card, so the page does not jump when the cards arrive.
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = 24.dp)
+                    .fillMaxWidth()
+                    .height(230.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(MaterialTheme.colorScheme.surface)
+                    .pressScale(enabled = loadError != null) { retry++ },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    when {
+                        loadError != null -> "競賽載入失敗，點這裡重試"
+                        loading -> "載入中…"
+                        else -> "目前沒有開放報名的競賽"
+                    },
+                    color = InkGray500,
+                    fontSize = 13.sp,
+                )
+            }
+        } else {
+            val lazyListState = androidx.compose.foundation.lazy.rememberLazyListState()
+            val flingBehavior = androidx.compose.foundation.gestures.snapping
+                .rememberSnapFlingBehavior(lazyListState = lazyListState)
+            LazyRow(
+                state = lazyListState,
+                flingBehavior = flingBehavior,
+                contentPadding = PaddingValues(horizontal = 24.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                items(comps, key = { it.id }) { competition ->
+                    CompetitionCard(competition, navController)
+                }
             }
         }
     }

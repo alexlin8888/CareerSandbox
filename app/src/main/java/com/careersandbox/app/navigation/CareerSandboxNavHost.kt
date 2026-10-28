@@ -63,35 +63,35 @@ fun CareerSandboxNavHost(
         startDestination = startDestination,
         enterTransition = {
             fadeIn(animationSpec = tween(280, easing = androidx.compose.animation.core.FastOutSlowInEasing)) +
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    animationSpec = tween(340, easing = androidx.compose.animation.core.FastOutSlowInEasing),
-                    initialOffset = { it / 8 },
-                )
+                    slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(340, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                        initialOffset = { it / 8 },
+                    )
         },
         exitTransition = {
             fadeOut(animationSpec = tween(220)) +
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    animationSpec = tween(340),
-                    targetOffset = { -it / 12 },
-                )
+                    slideOutOfContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(340),
+                        targetOffset = { -it / 12 },
+                    )
         },
         popEnterTransition = {
             fadeIn(animationSpec = tween(280)) +
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    animationSpec = tween(340),
-                    initialOffset = { -it / 12 },
-                )
+                    slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(340),
+                        initialOffset = { -it / 12 },
+                    )
         },
         popExitTransition = {
             fadeOut(animationSpec = tween(220)) +
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    animationSpec = tween(340),
-                    targetOffset = { it / 8 },
-                )
+                    slideOutOfContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(340),
+                        targetOffset = { it / 8 },
+                    )
         },
     ) {
         composable(Routes.SPLASH) {
@@ -191,7 +191,16 @@ fun CareerSandboxNavHost(
         composable(Routes.RESUME_UPLOAD_PROCESSING) { ResumeUploadProcessingScreen(navController) }
         composable(Routes.CAREER_EXPLORATION) { CareerExplorationScreen(navController) }
         composable(Routes.LEARNING_PATH) { LearningPathScreen(navController) }
-        composable(Routes.FIT_ANALYSIS) { FitAnalysisScreen(navController) }
+        composable(
+            route = Routes.FIT_ANALYSIS_ROUTE,
+            arguments = listOf(navArgument("jobId") {
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            }),
+        ) { entry ->
+            FitAnalysisScreen(navController, initialJobId = entry.arguments?.getString("jobId"))
+        }
 
         composable(Routes.COMPETITION_LIST) { CompetitionListScreen(navController) }
         composable(Routes.TEAM_CHAT) { TeamChatScreen(navController) }
