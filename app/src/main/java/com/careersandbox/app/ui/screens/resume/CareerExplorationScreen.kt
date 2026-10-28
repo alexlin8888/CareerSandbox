@@ -17,11 +17,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.platform.LocalContext
 import android.widget.Toast
 import androidx.compose.ui.Alignment
@@ -49,6 +53,14 @@ import com.careersandbox.app.ui.components.HandDrawnUnderline
 import com.careersandbox.app.ui.components.ScatteredDecorations
 import com.careersandbox.app.ui.components.WaveHeroBackground
 import com.careersandbox.app.ui.components.pressScale
+import com.careersandbox.app.data.repository.CareerRecommendation
+import com.careersandbox.app.data.repository.RemoteCareerRecommendRepository
+import com.careersandbox.app.data.local.CareerCatalog
+import com.careersandbox.app.data.local.CareerRecSnapshot
+import com.careersandbox.app.data.local.CareerRecStore
+import com.careersandbox.app.data.local.CatalogCareer
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import com.careersandbox.app.ui.theme.*
 
 private data class CareerRec(
@@ -60,10 +72,15 @@ private data class CareerRec(
     val openings: String,
     val matchScore: Int,
     val missingSkills: List<String>,
+    val coveredSkills: List<String> = emptyList(),
     val category: String,
     val icon: ImageVector,
     val isAcademic: Boolean = false,
     val academicNote: String = "",
+    // false for random catalog picks: no FIT score until the user searches
+    val scored: Boolean = true,
+    // shown instead of covered / missing skills when not scored
+    val requiredSkills: List<String> = emptyList(),
 )
 
 private data class LearningStep(
@@ -75,42 +92,62 @@ private data class LearningStep(
 )
 private enum class StepTier { Primary, Secondary, Tertiary }
 
-private val allCareerRecs = listOf(
-    CareerRec(
-        id = "data_analyst", title = "資料分析師", subtitleEn = "Data Analyst",
-        shortSubtitle = "數據 · 45-65k", salary = "45-65k", openings = "1,240",
-        matchScore = 92, missingSkills = listOf("SQL 進階", "A/B test", "用戶研究"),
-        category = "數據", icon = Icons.Outlined.Analytics,
-    ),
-    CareerRec(
-        id = "pm", title = "產品經理", subtitleEn = "Product Manager",
-        shortSubtitle = "PM · 50-80k", salary = "50-80k", openings = "890",
-        matchScore = 78, missingSkills = listOf("PRD 撰寫", "user story", "SaaS 邏輯"),
-        category = "產品", icon = Icons.Outlined.Description,
-    ),
-    CareerRec(
-        id = "growth", title = "行銷策略", subtitleEn = "Growth Marketing",
-        shortSubtitle = "Growth · 42-58k", salary = "42-58k", openings = "1,050",
-        matchScore = 71, missingSkills = listOf("成長駭客", "SEO", "數據追蹤"),
-        category = "產品", icon = Icons.Outlined.TrendingUp,
-    ),
-    CareerRec(
-        id = "ux", title = "UX 設計師", subtitleEn = "UX Designer",
-        shortSubtitle = "Design · 48-70k", salary = "48-70k", openings = "620",
-        matchScore = 68, missingSkills = listOf("Figma", "使用者訪談", "原型測試"),
-        category = "設計", icon = Icons.Outlined.Edit,
-    ),
-    CareerRec(
-        id = "researcher", title = "研究員", subtitleEn = "Researcher",
-        shortSubtitle = "學術 · 依機構", salary = "依機構", openings = "380",
-        matchScore = 65, missingSkills = listOf("論文發表", "研究方法", "碩博學歷"),
-        category = "學術", icon = Icons.Outlined.Lightbulb,
-        isAcademic = true,
-        academicNote = "想走學術路線?先看看研究員的一天,以及碩博升學的時程規劃。",
-    ),
+// The API sends the category as text only; pick the icon from a local table
+// (as suggested by the comment on CareerRecOut in the AI service).
+private fun categoryIcon(category: String): ImageVector = when (category) {
+    "工程" -> Icons.Outlined.Code
+    "數據" -> Icons.Outlined.Analytics
+    "產品" -> Icons.Outlined.Description
+    "設計" -> Icons.Outlined.Edit
+    "行銷" -> Icons.Outlined.Campaign
+    "業務" -> Icons.Outlined.TrendingUp
+    "客服" -> Icons.Outlined.SupportAgent
+    "人資" -> Icons.Outlined.Groups
+    "財會", "公職" -> Icons.Outlined.AccountBalance
+    "採購" -> Icons.Outlined.ShoppingCart
+    "物流" -> Icons.Outlined.LocalShipping
+    "行政" -> Icons.Outlined.Folder
+    "營運" -> Icons.Outlined.Store
+    "服務" -> Icons.Outlined.RoomService
+    "運輸" -> Icons.Outlined.DirectionsCar
+    "技術" -> Icons.Outlined.Build
+    "法務" -> Icons.Outlined.Gavel
+    "醫護" -> Icons.Outlined.LocalHospital
+    "學術" -> Icons.Outlined.Lightbulb
+    else -> Icons.Outlined.WorkOutline
+}
+
+private fun CareerRecommendation.toCareerRec() = CareerRec(
+    id = id,
+    title = title,
+    subtitleEn = subtitleEn,
+    shortSubtitle = shortSubtitle,
+    salary = salary,
+    openings = openings,
+    matchScore = matchScore,
+    missingSkills = missingSkills,
+    coveredSkills = coveredSkills,
+    category = category,
+    icon = categoryIcon(category),
+    isAcademic = isAcademic,
+    academicNote = academicNote,
 )
 
-private val careerFilters = listOf("全部", "數據", "產品", "設計", "學術")
+// Random picks shown before any search: no score yet, so list the required skills as-is.
+private fun CatalogCareer.toCareerRec() = CareerRec(
+    id = id,
+    title = title,
+    subtitleEn = subtitleEn,
+    shortSubtitle = "$category · $salary",
+    salary = salary,
+    openings = openings,
+    matchScore = 0,
+    missingSkills = emptyList(),
+    category = category,
+    icon = categoryIcon(category),
+    scored = false,
+    requiredSkills = requiredSkills,
+)
 
 @Composable
 fun CareerExplorationScreen(navController: NavHostController) {
@@ -121,30 +158,86 @@ fun CareerExplorationScreen(navController: NavHostController) {
             LearningStep(3, "暑期", "外商 BI 實習", "補用戶研究短板", StepTier.Tertiary),
         )
     }
-    val chipScroll = rememberScrollState()
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { visible = true }
 
     // === 互動狀態 ===
-    var searchQuery by remember { mutableStateOf("") }
-    var activeFilter by remember { mutableStateOf("全部") }
-    var selectedId by remember { mutableStateOf("data_analyst") }
+    var searchQuery by remember { mutableStateOf("") }      // text in the box
+    var selectedId by remember { mutableStateOf("") }
     val excludedIds = remember { mutableStateListOf<String>() }
 
     // === #17/#18/#19 語意探索狀態 ===
     var semanticText by remember { mutableStateOf("") }
     var resolvedIntent by remember { mutableStateOf<ExploreIntent?>(null) }
 
-    // === 衍生清單 ===
-    val visibleRecs = allCareerRecs.filter { rec ->
-        rec.id !in excludedIds &&
-            (activeFilter == "全部" || rec.category == activeFilter) &&
-            (searchQuery.isBlank() ||
-                rec.title.contains(searchQuery, ignoreCase = true) ||
-                rec.subtitleEn.contains(searchQuery, ignoreCase = true))
+    // === Recommendations ===
+    // Opening the page never calls the AI service (one call takes tens of seconds).
+    // It shows what this user saw last time, or five random catalog directions the
+    // first time. Only a search with text calls POST /ai/career/recommend, and its
+    // result replaces (and is saved over) the cards only when it succeeds.
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val recRepo = remember { RemoteCareerRecommendRepository() }
+    var allCareerRecs by remember { mutableStateOf<List<CareerRec>>(emptyList()) }
+    var shownQuery by remember { mutableStateOf("") }                // query behind the cards; "" = random
+    var searchingFor by remember { mutableStateOf<String?>(null) }   // set while a search runs
+    var searchMessage by remember { mutableStateOf<String?>(null) }
+    var retryQuery by remember { mutableStateOf<String?>(null) }     // set when a search failed
+    var searchJob by remember { mutableStateOf<Job?>(null) }
+
+    LaunchedEffect(Unit) {
+        val saved = CareerRecStore.load(context)
+        val savedAi = saved?.recs.orEmpty()
+        val savedRandom = saved?.randomIds.orEmpty().mapNotNull { CareerCatalog.byId(it) }
+        when {
+            saved != null && saved.query.isNotEmpty() && savedAi.isNotEmpty() -> {
+                allCareerRecs = savedAi.map { it.toCareerRec() }
+                shownQuery = saved.query
+                searchQuery = saved.query
+            }
+            savedRandom.isNotEmpty() -> allCareerRecs = savedRandom.map { it.toCareerRec() }
+            else -> {
+                val picks = CareerCatalog.randomPicks(5)
+                allCareerRecs = picks.map { it.toCareerRec() }
+                CareerRecStore.save(context, CareerRecSnapshot(randomIds = picks.map { it.id }))
+            }
+        }
     }
+
+    // Only a non-empty query reaches the AI service; a new search replaces a running one.
+    fun search(raw: String) {
+        val q = raw.trim()
+        if (q.isEmpty()) return
+        searchJob?.cancel()
+        searchingFor = q
+        searchMessage = null
+        retryQuery = null
+        searchJob = scope.launch {
+            recRepo.recommend(q)
+                .onSuccess { list ->
+                    if (list.isEmpty()) {
+                        searchMessage = "「$q」沒有找到分數夠高的方向,下面仍是上一次的結果"
+                    } else {
+                        allCareerRecs = list.map { it.toCareerRec() }
+                        shownQuery = q
+                        selectedId = ""
+                        CareerRecStore.save(context, CareerRecSnapshot(query = q, recs = list))
+                    }
+                }
+                .onFailure {
+                    searchMessage = it.message ?: "載入失敗,請稍後再試"
+                    retryQuery = q
+                }
+            searchingFor = null
+        }
+    }
+
+    // === 衍生清單 ===
+    // The API already returns its pick order (score, plus the query when there is one),
+    // so the big card shows the first item rather than re-sorting by score.
+    val visibleRecs = allCareerRecs.filter { it.id !in excludedIds }
     val focusedRec = visibleRecs.firstOrNull { it.id == selectedId }
-        ?: visibleRecs.maxByOrNull { it.matchScore }
+        ?: visibleRecs.firstOrNull()
     val otherRecs = visibleRecs.filter { it.id != focusedRec?.id }
     val excludedRecs = allCareerRecs.filter { it.id in excludedIds }
 
@@ -155,6 +248,9 @@ fun CareerExplorationScreen(navController: NavHostController) {
             CareerHeroSection(onBack = { navController.popBackStack() })
 
             Column(modifier = Modifier.padding(horizontal = 24.dp).padding(top = 20.dp, bottom = 40.dp)) {
+                // Hidden for now (2026-10-27), not deleted: the "用自己的話找方向" panel.
+                // To bring it back, delete the /* line right below and its matching */ line.
+                /*
                 // === #18 搜尋成為主角:自然語言語意探索 ===
                 AnimatedSection(visible = visible, delayMs = 0) {
                     SemanticExplorePanel(
@@ -167,11 +263,12 @@ fun CareerExplorationScreen(navController: NavHostController) {
                     )
                 }
                 Spacer(Modifier.height(24.dp))
-                // 分隔:或直接瀏覽(關鍵字搜尋降為次要)
+                */
+                // Divider above the search box, with a hint on what can be typed
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.weight(1f).height(1.dp).background(InkGray200))
                     Text(
-                        "或直接瀏覽全部職位",
+                        "可以輸入關鍵字,或用一段話描述",
                         color = InkGray400, fontSize = 12.sp, fontWeight = FontWeight.Medium,
                         modifier = Modifier.padding(horizontal = 12.dp),
                     )
@@ -180,46 +277,30 @@ fun CareerExplorationScreen(navController: NavHostController) {
                 Spacer(Modifier.height(16.dp))
 
                 AnimatedSection(visible = visible, delayMs = 0) {
-                    SearchBar(query = searchQuery, onQueryChange = { searchQuery = it })
+                    SearchBar(
+                        query = searchQuery,
+                        onQueryChange = { searchQuery = it },
+                        onSubmit = { search(searchQuery) },
+                        onClear = { searchQuery = "" },   // clearing the box keeps the current cards
+                    )
                 }
-                Spacer(Modifier.height(12.dp))
-
-                AnimatedSection(visible = visible, delayMs = 80) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().horizontalScroll(chipScroll),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        careerFilters.forEach { f ->
-                            FilterPill(
-                                text = f,
-                                active = activeFilter == f,
-                                onClick = { activeFilter = f },
-                            )
-                        }
-                    }
-                }
-                Spacer(Modifier.height(18.dp))
-
-                // === 學術路線 banner(只在學術 filter 出現)===
-                if (activeFilter == "學術") {
-                    val academicRec = allCareerRecs.first { it.isAcademic }
-                    AcademicBanner(note = academicRec.academicNote)
-                    Spacer(Modifier.height(14.dp))
-                }
+                Spacer(Modifier.height(10.dp))
+                SearchStatusLine(
+                    searchingFor = searchingFor,
+                    message = searchMessage,
+                    shownQuery = shownQuery,
+                    onRetry = retryQuery?.let { q -> { search(q) } },
+                )
+                Spacer(Modifier.height(14.dp))
 
                 if (focusedRec != null) {
                     AnimatedSection(visible = visible, delayMs = 160) {
                         TopMatchCard(rec = focusedRec, onViewPath = { navController.navigate(Routes.FIT_ANALYSIS) })
                     }
                     Spacer(Modifier.height(12.dp))
-                } else {
-                    // 全被排除 / 搜尋無結果
-                    EmptyRecState(
-                        hasExcluded = excludedRecs.isNotEmpty(),
-                        onClearFilter = {
-                            searchQuery = ""; activeFilter = "全部"
-                        },
-                    )
+                } else if (excludedRecs.isNotEmpty()) {
+                    // Every card was excluded
+                    EmptyRecState(onRestoreAll = { excludedIds.clear() })
                     Spacer(Modifier.height(12.dp))
                 }
 
@@ -257,6 +338,9 @@ fun CareerExplorationScreen(navController: NavHostController) {
                     Spacer(Modifier.height(24.dp))
                 }
 
+                // Hidden for now (2026-10-27), not deleted: the learning path and the two buttons below it.
+                // To bring them back, delete the /* line right below and its matching */ line.
+                /*
                 // === 學習路徑(整塊色塊,打破白卡框)===
                 if (focusedRec != null) {
                     AnimatedSection(visible = visible, delayMs = 320) {
@@ -324,6 +408,7 @@ fun CareerExplorationScreen(navController: NavHostController) {
                         }
                     }
                 }
+                */
             }
         }
     }
@@ -334,10 +419,10 @@ private fun AnimatedSection(visible: Boolean, delayMs: Int, content: @Composable
     AnimatedVisibility(
         visible = visible,
         enter = fadeIn(animationSpec = tween(550, delayMillis = delayMs, easing = FastOutSlowInEasing)) +
-            slideInVertically(
-                initialOffsetY = { it / 4 },
-                animationSpec = tween(550, delayMillis = delayMs, easing = FastOutSlowInEasing),
-            ),
+                slideInVertically(
+                    initialOffsetY = { it / 4 },
+                    animationSpec = tween(550, delayMillis = delayMs, easing = FastOutSlowInEasing),
+                ),
     ) {
         content()
     }
@@ -431,8 +516,23 @@ private fun CareerHeroSection(onBack: () -> Unit) {
     }
 }
 
+/**
+ * Keyword / free-text box whose text becomes the recommend `query`.
+ * Submits on the keyboard's search key or the magnifier icon, not on every keystroke,
+ * because each request runs an LLM ranking step.
+ */
 @Composable
-private fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
+private fun SearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+    onClear: () -> Unit,
+) {
+    val focusManager = LocalFocusManager.current
+    val submit = {
+        focusManager.clearFocus()   // also hides the keyboard
+        onSubmit()
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -442,7 +542,12 @@ private fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
             .padding(horizontal = 14.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(Icons.Outlined.Search, contentDescription = null, tint = InkGray400, modifier = Modifier.size(16.dp))
+        Icon(
+            Icons.Outlined.Search,
+            contentDescription = "搜尋",
+            tint = if (query.isBlank()) InkGray400 else BrandDeepOrange,
+            modifier = Modifier.size(16.dp).pressScale { submit() },
+        )
         Spacer(Modifier.width(10.dp))
         Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
             if (query.isEmpty()) {
@@ -454,6 +559,8 @@ private fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
                 singleLine = true,
                 textStyle = TextStyle(color = InkBlack, fontSize = 13.sp),
                 cursorBrush = SolidColor(BrandDeepOrange),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { submit() }),
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -462,7 +569,10 @@ private fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
                 Icons.Outlined.Close,
                 contentDescription = "清除",
                 tint = InkGray400,
-                modifier = Modifier.size(16.dp).pressScale { onQueryChange("") },
+                modifier = Modifier.size(16.dp).pressScale {
+                    focusManager.clearFocus()
+                    onClear()
+                },
             )
         } else {
             Icon(Icons.Outlined.Tune, contentDescription = null, tint = InkGray500, modifier = Modifier.size(16.dp))
@@ -470,64 +580,9 @@ private fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
     }
 }
 
+/** Shown when the user excluded every card. */
 @Composable
-private fun FilterPill(text: String, active: Boolean, onClick: () -> Unit) {
-    val base = if (active) {
-        Modifier
-            .clip(CircleShape)
-            .background(InkBlack)
-    } else {
-        Modifier
-            .clip(CircleShape)
-            .background(PaperWhite)
-            .border(1.dp, InkGray200, CircleShape)
-    }
-    Box(
-        modifier = base
-            .pressScale(onClick = onClick)
-            .padding(horizontal = 13.dp, vertical = 6.dp),
-    ) {
-        Text(
-            text,
-            color = if (active) PaperWhite else InkBlack,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 12.sp,
-        )
-    }
-}
-
-/** 學術路線 banner — 訪談洞察:受訪者想「看研究員生活、更早決定方向」 */
-@Composable
-private fun AcademicBanner(note: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(Brush.linearGradient(listOf(InkDeepBlue, InkSlate)))
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(PaperWhite.copy(alpha = 0.15f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(Icons.Outlined.Lightbulb, contentDescription = null, tint = PaperWhite, modifier = Modifier.size(20.dp))
-        }
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text("學術路線", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 14.sp)
-            Spacer(Modifier.height(3.dp))
-            Text(note, color = PaperWhite.copy(alpha = 0.85f), fontSize = 11.sp, lineHeight = 16.sp)
-        }
-    }
-}
-
-/** 全排除 / 搜尋無結果空狀態 */
-@Composable
-private fun EmptyRecState(hasExcluded: Boolean, onClearFilter: () -> Unit) {
+private fun EmptyRecState(onRestoreAll: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -538,33 +593,99 @@ private fun EmptyRecState(hasExcluded: Boolean, onClearFilter: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Image(
-            painter = painterResource(
-                if (hasExcluded) R.drawable.beaver_confused else R.drawable.beaver_search
-            ),
+            painter = painterResource(R.drawable.beaver_confused),
             contentDescription = null,
             modifier = Modifier.size(120.dp),
             contentScale = ContentScale.Fit,
         )
         Spacer(Modifier.height(8.dp))
-        Text(
-            if (hasExcluded) "這個條件下的職位都被你排除了" else "找不到符合的職位",
-            color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 15.sp,
-        )
+        Text("推薦的方向都被你排除了", color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 15.sp)
         Spacer(Modifier.height(4.dp))
-        Text(
-            if (hasExcluded) "下面可以把排除的職位拉回來" else "試試換個關鍵字或篩選",
-            color = InkGray500, fontSize = 12.sp,
-        )
+        Text("可以全部拉回,或在下面個別拉回", color = InkGray500, fontSize = 12.sp)
         Spacer(Modifier.height(14.dp))
         Box(
             modifier = Modifier
                 .clip(CircleShape)
                 .background(InkGray100)
-                .pressScale(onClick = onClearFilter)
+                .pressScale(onClick = onRestoreAll)
                 .padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
-            Text("清除條件", color = InkBlack, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+            Text("全部拉回", color = InkBlack, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
         }
+    }
+}
+
+/** One line under the search box: what the cards are, or how the search is going. */
+@Composable
+private fun SearchStatusLine(
+    searchingFor: String?,
+    message: String?,
+    shownQuery: String,
+    onRetry: (() -> Unit)?,
+) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        when {
+            searchingFor != null -> {
+                CircularProgressIndicator(color = BrandDeepOrange, strokeWidth = 2.dp, modifier = Modifier.size(14.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "正在找「$searchingFor」相關的方向,可能要等幾十秒…",
+                    color = InkGray500, fontSize = 12.sp, lineHeight = 17.sp,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            message != null -> {
+                Text(message, color = BrandDeepOrange, fontSize = 12.sp, lineHeight = 17.sp, modifier = Modifier.weight(1f))
+                if (onRetry != null) {
+                    Spacer(Modifier.width(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(InkBlack)
+                            .pressScale(onClick = onRetry)
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                    ) {
+                        Text("重試", color = PaperWhite, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                }
+            }
+            shownQuery.isEmpty() -> Text(
+                "目前是隨機挑的 5 個方向。輸入想找的方向後按搜尋,會依你的經歷算出適配度。",
+                color = InkGray500, fontSize = 12.sp, lineHeight = 17.sp,
+            )
+            else -> Text("「$shownQuery」的推薦結果", color = InkGray500, fontSize = 12.sp, lineHeight = 17.sp)
+        }
+    }
+}
+
+/** Required skill on a random (not yet scored) card, in the card's original chip style. */
+@Composable
+private fun NeutralSkillChip(text: String) {
+    Box(
+        modifier = Modifier
+            .clip(CircleShape)
+            .background(PaperWhite.copy(alpha = 0.2f))
+            .padding(horizontal = 11.dp, vertical = 4.dp),
+    ) {
+        Text(text, color = PaperWhite, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
+    }
+}
+
+/** Required-skill chip on the top card: have = orange, missing = light gray. */
+@Composable
+private fun SkillChip(text: String, have: Boolean) {
+    Box(
+        modifier = Modifier
+            .clip(CircleShape)
+            .background(if (have) BrandPeach else InkGray100)
+            .padding(horizontal = 11.dp, vertical = 4.dp),
+    ) {
+        Text(
+            text,
+            color = if (have) BrandDeepOrange else InkGray500,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 11.sp,
+        )
     }
 }
 
@@ -623,6 +744,7 @@ private fun ExcludedSection(excluded: List<CareerRec>, onRestore: (String) -> Un
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TopMatchCard(rec: CareerRec, onViewPath: () -> Unit = {}) {
     val animScore by animateIntAsState(
@@ -658,7 +780,7 @@ private fun TopMatchCard(rec: CareerRec, onViewPath: () -> Unit = {}) {
                         .background(PaperWhite)
                         .padding(horizontal = 11.dp, vertical = 4.dp),
                 ) {
-                    Text("TOP MATCH",
+                    Text(if (rec.scored) "TOP MATCH" else "隨機推薦",
                         color = BrandDeepOrange,
                         fontWeight = FontWeight.Black,
                         fontSize = 10.sp,
@@ -689,27 +811,49 @@ private fun TopMatchCard(rec: CareerRec, onViewPath: () -> Unit = {}) {
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text("FIT", color = PaperWhite.copy(alpha = 0.7f), fontSize = 10.sp, letterSpacing = 1.2.sp, fontWeight = FontWeight.SemiBold)
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        Text("$animScore", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 44.sp, lineHeight = 44.sp)
-                        Text("%", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 16.sp, modifier = Modifier.padding(bottom = 5.dp))
+                    if (rec.scored) {
+                        Row(verticalAlignment = Alignment.Bottom) {
+                            Text("$animScore", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 44.sp, lineHeight = 44.sp)
+                            Text("%", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 16.sp, modifier = Modifier.padding(bottom = 5.dp))
+                        }
+                    } else {
+                        // No score until the user searches
+                        Text("—", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 44.sp, lineHeight = 44.sp)
                     }
                 }
             }
             Spacer(Modifier.height(14.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                rec.missingSkills.forEach { skill ->
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(PaperWhite.copy(alpha = 0.2f))
-                            .padding(horizontal = 11.dp, vertical = 4.dp),
-                    ) {
-                        Text(skill, color = PaperWhite, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
-                    }
+            // Required skills: already have = orange, still missing = light gray.
+            // coveredSkills stays empty until the AI service returns it, so only the
+            // gray chips show until then.
+            val skillSummary = listOfNotNull(
+                rec.coveredSkills.takeIf { it.isNotEmpty() }?.let { "已具備 ${it.size} 項" },
+                rec.missingSkills.takeIf { it.isNotEmpty() }?.let { "還缺 ${it.size} 項" },
+            ).joinToString(" · ")
+            if (!rec.scored && rec.requiredSkills.isNotEmpty()) {
+                Text("需要的技能", color = PaperWhite.copy(alpha = 0.85f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(6.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    verticalArrangement = Arrangement.spacedBy(5.dp),
+                ) {
+                    rec.requiredSkills.forEach { NeutralSkillChip(it) }
                 }
+                Spacer(Modifier.height(14.dp))
             }
-            Spacer(Modifier.height(14.dp))
+            if (skillSummary.isNotEmpty()) {
+                Text(skillSummary, color = PaperWhite.copy(alpha = 0.85f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(6.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    verticalArrangement = Arrangement.spacedBy(5.dp),
+                ) {
+                    rec.coveredSkills.forEach { SkillChip(it, have = true) }
+                    rec.missingSkills.forEach { SkillChip(it, have = false) }
+                }
+                Spacer(Modifier.height(14.dp))
+            }
 
             Box(
                 modifier = Modifier
@@ -786,9 +930,14 @@ private fun SecondaryRecCard(
             verticalAlignment = Alignment.Bottom,
         ) {
             Text("FIT", color = InkGray400, fontSize = 10.sp, letterSpacing = 1.sp, fontWeight = FontWeight.SemiBold)
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text("$animScore", color = scoreColor as Color, fontWeight = FontWeight.Black, fontSize = 22.sp, lineHeight = 22.sp)
-                Text("%", color = scoreColor, fontWeight = FontWeight.Black, fontSize = 11.sp, modifier = Modifier.padding(bottom = 3.dp))
+            if (rec.scored) {
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text("$animScore", color = scoreColor as Color, fontWeight = FontWeight.Black, fontSize = 22.sp, lineHeight = 22.sp)
+                    Text("%", color = scoreColor, fontWeight = FontWeight.Black, fontSize = 11.sp, modifier = Modifier.padding(bottom = 3.dp))
+                }
+            } else {
+                // No score until the user searches (the bar stays empty too)
+                Text("—", color = InkGray400, fontWeight = FontWeight.Black, fontSize = 22.sp, lineHeight = 22.sp)
             }
         }
         Spacer(Modifier.height(6.dp))
@@ -938,9 +1087,9 @@ private fun paretoFront(xKey: String, yKey: String): Set<String> =
     exploreRoles.filter { r ->
         exploreRoles.none { o ->
             o.id != r.id &&
-                axisVal(o, xKey) >= axisVal(r, xKey) &&
-                axisVal(o, yKey) >= axisVal(r, yKey) &&
-                (axisVal(o, xKey) > axisVal(r, xKey) || axisVal(o, yKey) > axisVal(r, yKey))
+                    axisVal(o, xKey) >= axisVal(r, xKey) &&
+                    axisVal(o, yKey) >= axisVal(r, yKey) &&
+                    (axisVal(o, xKey) > axisVal(r, xKey) || axisVal(o, yKey) > axisVal(r, yKey))
         }
     }.map { it.id }.toSet()
 
