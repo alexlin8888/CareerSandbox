@@ -54,6 +54,7 @@ import com.careersandbox.app.data.remote.InterviewAiApiClient
 import com.careersandbox.app.data.remote.InterviewContextDto
 import com.careersandbox.app.data.remote.TurnRequest
 import com.careersandbox.app.data.remote.toDto
+import com.careersandbox.app.data.remote.toContextDto
 
 private const val USER_KEY = "你"
 
@@ -151,6 +152,9 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
                 val who = InterviewAiSession.openingSpeaker.ifBlank {
                     personas.firstOrNull { it.role != "peer" }?.displayName ?: "主考官"
                 }
+                InterviewAiSession.openingIntro.orEmpty().takeIf { it.isNotBlank() }?.let {
+                    add(ChatMessage("intro", who, it, isUser = false, isInterviewer = personas.isInterviewer(who)))
+                }
                 add(ChatMessage("open", who, opening, isUser = false, isInterviewer = personas.isInterviewer(who)))
             } else {
                 addAll(
@@ -216,17 +220,14 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
                             mode = "group",
                             inputMode = inputMode,
                             endedBy = endedBy,
-                            context = InterviewContextDto(
-                                round = InterviewConfig.round,
-                                language = InterviewConfig.language,
-                                type = InterviewConfig.type,
-                                difficulty = InterviewConfig.difficulty,
-                                groupInterviewers = InterviewConfig.groupInterviewers,
-                                groupSize = InterviewConfig.groupSize,
-                                groupRole = InterviewConfig.groupRole,
-                            ),
+                            context = InterviewConfig.toContextDto(group = true),
                             spokenBy = spokenBy.toList(),
                             askedTopics = askedTopics.toList(),
+                            askedQuestions = InterviewAiSession.askedQuestions.toList(),
+                            probeGap = InterviewAiSession.probeGap,
+                            probeDepth = InterviewAiSession.probeDepth,
+                            jdSkills = InterviewAiSession.jdSkills,
+                            experiences = InterviewAiSession.experiences,
                             groupSays = com.careersandbox.app.data.mock.InterviewSession
                                 .groupTranscript.map { it.toDto() },
                         ),
@@ -234,6 +235,9 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
                     val body = res.body()
                     if (res.isSuccessful && body != null) {
                         if (body.topic.isNotBlank()) askedTopics.add(body.topic)
+                        InterviewAiSession.probeGap = body.probeGap.orEmpty()
+                        InterviewAiSession.probeDepth = body.probeDepth ?: 0
+                        if (body.nextQuestion.isNotBlank()) InterviewAiSession.askedQuestions.add(body.nextQuestion)
                         val speaker = body.speaker.ifBlank { typingSpeaker }
                         spokenBy.add(speaker)
                         lastQuestion = body.nextQuestion
@@ -267,7 +271,7 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
         com.careersandbox.app.data.mock.InterviewConfig.lastWasGroup = true
         if (useAi) {
             // The opening question belongs in the transcript so the model sees the full dialogue.
-            messages.firstOrNull()?.let {
+            messages.firstOrNull { it.id == "open" }?.let {
                 com.careersandbox.app.data.mock.InterviewSession.recordGroupUtterance(
                     it.speaker, it.content, isUser = false,
                 )

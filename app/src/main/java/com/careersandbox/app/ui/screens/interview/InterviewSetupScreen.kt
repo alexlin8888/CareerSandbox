@@ -304,7 +304,7 @@ private fun SectionLabel(text: String) {
 }
 
 @Composable
-private fun JobTargetCard(job: JobTarget, selected: Boolean, onClick: () -> Unit) {
+internal fun JobTargetCard(job: JobTarget, selected: Boolean, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -572,7 +572,7 @@ private fun InterviewerTile(p: Interviewer, big: Boolean, modifier: Modifier = M
 }
 
 @Composable
-private fun VersionOptionRow(name: String, sub: String, selected: Boolean, onClick: () -> Unit) {
+internal fun VersionOptionRow(name: String, sub: String, selected: Boolean, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -610,15 +610,37 @@ private fun VersionOptionRow(name: String, sub: String, selected: Boolean, onCli
 // Experiences sent to the interview model. With a version picked, only that version's
 // highlighted items go (all of its items if none is highlighted); otherwise everything.
 // Any load failure falls back to the full list, and to empty if even that fails.
-private suspend fun loadInterviewExperiences(versionId: String): List<ExperienceDto> {
+// Sends the selected resume version: customized text goes into description,
+// the original experience supplies title, period and tags (B's contract).
+suspend fun loadInterviewExperiences(versionId: String): List<ExperienceDto> {
     val all = RemoteExperienceRepository().listRaw().getOrNull() ?: return emptyList()
     if (versionId.isEmpty()) return all.map { it.toInterviewDto() }
     val items = RemoteResumeHierarchyProvider.loadVersionItems(versionId).getOrNull()
         ?: return all.map { it.toInterviewDto() }
-    val highlighted = items.filter { it.highlighted }.mapNotNull { it.experienceId }.toSet()
-    val keep = highlighted.ifEmpty { items.mapNotNull { it.experienceId }.toSet() }
-    if (keep.isEmpty()) return all.map { it.toInterviewDto() }
-    return all.filter { it.id in keep }.map { it.toInterviewDto() }
+    val byId = all.associateBy { it.id.orEmpty() }
+    // The model truncates at 1200 chars from the back, so most relevant goes first.
+    val chosen = items.filter { it.highlighted }.ifEmpty { items }
+        .sortedByDescending { it.matchedKeywords.size }
+    val result = chosen.mapNotNull { item ->
+        val original = byId[item.experienceId.orEmpty()] ?: return@mapNotNull null
+        if (item.text.isBlank()) {
+            original.toInterviewDto()
+        } else {
+            ExperienceDto(
+                id = original.id.orEmpty(),
+                title = original.title.orEmpty(),
+                category = "",
+                period = original.period.orEmpty(),
+                role = "",
+                action = "",
+                result = "",
+                learning = "",
+                description = item.text,
+                tags = original.tags ?: emptyList(),
+            )
+        }
+    }
+    return result.ifEmpty { all.map { it.toInterviewDto() } }
 }
 
 private fun ExperienceResponse.toInterviewDto() = ExperienceDto(

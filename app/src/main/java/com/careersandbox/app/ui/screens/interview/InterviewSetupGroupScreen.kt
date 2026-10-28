@@ -36,6 +36,10 @@ import com.careersandbox.app.data.remote.InterviewAiApiClient
 import com.careersandbox.app.data.remote.InterviewContextDto
 import com.careersandbox.app.data.remote.StartInterviewRequest
 import kotlinx.coroutines.launch
+import androidx.compose.animation.AnimatedVisibility
+import com.careersandbox.app.data.mock.displayName
+import com.careersandbox.app.data.remote.toContextDto
+import com.careersandbox.app.data.repository.RemoteResumeHierarchyProvider
 
 private data class PeerPersona(val name: String, val trait: String, val drawable: Int)
 
@@ -57,9 +61,13 @@ private val roleOptions = listOf(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InterviewSetupGroupScreen(navController: NavHostController) {
-    val jobs = MockData.jobApplications
-    var selectedJobId by remember { mutableStateOf(jobs.firstOrNull()?.id ?: "") }
-    var customSelected by remember { mutableStateOf(false) }
+    val targets = RemoteResumeHierarchyProvider.jobTargets()
+    LaunchedEffect(Unit) { RemoteResumeHierarchyProvider.refresh() }
+    var pickedJobId by remember { mutableStateOf("") }
+    var pickedVersionId by remember { mutableStateOf("") }
+    val selectedJobId = pickedJobId.ifEmpty { targets.firstOrNull()?.id ?: "custom" }
+    val selectedTarget = targets.firstOrNull { it.id == selectedJobId }
+    val customSelected = selectedJobId == "custom"
     var customJob by remember { mutableStateOf("") }
     var groupSize by remember { mutableIntStateOf(4) } // 含你
     var interviewers by remember { mutableIntStateOf(InterviewConfig.groupInterviewers) }
@@ -93,29 +101,37 @@ fun InterviewSetupGroupScreen(navController: NavHostController) {
                             InterviewConfig.groupSize = groupSize
                             InterviewConfig.groupRole = role.title
                             InterviewConfig.format = "group"
-                            val job = jobs.firstOrNull { it.id == selectedJobId }
-                            val jobTitle = if (customSelected) customJob else job?.position.orEmpty()
-                            val jobCompany = if (customSelected) "" else job?.company.orEmpty()
+                            InterviewConfig.resumeVersionId = pickedVersionId
+                            InterviewConfig.resumeVersionLabel = selectedTarget?.versions
+                                ?.withIndex()
+                                ?.firstOrNull { it.value.id == pickedVersionId }
+                                ?.let { it.value.displayName(it.index + 1) }
+                                .orEmpty()
+                            // Same job context rules as the individual setup page.
+                            InterviewConfig.customSeniority = "新鮮人"
+                            InterviewConfig.customIndustry = ""
+                            if (customSelected) {
+                                InterviewConfig.customRole = customJob
+                                InterviewConfig.customCompany = ""
+                                InterviewConfig.customJd = ""
+                            } else {
+                                InterviewConfig.customRole = selectedTarget?.title.orEmpty()
+                                InterviewConfig.customCompany = selectedTarget?.company.orEmpty()
+                                InterviewConfig.customJd = selectedTarget?.jdSnippet.orEmpty()
+                            }
                             starting = true
                             // Wait for the opening response before navigating, so the live screen
                             // never reads a half-filled session. Any failure falls back to the mock flow.
                             scope.launch {
                                 InterviewAiSession.reset()
                                 try {
+                                    val exps = loadInterviewExperiences(InterviewConfig.resumeVersionId)
+                                    InterviewAiSession.experiences = exps
                                     val res = InterviewAiApiClient.interviewAiApi.startInterview(
                                         StartInterviewRequest(
                                             mode = "group",
-                                            context = InterviewContextDto(
-                                                round = InterviewConfig.round,
-                                                language = InterviewConfig.language,
-                                                type = InterviewConfig.type,
-                                                difficulty = InterviewConfig.difficulty,
-                                                groupInterviewers = interviewers,
-                                                groupSize = groupSize,
-                                                groupRole = role.title,
-                                                customRole = jobTitle,
-                                                customCompany = jobCompany,
-                                            ),
+                                            context = InterviewConfig.toContextDto(group = true),
+                                            experiences = exps,
                                         )
                                     )
                                     val body = res.body()
@@ -124,10 +140,19 @@ fun InterviewSetupGroupScreen(navController: NavHostController) {
                                         InterviewAiSession.openingQuestion = body.openingQuestion
                                         InterviewAiSession.openingSpeaker = body.openingSpeaker
                                         InterviewAiSession.openingTopic = body.openingTopic
+                                        InterviewAiSession.openingIntro = body.openingIntro.orEmpty()
                                         InterviewAiSession.personas = body.personas
                                         InterviewAiSession.fallbackProbes = body.fallbackProbes
                                         InterviewAiSession.interruptLines = body.interruptLines
                                         InterviewAiSession.interruptCap = body.interruptCap
+                                        InterviewAiSession.jdSkills =
+                                            selectedTarget?.requiredSkills?.takeIf { it.isNotEmpty() }
+                                                ?: body.jdSkills.orEmpty()
+                                        InterviewAiSession.probeGap = ""
+                                        InterviewAiSession.probeDepth = 0
+                                        InterviewAiSession.askedQuestions.clear()
+                                        body.openingQuestion.orEmpty().takeIf { it.isNotBlank() }
+                                            ?.let { InterviewAiSession.askedQuestions.add(it) }
                                     }
                                 } catch (e: Exception) {
                                     InterviewAiSession.reset()
@@ -163,18 +188,30 @@ fun InterviewSetupGroupScreen(navController: NavHostController) {
             Text("AI 應徵者會跟你一起參與討論",
                 color = InkGray400, fontSize = 12.sp)
             Spacer(Modifier.height(12.dp))
-            jobs.forEach { job ->
-                GroupJobCard(
-                    job = job,
-                    selected = !customSelected && selectedJobId == job.id,
-                    onClick = { selectedJobId = job.id; customSelected = false },
-                )
-                Spacer(Modifier.height(8.dp))
+            targets.forEach { job ->
+                JobTargetCard(job = job, selected = selectedJobId == job.id) {
+                    pickedJobId = job.id
+                    pickedVersionId = ""
+                }
+                AnimatedVisibility(visible = selectedJobId == job.id && job.versions.isNotEmpty()) {
+                    Column(Modifier.padding(start = 24.dp, top = 8.dp)) {
+                        VersionOptionRow("不指定", "不套用特定版本", pickedVersionId.isEmpty()) {
+                            pickedVersionId = ""
+                        }
+                        job.versions.forEachIndexed { i, v ->
+                            Spacer(Modifier.height(8.dp))
+                            VersionOptionRow(v.displayName(i + 1), v.note, v.id == pickedVersionId) {
+                                pickedVersionId = v.id
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
             }
             GroupCustomJobCard(
                 selected = customSelected,
                 value = customJob,
-                onSelect = { customSelected = true },
+                onSelect = { pickedJobId = "custom"; pickedVersionId = "" },
                 onValueChange = { customJob = it },
             )
 

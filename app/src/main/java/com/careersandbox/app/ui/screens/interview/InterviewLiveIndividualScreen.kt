@@ -167,7 +167,10 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
     val reverses = if (lang == "English") reverseOptionsEn else reverseOptions
 
     var phase by remember { mutableStateOf("MAIN") }   // MAIN / REVERSE / CLOSING / DONE
-    var question by remember { mutableStateOf(openingQ) }
+    val openingIntro = InterviewAiSession.openingIntro.orEmpty()
+    // The intro shows first as its own line; answering unlocks once the question appears.
+    var introPlaying by remember { mutableStateOf(openingIntro.isNotBlank()) }
+    var question by remember { mutableStateOf(if (openingIntro.isNotBlank()) openingIntro else openingQ) }
     var answer by remember { mutableStateOf("") }
     var reactingDelta by remember { mutableIntStateOf(0) }
     var followUpIdx by remember { mutableIntStateOf(0) }
@@ -175,10 +178,18 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
     var elapsedSec by remember { mutableIntStateOf(0) }
     var input by remember { mutableStateOf("") }
     var answerMode by remember { mutableStateOf("voice") }   // voice / typed
-    val askedTopics = remember { mutableStateListOf<String>() }
+    val askedTopics = remember {
+        mutableStateListOf<String>().apply {
+            // Seed with the opening topic, same as the group screen.
+            InterviewAiSession.openingTopic.takeIf { it.isNotBlank() }?.let { add(it) }
+        }
+    }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) { InterviewSession.reset(); InterviewAiReport.reset(); while (true) { delay(1000); elapsedSec++ } }
+    LaunchedEffect(Unit) {
+        if (introPlaying) { delay(3000); question = openingQ; introPlaying = false }
+    }
     val timerText = "${(elapsedSec / 60).toString().padStart(2, '0')}:${(elapsedSec % 60).toString().padStart(2, '0')}"
     val role = InterviewConfig.customRole.ifBlank { "Junior PM" }
 
@@ -190,7 +201,7 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
         inputMode: String = "voice",
         segmentEndsMs: List<Long> = emptyList(),
     ) {
-        if (phase != "MAIN" || transcript.isBlank() || answer.isNotBlank()) return
+        if (phase != "MAIN" || introPlaying || transcript.isBlank() || answer.isNotBlank()) return
         answer = transcript
         answerMode = inputMode
         InterviewSession.record(question, transcript, segments, segmentStartsMs, inputMode, endedBy, segmentEndsMs)
@@ -454,7 +465,7 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
                             Text(t("轉錄中...", "Transcribing..."), color = Color(0x99FFFFFF), fontSize = 12.sp)
                         }
                     } else {
-                        val canSend = input.isNotBlank() && answer.isBlank()
+                        val canSend = input.isNotBlank() && answer.isBlank() && !introPlaying
                         Row(verticalAlignment = Alignment.Bottom) {
                             RecordingMicButton(
                                 isRecording = recorder.isRecording,
@@ -462,17 +473,17 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
                                 elapsedMs = recorder.elapsedMs,
                                 maxDurationMs = 120_000L,
                                 size = 48.dp,
-                                idleEnabled = answer.isBlank(),
+                                idleEnabled = answer.isBlank() && !introPlaying,
                                 onClick = {
                                     if (recorder.isRecording) recorder.stop()
-                                    else if (answer.isBlank()) recorder.start()
+                                    else if (answer.isBlank() && !introPlaying) recorder.start()
                                 },
                             )
                             Spacer(Modifier.width(8.dp))
                             OutlinedTextField(
                                 value = input,
                                 onValueChange = { input = it },
-                                enabled = answer.isBlank() && !recorder.isRecording,
+                                enabled = answer.isBlank() && !recorder.isRecording && !introPlaying,
                                 modifier = Modifier.weight(1f),
                                 placeholder = {
                                     Text(t("輸入你的回答", "Type your answer"), color = Color(0x80FFFFFF), fontSize = 13.sp)
