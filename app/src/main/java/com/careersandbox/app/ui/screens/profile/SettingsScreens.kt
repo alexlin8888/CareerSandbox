@@ -44,6 +44,13 @@ import com.careersandbox.app.data.local.SessionManager
 import com.careersandbox.app.data.local.UserStore
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import com.careersandbox.app.data.remote.ExperienceResponse
+import com.careersandbox.app.data.remote.LanguageDto
+import com.careersandbox.app.data.remote.UpdateProfileRequest
+import com.careersandbox.app.data.repository.RemoteExperienceRepository
+import com.careersandbox.app.data.repository.RemoteUserRepository
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,17 +79,83 @@ private fun SettingsScaffold(
 // ============= 01 個人資料 =============
 @Composable
 fun SettingsProfileScreen(navController: NavHostController) {
-    val user = MockData.currentUser
+    // Real profile from the backend; show a spinner while the session loads
+    val user = UserStore.me
+    if (user == null) {
+        LaunchedEffect(Unit) { UserStore.refresh() }
+        Box(
+            modifier = Modifier.fillMaxSize().background(PaperWhite),
+            contentAlignment = Alignment.Center,
+        ) {
+            CircularProgressIndicator(color = BrandOrange)
+        }
+        return
+    }
+
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+
     var name by remember { mutableStateOf(user.name) }
     var school by remember { mutableStateOf(user.school) }
     var dept by remember { mutableStateOf(user.department) }
     var year by remember { mutableStateOf(user.year) }
-    var email by remember { mutableStateOf(user.email) }
+    // Contact email is separate from the login email; fall back to the login email for display
+    var contactEmail by remember { mutableStateOf(user.contactEmail.ifBlank { user.email }) }
     var phone by remember { mutableStateOf(user.phone) }
     var bio by remember { mutableStateOf(user.bio) }
+    val skillsHave = remember { mutableStateListOf(*user.skillsHave.toTypedArray()) }
+    val skillsWant = remember { mutableStateListOf(*user.skillsWant.toTypedArray()) }
+    val languages = remember { mutableStateListOf(*user.languages.toTypedArray()) }
     var linkedin by remember { mutableStateOf(user.linkedin) }
     var github by remember { mutableStateOf(user.github) }
     var portfolio by remember { mutableStateOf(user.portfolio) }
+    var saving by remember { mutableStateOf(false) }
+
+    // Section 06 reads the same experiences the experience pages use
+    var expList by remember { mutableStateOf<List<ExperienceResponse>?>(null) }
+    var expError by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        RemoteExperienceRepository().listRaw()
+            .onSuccess { expList = it; expError = null }
+            .onFailure { expError = it.message ?: "經歷載入失敗" }
+    }
+
+    fun save() {
+        if (saving) return
+        if (name.isBlank()) {
+            Toast.makeText(ctx, "姓名不能空白", Toast.LENGTH_SHORT).show()
+            return
+        }
+        saving = true
+        scope.launch {
+            RemoteUserRepository().updateMe(
+                UpdateProfileRequest(
+                    name = name.trim(),
+                    school = school.trim(),
+                    department = dept.trim(),
+                    year = year.trim(),
+                    contactEmail = contactEmail.trim(),
+                    phone = phone.trim(),
+                    bio = bio.trim(),
+                    linkedin = linkedin.trim(),
+                    github = github.trim(),
+                    portfolio = portfolio.trim(),
+                    skillsHave = skillsHave.toList(),
+                    skillsWant = skillsWant.toList(),
+                    languages = languages.toList(),
+                )
+            )
+                .onSuccess {
+                    UserStore.refresh()
+                    Toast.makeText(ctx, "已儲存", Toast.LENGTH_SHORT).show()
+                    navController.popBackStack()
+                }
+                .onFailure {
+                    saving = false
+                    Toast.makeText(ctx, it.message ?: "儲存失敗,請稍後再試", Toast.LENGTH_SHORT).show()
+                }
+        }
+    }
 
     SettingsScaffold("個人資料", { navController.popBackStack() }) { pad ->
         Column(
@@ -93,7 +166,7 @@ fun SettingsProfileScreen(navController: NavHostController) {
                 .padding(horizontal = 24.dp),
         ) {
             Spacer(Modifier.height(8.dp))
-            // 大頭照
+            // 大頭照(目前顯示姓名第一個字)
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Box(
                     Modifier
@@ -103,7 +176,7 @@ fun SettingsProfileScreen(navController: NavHostController) {
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = user.name.firstOrNull()?.toString() ?: "?",
+                        text = name.trim().firstOrNull()?.toString() ?: "?",
                         color = BrandDeepOrange,
                         fontSize = 40.sp,
                         fontWeight = FontWeight.Black,
@@ -111,7 +184,6 @@ fun SettingsProfileScreen(navController: NavHostController) {
                 }
             }
             Spacer(Modifier.height(8.dp))
-            val ctxAvatar = LocalContext.current
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text(
                     text = "更換大頭照",
@@ -119,7 +191,7 @@ fun SettingsProfileScreen(navController: NavHostController) {
                     fontWeight = FontWeight.SemiBold,
                     style = MaterialTheme.typography.labelLarge,
                     modifier = Modifier.pressScale {
-                        Toast.makeText(ctxAvatar, "相片上傳之後開放", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(ctx, "相片上傳之後開放", Toast.LENGTH_SHORT).show()
                     },
                 )
             }
@@ -136,35 +208,33 @@ fun SettingsProfileScreen(navController: NavHostController) {
 
             // 02 聯絡方式
             ProfileSectionHeader("02", "聯絡方式")
-            ProfileField("Email", email) { email = it }
+            ProfileField("聯絡 Email", contactEmail) { contactEmail = it }
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "登入帳號為 ${user.email},不會因這裡的修改而改變",
+                color = InkGray400,
+                style = MaterialTheme.typography.labelSmall,
+            )
             Spacer(Modifier.height(16.dp))
             ProfileField("電話", phone) { phone = it }
 
             // 03 自我介紹
             ProfileSectionHeader("03", "自我介紹")
-            BioField(bio) { bio = it }
+            BioField(bio) { if (it.length <= 400) bio = it }
 
             // 04 專長技能
             ProfileSectionHeader("04", "專長與技能")
-            ChipDisplaySection("已具備", user.skillsHave, BrandOrange)
+            ChipEditSection("已具備", skillsHave, BrandOrange)
             Spacer(Modifier.height(16.dp))
-            ChipDisplaySection("學習中", user.skillsWant, BrandDeepOrange)
+            ChipEditSection("學習中", skillsWant, BrandDeepOrange)
 
             // 05 語言能力
             ProfileSectionHeader("05", "語言能力")
-            user.languages.forEach { lang ->
-                LanguageRow(lang)
-                if (lang != user.languages.last()) {
-                    SectionDivider(modifier = Modifier.padding(vertical = 8.dp))
-                }
-            }
+            LanguageEditSection(languages)
 
-            // 06 社團與競賽
+            // 06 社團與競賽經歷(讀 experiences,包含工作等所有類別)
             ProfileSectionHeader("06", "社團與競賽經歷")
-            user.activities.forEach { act ->
-                ActivityCard(act)
-                Spacer(Modifier.height(12.dp))
-            }
+            ExperienceSection(navController, expList, expError)
 
             // 07 個人連結
             ProfileSectionHeader("07", "個人連結")
@@ -182,12 +252,12 @@ fun SettingsProfileScreen(navController: NavHostController) {
                     .fillMaxWidth()
                     .height(56.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(BrandOrange)
-                    .pressScale { navController.popBackStack() },
+                    .background(if (saving) BrandOrange.copy(alpha = 0.5f) else BrandOrange)
+                    .pressScale { save() },
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    "儲存變更",
+                    if (saving) "儲存中…" else "儲存變更",
                     color = PaperWhite,
                     fontWeight = FontWeight.Black,
                     style = MaterialTheme.typography.titleMedium,
@@ -276,9 +346,43 @@ private fun BioField(value: String, onChange: (String) -> Unit) {
     }
 }
 
+@Composable
+private fun TextInputDialog(
+    title: String,
+    hint: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit,
+) {
+    var text by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title, fontWeight = FontWeight.Bold) },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                singleLine = true,
+                placeholder = { Text(hint, color = InkGray400) },
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = BrandOrange,
+                    unfocusedBorderColor = InkGray300,
+                ),
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(text) }) { Text("新增", color = BrandOrange) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("取消", color = InkGray500) }
+        },
+    )
+}
+
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun ChipDisplaySection(label: String, items: List<String>, accent: Color) {
+private fun ChipEditSection(label: String, items: SnapshotStateList<String>, accent: Color) {
+    var adding by remember { mutableStateOf(false) }
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(6.dp).clip(CircleShape).background(accent))
@@ -296,12 +400,13 @@ private fun ChipDisplaySection(label: String, items: List<String>, accent: Color
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            items.forEach { item ->
-                Box(
+            items.toList().forEach { item ->
+                Row(
                     modifier = Modifier
                         .clip(CircleShape)
                         .background(accent.copy(alpha = 0.1f))
-                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                        .padding(start = 14.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         item,
@@ -309,17 +414,23 @@ private fun ChipDisplaySection(label: String, items: List<String>, accent: Color
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.SemiBold,
                     )
+                    Spacer(Modifier.width(6.dp))
+                    Icon(
+                        Icons.Filled.Close,
+                        contentDescription = "移除",
+                        tint = accent,
+                        modifier = Modifier
+                            .size(16.dp)
+                            .clip(CircleShape)
+                            .pressScale { items.remove(item) },
+                    )
                 }
             }
-            // 加 + 按鈕
-            val ctxAdd = LocalContext.current
             Box(
                 modifier = Modifier
                     .clip(CircleShape)
                     .background(InkGray100)
-                    .pressScale {
-                        Toast.makeText(ctxAdd, "這裡之後會開放新增", Toast.LENGTH_SHORT).show()
-                    }
+                    .pressScale { adding = true }
                     .padding(horizontal = 14.dp, vertical = 6.dp),
             ) {
                 Text(
@@ -331,77 +442,230 @@ private fun ChipDisplaySection(label: String, items: List<String>, accent: Color
             }
         }
     }
-}
-
-@Composable
-private fun LanguageRow(lang: com.careersandbox.app.data.model.LanguageProficiency) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            lang.language,
-            color = InkBlack,
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.weight(1f),
+    if (adding) {
+        TextInputDialog(
+            title = "新增$label",
+            hint = "例如:Excel",
+            onDismiss = { adding = false },
+            onConfirm = { v ->
+                val t = v.trim()
+                if (t.isNotEmpty() && t !in items) items.add(t)
+                adding = false
+            },
         )
-        Box(
-            modifier = Modifier
-                .clip(CircleShape)
-                .background(BrandOrange.copy(alpha = 0.1f))
-                .padding(horizontal = 12.dp, vertical = 5.dp),
-        ) {
-            Text(
-                lang.level,
-                color = BrandDeepOrange,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-            )
-        }
     }
 }
 
 @Composable
-private fun ActivityCard(act: com.careersandbox.app.data.model.ActivityRecord) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(BrandOrange.copy(alpha = 0.05f))
-            .padding(16.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+private fun LanguageDialog(
+    initial: LanguageDto?,
+    onDismiss: () -> Unit,
+    onDelete: (() -> Unit)?,
+    onConfirm: (LanguageDto) -> Unit,
+) {
+    var language by remember { mutableStateOf(initial?.language ?: "") }
+    var level by remember { mutableStateOf(initial?.level ?: "") }
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = BrandOrange,
+        unfocusedBorderColor = InkGray300,
+    )
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (initial == null) "新增語言" else "編輯語言", fontWeight = FontWeight.Bold) },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = language,
+                    onValueChange = { language = it },
+                    singleLine = true,
+                    label = { Text("語言") },
+                    placeholder = { Text("例如:英文", color = InkGray400) },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = fieldColors,
+                )
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = level,
+                    onValueChange = { level = it },
+                    singleLine = true,
+                    label = { Text("程度") },
+                    placeholder = { Text("例如:TOEIC 875 / 母語", color = InkGray400) },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = fieldColors,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = language.isNotBlank(),
+                onClick = { onConfirm(LanguageDto(language.trim(), level.trim())) },
+            ) { Text("確定", color = BrandOrange) }
+        },
+        dismissButton = {
+            Row {
+                if (onDelete != null) {
+                    TextButton(onClick = onDelete) { Text("刪除", color = AccentRed) }
+                }
+                TextButton(onClick = onDismiss) { Text("取消", color = InkGray500) }
+            }
+        },
+    )
+}
+
+@Composable
+private fun LanguageEditSection(languages: SnapshotStateList<LanguageDto>) {
+    // null = dialog closed, -1 = adding a new entry, >= 0 = editing that index
+    var editingIndex by remember { mutableStateOf<Int?>(null) }
+
+    languages.forEachIndexed { i, lang ->
+        Row(
+            modifier = Modifier.fillMaxWidth().pressScale { editingIndex = i },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Text(
-                act.title,
+                lang.language,
                 color = InkBlack,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.weight(1f),
             )
-            Text(
-                act.period,
-                color = InkGray500,
-                style = MaterialTheme.typography.labelSmall,
-            )
+            if (lang.level.isNotBlank()) {
+                Box(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(BrandOrange.copy(alpha = 0.1f))
+                        .padding(horizontal = 12.dp, vertical = 5.dp),
+                ) {
+                    Text(
+                        lang.level,
+                        color = BrandDeepOrange,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
         }
-        Spacer(Modifier.height(4.dp))
+        SectionDivider(modifier = Modifier.padding(vertical = 8.dp))
+    }
+    if (languages.isEmpty()) {
+        Text("尚未新增語言", color = InkGray400, style = MaterialTheme.typography.bodyMedium)
+        Spacer(Modifier.height(8.dp))
+    }
+    Box(
+        modifier = Modifier
+            .clip(CircleShape)
+            .background(InkGray100)
+            .pressScale { editingIndex = -1 }
+            .padding(horizontal = 14.dp, vertical = 6.dp),
+    ) {
         Text(
-            act.role,
-            color = BrandDeepOrange,
+            "+ 新增語言",
+            color = InkGray500,
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
         )
-        if (act.highlight.isNotEmpty()) {
-            Spacer(Modifier.height(8.dp))
+    }
+
+    editingIndex?.let { idx ->
+        LanguageDialog(
+            initial = languages.getOrNull(idx),
+            onDismiss = { editingIndex = null },
+            onDelete = if (idx >= 0) {
+                { languages.removeAt(idx); editingIndex = null }
+            } else null,
+            onConfirm = { l ->
+                if (idx >= 0) languages[idx] = l else languages.add(l)
+                editingIndex = null
+            },
+        )
+    }
+}
+
+@Composable
+private fun ExperienceSection(
+    navController: NavHostController,
+    exps: List<ExperienceResponse>?,
+    error: String?,
+) {
+    when {
+        exps == null && error == null -> {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                CircularProgressIndicator(
+                    color = BrandOrange,
+                    modifier = Modifier.size(22.dp),
+                    strokeWidth = 2.dp,
+                )
+            }
+        }
+        exps == null -> {
+            Text(error ?: "", color = BrandDeepOrange, style = MaterialTheme.typography.bodyMedium)
+        }
+        exps.isEmpty() -> {
             Text(
-                act.highlight,
-                color = InkGray700,
+                "還沒有任何經歷,點下方「管理全部經歷」新增第一筆。",
+                color = InkGray400,
                 style = MaterialTheme.typography.bodyMedium,
-                lineHeight = 22.sp,
             )
         }
+        else -> {
+            exps.forEach { e ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(BrandOrange.copy(alpha = 0.05f))
+                        .pressScale { navController.navigate(Routes.experienceEdit(e.id)) }
+                        .padding(16.dp),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            e.title,
+                            color = InkBlack,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(
+                            e.period,
+                            color = InkGray500,
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    }
+                    if (e.role.isNotBlank()) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            e.role,
+                            color = BrandDeepOrange,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                    if (e.description.isNotBlank()) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            e.description,
+                            color = InkGray700,
+                            style = MaterialTheme.typography.bodyMedium,
+                            lineHeight = 22.sp,
+                            maxLines = 4,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+            }
+        }
     }
+    Spacer(Modifier.height(4.dp))
+    Text(
+        "管理全部經歷",
+        color = BrandOrange,
+        fontWeight = FontWeight.SemiBold,
+        style = MaterialTheme.typography.labelLarge,
+        modifier = Modifier.pressScale { navController.navigate(Routes.EXPERIENCE_LIST) },
+    )
 }
 
 // ============= 02 通知設定 =============
@@ -600,56 +864,56 @@ private fun ActionRow(
 @Composable
 fun SettingsHelpScreen(navController: NavHostController) {
     Box {
-    SettingsScaffold("幫助與支援", { navController.popBackStack() }) { pad ->
-        Column(
-            modifier = Modifier
-                .padding(pad)
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 16.dp),
-        ) {
-            SettingsGroupTitle("功能導覽")
-            ActionRow("重看功能導覽", Icons.Filled.Info, BrandOrange) {
-                TourState.forceShow = true
-                navController.navigate(Routes.HOME) {
-                    popUpTo(Routes.HOME) { inclusive = true }
+        SettingsScaffold("幫助與支援", { navController.popBackStack() }) { pad ->
+            Column(
+                modifier = Modifier
+                    .padding(pad)
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp, vertical = 16.dp),
+            ) {
+                SettingsGroupTitle("功能導覽")
+                ActionRow("重看功能導覽", Icons.Filled.Info, BrandOrange) {
+                    TourState.forceShow = true
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.HOME) { inclusive = true }
+                    }
                 }
+
+                Spacer(Modifier.height(28.dp))
+                SettingsGroupTitle("常見問題")
+                FaqItem(
+                    "AI 面試評分準確嗎?",
+                    "我們用業界專家設計的 12 項指標,結合你的履歷與職缺特性綜合評分,建議與真實面試後使用做比對。",
+                )
+                SectionDivider(modifier = Modifier.padding(vertical = 12.dp))
+                FaqItem(
+                    "我的履歷會被別人看到嗎?",
+                    "預設不公開,只有開啟「公開個人檔案」後才會出現在企業搜尋結果。",
+                )
+                SectionDivider(modifier = Modifier.padding(vertical = 12.dp))
+                FaqItem(
+                    "可以匯出履歷成 PDF 嗎?",
+                    "履歷編輯器右上角有匯出選項,支援 PDF、Word、純文字三種格式。",
+                )
+
+                Spacer(Modifier.height(28.dp))
+                SettingsGroupTitle("聯絡我們")
+                ActionRow("Email 客服", Icons.Filled.Email, BrandOrange) {}
+                SectionDivider(modifier = Modifier.padding(vertical = 12.dp))
+                ActionRow("回報問題", Icons.Filled.Info, BrandDeepOrange) {}
+                SectionDivider(modifier = Modifier.padding(vertical = 12.dp))
+                ActionRow("功能建議", Icons.Filled.Lightbulb, GlowPurple) {}
+
+                Spacer(Modifier.height(28.dp))
+                SettingsGroupTitle("關於")
+                InfoRow("版本", "0.2.0-mvp")
+                InfoRow("使用條款", "查看")
+                InfoRow("隱私政策", "查看")
+
+                Spacer(Modifier.height(40.dp))
             }
-
-            Spacer(Modifier.height(28.dp))
-            SettingsGroupTitle("常見問題")
-            FaqItem(
-                "AI 面試評分準確嗎?",
-                "我們用業界專家設計的 12 項指標,結合你的履歷與職缺特性綜合評分,建議與真實面試後使用做比對。",
-            )
-            SectionDivider(modifier = Modifier.padding(vertical = 12.dp))
-            FaqItem(
-                "我的履歷會被別人看到嗎?",
-                "預設不公開,只有開啟「公開個人檔案」後才會出現在企業搜尋結果。",
-            )
-            SectionDivider(modifier = Modifier.padding(vertical = 12.dp))
-            FaqItem(
-                "可以匯出履歷成 PDF 嗎?",
-                "履歷編輯器右上角有匯出選項,支援 PDF、Word、純文字三種格式。",
-            )
-
-            Spacer(Modifier.height(28.dp))
-            SettingsGroupTitle("聯絡我們")
-            ActionRow("Email 客服", Icons.Filled.Email, BrandOrange) {}
-            SectionDivider(modifier = Modifier.padding(vertical = 12.dp))
-            ActionRow("回報問題", Icons.Filled.Info, BrandDeepOrange) {}
-            SectionDivider(modifier = Modifier.padding(vertical = 12.dp))
-            ActionRow("功能建議", Icons.Filled.Lightbulb, GlowPurple) {}
-
-            Spacer(Modifier.height(28.dp))
-            SettingsGroupTitle("關於")
-            InfoRow("版本", "0.2.0-mvp")
-            InfoRow("使用條款", "查看")
-            InfoRow("隱私政策", "查看")
-
-            Spacer(Modifier.height(40.dp))
         }
-    }
     }
 }
 

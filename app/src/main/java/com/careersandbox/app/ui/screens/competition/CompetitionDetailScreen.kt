@@ -27,6 +27,7 @@ import coil.compose.AsyncImage
 import com.careersandbox.app.data.model.CompetitionTeam
 import com.careersandbox.app.data.model.TeamMate
 import com.careersandbox.app.data.mock.MockData
+import com.careersandbox.app.data.repository.RemoteCompetitionRepository
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.StaggeredAppear
 import com.careersandbox.app.ui.components.StickyNote
@@ -34,12 +35,24 @@ import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.components.rememberCountUp
 import com.careersandbox.app.ui.theme.*
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CompetitionDetailScreen(navController: NavHostController, compId: String) {
-    val comp = remember(compId) { MockData.competitionById(compId) }
+    // compId is the sourceId. Usually the home row or the list already loaded this
+    // competition; otherwise it is fetched with GET /competitions/{id}.
+    var loaded by remember(compId) { mutableStateOf(RemoteCompetitionRepository.cached(compId)) }
+    var loadError by remember(compId) { mutableStateOf<String?>(null) }
+    LaunchedEffect(compId) {
+        if (loaded == null) {
+            RemoteCompetitionRepository.get(compId)
+                .onSuccess { loaded = it }
+                .onFailure { loadError = it.message ?: "找不到這個競賽" }
+        }
+    }
+    val comp = loaded
     if (comp == null) {
         Box(Modifier.fillMaxSize().background(PaperWarm), contentAlignment = Alignment.Center) {
-            Text("找不到這個競賽", color = InkGray500)
+            Text(loadError ?: "載入中…", color = InkGray500)
         }
         return
     }
@@ -107,8 +120,11 @@ fun CompetitionDetailScreen(navController: NavHostController, compId: String) {
                     InfoCell("獎金", comp.prize, Icons.Outlined.EmojiEvents, Modifier.weight(1f))
                 }
                 Spacer(Modifier.height(10.dp))
-                // tags
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                // tags: wrap onto more lines, crawled tags are often long ("Machine Learning/AI")
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
                     comp.tags.forEach { tag ->
                         Box(
                             modifier = Modifier.clip(CircleShape).background(PaperWhite)
@@ -155,6 +171,12 @@ fun CompetitionDetailScreen(navController: NavHostController, compId: String) {
                             modifier = Modifier.size(16.dp))
                     }
                 }
+
+                // Hidden for now, kept for later: 為什麼推薦你, 推薦隊友, 找隊伍加入, 建立隊伍
+                // and 我的隊伍 (all sample data). To bring them back, delete the two lines that
+                // open and close this comment block. The invite / apply dialogs further down
+                // are left as they are; nothing on screen opens them while this is hidden.
+                /*
                 Spacer(Modifier.height(28.dp))
 
                 // === 為什麼推薦你 ===
@@ -336,6 +358,7 @@ fun CompetitionDetailScreen(navController: NavHostController, compId: String) {
                         }
                     }
                 }
+                */
             }
         }
 

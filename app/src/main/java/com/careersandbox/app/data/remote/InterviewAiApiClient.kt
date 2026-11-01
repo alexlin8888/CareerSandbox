@@ -6,7 +6,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 /* =====================================================================
-   指向模型組面試 AI 服務（獨立的 Python/FastAPI 服務，跑在 8001）的連線設定。
+   指向模型組面試 AI 服務（獨立的 Python/FastAPI 服務，跑在 8002）的連線設定。
    跟 ApiClient.kt（指向你們自己的 careersandbox-api，8000）完全獨立、互不影響。
 
    跟 ApiClient.kt 的差異：
@@ -18,7 +18,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 object InterviewAiApiClient {
     // 10.0.2.2 = 從模擬器角度看你電腦的 localhost；實機測試時要換成區網 IP，
     // 做法跟 ApiClient.kt 的 BASE_URL 完全一樣
-    private const val BASE_URL = "http://10.0.2.2:8001/"
+    private const val BASE_URL = "http://10.0.2.2:8002/"
 
     private val logging = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY

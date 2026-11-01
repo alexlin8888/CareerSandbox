@@ -1,5 +1,8 @@
 package com.careersandbox.app.ui.screens.resume
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.draw.scale
 import androidx.compose.animation.core.animateFloat
@@ -68,6 +71,10 @@ import com.careersandbox.app.ui.components.WaveHeroBackground
 import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.ui.platform.LocalUriHandler
+import com.careersandbox.app.data.repository.ReinforceGroup
+import com.careersandbox.app.data.repository.ReinforceResource
+import com.careersandbox.app.data.repository.RemoteReinforceRepository
 
 private data class Capability(
     val label: String,
@@ -78,19 +85,8 @@ private data class Capability(
     val target: Int = 80,
 )
 
-private data class FitTask(
-    val id: String,
-    val title: String,
-    val subtitle: String,
-    val tagText: String,
-    var done: Boolean = false,
-    val what: String = "",
-    val gain: String = "",
-    val hrValue: String = "",
-)
-
 @Composable
-fun FitAnalysisScreen(navController: NavHostController) {
+fun FitAnalysisScreen(navController: NavHostController, initialJobId: String? = null) {
     val capabilities = remember {
         listOf(
             Capability(
@@ -125,24 +121,6 @@ fun FitAnalysisScreen(navController: NavHostController) {
             ),
         )
     }
-    var tasks by remember {
-        mutableStateOf(
-            listOf(
-                FitTask("t1", "參加一場黑客松", "建議 4 月前完成", "創新 +12", false,
-                    what = "挑一場 2-3 天的主題黑客松(資料或產品類佳),組隊做出能 demo 的雛形,留下作品連結與一頁說明。",
-                    gain = "創新思考與快速執行——你的履歷目前少有從 0 到 1 的專案。",
-                    hrValue = "面對沒有標準答案的問題,你怎麼定義問題、做取捨、在時限內交出東西。"),
-                FitTask("t2", "寫一段失敗復原經歷", "面試考古題出現率高", "抗壓 +8", false,
-                    what = "從過去經歷挑一個卡關或搞砸的時刻,用「狀況 → 你怎麼處理 → 結果與學到什麼」寫成一段 STAR。",
-                    gain = "抗壓性與反思能力——這是面試高頻題,你的履歷現在幾乎沒有挫折敘述。",
-                    hrValue = "遇到挫折你是逃避卸責,還是承擔修正。誠實面對失敗反而加分。"),
-                FitTask("t3", "完成電商實習量化描述", "已完成 · 數據 +5", "", true,
-                    what = "把電商實習的成果補上具體數字(處理多少筆資料、效率提升幾 %、影響多少營收)。",
-                    gain = "數據能力的佐證——抽象描述換成數字,說服力差很多。",
-                    hrValue = "你做的事的規模與影響,recruiter 用數字就能快速判斷。"),
-            )
-        )
-    }
     // Top section reads the user's own job targets (job_targets). The fit score,
     // styleTag and requiredSkills come from B2 via the Node API and are cached on
     // each target; selecting a chip recomputes it so the number reflects the
@@ -152,9 +130,11 @@ fun FitAnalysisScreen(navController: NavHostController) {
     }
     val targets = RemoteResumeHierarchyProvider.jobTargets()
     val jobs = remember(targets) { targets.map { it.toJobFit() } }
-    var selectedJobId by rememberSaveable { mutableStateOf<String?>(null) }
-    if (selectedJobId == null || jobs.none { it.jobId == selectedJobId }) {
-        selectedJobId = jobs.firstOrNull()?.jobId
+    // Starts on the job passed in (e.g. from the home card). Falls back to the first job
+    // only once the list has loaded, so a passed-in id is not dropped while it is empty.
+    var selectedJobId by rememberSaveable { mutableStateOf(initialJobId) }
+    if (jobs.isNotEmpty() && (selectedJobId == null || jobs.none { it.jobId == selectedJobId })) {
+        selectedJobId = jobs.first().jobId
     }
     val fit = jobs.firstOrNull { it.jobId == selectedJobId }
 
@@ -165,6 +145,43 @@ fun FitAnalysisScreen(navController: NavHostController) {
         scoring = true
         RemoteResumeHierarchyProvider.fit(id)   // failure keeps the cached value
         scoring = false
+    }
+    // Tab state lives up here so the reinforce request can wait until the tab is opened.
+    var activeTab by remember { mutableStateOf(0) }
+
+    // 補強路徑 = POST /ai/skills/reinforce (courses + competitions per missing skill).
+    // TODO: swap this stand-in for the server-side missingSkills once /jobs/{id}/fit returns it.
+    // Until then it matches the 能力分布 tab's "還缺" list: job skills the user's profile lacks.
+    val missingSkills = remember(fit?.jobId, fit?.requiredSkills) {
+        (fit?.requiredSkills ?: emptyList())
+            .filter { it !in MockData.currentUser.skillsHave }
+            .take(5)
+    }
+    val reinforceRepo = remember { RemoteReinforceRepository() }
+    var reinforce by remember { mutableStateOf<List<ReinforceGroup>>(emptyList()) }
+    var reinforceLoading by remember { mutableStateOf(false) }
+    var reinforceError by remember { mutableStateOf<String?>(null) }
+    var reinforceRetry by remember { mutableStateOf(0) }
+    var fetchedFor by remember { mutableStateOf<List<String>?>(null) }
+    var doneIds by remember { mutableStateOf(setOf<String>()) }   // session-only "done" marks
+    LaunchedEffect(missingSkills, activeTab, reinforceRetry) {
+        if (activeTab != 1) return@LaunchedEffect
+        if (missingSkills.isEmpty()) {
+            reinforce = emptyList()
+            reinforceError = null
+            fetchedFor = missingSkills
+            return@LaunchedEffect
+        }
+        if (fetchedFor == missingSkills && reinforceError == null) return@LaunchedEffect
+        reinforceLoading = true
+        reinforceError = null
+        try {
+            reinforceRepo.reinforce(missingSkills)
+                .onSuccess { reinforce = it; fetchedFor = missingSkills }
+                .onFailure { reinforceError = it.message ?: "載入失敗,請稍後再試" }
+        } finally {
+            reinforceLoading = false
+        }
     }
 
     var visible by remember { mutableStateOf(false) }
@@ -196,7 +213,6 @@ fun FitAnalysisScreen(navController: NavHostController) {
                 }
                 Spacer(Modifier.height(20.dp))
 
-                var activeTab by remember { mutableStateOf(0) }
                 AnimatedSection(visible = visible, delayMs = 120) {
                     TabBar(
                         tabs = listOf("能力分布", "補強路徑", "推薦行動"),
@@ -241,28 +257,66 @@ fun FitAnalysisScreen(navController: NavHostController) {
                         }
                     }
                     1 -> {
-                        // === 補強路徑:任務清單 ===
+                        // === 補強路徑:AI 依缺口技能推薦的中山課程與競賽 ===
+                        val total = reinforce.sumOf { it.resources.size }
+                        val reinforcePending = reinforceLoading || (fetchedFor != missingSkills && reinforceError == null)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text("補強路徑", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 20.sp)
-                            val doneCount = tasks.count { it.done }
-                            Text("$doneCount / ${tasks.size} 完成",
-                                color = InkGray500, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            if (total > 0 && !reinforcePending) {
+                                val doneCount = reinforce.sumOf { g ->
+                                    g.resources.count { r -> "${g.skill}|${r.id}" in doneIds }
+                                }
+                                Text("$doneCount / $total 完成",
+                                    color = InkGray500, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            }
                         }
                         Spacer(Modifier.height(12.dp))
-                        Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                            tasks.forEach { task ->
-                                TaskCard(
-                                    task = task,
-                                    onToggle = {
-                                        tasks = tasks.map {
-                                            if (it.id == task.id) it.copy(done = !it.done) else it
-                                        }
-                                    },
+                        when {
+                            fit == null -> ReinforceNotice("先新增一個職缺,才能看到補強建議")
+                            missingSkills.isEmpty() -> ReinforceNotice("這份職缺沒有列出可比對的技能缺口,暫時沒有補強建議")
+                            reinforcePending -> Row(verticalAlignment = Alignment.CenterVertically) {
+                                CircularProgressIndicator(
+                                    color = BrandDeepOrange, strokeWidth = 2.dp, modifier = Modifier.size(18.dp),
                                 )
+                                Spacer(Modifier.width(10.dp))
+                                Text("正在找能補這些技能的課程與競賽…", color = InkGray500, fontSize = 13.sp)
+                            }
+                            reinforceError != null -> Column {
+                                ReinforceNotice(reinforceError ?: "")
+                                Spacer(Modifier.height(10.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(InkBlack)
+                                        .pressScale { reinforceRetry += 1 }
+                                        .padding(horizontal = 18.dp, vertical = 10.dp),
+                                ) {
+                                    Text("重試", color = PaperWhite, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                }
+                            }
+                            reinforce.isEmpty() -> ReinforceNotice("目前沒有可推薦的課程或競賽")
+                            else -> Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                                reinforce.forEach { group ->
+                                    if (group.resources.isEmpty()) {
+                                        Text("「${group.skill}」暫無推薦", color = InkGray400, fontSize = 12.sp)
+                                    } else {
+                                        group.resources.forEach { r ->
+                                            val key = "${group.skill}|${r.id}"
+                                            ResourceCard(
+                                                resource = r,
+                                                skill = group.skill,
+                                                done = key in doneIds,
+                                                onToggle = {
+                                                    doneIds = if (key in doneIds) doneIds - key else doneIds + key
+                                                },
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
                         Spacer(Modifier.height(28.dp))
@@ -526,6 +580,7 @@ private fun FitHeroJobCard(fit: JobFit, scoring: Boolean = false) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun JobSelectorRow(
     jobs: List<JobFit>,
@@ -565,10 +620,14 @@ private fun JobSelectorRow(
                     .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                jobs.forEach { job ->
+                jobs.forEach { job -> key(job.jobId) {
                     val sel = job.jobId == selectedId
+                    // Scroll the chosen chip into view, e.g. when opened from the home card.
+                    val chipRequester = remember { BringIntoViewRequester() }
+                    LaunchedEffect(sel) { if (sel) chipRequester.bringIntoView() }
                     Box(
                         modifier = Modifier
+                            .bringIntoViewRequester(chipRequester)
                             .clip(RoundedCornerShape(50))
                             .background(if (sel) InkBlack else PaperWhite)
                             .pressScale { onSelect(job.jobId) }
@@ -585,7 +644,7 @@ private fun JobSelectorRow(
                             modifier = Modifier.widthIn(max = 180.dp),
                         )
                     }
-                }
+                } }
             }
         }
     }
@@ -859,9 +918,21 @@ private fun CapabilityRow(cap: Capability) {
 }
 
 @Composable
-private fun TaskCard(task: FitTask, onToggle: () -> Unit) {
+private fun ReinforceNotice(text: String) {
+    Text(text, color = InkGray500, fontSize = 13.sp, lineHeight = 19.sp)
+}
+
+/** One recommended course / competition from POST /ai/skills/reinforce. */
+@Composable
+private fun ResourceCard(resource: ReinforceResource, skill: String, done: Boolean, onToggle: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
-    val hasDetail = task.what.isNotEmpty()
+    val tagText = when (resource.type) {
+        "course" -> "課程"
+        "competition" -> "競賽"
+        else -> resource.type
+    }
+    val hasDetail = resource.provider.isNotBlank() || resource.deadline.isNotBlank() ||
+            resource.note.isNotBlank() || resource.url.isNotBlank()
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -876,7 +947,7 @@ private fun TaskCard(task: FitTask, onToggle: () -> Unit) {
                 modifier = Modifier.size(24.dp).pressScale(onClick = onToggle),
                 contentAlignment = Alignment.Center,
             ) {
-                if (task.done) {
+                if (done) {
                     Box(
                         modifier = Modifier.size(24.dp).clip(CircleShape).background(BrandDeepOrange),
                         contentAlignment = Alignment.Center,
@@ -896,21 +967,21 @@ private fun TaskCard(task: FitTask, onToggle: () -> Unit) {
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    task.title,
-                    color = if (task.done) InkGray500 else InkBlack,
+                    resource.title,
+                    color = if (done) InkGray500 else InkBlack,
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
-                    textDecoration = if (task.done) TextDecoration.LineThrough else TextDecoration.None,
+                    textDecoration = if (done) TextDecoration.LineThrough else TextDecoration.None,
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    task.subtitle,
-                    color = if (task.done) AccentGreen else InkGray500,
+                    if (done) "已完成" else "補強:$skill",
+                    color = if (done) AccentGreen else InkGray500,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
             }
-            if (!task.done && task.tagText.isNotEmpty()) {
+            if (tagText.isNotBlank()) {
                 Spacer(Modifier.width(8.dp))
                 Box(
                     modifier = Modifier
@@ -918,7 +989,7 @@ private fun TaskCard(task: FitTask, onToggle: () -> Unit) {
                         .background(BrandPeach)
                         .padding(horizontal = 9.dp, vertical = 4.dp),
                 ) {
-                    Text(task.tagText, color = BrandDeepOrange, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    Text(tagText, color = BrandDeepOrange, fontWeight = FontWeight.Bold, fontSize = 11.sp)
                 }
             }
             if (hasDetail) {
@@ -932,14 +1003,43 @@ private fun TaskCard(task: FitTask, onToggle: () -> Unit) {
             }
         }
         androidx.compose.animation.AnimatedVisibility(visible = expanded) {
-            Column(modifier = Modifier.padding(top = 12.dp, start = 36.dp, end = 4.dp)) {
-                TaskDetailRow("具體做什麼", task.what)
-                Spacer(Modifier.height(9.dp))
-                TaskDetailRow("補強什麼", task.gain)
-                Spacer(Modifier.height(9.dp))
-                TaskDetailRow("HR 想看到", task.hrValue)
+            Column(
+                modifier = Modifier.padding(top = 12.dp, start = 36.dp, end = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(9.dp),
+            ) {
+                if (resource.provider.isNotBlank()) {
+                    TaskDetailRow(if (resource.type == "competition") "主辦單位" else "開課單位", resource.provider)
+                }
+                if (resource.deadline.isNotBlank()) TaskDetailRow("截止日期", resource.deadline)
+                if (resource.note.isNotBlank()) TaskDetailRow("為什麼推薦", resource.note)
+                if (resource.url.isNotBlank()) ResourceLinkRow(resource.url)
             }
         }
+    }
+}
+
+@Composable
+private fun ResourceLinkRow(url: String) {
+    val uriHandler = LocalUriHandler.current
+    Column {
+        Text(
+            "連結",
+            color = BrandDeepOrange,
+            fontWeight = FontWeight.Black,
+            fontSize = 11.sp,
+            letterSpacing = 0.5.sp,
+        )
+        Spacer(Modifier.height(3.dp))
+        Text(
+            url,
+            color = BrandDeepOrange,
+            fontSize = 12.sp,
+            lineHeight = 17.sp,
+            textDecoration = TextDecoration.Underline,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            modifier = Modifier.pressScale { runCatching { uriHandler.openUri(url) } },
+        )
     }
 }
 

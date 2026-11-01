@@ -9,6 +9,7 @@ data class UserProfileResponse(
     val userId: String,
     val name: String,
     val email: String,
+    val contactEmail: String = "",
     val school: String = "",
     val department: String = "",
     val year: String = "",
@@ -27,6 +28,7 @@ data class UserProfileResponse(
 // the fields you actually set get sent (true partial update)
 data class UpdateProfileRequest(
     val name: String? = null,
+    val contactEmail: String? = null,
     val school: String? = null,
     val department: String? = null,
     val year: String? = null,

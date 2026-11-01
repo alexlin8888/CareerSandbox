@@ -69,6 +69,10 @@ object Routes {
     const val CAREER_EXPLORATION = "career_exploration"
     const val LEARNING_PATH = "learning_path"
     const val FIT_ANALYSIS = "fit_analysis"
+    // Optional jobId preselects that job target on the fit analysis screen.
+    const val FIT_ANALYSIS_ROUTE = "fit_analysis?jobId={jobId}"
+    fun fitAnalysis(jobId: String? = null) =
+        if (jobId == null) FIT_ANALYSIS else "$FIT_ANALYSIS?jobId=$jobId"
 
     const val COMPETITION_LIST = "competition_list"
     const val COMPETITION_DETAIL = "competition_detail/{compId}"
