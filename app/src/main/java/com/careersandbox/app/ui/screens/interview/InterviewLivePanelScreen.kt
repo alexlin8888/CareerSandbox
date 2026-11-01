@@ -54,6 +54,7 @@ import com.careersandbox.app.data.remote.InterviewAiApiClient
 import com.careersandbox.app.data.remote.InterviewContextDto
 import com.careersandbox.app.data.remote.TurnRequest
 import com.careersandbox.app.data.remote.toContextDto
+import com.careersandbox.app.data.repository.TranscriptionResult
 
 /* =====================================================================
    主管 panel 面試(場景式,真流程)
@@ -91,13 +92,13 @@ private fun faceFor(who: String, d: Int): Int = when (who) {
 
 private fun accentFor(who: String): Color = seats.firstOrNull { it.who == who }?.accent ?: BrandAmber
 
-// 反應啟發式(報告接後端評分後可改吃真分數)
+// Length says nothing about quality, so the front end never rewards an answer with a nod.
+// A positive reaction needs a content judgment from the model.
 private fun deltaFor(answer: String): Int = when {
     answer.isBlank() -> 0
-    answer.contains("不知道") || answer.contains("不確定") || answer.contains("沒想過") -> -1
-    answer.length >= 24 -> 1
-    answer.length >= 10 -> 0
-    else -> -1
+    answer.length <= 20 && (answer.contains("不知道") || answer.contains("不確定") || answer.contains("沒想過")) -> -1
+    answer.length < 10 -> -1
+    else -> 0
 }
 private fun reactionText(d: Int): String = when {
     d >= 1 -> "認可地點點頭"
@@ -142,11 +143,18 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
     val timerText = "${(elapsedSec / 60).toString().padStart(2, '0')}:${(elapsedSec % 60).toString().padStart(2, '0')}"
     val role = InterviewConfig.customRole.ifBlank { "Junior PM" }
 
-    fun submitAnswer(transcript: String, endedBy: String = "unknown", inputMode: String = "voice") {
+    fun submitAnswer(
+        transcript: String,
+        segments: List<String> = emptyList(),
+        segmentStartsMs: List<Long> = emptyList(),
+        endedBy: String = "unknown",
+        inputMode: String = "voice",
+        segmentEndsMs: List<Long> = emptyList(),
+    ) {
         if (introPlaying || transcript.isBlank() || answer.isNotBlank()) return
         answer = transcript
         answerMode = inputMode
-        InterviewSession.record(question, transcript, inputMode = inputMode, endedBy = endedBy)
+        InterviewSession.record(question, transcript, segments, segmentStartsMs, inputMode, endedBy, segmentEndsMs)
         reactingDelta = deltaFor(transcript)
         scope.launch {
             delay(1700)
@@ -214,7 +222,7 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
     }
 
     var isTranscribing by remember { mutableStateOf(false) }
-    var pendingTranscript by remember { mutableStateOf<String?>(null) }
+    var pendingResult by remember { mutableStateOf<TranscriptionResult?>(null) }
     var pendingEndedBy by remember { mutableStateOf("unknown") }
     val transcribeRepo = remember { RemoteTranscribeRepository() }
     val recorder = rememberInPageAudioRecorder(maxDurationMs = 120_000L) { file, endedBy ->
@@ -222,7 +230,7 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
         pendingEndedBy = endedBy
         scope.launch {
             transcribeRepo.transcribe(file)
-                .onSuccess { result -> pendingTranscript = result.text }
+                .onSuccess { result -> pendingResult = result }
                 .onFailure { /* 轉錄失敗：先讓使用者看到麥克風按鈕重新出現，可以再錄一次 */ }
             isTranscribing = false
             file.delete()
@@ -346,7 +354,7 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
             }
 
             Spacer(Modifier.height(12.dp))
-            val pending = pendingTranscript
+            val pending = pendingResult
             if (finished) {
                 Box(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(999.dp))
@@ -366,13 +374,13 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
                 ) {
                     Text("確認這段回答內容：", color = Color(0xFF9A6A3A), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(4.dp))
-                    Text(pending, color = Color(0xFF1F2937), fontSize = 13.sp, lineHeight = 20.sp)
+                    Text(pending.text, color = Color(0xFF1F2937), fontSize = 13.sp, lineHeight = 20.sp)
                     Spacer(Modifier.height(10.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Box(
                             Modifier.weight(1f).clip(RoundedCornerShape(999.dp))
                                 .background(Color(0x14000000))
-                                .clickable { pendingTranscript = null }
+                                .clickable { pendingResult = null }
                                 .padding(vertical = 10.dp),
                             contentAlignment = Alignment.Center,
                         ) { Text("重新錄音", color = Color(0xFF6B5B4A), fontSize = 12.sp, fontWeight = FontWeight.Bold) }
@@ -380,8 +388,11 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
                             Modifier.weight(1f).clip(RoundedCornerShape(999.dp))
                                 .background(BrandOrange)
                                 .clickable {
-                                    submitAnswer(pending, pendingEndedBy)
-                                    pendingTranscript = null
+                                    submitAnswer(
+                                        pending.text, pending.segmentTexts, pending.segmentStartsMs, pendingEndedBy,
+                                        segmentEndsMs = pending.segmentEndsMs,
+                                    )
+                                    pendingResult = null
                                 }
                                 .padding(vertical = 10.dp),
                             contentAlignment = Alignment.Center,
