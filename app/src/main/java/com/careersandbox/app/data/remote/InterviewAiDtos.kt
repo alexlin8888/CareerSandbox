@@ -139,6 +139,7 @@ data class ReportRequest(
     val experiences: List<ExperienceDto> = emptyList(),
     val turns: List<TurnDto> = emptyList(),
     val groupSays: List<UtteranceDto> = emptyList(),
+    val jdSkills: List<String> = emptyList(),
 )
 
 // 對應 ProsodyItem
@@ -205,7 +206,7 @@ data class MissingPointDto(
 // 對應 ReportResponse
 data class ReportResponse(
     val overallScore: Double? = null,
-    val scoreBasis: String? = null,
+    val scoreBasis: Int? = null,
     val mode: String,
     val faceDimensions: List<FaceDimensionDto> = emptyList(),
     val subScores: List<SubScoreDto> = emptyList(),

@@ -56,7 +56,7 @@ fun InterviewReportScreen(navController: NavHostController) {
     // 只有剛做完影像面試才顯示影像維度;讀取後重置,避免下次文字/語音面試誤顯示。
     val showVideoDims = remember { InterviewConfig.lastWasVideo }
     // 只有剛做完團體面試才顯示協作維度;同樣讀取後重置。
-    val showCollab = remember { InterviewConfig.lastWasGroup }
+    val showCollab = remember { InterviewConfig.format == "group" }
     // A report only makes sense when the user answered at least one question.
     val hasAnswers = remember {
         InterviewSession.turns.isNotEmpty() || InterviewSession.groupTranscript.any { it.isUser }
@@ -134,6 +134,7 @@ fun InterviewReportScreen(navController: NavHostController) {
                         experiences = experiences,
                         turns = turns,
                         groupSays = if (isGroup) InterviewSession.groupTranscript.map { it.toDto() } else emptyList(),
+                        jdSkills = InterviewAiSession.jdSkills,
                     ),
                 )
                 if (res.isSuccessful && res.body() != null) {
@@ -312,7 +313,14 @@ fun InterviewReportScreen(navController: NavHostController) {
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 letterSpacing = 2.sp)
-                            report?.scoreBasis?.takeIf { it.isNotBlank() }?.let {
+                            val basis = report?.scoreBasis
+                            val basisNote = when {
+                                basis == null -> null
+                                basis == 0 -> "本場無法評分"
+                                basis in 1..5 -> "依 $basis 項計算"
+                                else -> null
+                            }
+                            basisNote?.let {
                                 Spacer(Modifier.height(8.dp))
                                 Text(it, color = InkGray400, fontSize = 12.sp, lineHeight = 18.sp,
                                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -407,7 +415,7 @@ fun InterviewReportScreen(navController: NavHostController) {
                 }
 
                 // === 協作維度（只在剛做完團體面試時顯示）===
-                if (showCollab && collabEnabled) {
+                if (showCollab && collabEnabled && (report == null || report.mode == "group")) {
                     SectionTitleDark("協作維度")
                     Spacer(Modifier.height(6.dp))
                     Text("這是團體面試的協作參考——看的是你在討論中怎麼互動,不是排名,也不是評分。",
@@ -548,11 +556,31 @@ private fun SectionTitleDark(text: String) {
         Box(Modifier.size(6.dp).clip(CircleShape).background(BrandYellow))
     }
 }
+// Plain-language fallback for sub-scores whose basis is empty; wording should match the model team's rubric.
+private val DimensionHints = mapOf(
+    "邏輯清晰度" to "看你的回答有沒有先給結論,再依序說明原因與做法。",
+    "互動能力" to "看你有沒有回應問題的重點,和面試官一來一往是否自然。",
+    "應變能力" to "看被追問或遇到沒準備過的問題時,你怎麼接住並繼續回答。",
+    "自信程度" to "看你的用詞與語氣是否肯定,有沒有一直否定或貶低自己。",
+)
 
+// Rewrites the backend's terse basis strings into sentences; unknown formats pass through unchanged.
+private fun friendlyBasis(raw: String): String {
+    Regex("STAR\\s*命中\\s*(\\d+)\\s*/\\s*4\\s*段[,，]\\s*數字與量化詞\\s*(\\d+)\\s*處").find(raw)?.let {
+        val (hit, nums) = it.destructured
+        return "你的回答涵蓋 STAR 四段(情境、任務、行動、結果)中的 $hit 段,提到 $nums 處具體數字。"
+    }
+    Regex("詞彙型填充詞每百字\\s*([0-9.]+)").find(raw)?.let {
+        return "每 100 字約有 ${it.groupValues[1]} 個填充詞(像「這個」「就是」)。"
+    }
+    return raw
+}
 @Composable
 private fun DimensionRow(name: String, rawScore: Int?, basis: String = "") {
     val score = rawScore ?: 0
-    val note = basis.ifBlank { if (rawScore == null) "這場資料不足,暫不評分" else "" }
+    val note = friendlyBasis(basis).ifBlank {
+        if (rawScore == null) "這場資料不足,暫不評分" else DimensionHints[name].orEmpty()
+    }
     val color = if (rawScore == null) InkGray400 else when {
         score >= 80 -> AccentGreen
         score >= 65 -> BrandOrange
