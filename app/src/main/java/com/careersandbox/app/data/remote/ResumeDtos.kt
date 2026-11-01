@@ -25,6 +25,7 @@ data class JobTargetDto(
     val jdKeywords: List<String>?,
     val versions: List<ResumeVersionDto>?,
     val jdSnippet: String?,
+    val jdSnapshot: String?,
     val matchScore: Int?,
     val styleTag: String?,
     val requiredSkills: List<String>?,

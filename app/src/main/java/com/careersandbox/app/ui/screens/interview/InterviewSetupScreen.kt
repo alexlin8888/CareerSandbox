@@ -123,7 +123,10 @@ fun InterviewSetupScreen(navController: NavHostController) {
                                 InterviewConfig.customCompany = selectedTarget?.company.orEmpty()
                                 InterviewConfig.customSeniority = "新鮮人"
                                 InterviewConfig.customIndustry = ""
-                                InterviewConfig.customJd = selectedTarget?.jdSnippet.orEmpty()
+                                // Full JD when the backend has it; the 80-char snippet is only a fallback
+                                InterviewConfig.customJd = selectedTarget
+                                    ?.let { it.jdSnapshot.ifBlank { it.jdSnippet } }
+                                    .orEmpty()
                             }
                             showWarmup = true
                         },

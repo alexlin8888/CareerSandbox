@@ -117,7 +117,9 @@ fun InterviewSetupGroupScreen(navController: NavHostController) {
                             } else {
                                 InterviewConfig.customRole = selectedTarget?.title.orEmpty()
                                 InterviewConfig.customCompany = selectedTarget?.company.orEmpty()
-                                InterviewConfig.customJd = selectedTarget?.jdSnippet.orEmpty()
+                                InterviewConfig.customJd = selectedTarget
+                                    ?.let { it.jdSnapshot.ifBlank { it.jdSnippet } }
+                                    .orEmpty()
                             }
                             starting = true
                             // Wait for the opening response before navigating, so the live screen

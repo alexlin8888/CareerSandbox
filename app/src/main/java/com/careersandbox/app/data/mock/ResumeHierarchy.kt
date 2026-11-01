@@ -53,6 +53,7 @@ data class JobTarget(
     val jdKeywords: List<String>,
     val versions: List<ResumeVersion>,
     val jdSnippet: String = "",
+    val jdSnapshot: String = "",           // full JD, line breaks kept
     val matchScore: Int? = null,           // null = not scored yet
     val styleTag: String = "",
     val requiredSkills: List<String> = emptyList(),
