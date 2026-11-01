@@ -151,7 +151,7 @@ data class ProsodyItemDto(
 data class FaceDimensionDto(
     val letter: String,
     val name: String,
-    val score: Int,
+    val score: Double,
     val verdict: String,
     val points: List<String> = emptyList(),
     val prosody: List<ProsodyItemDto>? = null,
@@ -161,7 +161,7 @@ data class FaceDimensionDto(
 data class SubScoreDto(
     val basis: String? = null,
     val name: String,
-    val score: Int,
+    val score: Double,
 )
 
 // 對應 QuestionFeedbackDTO
@@ -184,14 +184,14 @@ data class StarPartDto(
 // 對應 VideoDimDTO（這次一定是空陣列，本期沒做，但型別要存在）
 data class VideoDimDto(
     val name: String,
-    val score: Int,
+    val score: Double,
     val hint: String = "",
 )
 
 // 對應 CollabDimDTO（一對一模式這次也一定是空陣列，只有 group 才有內容）
 data class CollabDimDto(
     val name: String,
-    val score: Int,
+    val score: Double,
     val hint: String = "",
     val evidence: String = "",
 )
@@ -204,7 +204,7 @@ data class MissingPointDto(
 
 // 對應 ReportResponse
 data class ReportResponse(
-    val overallScore: Int? = null,
+    val overallScore: Double? = null,
     val scoreBasis: String? = null,
     val mode: String,
     val faceDimensions: List<FaceDimensionDto> = emptyList(),

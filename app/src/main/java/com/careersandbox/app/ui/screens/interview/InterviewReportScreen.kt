@@ -48,6 +48,7 @@ import com.careersandbox.app.data.repository.RemoteExperienceRepository
 import kotlinx.coroutines.launch
 import com.careersandbox.app.data.remote.toDto
 import com.careersandbox.app.data.remote.toGroupTurns
+import kotlin.math.roundToInt
 
 @Composable
 fun InterviewReportScreen(navController: NavHostController) {
@@ -138,9 +139,7 @@ fun InterviewReportScreen(navController: NavHostController) {
                 if (res.isSuccessful && res.body() != null) {
                     InterviewAiReport.response = res.body()
                 }
-            } catch (e: Exception) {
-                // 失敗就維持 null，畫面會自動退回原本的假資料，不會卡住或閃退
-            }
+            } catch (e: Exception) { android.util.Log.e("AI_REPORT", "getReport failed", e) }
             isLoadingReport = false
         }
     }
@@ -297,7 +296,7 @@ fun InterviewReportScreen(navController: NavHostController) {
                             val scored = com.careersandbox.app.data.mock.MockInterviewReportProvider
                                 .subScores().mapNotNull { it.score }
                             // Prefer the backend's overallScore; a real report with nothing scored shows "—"
-                            val overallScore: Int? = report?.overallScore
+                            val overallScore: Int? = report?.overallScore?.roundToInt()
                                 ?: if (scored.isNotEmpty()) scored.sum() / scored.size
                                 else if (report == null) 74 else null
                             Spacer(Modifier.height(20.dp))
@@ -967,7 +966,7 @@ private fun CollabDimensionSection() {
     val real = InterviewAiReport.response?.collabDims.orEmpty()
     val usingReal = real.isNotEmpty()
     val rows = if (usingReal) {
-        real.map { CollabRow(it.name, it.score, it.hint, it.evidence) }
+        real.map { CollabRow(it.name, score = it.score.roundToInt(), it.hint, it.evidence) }
     } else {
         com.careersandbox.app.data.mock.MockInterviewReportProvider.collabDims()
             .map { CollabRow(it.name, it.score, it.hint, "") }
