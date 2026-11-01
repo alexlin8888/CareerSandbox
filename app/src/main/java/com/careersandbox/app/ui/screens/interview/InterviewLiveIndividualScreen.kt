@@ -51,7 +51,7 @@ import com.careersandbox.app.data.repository.TranscriptionResult
 import com.careersandbox.app.data.mock.InterviewAiSession
 import androidx.compose.runtime.mutableStateListOf
 import com.careersandbox.app.data.remote.InterviewAiApiClient
-import com.careersandbox.app.data.remote.InterviewContextDto
+import com.careersandbox.app.data.remote.toContextDto
 import com.careersandbox.app.data.remote.TurnRequest
 import com.careersandbox.app.data.mock.InterviewAiReport
 
@@ -167,19 +167,29 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
     val reverses = if (lang == "English") reverseOptionsEn else reverseOptions
 
     var phase by remember { mutableStateOf("MAIN") }   // MAIN / REVERSE / CLOSING / DONE
-    var question by remember { mutableStateOf(openingQ) }
+    val openingIntro = InterviewAiSession.openingIntro.orEmpty()
+    // The intro shows first as its own line; answering unlocks once the question appears.
+    var introPlaying by remember { mutableStateOf(openingIntro.isNotBlank()) }
+    var question by remember { mutableStateOf(if (openingIntro.isNotBlank()) openingIntro else openingQ) }
     var answer by remember { mutableStateOf("") }
     var reactingDelta by remember { mutableIntStateOf(0) }
     var followUpIdx by remember { mutableIntStateOf(0) }
     var lastProbe by remember { mutableStateOf("") }
-    var repeatFired by remember { mutableStateOf(false) }
     var elapsedSec by remember { mutableIntStateOf(0) }
     var input by remember { mutableStateOf("") }
     var answerMode by remember { mutableStateOf("voice") }   // voice / typed
-    val askedTopics = remember { mutableStateListOf<String>() }
+    val askedTopics = remember {
+        mutableStateListOf<String>().apply {
+            // Seed with the opening topic, same as the group screen.
+            InterviewAiSession.openingTopic.takeIf { it.isNotBlank() }?.let { add(it) }
+        }
+    }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) { InterviewSession.reset(); InterviewAiReport.reset(); while (true) { delay(1000); elapsedSec++ } }
+    LaunchedEffect(Unit) {
+        if (introPlaying) { delay(3000); question = openingQ; introPlaying = false }
+    }
     val timerText = "${(elapsedSec / 60).toString().padStart(2, '0')}:${(elapsedSec % 60).toString().padStart(2, '0')}"
     val role = InterviewConfig.customRole.ifBlank { "Junior PM" }
 
@@ -189,19 +199,16 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
         segmentStartsMs: List<Long> = emptyList(),
         endedBy: String = "unknown",
         inputMode: String = "voice",
+        segmentEndsMs: List<Long> = emptyList(),
     ) {
-        if (phase != "MAIN" || transcript.isBlank() || answer.isNotBlank()) return
+        if (phase != "MAIN" || introPlaying || transcript.isBlank() || answer.isNotBlank()) return
         answer = transcript
         answerMode = inputMode
-        InterviewSession.record(question, transcript, segments, segmentStartsMs, inputMode, endedBy)
+        InterviewSession.record(question, transcript, segments, segmentStartsMs, inputMode, endedBy, segmentEndsMs)
         reactingDelta = deltaFor(transcript)
         scope.launch {
             delay(1500)
             val reply = when {
-                followUpIdx == 2 && !repeatFired -> {
-                    repeatFired = true
-                    t("(他翻回上一頁。)讓我再問一次：$lastProbe", "(He flips back a page.) Let me ask that one again: $lastProbe")
-                }
                 followUpIdx >= 4 -> {
                     phase = "REVERSE"
                     t("好，主要問題就先到這邊。最後想請問，你有什麼想問我們的嗎？", "Alright, that covers the main questions. One last thing: what would you like to ask us?")
@@ -219,18 +226,22 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
                                 mode = "single",
                                 inputMode = inputMode,
                                 endedBy = endedBy,
-                                context = InterviewContextDto(
-                                    round = InterviewConfig.round,
-                                    language = InterviewConfig.language,
-                                    type = InterviewConfig.type,
-                                    difficulty = InterviewConfig.difficulty,
-                                ),
+                                context = InterviewConfig.toContextDto(),
                                 askedTopics = askedTopics.toList(),
+                                askedQuestions = InterviewAiSession.askedQuestions.toList(),
+                                probeGap = InterviewAiSession.probeGap,
+                                probeDepth = InterviewAiSession.probeDepth,
+                                jdSkills = InterviewAiSession.jdSkills,
+                                experiences = InterviewAiSession.experiences,
                             ),
                         )
                         if (res.isSuccessful && res.body() != null) {
                             val body = res.body()!!
                             if (body.topic.isNotBlank()) askedTopics.add(body.topic)
+                            // Echo the model's probe state back next turn (store-and-echo)
+                            InterviewAiSession.probeGap = body.probeGap.orEmpty()
+                            InterviewAiSession.probeDepth = body.probeDepth ?: 0
+                            if (body.nextQuestion.isNotBlank()) InterviewAiSession.askedQuestions.add(body.nextQuestion)
                             body.nextQuestion
                         } else {
                             MockInterviewProber.probe(transcript, followUpIdx, probes).also { lastProbe = it }
@@ -428,7 +439,10 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
                                     Modifier.weight(1f).clip(RoundedCornerShape(999.dp))
                                         .background(BrandOrange)
                                         .clickable {
-                                            submitAnswer(pending.text, pending.segmentTexts, pending.segmentStartsMs, pendingEndedBy)
+                                            submitAnswer(
+                                                pending.text, pending.segmentTexts, pending.segmentStartsMs, pendingEndedBy,
+                                                segmentEndsMs = pending.segmentEndsMs,
+                                            )
                                             pendingResult = null
                                         }
                                         .padding(vertical = 10.dp),
@@ -451,7 +465,7 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
                             Text(t("轉錄中...", "Transcribing..."), color = Color(0x99FFFFFF), fontSize = 12.sp)
                         }
                     } else {
-                        val canSend = input.isNotBlank() && answer.isBlank()
+                        val canSend = input.isNotBlank() && answer.isBlank() && !introPlaying
                         Row(verticalAlignment = Alignment.Bottom) {
                             RecordingMicButton(
                                 isRecording = recorder.isRecording,
@@ -459,17 +473,17 @@ fun InterviewLiveIndividualScreen(navController: NavHostController) {
                                 elapsedMs = recorder.elapsedMs,
                                 maxDurationMs = 120_000L,
                                 size = 48.dp,
-                                idleEnabled = answer.isBlank(),
+                                idleEnabled = answer.isBlank() && !introPlaying,
                                 onClick = {
                                     if (recorder.isRecording) recorder.stop()
-                                    else if (answer.isBlank()) recorder.start()
+                                    else if (answer.isBlank() && !introPlaying) recorder.start()
                                 },
                             )
                             Spacer(Modifier.width(8.dp))
                             OutlinedTextField(
                                 value = input,
                                 onValueChange = { input = it },
-                                enabled = answer.isBlank() && !recorder.isRecording,
+                                enabled = answer.isBlank() && !recorder.isRecording && !introPlaying,
                                 modifier = Modifier.weight(1f),
                                 placeholder = {
                                     Text(t("輸入你的回答", "Type your answer"), color = Color(0x80FFFFFF), fontSize = 13.sp)

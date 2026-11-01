@@ -15,6 +15,7 @@ object InterviewSession {
         val segmentStartsMs: List<Long> = emptyList(),
         val inputMode: String = "voice",
         val endedBy: String = "unknown",
+        val segmentEndsMs: List<Long> = emptyList(),
     )
     /** 團體面試完整逐字稿:依實際發生順序記錄每一句話跟說話者(使用者或 AI 隊友)。*/
     data class GroupUtterance(
@@ -25,6 +26,7 @@ object InterviewSession {
         val segmentStartsMs: List<Long> = emptyList(),
         val inputMode: String = "unknown",
         val endedBy: String = "unknown",
+        val segmentEndsMs: List<Long> = emptyList(),
     )
 
     fun recordGroupUtterance(
@@ -35,10 +37,11 @@ object InterviewSession {
         segmentStartsMs: List<Long> = emptyList(),
         inputMode: String = "unknown",
         endedBy: String = "unknown",
+        segmentEndsMs: List<Long> = emptyList(),
     ) {
         if (content.isBlank()) return
         groupTranscript.add(
-            GroupUtterance(speaker.trim(), content.trim(), isUser, segments, segmentStartsMs, inputMode, endedBy)
+            GroupUtterance(speaker.trim(), content.trim(), isUser, segments, segmentStartsMs, inputMode, endedBy, segmentEndsMs)
         )
     }
 
@@ -62,9 +65,10 @@ object InterviewSession {
         segmentStartsMs: List<Long> = emptyList(),
         inputMode: String = "voice",
         endedBy: String = "unknown",
+        segmentEndsMs: List<Long> = emptyList(),
     ) {
         if (answer.isBlank()) return
-        turns.add(Turn(question.trim(), answer.trim(), answerSegments, segmentStartsMs, inputMode, endedBy))
+        turns.add(Turn(question.trim(), answer.trim(), answerSegments, segmentStartsMs, inputMode, endedBy, segmentEndsMs))
     }
 
     fun recordGroupSay(text: String) {

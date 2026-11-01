@@ -1,5 +1,6 @@
 package com.careersandbox.app.data.mock
 
+import kotlin.math.roundToInt
 /* =====================================================================
    面試報告 —— 核心回饋資料層(後端接點)
 
@@ -29,7 +30,7 @@ data class FaceDimension(
 )
 
 /** 一項細分能力分數 */
-data class SubScore(val name: String, val score: Int)
+data class SubScore(val name: String, val score: Int?, val basis: String = "")
 
 /** 逐題回顧:你的回答 + 點評 + 更好的講法 */
 data class QuestionFeedback(
@@ -73,7 +74,7 @@ object MockInterviewReportProvider : InterviewReportProvider {
         if (real != null && real.faceDimensions.isNotEmpty()) {
             return real.faceDimensions.map { d ->
                 FaceDimension(
-                    letter = d.letter, name = d.name, score = d.score, verdict = d.verdict,
+                    letter = d.letter, name = d.name, score = d.score.roundToInt(), verdict = d.verdict,
                     points = d.points, prosody = d.prosody?.map { it.label to it.value },
                 )
             }
@@ -116,7 +117,7 @@ object MockInterviewReportProvider : InterviewReportProvider {
     override fun subScores(): List<SubScore> {
         val real = InterviewAiReport.response
         if (real != null && real.subScores.isNotEmpty()) {
-            return real.subScores.map { SubScore(it.name, it.score) }
+            return real.subScores.map { SubScore(it.name, score = it.score.roundToInt(), it.basis.orEmpty()) }
         }
         return listOf(
         SubScore("內容深度", 78),
@@ -181,7 +182,7 @@ object MockInterviewReportProvider : InterviewReportProvider {
     override fun videoDims(): List<VideoDim> {
         val real = InterviewAiReport.response
         if (real != null && real.videoDims.isNotEmpty()) {
-            return real.videoDims.map { VideoDim(it.name, it.score, it.hint) }
+            return real.videoDims.map { VideoDim(it.name, score = it.score.roundToInt(), it.hint) }
         }
         return listOf(
             VideoDim(
@@ -196,7 +197,7 @@ object MockInterviewReportProvider : InterviewReportProvider {
     override fun collabDims(): List<CollabDim> {
         val real = InterviewAiReport.response
         if (real != null && real.collabDims.isNotEmpty()) {
-            return real.collabDims.map { CollabDim(it.name, it.score, it.hint) }
+            return real.collabDims.map { CollabDim(it.name, score = it.score.roundToInt(), it.hint) }
         }
         return listOf(
             CollabDim(

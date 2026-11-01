@@ -53,6 +53,7 @@ import com.careersandbox.app.data.mock.InterviewAiSession
 import com.careersandbox.app.data.remote.InterviewAiApiClient
 import com.careersandbox.app.data.remote.InterviewContextDto
 import com.careersandbox.app.data.remote.TurnRequest
+import com.careersandbox.app.data.remote.toContextDto
 
 /* =====================================================================
    主管 panel 面試(場景式,真流程)
@@ -109,24 +110,40 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
     var currentAsker by remember {
         mutableStateOf(InterviewAiSession.openingSpeaker.ifBlank { "HR 主管" })
     }
-    var question by remember { mutableStateOf(InterviewAiSession.openingQuestion ?: OPENING_Q) }
+    val openingQ = InterviewAiSession.openingQuestion ?: OPENING_Q
+    val openingIntro = InterviewAiSession.openingIntro.orEmpty()
+    var introPlaying by remember { mutableStateOf(openingIntro.isNotBlank()) }
+    var question by remember { mutableStateOf(if (openingIntro.isNotBlank()) openingIntro else openingQ) }
     var answer by remember { mutableStateOf("") }
     var input by remember { mutableStateOf("") }
     var answerMode by remember { mutableStateOf("voice") }   // voice / typed
     var reactingDelta by remember { mutableIntStateOf(0) }
     var followUpIdx by remember { mutableIntStateOf(0) }
     var elapsedSec by remember { mutableIntStateOf(0) }
-    val askedTopics = remember { mutableStateListOf<String>() }
-    val spokenBy = remember { mutableStateListOf<String>() }
+    val askedTopics = remember {
+        mutableStateListOf<String>().apply {
+            // Seed with the opening topic, same as the group screen.
+            InterviewAiSession.openingTopic.takeIf { it.isNotBlank() }?.let { add(it) }
+        }
+    }
+    val spokenBy = remember {
+        mutableStateListOf<String>().apply {
+            // The opening speaker already spoke, same as the group screen.
+            InterviewAiSession.openingSpeaker.takeIf { it.isNotBlank() }?.let { add(it) }
+        }
+    }
     var finished by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) { InterviewSession.reset(); InterviewAiReport.reset(); while (true) { delay(1000); elapsedSec++ } }
+    LaunchedEffect(Unit) {
+        if (introPlaying) { delay(3000); question = openingQ; introPlaying = false }
+    }
     val timerText = "${(elapsedSec / 60).toString().padStart(2, '0')}:${(elapsedSec % 60).toString().padStart(2, '0')}"
     val role = InterviewConfig.customRole.ifBlank { "Junior PM" }
 
     fun submitAnswer(transcript: String, endedBy: String = "unknown", inputMode: String = "voice") {
-        if (transcript.isBlank() || answer.isNotBlank()) return
+        if (introPlaying || transcript.isBlank() || answer.isNotBlank()) return
         answer = transcript
         answerMode = inputMode
         InterviewSession.record(question, transcript, inputMode = inputMode, endedBy = endedBy)
@@ -154,14 +171,14 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
                             mode = "panel",
                             inputMode = inputMode,
                             endedBy = endedBy,
-                            context = InterviewContextDto(
-                                round = InterviewConfig.round,
-                                language = InterviewConfig.language,
-                                type = InterviewConfig.type,
-                                difficulty = InterviewConfig.difficulty,
-                            ),
+                            context = InterviewConfig.toContextDto(),
                             spokenBy = spokenBy.toList(),
                             askedTopics = askedTopics.toList(),
+                            askedQuestions = InterviewAiSession.askedQuestions.toList(),
+                            probeGap = InterviewAiSession.probeGap,
+                            probeDepth = InterviewAiSession.probeDepth,
+                            jdSkills = InterviewAiSession.jdSkills,
+                            experiences = InterviewAiSession.experiences,
                         ),
                     )
                     if (res.isSuccessful && res.body() != null) {
@@ -171,6 +188,9 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
                             spokenBy.add(body.speaker)
                         }
                         if (body.topic.isNotBlank()) askedTopics.add(body.topic)
+                        InterviewAiSession.probeGap = body.probeGap.orEmpty()
+                        InterviewAiSession.probeDepth = body.probeDepth ?: 0
+                        if (body.nextQuestion.isNotBlank()) InterviewAiSession.askedQuestions.add(body.nextQuestion)
                         question = body.nextQuestion
                     } else {
                         val (nextWho, nextQ) = MockPanelDispatcher.dispatch(transcript, followUpIdx)
@@ -383,7 +403,7 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
                     Text("轉錄中...", color = Color(0x99FFFFFF), fontSize = 12.sp)
                 }
             } else {
-                val canSend = input.isNotBlank() && answer.isBlank()
+                val canSend = input.isNotBlank() && answer.isBlank() && !introPlaying
                 Row(verticalAlignment = Alignment.Bottom) {
                     RecordingMicButton(
                         isRecording = recorder.isRecording,
@@ -391,17 +411,17 @@ fun InterviewLivePanelScreen(navController: NavHostController) {
                         elapsedMs = recorder.elapsedMs,
                         maxDurationMs = 120_000L,
                         size = 48.dp,
-                        idleEnabled = answer.isBlank(),
+                        idleEnabled = answer.isBlank() && !introPlaying,
                         onClick = {
                             if (recorder.isRecording) recorder.stop()
-                            else if (answer.isBlank()) recorder.start()
+                            else if (answer.isBlank() && !introPlaying) recorder.start()
                         },
                     )
                     Spacer(Modifier.width(8.dp))
                     OutlinedTextField(
                         value = input,
                         onValueChange = { input = it },
-                        enabled = answer.isBlank() && !recorder.isRecording,
+                        enabled = answer.isBlank() && !recorder.isRecording && !introPlaying,
                         modifier = Modifier.weight(1f),
                         placeholder = {
                             Text("輸入你的回答", color = Color(0x80FFFFFF), fontSize = 13.sp)

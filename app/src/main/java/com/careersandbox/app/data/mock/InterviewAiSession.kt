@@ -1,5 +1,6 @@
 package com.careersandbox.app.data.mock
 
+import com.careersandbox.app.data.remote.ExperienceDto
 import com.careersandbox.app.data.remote.PersonaDto
 
 /* =====================================================================
@@ -17,6 +18,14 @@ object InterviewAiSession {
     var fallbackProbes: List<String> = emptyList()
     var interruptLines: List<String> = emptyList()
     var interruptCap: Int = 0
+    var jdSkills: List<String> = emptyList()
+    var openingIntro: String = ""
+    var experiences: List<ExperienceDto> = emptyList()
+
+    // Round-trip state: saved from each reply and sent back unchanged on the next turn.
+    var probeGap: String = ""
+    var probeDepth: Int = 0
+    val askedQuestions = mutableListOf<String>()
 
     fun reset() {
         sessionId = null
@@ -27,5 +36,11 @@ object InterviewAiSession {
         fallbackProbes = emptyList()
         interruptLines = emptyList()
         interruptCap = 0
+        jdSkills = emptyList()
+        openingIntro = ""
+        experiences = emptyList()
+        probeGap = ""
+        probeDepth = 0
+        askedQuestions.clear()
     }
 }
