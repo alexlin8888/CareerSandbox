@@ -27,7 +27,6 @@ import androidx.navigation.NavHostController
 import com.careersandbox.app.R
 import com.careersandbox.app.data.mock.InterviewConfig
 import com.careersandbox.app.data.mock.MockData
-import com.careersandbox.app.data.model.JobApplication
 import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
@@ -69,6 +68,7 @@ fun InterviewSetupGroupScreen(navController: NavHostController) {
     val selectedTarget = targets.firstOrNull { it.id == selectedJobId }
     val customSelected = selectedJobId == "custom"
     var customJob by remember { mutableStateOf("") }
+    var customJd by remember { mutableStateOf("") }
     var groupSize by remember { mutableIntStateOf(4) } // 含你
     var interviewers by remember { mutableIntStateOf(InterviewConfig.groupInterviewers) }
     var role by remember { mutableStateOf(roleOptions[0]) }
@@ -113,7 +113,7 @@ fun InterviewSetupGroupScreen(navController: NavHostController) {
                             if (customSelected) {
                                 InterviewConfig.customRole = customJob
                                 InterviewConfig.customCompany = ""
-                                InterviewConfig.customJd = ""
+                                InterviewConfig.customJd = customJd
                             } else {
                                 InterviewConfig.customRole = selectedTarget?.title.orEmpty()
                                 InterviewConfig.customCompany = selectedTarget?.company.orEmpty()
@@ -215,6 +215,8 @@ fun InterviewSetupGroupScreen(navController: NavHostController) {
                 value = customJob,
                 onSelect = { pickedJobId = "custom"; pickedVersionId = "" },
                 onValueChange = { customJob = it },
+                jd = customJd,
+                onJd = { customJd = it },
             )
 
             Spacer(Modifier.height(28.dp))
@@ -354,38 +356,6 @@ private fun SectionLabelGroup(text: String) {
         letterSpacing = 2.sp)
 }
 
-@Composable
-private fun GroupJobCard(job: JobApplication, selected: Boolean, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(if (selected) BrandOrange.copy(alpha = 0.12f) else InkGray100)
-            .pressScale(onClick = onClick)
-            .padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            Modifier.size(20.dp).clip(CircleShape)
-                .background(if (selected) BrandOrange else InkGray300),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (selected) Box(Modifier.size(8.dp).clip(CircleShape).background(PaperWhite))
-        }
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(job.position,
-                color = if (selected) BrandDeepOrange else InkBlack,
-                fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            Spacer(Modifier.height(2.dp))
-            Text(job.company, color = InkGray500,
-                style = MaterialTheme.typography.bodySmall)
-        }
-        Text("${job.matchScore}%",
-            color = if (selected) BrandDeepOrange else InkGray400,
-            fontWeight = FontWeight.Black, fontSize = 16.sp)
-    }
-}
 
 @Composable
 private fun GroupCustomJobCard(
@@ -393,6 +363,8 @@ private fun GroupCustomJobCard(
     value: String,
     onSelect: () -> Unit,
     onValueChange: (String) -> Unit,
+    jd: String,
+    onJd: (String) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -424,6 +396,21 @@ private fun GroupCustomJobCard(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = BrandOrange,
+                    unfocusedBorderColor = InkGray300,
+                    focusedContainerColor = PaperWhite,
+                    unfocusedContainerColor = PaperWhite,
+                ),
+            )
+            Spacer(Modifier.height(10.dp))
+            OutlinedTextField(
+                value = jd,
+                onValueChange = onJd,
+                placeholder = { Text("貼上 JD(選填,越完整題目越準)", color = InkGray400) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                minLines = 3,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = BrandOrange,
                     unfocusedBorderColor = InkGray300,
