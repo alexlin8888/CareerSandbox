@@ -190,6 +190,12 @@ fun InterviewReportScreen(navController: NavHostController) {
     // A real report without missing points (for example, no saved experiences) hides the block
     // instead of falling back to mock content.
     val showOmission = report == null || report.missingPoints.isNotEmpty()
+    val scored = com.careersandbox.app.data.mock.MockInterviewReportProvider
+        .subScores().mapNotNull { it.score }
+    // Prefer the backend's overallScore; a real report with nothing scored shows "—"
+    val overallScore: Int? = report?.overallScore?.roundToInt()
+        ?: if (scored.isNotEmpty()) scored.sum() / scored.size
+        else if (report == null) 74 else null
 
     Box(modifier = Modifier.fillMaxSize().background(InkCharcoal)) {
         // 光暈
@@ -294,14 +300,8 @@ fun InterviewReportScreen(navController: NavHostController) {
                                     fontWeight = FontWeight.SemiBold,
                                     letterSpacing = 1.sp)
                             }
-                            val scored = com.careersandbox.app.data.mock.MockInterviewReportProvider
-                                .subScores().mapNotNull { it.score }
-                            // Prefer the backend's overallScore; a real report with nothing scored shows "—"
-                            val overallScore: Int? = report?.overallScore?.roundToInt()
-                                ?: if (scored.isNotEmpty()) scored.sum() / scored.size
-                                else if (report == null) 74 else null
                             Spacer(Modifier.height(20.dp))
-                            // 超大數字（暫時用六項細分分數的平均值，正式算法待跟模型組/B對齊 overallScore）
+                            // 超大數字：後端的 overallScore（六項細分分數的平均）
                             Text(if (overallScore != null) "${rememberCountUp(overallScore, durationMillis = 1200)}" else "—",
                                 color = PaperWhite,
                                 fontSize = 128.sp,
@@ -333,7 +333,7 @@ fun InterviewReportScreen(navController: NavHostController) {
                                     .background(BrandYellow)
                                     .padding(horizontal = 16.dp, vertical = 6.dp)
                             ) {
-                                Text("有基礎,但還能更好",
+                                Text(overallLabel(overallScore),
                                     color = InkCharcoal,
                                     fontWeight = FontWeight.Bold,
                                     style = MaterialTheme.typography.bodyMedium)
@@ -459,7 +459,7 @@ fun InterviewReportScreen(navController: NavHostController) {
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            "有基礎了，別停在這",
+                            overallClosing(overallScore),
                             color = PaperWhite,
                             fontWeight = FontWeight.Black,
                             fontSize = 16.sp,
@@ -542,6 +542,21 @@ private fun buildSessionExportJson(): String {
         "report" to InterviewAiReport.response,
     )
     return com.google.gson.GsonBuilder().setPrettyPrinting().create().toJson(payload)
+}
+
+// Thresholds match the score colors used across the report (80 / 65).
+private fun overallLabel(score: Int?): String = when {
+    score == null -> "這場資料不足,暫不評分"
+    score >= 80 -> "整體表現很穩"
+    score >= 65 -> "有基礎,但還能更好"
+    else -> "還有不少地方可以練"
+}
+
+private fun overallClosing(score: Int?): String = when {
+    score == null -> "下次多答幾題,就能看到分數"
+    score >= 80 -> "表現穩定,挑一個弱項練到位"
+    score >= 65 -> "有基礎了，別停在這"
+    else -> "先從一個弱項開始，慢慢補"
 }
 
 @Composable

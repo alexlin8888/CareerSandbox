@@ -296,6 +296,7 @@ private fun JobTargetDto.toModel(): JobTarget? {
         jdKeywords = jdKeywords ?: emptyList(),
         versions = (versions ?: emptyList()).mapNotNull { it.toModel() },
         jdSnippet = jdSnippet.orEmpty(),
+        jdSnapshot = jdSnapshot.orEmpty(),
         matchScore = matchScore,
         styleTag = styleTag.orEmpty(),
         requiredSkills = requiredSkills ?: emptyList(),
