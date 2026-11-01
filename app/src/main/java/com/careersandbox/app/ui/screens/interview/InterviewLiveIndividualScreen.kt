@@ -143,12 +143,13 @@ private fun faceFor(d: Int): Int = when {
     d <= -1 -> R.drawable.ken_concerned
     else -> R.drawable.ken_neutral
 }
+// Length says nothing about quality, so the front end never rewards an answer with a nod.
+// A positive reaction needs a content judgment from the model.
 private fun deltaFor(answer: String): Int = when {
     answer.isBlank() -> 0
-    answer.contains("不知道") || answer.contains("不確定") || answer.contains("沒想過") -> -1
-    answer.length >= 24 -> 1
-    answer.length >= 10 -> 0
-    else -> -1
+    answer.length <= 20 && (answer.contains("不知道") || answer.contains("不確定") || answer.contains("沒想過")) -> -1
+    answer.length < 10 -> -1
+    else -> 0
 }
 
 @Composable

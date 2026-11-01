@@ -59,7 +59,7 @@ import com.careersandbox.app.data.remote.toContextDto
 private const val USER_KEY = "你"
 
 // Group discussions are time-boxed. Set to 60 temporarily when testing the wrap-up.
-private const val GROUP_MAX_SECONDS = 15 * 60
+private const val GROUP_MAX_SECONDS = 10 * 60
 
 // Avatars keyed by persona id (PersonaDto.id from POST /interviews).
 // Unknown ids, such as generated competitor candidates, fall back to a colored circle.
@@ -137,7 +137,7 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
     var lastQuestion by remember { mutableStateOf(InterviewAiSession.openingQuestion.orEmpty()) }
     val interruptLines = remember { InterviewAiSession.interruptLines }
     val interruptCap =
-        if (useAi && interruptLines.isNotEmpty()) minOf(InterviewAiSession.interruptCap, interruptLines.size)
+        if (useAi) minOf(InterviewAiSession.interruptCap, interruptLines.size)
         else com.careersandbox.app.data.mock.MockGroupDispatcher.interruptCap()
     var panelIdx by remember { mutableIntStateOf(0) }
     fun nextInterviewer(): String {
