@@ -156,7 +156,7 @@ fun CareerSandboxNavHost(
         composable(Routes.SANDBOX_V2_RESULT) {
             SandboxResultScreen(
                 result = remember { if (SandboxFlags.USE_SAMPLE_RESULT) sampleResult() else SandboxResultBuilder.build() },
-                onGapClick = { /* TODO: open the learning path screen */ },
+                onGapClick = { navController.navigate(Routes.LEARNING_PATH) },
                 onFinish = { navController.popBackStack(Routes.WORKPLACE_SANDBOX, false) },
             )
         }
