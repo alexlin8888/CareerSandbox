@@ -71,6 +71,15 @@ val HardestOptions = listOf(
     "被追問的時候",
 )
 
+/** 阿哲's closing lines, indexed like HardestOptions. */
+private val ClosingLines = listOf(
+    listOf("一開始沒人講清楚，最累。", "先這樣，今天辛苦了。"),
+    listOf("資料表這種東西，不看到一半不知道哪裡有洞。", "先這樣，今天辛苦了。"),
+    listOf("做到一半被改需求，換誰都會煩。", "先這樣，今天辛苦了。"),
+    listOf("要把一整天收成幾句話，不輕鬆。", "先這樣，今天辛苦了。"),
+    listOf("被追問的時候很難不緊張。", "先這樣，今天辛苦了。"),
+)
+
 /** 18:00. The screen dims and 阿哲 asks how the day went. Two taps, then the result screen. */
 @Composable
 fun SandboxEveningScreen(navController: NavHostController) {
@@ -128,10 +137,19 @@ fun SandboxEveningScreen(navController: NavHostController) {
                         step = 3
                     }
                 }
-                3 -> EveningChoices("回阿哲", HardestOptions) { k ->
-                    step = 4
+                3 -> EveningChoices("（標題，保留原本的）", HardestOptions) { k ->
+                    step = 5   // hide the options while 阿哲 types
                     state.setEveningHardest(k)
                     chat.add(true to HardestOptions[k])
+                    scope.launch {
+                        val lines = ClosingLines.getOrElse(k) { ClosingLines.last() }
+                        lines.forEach { line ->
+                            delay(1100)
+                            chat.add(false to line)
+                        }
+                        delay(600)
+                        step = 4
+                    }
                 }
                 4 -> Box(
                     modifier = Modifier
