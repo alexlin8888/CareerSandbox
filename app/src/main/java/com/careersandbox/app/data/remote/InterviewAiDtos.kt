@@ -203,6 +203,14 @@ data class MissingPointDto(
     val why: String,
 )
 
+// 對應 TurnEmotionDTO: per-question emotion label from the model.
+// turnIndex starts at 1 and lines up with questionFeedbacks; calm turns are not listed.
+data class TurnEmotionDto(
+    val turnIndex: Int,
+    val label: String,
+    val quote: String = "",
+)
+
 // 對應 ReportResponse
 data class ReportResponse(
     val overallScore: Double? = null,
@@ -218,6 +226,8 @@ data class ReportResponse(
     val missingPoints: List<MissingPointDto> = emptyList(),
     val resumeGrounded: Boolean = false,
     val notices: List<String> = emptyList(),
+    // Nullable: Gson leaves absent fields null; the export shows [] when the model returned none.
+    val turnEmotions: List<TurnEmotionDto>? = null,
 )
 
 // Converts a locally recorded group utterance into the request format.
