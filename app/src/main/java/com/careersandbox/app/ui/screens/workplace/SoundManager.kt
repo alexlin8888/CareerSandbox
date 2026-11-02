@@ -64,6 +64,17 @@ object SoundManager {
         currentBgm = -1
     }
 
+    /** Pauses the music while the app is in the background. */
+    fun pauseBgm() {
+        runCatching { bgm?.pause() }
+    }
+
+    /** Resumes the music when the app comes back, unless it is muted or already stopped. */
+    fun resumeBgm() {
+        if (muted) return
+        runCatching { bgm?.start() }
+    }
+
     /** 播 UI 音效(靜音時不播) */
     fun sfx(resId: Int) {
         if (muted) return

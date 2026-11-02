@@ -37,6 +37,7 @@ import com.careersandbox.app.data.local.SessionManager
 import com.careersandbox.app.data.local.SettingsStore
 import kotlinx.coroutines.launch
 import com.careersandbox.app.ui.theme.PaperWhite
+import com.careersandbox.app.ui.screens.workplace.SoundManager
 
 
 class MainActivity : ComponentActivity() {
@@ -56,6 +57,15 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+    override fun onStart() {
+        super.onStart()
+        SoundManager.resumeBgm()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        SoundManager.pauseBgm()
     }
 }
 
@@ -91,12 +101,14 @@ fun CareerSandboxApp() {
 
     val showNav = shouldShowBottomNav(currentRoute)
     val isHome = currentRoute == Routes.HOME
+    // The sandbox v2 desk screen draws behind the system bars
+    val isFullBleed = currentRoute == Routes.SANDBOX_V2_DESK || currentRoute == Routes.SANDBOX_V2_EVENING
     Box(Modifier.fillMaxSize()) {
         Box(
             Modifier
                 .fillMaxSize()
-                .then(if (isHome) Modifier else Modifier.statusBarsPadding())
-                .then(if (showNav) Modifier else Modifier.navigationBarsPadding()),
+                .then(if (isHome || isFullBleed) Modifier else Modifier.statusBarsPadding())
+                .then(if (showNav || isFullBleed) Modifier else Modifier.navigationBarsPadding()),
         ) {
             CareerSandboxNavHost(navController = navController)
         }
