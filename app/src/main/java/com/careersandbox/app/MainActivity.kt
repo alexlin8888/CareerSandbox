@@ -37,6 +37,7 @@ import com.careersandbox.app.data.local.SessionManager
 import com.careersandbox.app.data.local.SettingsStore
 import kotlinx.coroutines.launch
 import com.careersandbox.app.ui.theme.PaperWhite
+import com.careersandbox.app.ui.screens.workplace.SoundManager
 
 
 class MainActivity : ComponentActivity() {
@@ -56,6 +57,15 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+    override fun onStart() {
+        super.onStart()
+        SoundManager.resumeBgm()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        SoundManager.pauseBgm()
     }
 }
 
