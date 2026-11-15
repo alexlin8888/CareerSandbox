@@ -62,6 +62,8 @@ import com.careersandbox.app.data.local.CatalogCareer
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import com.careersandbox.app.ui.theme.*
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
 
 private data class CareerRec(
     val id: String,
@@ -166,9 +168,9 @@ fun CareerExplorationScreen(navController: NavHostController) {
     var selectedId by remember { mutableStateOf("") }
     val excludedIds = remember { mutableStateListOf<String>() }
 
-    // === #17/#18/#19 語意探索狀態 ===
-    var semanticText by remember { mutableStateOf("") }
-    var resolvedIntent by remember { mutableStateOf<ExploreIntent?>(null) }
+    // === 魚與熊掌圖:目前選的取捨組合 ===
+    // 先點的是橫軸、後點的是縱軸
+    var selectedAxes by remember { mutableStateOf(listOf(TradeAxis.Salary, TradeAxis.Fit)) }
 
     // === Recommendations ===
     // Opening the page never calls the AI service (one call takes tens of seconds).
@@ -337,7 +339,21 @@ fun CareerExplorationScreen(navController: NavHostController) {
                     )
                     Spacer(Modifier.height(24.dp))
                 }
-
+                // === 魚與熊掌圖(取捨)===
+                AnimatedSection(visible = visible, delayMs = 320) {
+                    TradeoffPanel(
+                        recs = visibleRecs,
+                        selected = selectedAxes,
+                        onToggle = { axis ->
+                            selectedAxes = when {
+                                axis in selectedAxes -> selectedAxes - axis
+                                selectedAxes.size < 2 -> selectedAxes + axis
+                                else -> selectedAxes.drop(1) + axis
+                            }
+                        },
+                    )
+                }
+                Spacer(Modifier.height(24.dp))
                 // Hidden for now (2026-10-27), not deleted: the learning path and the two buttons below it.
                 // To bring them back, delete the /* line right below and its matching */ line.
                 /*
@@ -786,7 +802,7 @@ private fun TopMatchCard(rec: CareerRec, onViewPath: () -> Unit = {}) {
                         fontSize = 10.sp,
                         letterSpacing = 1.2.sp)
                 }
-                Icon(Icons.Outlined.BookmarkBorder, contentDescription = null, tint = PaperWhite.copy(alpha = 0.85f), modifier = Modifier.size(20.dp))
+
             }
             Spacer(Modifier.height(14.dp))
             Text(rec.title, color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 24.sp, lineHeight = 28.sp)
@@ -1017,7 +1033,273 @@ private fun LearningStepCard(step: LearningStep) {
     }
 }
 
-/* ===================== #17/#18/#19 語意探索 ===================== */
+/* ===================== 魚與熊掌圖(取捨圖) ===================== */
+
+private enum class TradeAxis(val label: String) { Salary("薪水"), Openings("職缺數"), Fit("適合我") }
+
+private data class TradeoffPoint(
+    val id: String,
+    val title: String,
+    val salaryK: Float?,   // null when the catalog says 依市場
+    val openings: Int?,
+    val fit: Int?,
+)
+
+// "38-62k" -> 50, "0-35k" -> 35 (a 0 lower bound means unknown, not zero), "依市場" -> null
+private fun parseSalaryK(s: String): Float? {
+    val m = Regex("""(\d+)\s*-\s*(\d+)\s*k""", RegexOption.IGNORE_CASE).find(s) ?: return null
+    val lo = m.groupValues[1].toFloat()
+    val hi = m.groupValues[2].toFloat()
+    return if (lo <= 0f) hi else (lo + hi) / 2f
+}
+
+// DEMO ONLY (2026-11-05): stand-in fit scores for the catalog directions, used when a
+// card has no real matchScore yet (random picks before any search). Delete once
+// /career/recommend can score everything shown here.
+private val demoFitScores = mapOf(
+    "software_engineer" to 78, "frontend_engineer" to 74, "fullstack_engineer" to 70,
+    "ai_data_engineer" to 82, "qa_engineer" to 55, "network_engineer" to 48,
+    "it_support" to 52, "data_analyst" to 86, "pm" to 80, "uiux_designer" to 61,
+    "graphic_designer" to 40, "content_creator" to 46, "marketing" to 58, "sales" to 44,
+    "customer_service" to 38, "hr" to 50, "finance_accounting" to 54, "procurement" to 35,
+    "logistics" to 30, "admin" to 42, "operations_mgmt" to 33, "reception" to 31,
+    "beauty" to 18, "food_service" to 22, "driver" to 20, "technician" to 28,
+    "travel" to 25, "legal" to 45, "public_sector" to 47, "healthcare" to 24,
+)
+
+// Only the directions shown as cards above are plotted.
+private fun buildTradeoffPoints(recs: List<CareerRec>): List<TradeoffPoint> =
+    recs.map { r ->
+        TradeoffPoint(
+            id = r.id,
+            title = r.title,
+            salaryK = parseSalaryK(r.salary),
+            openings = r.openings.toIntOrNull(),
+            fit = if (r.scored) r.matchScore else demoFitScores[r.id],
+        )
+    }
+
+private fun axisVal(p: TradeoffPoint, a: TradeAxis): Float? = when (a) {
+    TradeAxis.Salary -> p.salaryK
+    TradeAxis.Openings -> p.openings?.toFloat()
+    TradeAxis.Fit -> p.fit?.toFloat()
+}
+
+private fun axisText(p: TradeoffPoint, a: TradeAxis): String = when (a) {
+    TradeAxis.Salary -> p.salaryK?.let { "${it.toInt()}k" } ?: "未公開"
+    TradeAxis.Openings -> p.openings?.let { "$it 筆" } ?: "—"
+    TradeAxis.Fit -> p.fit?.let { "$it%" } ?: "—"
+}
+
+private fun plottable(points: List<TradeoffPoint>, x: TradeAxis, y: TradeAxis) =
+    points.filter { axisVal(it, x) != null && axisVal(it, y) != null }
+
+private fun paretoFront(points: List<TradeoffPoint>, x: TradeAxis, y: TradeAxis): Set<String> {
+    val plotted = plottable(points, x, y)
+    return plotted.filter { r ->
+        val rx = axisVal(r, x)!!
+        val ry = axisVal(r, y)!!
+        plotted.none { o ->
+            val ox = axisVal(o, x)!!
+            val oy = axisVal(o, y)!!
+            o.id != r.id && ox >= rx && oy >= ry && (ox > rx || oy > ry)
+        }
+    }.map { it.id }.toSet()
+}
+
+@Composable
+private fun TradeoffPanel(
+    recs: List<CareerRec>,
+    selected: List<TradeAxis>,
+    onToggle: (TradeAxis) -> Unit,
+) {
+    val points = remember(recs) { buildTradeoffPoints(recs) }
+    val x = selected.getOrNull(0)
+    val y = selected.getOrNull(1)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(PaperWhite)
+            .border(1.dp, InkGray100, RoundedCornerShape(20.dp))
+            .padding(18.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = BrandDeepOrange, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("魚與熊掌圖", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 18.sp)
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "挑兩件你在意的事,看推薦給你的這 ${points.size} 個方向各自守住了哪一邊。",
+            color = InkGray500, fontSize = 13.sp, lineHeight = 19.sp,
+        )
+        Spacer(Modifier.height(14.dp))
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TradeAxis.values().forEach { axis ->
+                val sel = axis in selected
+                Box(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(if (sel) InkBlack else BrandPeach.copy(alpha = 0.5f))
+                        .pressScale { onToggle(axis) }
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                ) {
+                    Text(
+                        axis.label,
+                        color = if (sel) PaperWhite else BrandDeepOrange,
+                        fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(14.dp))
+
+        if (x == null || y == null) {
+            Text("再選一個", color = InkGray400, fontSize = 12.sp)
+        } else {
+            val plotted = plottable(points, x, y)
+            val front = remember(points, x, y) { paretoFront(points, x, y) }
+            val leftOut = points.filter { p -> plotted.none { it.id == p.id } }
+
+            TradeoffChart(points = plotted, x = x, y = y, front = front)
+            Spacer(Modifier.height(14.dp))
+            plotted.forEachIndexed { i, p ->
+                PointRow(index = i + 1, p = p, x = x, y = y, onFront = p.id in front)
+                Spacer(Modifier.height(8.dp))
+            }
+
+            if (leftOut.isNotEmpty()) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "薪資未公開,沒放進圖裡:" + leftOut.joinToString("、") { it.title },
+                    color = InkGray400, fontSize = 11.sp, lineHeight = 16.sp,
+                )
+            }
+        }
+    }
+}
+
+/** Each axis is scaled to its own min..max; the career name sits next to every dot. */
+@Composable
+private fun TradeoffChart(points: List<TradeoffPoint>, x: TradeAxis, y: TradeAxis, front: Set<String>) {
+    val measurer = rememberTextMeasurer()
+    val labelStyle = TextStyle(color = PaperWhite, fontSize = 11.sp, fontWeight = FontWeight.Black)
+    val xs = points.map { axisVal(it, x)!! }
+    val ys = points.map { axisVal(it, y)!! }
+    val xMin = xs.minOrNull() ?: 0f
+    val xMax = xs.maxOrNull() ?: 1f
+    val yMin = ys.minOrNull() ?: 0f
+    val yMax = ys.maxOrNull() ?: 1f
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(230.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(PaperWarm)
+            .padding(16.dp),
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val pad = 14.dp.toPx()
+            val w = size.width
+            val h = size.height
+            val plotW = w - pad * 2
+            val plotH = h - pad * 2
+            drawLine(InkGray200, Offset(pad, h - pad), Offset(w - pad, h - pad), strokeWidth = 1.5.dp.toPx())
+            drawLine(InkGray200, Offset(pad, pad), Offset(pad, h - pad), strokeWidth = 1.5.dp.toPx())
+
+            // Numbered dots only, so the plot can use most of the box.
+            fun norm(v: Float, lo: Float, hi: Float) = if (hi > lo) (v - lo) / (hi - lo) else 0.5f
+            fun px(p: TradeoffPoint) = pad + plotW * (0.10f + 0.80f * norm(axisVal(p, x)!!, xMin, xMax))
+            fun py(p: TradeoffPoint) = (h - pad) - plotH * (0.12f + 0.76f * norm(axisVal(p, y)!!, yMin, yMax))
+
+            val frontPts = points.filter { it.id in front }.sortedBy { axisVal(it, x) }
+            for (i in 0 until frontPts.size - 1) {
+                drawLine(
+                    color = BrandDeepOrange.copy(alpha = 0.45f),
+                    start = Offset(px(frontPts[i]), py(frontPts[i])),
+                    end = Offset(px(frontPts[i + 1]), py(frontPts[i + 1])),
+                    strokeWidth = 2.dp.toPx(),
+                )
+            }
+            points.forEachIndexed { i, p ->
+                val c = Offset(px(p), py(p))
+                val onFront = p.id in front
+                if (onFront) drawCircle(BrandDeepOrange.copy(alpha = 0.18f), radius = 14.dp.toPx(), center = c)
+                drawCircle(
+                    color = if (onFront) BrandDeepOrange else BrandAmber,
+                    radius = 9.dp.toPx(),
+                    center = c,
+                )
+                val layout = measurer.measure("${i + 1}", labelStyle)
+                drawText(
+                    textLayoutResult = layout,
+                    topLeft = Offset(c.x - layout.size.width / 2f, c.y - layout.size.height / 2f),
+                )
+            }
+        }
+        Text(
+            "↑ ${y.label}",
+            color = InkGray500, fontSize = 10.sp, fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.align(Alignment.TopStart),
+        )
+        Text(
+            "${x.label} →",
+            color = InkGray500, fontSize = 10.sp, fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.align(Alignment.BottomEnd),
+        )
+    }
+}
+
+@Composable
+private fun PointRow(index: Int, p: TradeoffPoint, x: TradeAxis, y: TradeAxis, onFront: Boolean) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (onFront) BrandPeach.copy(alpha = 0.25f) else PaperWhite)
+            .border(1.dp, if (onFront) BrandDeepOrange else InkGray100, RoundedCornerShape(12.dp))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(22.dp)
+                .clip(CircleShape)
+                .background(if (onFront) BrandDeepOrange else BrandAmber),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("$index", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 11.sp)
+        }
+        Spacer(Modifier.width(10.dp))
+        Text(
+            p.title,
+            color = InkBlack,
+            fontWeight = if (onFront) FontWeight.Bold else FontWeight.Medium,
+            fontSize = 14.sp,
+            modifier = Modifier.weight(1f),
+        )
+        AxisChip(x.label, axisText(p, x))
+        Spacer(Modifier.width(6.dp))
+        AxisChip(y.label, axisText(p, y))
+    }
+}
+
+@Composable
+private fun AxisChip(label: String, value: String) {
+    Box(
+        modifier = Modifier
+            .clip(CircleShape)
+            .background(BrandPeach.copy(alpha = 0.5f))
+            .padding(horizontal = 8.dp, vertical = 3.dp),
+    ) {
+        Text("$label $value", color = BrandDeepOrange, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
+    }
+}
+/* ===================== #17/#18/#19 語意探索 =====================
 
 private data class RoleAxis(
     val id: String,
@@ -1354,4 +1636,4 @@ private fun AxisChip(key: String, value: Int) {
     ) {
         Text("$key $value", color = BrandDeepOrange, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
     }
-}
+} */
