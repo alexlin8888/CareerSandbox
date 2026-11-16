@@ -2,6 +2,7 @@ package com.careersandbox.app.data.remote
 
 import com.careersandbox.app.data.mock.InterviewConfig
 import com.careersandbox.app.data.mock.InterviewSession
+import com.careersandbox.app.data.mock.InterviewAiSession
 
 /* =====================================================================
    對應 CareerSandboxInterview 的 app/schemas/interview.py。
@@ -104,6 +105,10 @@ data class TurnResponse(
     val probeGap: String? = null,
     val probeDepth: Int? = null,
     val topic: String = "",
+    // Milliseconds to wait before showing this line; 0 once the user has answered this question.
+    val delayMs: Int = 0,
+    // True when every AI has answered and only the user is left; speaker and nextQuestion are empty.
+    val awaitUser: Boolean = false,
     val notices: List<String> = emptyList(),
 )
 
@@ -203,6 +208,15 @@ data class MissingPointDto(
     val why: String,
 )
 
+// 對應 TurnEmotionDTO: per-question emotion label from the model.
+// turnIndex starts at 1 and lines up with questionFeedbacks; calm turns are not listed.
+data class TurnEmotionDto(
+    val turnIndex: Int,
+    val label: String,
+    // Nullable: Gson leaves absent fields null; the model omits quote for 過度自責.
+    val quote: String? = null,
+)
+
 // 對應 ReportResponse
 data class ReportResponse(
     val overallScore: Double? = null,
@@ -218,6 +232,8 @@ data class ReportResponse(
     val missingPoints: List<MissingPointDto> = emptyList(),
     val resumeGrounded: Boolean = false,
     val notices: List<String> = emptyList(),
+    // Nullable: Gson leaves absent fields null; the export shows [] when the model returned none.
+    val turnEmotions: List<TurnEmotionDto>? = null,
 )
 
 // Converts a locally recorded group utterance into the request format.
@@ -235,13 +251,20 @@ fun InterviewSession.GroupUtterance.toDto() = UtteranceDto(
 // Each user utterance is paired with the most recent line from anyone else, which is what
 // the user was responding to.
 fun List<InterviewSession.GroupUtterance>.toGroupTurns(): List<TurnDto> {
+    // Peers now answer the moderator's question before the user does, so each user utterance
+    // is paired with the latest moderator line; any other line is only a fallback.
+    val moderators = InterviewAiSession.personas
+        .filter { it.role != "peer" }
+        .flatMap { listOf(it.id, it.displayName) }
+        .toSet()
     val turns = mutableListOf<TurnDto>()
     var lastOther = ""
+    var lastModerator = ""
     for (u in this) {
         if (u.isUser) {
             turns.add(
                 TurnDto(
-                    question = lastOther,
+                    question = lastModerator.ifBlank { lastOther },
                     answer = u.content,
                     inputMode = u.inputMode,
                     answerSegments = u.segments,
@@ -252,6 +275,7 @@ fun List<InterviewSession.GroupUtterance>.toGroupTurns(): List<TurnDto> {
             )
         } else {
             lastOther = u.content
+            if (u.speaker in moderators) lastModerator = u.content
         }
     }
     return turns

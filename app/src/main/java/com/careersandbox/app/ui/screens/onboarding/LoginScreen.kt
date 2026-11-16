@@ -2,12 +2,18 @@ package com.careersandbox.app.ui.screens.onboarding
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,6 +31,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -44,6 +52,7 @@ import com.careersandbox.app.ui.components.pressScale
 import com.careersandbox.app.ui.theme.*
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.graphics.Color
+
 
 @Composable
 fun LoginScreen(
@@ -181,10 +190,26 @@ fun LoginScreen(
                     Spacer(Modifier.height(22.dp))
 
                     val canLogin = email.isNotBlank() && password.isNotBlank()
+                    val focusManager = LocalFocusManager.current
+                    val loginInteraction = remember { MutableInteractionSource() }
+                    val loginPressed by loginInteraction.collectIsPressedAsState()
+// Shrink while pressed and stay shrunk during the request, so a tap never looks ignored.
+                    val loginScale by animateFloatAsState(
+                        targetValue = if (loginPressed || isLoggingIn) 0.94f else 1f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMedium,
+                        ),
+                        label = "loginScale",
+                    )
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(54.dp)
+                            .graphicsLayer {
+                                scaleX = loginScale
+                                scaleY = loginScale
+                            }
                             .then(
                                 if (canLogin) Modifier.shadow(
                                     elevation = 12.dp,
@@ -197,23 +222,45 @@ fun LoginScreen(
                                 if (canLogin) Brush.linearGradient(listOf(BrandDeepOrange, BrandOrange, BrandAmber))
                                 else Brush.linearGradient(listOf(InkGray200, InkGray200)),
                             )
-                            .pressScale { if (canLogin && !isLoggingIn) loginViewModel.login(email, password) },
+                            .clickable(
+                                interactionSource = loginInteraction,
+                                indication = null,
+                                enabled = canLogin && !isLoggingIn,
+                            ) {
+                                focusManager.clearFocus()
+                                loginViewModel.login(email, password)
+                            },
                         contentAlignment = Alignment.Center,
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                "登入",
-                                color = if (canLogin) PaperWhite else InkGray400,
-                                fontWeight = FontWeight.Black,
-                                style = MaterialTheme.typography.titleMedium,
-                            )
-                            Spacer(Modifier.width(7.dp))
-                            Icon(
-                                Icons.Outlined.ArrowForward,
-                                contentDescription = null,
-                                tint = if (canLogin) PaperWhite else InkGray400,
-                                modifier = Modifier.size(18.dp),
-                            )
+                            if (isLoggingIn) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = PaperWhite,
+                                    strokeWidth = 2.5.dp,
+                                )
+                                Spacer(Modifier.width(10.dp))
+                                Text(
+                                    "登入中…",
+                                    color = PaperWhite,
+                                    fontWeight = FontWeight.Black,
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
+                            } else {
+                                Text(
+                                    "登入",
+                                    color = if (canLogin) PaperWhite else InkGray400,
+                                    fontWeight = FontWeight.Black,
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
+                                Spacer(Modifier.width(7.dp))
+                                Icon(
+                                    Icons.Outlined.ArrowForward,
+                                    contentDescription = null,
+                                    tint = if (canLogin) PaperWhite else InkGray400,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
                         }
                     }
 
