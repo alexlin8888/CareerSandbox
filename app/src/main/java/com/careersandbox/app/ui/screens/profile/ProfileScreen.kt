@@ -60,7 +60,7 @@ fun ProfileScreen(navController: NavHostController) {
             HeroSection(userName = user.name, school = user.school,
                 dept = user.department, year = user.year)
             Spacer(Modifier.height(20.dp))
-            StatsSection()
+            StatsSection(navController)
             Spacer(Modifier.height(32.dp))
             MenuSection(navController)
             Spacer(Modifier.height(48.dp))
@@ -130,7 +130,7 @@ private fun HeroSection(userName: String, school: String, dept: String, year: St
 }
 
 @Composable
-private fun StatsSection() {
+private fun StatsSection(navController: NavHostController) {
     var experienceCount by remember { mutableStateOf<Int?>(null) }
     LaunchedEffect(Unit) {
         experienceCount = com.careersandbox.app.data.repository.RemoteExperienceRepository()
@@ -143,17 +143,29 @@ private fun StatsSection() {
             .padding(horizontal = 24.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        StatBlock(value = "4", label = "完成面試")
+        StatBlock(value = "4", label = "完成面試") {
+            navController.navigate(Routes.INTERVIEW_HUB)
+        }
         VerticalDivider()
-        StatBlock(value = experienceCount?.toString() ?: "—", label = "經歷筆數")
+        StatBlock(value = experienceCount?.toString() ?: "—", label = "經歷筆數") {
+            navController.navigate(Routes.EXPERIENCE_LIST)
+        }
         VerticalDivider()
-        StatBlock(value = "${MockData.jobApplications.size}", label = "履歷數")
+        StatBlock(value = "${MockData.jobApplications.size}", label = "履歷數") {
+            navController.navigate(Routes.RESUME_HUB)
+        }
     }
 }
 
 @Composable
-private fun StatBlock(value: String, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+private fun StatBlock(value: String, label: String, onClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .pressScale(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         Text(value,
             color = BrandOrange,
             fontWeight = FontWeight.Black,

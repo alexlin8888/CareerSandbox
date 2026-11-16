@@ -59,7 +59,14 @@ import com.careersandbox.app.data.remote.toContextDto
 private const val USER_KEY = "你"
 
 // Group discussions are time-boxed. Set to 60 temporarily when testing the wrap-up.
-private const val GROUP_MAX_SECONDS = 10 * 60
+private const val GROUP_MAX_SECONDS = 5 * 60
+// Reading time before the first AI participant speaks, scaled by the opening text length.
+private const val OPENING_GRACE_MIN_MS = 6_000L
+private const val OPENING_GRACE_MAX_MS = 14_000L
+private const val OPENING_MS_PER_CHAR = 90L
+
+// Floor for the gap before an AI line when the model asks for a delay (0 means the user already answered).
+private const val MIN_AI_GAP_MS = 3_000
 
 // Avatars keyed by persona id (PersonaDto.id from POST /interviews).
 // Unknown ids, such as generated competitor candidates, fall back to a colored circle.
@@ -181,39 +188,43 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
     val currentSpeaker = if (isTyping) typingSpeaker
         else (messages.lastOrNull()?.speaker ?: if (panel) "用人主管" else "主考官")
 
-    fun submitGroup(
-        visible: String,
-        analyzed: String,
-        segments: List<String> = emptyList(),
-        segmentStartsMs: List<Long> = emptyList(),
-        inputMode: String = "typed",
+    // One question per round: a ticket number invalidates stale AI requests.
+    var aiTicket by remember { mutableIntStateOf(0) }
+    var aiBusy by remember { mutableStateOf(false) }
+    var lastShownAt by remember { mutableLongStateOf(0L) }
+    var answeredThisQuestion by remember { mutableStateOf(false) }
+    var awaitingUser by remember { mutableStateOf(false) }
+
+    fun showLine(who: String, line: String) {
+        typingSpeaker = who
+        com.careersandbox.app.data.mock.InterviewSession.recordGroupUtterance(who, line, isUser = false)
+        messages.add(ChatMessage("g${messages.size}", who, line, isUser = false, isInterviewer = personas.isInterviewer(who)))
+        followUpIdx++
+        lastShownAt = System.currentTimeMillis()
+        isTyping = false
+    }
+
+    fun requestNext(
+        answer: String = "",
+        inputMode: String = "unknown",
         endedBy: String = "unknown",
-        segmentEndsMs: List<Long> = emptyList(),
     ) {
-        if (isTyping) return
-        com.careersandbox.app.data.mock.InterviewSession.recordGroupSay(visible)
-        com.careersandbox.app.data.mock.InterviewSession.recordGroupUtterance(
-            speaker = "你",
-            content = visible,
-            isUser = true,
-            segments = segments,
-            segmentStartsMs = segmentStartsMs,
-            segmentEndsMs = segmentEndsMs,
-            inputMode = inputMode,
-            endedBy = endedBy,
-        )
-        messages.add(ChatMessage("u${messages.size}", "你", visible, isUser = true))
-        isTyping = true
+        if (elapsedSec >= GROUP_MAX_SECONDS) return
+        val ticket = ++aiTicket
+        aiBusy = true
         scope.launch {
             val sessionId = InterviewAiSession.sessionId
-            val aiReply: Pair<String, String>? = if (useAi && sessionId != null) {
+            if (useAi && sessionId != null && answer.isNotBlank()) {
                 // The speaker is unknown until the reply arrives, so the typing bubble starts as the moderator.
                 typingSpeaker = personas.firstOrNull { it.role != "peer" }?.displayName ?: "主考官"
+                isTyping = true
+            }
+            val body = if (useAi && sessionId != null) {
                 try {
                     val res = InterviewAiApiClient.interviewAiApi.submitTurn(
                         sessionId,
                         TurnRequest(
-                            answer = analyzed,
+                            answer = answer,
                             followUpIdx = followUpIdx,
                             question = lastQuestion,
                             fallback = InterviewAiSession.fallbackProbes,
@@ -232,37 +243,102 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
                                 .groupTranscript.map { it.toDto() },
                         ),
                     )
-                    val body = res.body()
-                    if (res.isSuccessful && body != null) {
-                        if (body.topic.isNotBlank()) askedTopics.add(body.topic)
-                        InterviewAiSession.probeGap = body.probeGap.orEmpty()
-                        InterviewAiSession.probeDepth = body.probeDepth ?: 0
-                        if (body.nextQuestion.isNotBlank()) InterviewAiSession.askedQuestions.add(body.nextQuestion)
-                        val speaker = body.speaker.ifBlank { typingSpeaker }
-                        spokenBy.add(speaker)
-                        lastQuestion = body.nextQuestion
-                        speaker to body.nextQuestion
-                    } else null
+                    res.body()?.takeIf { res.isSuccessful }
                 } catch (e: Exception) {
                     null
                 }
             } else null
 
-            // No session, or the request failed: fall back to the local mock dispatcher.
-            val (who, line) = aiReply ?: run {
-                val (rawWho, mockLine) =
-                    com.careersandbox.app.data.mock.MockGroupDispatcher.dispatch(analyzed, followUpIdx)
-                val mockWho = if (panel && rawWho == "主考官") nextInterviewer() else rawWho
-                typingSpeaker = mockWho
-                delay(1400)
-                mockWho to mockLine
+            // The user started answering while the request was in flight: drop the reply.
+            if (ticket != aiTicket) return@launch
+
+            if (body == null) {
+                // No session or the request failed: one mock line after a user answer, then wait for the user.
+                if (answer.isNotBlank()) {
+                    val (rawWho, mockLine) =
+                        com.careersandbox.app.data.mock.MockGroupDispatcher.dispatch(answer, followUpIdx)
+                    val mockWho = if (panel && rawWho == "主考官") nextInterviewer() else rawWho
+                    typingSpeaker = mockWho
+                    isTyping = true
+                    delay(1400)
+                    if (ticket != aiTicket) return@launch
+                    showLine(mockWho, mockLine)
+                }
+                isTyping = false
+                answeredThisQuestion = false
+                aiBusy = false
+                return@launch
             }
-            typingSpeaker = who
-            com.careersandbox.app.data.mock.InterviewSession.recordGroupUtterance(who, line, isUser = false)
-            messages.add(ChatMessage("g${messages.size}", who, line, isUser = false, isInterviewer = personas.isInterviewer(who)))
-            followUpIdx++
-            isTyping = false
+
+            if (body.awaitUser) {
+                // Every AI has answered; only the user is left.
+                isTyping = false
+                awaitingUser = true
+                aiBusy = false
+                return@launch
+            }
+
+            // delayMs == 0 means the user already answered this question; keep that instant.
+            val gap = if (body.delayMs > 0) maxOf(body.delayMs, MIN_AI_GAP_MS) else 0
+            val wait = lastShownAt + gap - System.currentTimeMillis()
+            if (wait > 0) {
+                typingSpeaker = body.speaker.ifBlank { typingSpeaker }
+                isTyping = true
+                delay(wait)
+                // The user started answering during the wait: drop this line.
+                if (ticket != aiTicket) return@launch
+            }
+
+            // Bookkeeping happens only for lines that are actually shown.
+            if (body.topic.isNotBlank()) askedTopics.add(body.topic)
+            InterviewAiSession.probeGap = body.probeGap.orEmpty()
+            InterviewAiSession.probeDepth = body.probeDepth ?: 0
+            if (body.nextQuestion.isNotBlank()) InterviewAiSession.askedQuestions.add(body.nextQuestion)
+            val who = body.speaker.ifBlank { typingSpeaker }
+            spokenBy.add(who)
+            lastQuestion = body.nextQuestion
+            awaitingUser = false
+            showLine(who, body.nextQuestion)
+            // A moderator line means a new question: reopen the answer controls.
+            if (personas.isInterviewer(who)) answeredThisQuestion = false
+            aiBusy = false
+            requestNext()
         }
+    }
+
+    // Called when the user presses record, or types the first character.
+    fun onRecordStart() {
+        aiTicket++
+        aiBusy = false
+        isTyping = false
+        awaitingUser = false
+    }
+
+    fun submitGroup(
+        visible: String,
+        analyzed: String,
+        segments: List<String> = emptyList(),
+        segmentStartsMs: List<Long> = emptyList(),
+        inputMode: String = "typed",
+        endedBy: String = "unknown",
+        segmentEndsMs: List<Long> = emptyList(),
+    ) {
+        if (answeredThisQuestion) return
+        com.careersandbox.app.data.mock.InterviewSession.recordGroupSay(visible)
+        com.careersandbox.app.data.mock.InterviewSession.recordGroupUtterance(
+            speaker = "你",
+            content = visible,
+            isUser = true,
+            segments = segments,
+            segmentStartsMs = segmentStartsMs,
+            segmentEndsMs = segmentEndsMs,
+            inputMode = inputMode,
+            endedBy = endedBy,
+        )
+        messages.add(ChatMessage("u${messages.size}", "你", visible, isUser = true))
+        answeredThisQuestion = true
+        awaitingUser = false
+        requestNext(answer = analyzed, inputMode = inputMode, endedBy = endedBy)
     }
 
     LaunchedEffect(Unit) {
@@ -279,6 +355,14 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
             }
             InterviewAiSession.openingTopic.takeIf { it.isNotBlank() }?.let { askedTopics.add(it) }
         }
+        // The opening question is on screen now; the AI participants answer in turn from here.
+        // Give the user time to read the intro and the opening question before anyone answers.
+        val readChars = InterviewAiSession.openingIntro.orEmpty().length +
+                InterviewAiSession.openingQuestion.orEmpty().length
+        val grace = (readChars * OPENING_MS_PER_CHAR)
+            .coerceIn(OPENING_GRACE_MIN_MS, OPENING_GRACE_MAX_MS)
+        lastShownAt = System.currentTimeMillis() + grace
+        if (useAi) requestNext()
     }
 
     // 頁內語音(SpeechRecognizer,需 RECORD_AUDIO,不跳 Google 框):逐字稿餵 dispatch 做同儕路由
@@ -292,14 +376,14 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
         scope.launch {
             transcribeRepo.transcribe(file)
                 .onSuccess { result -> pendingResult = result }
-                .onFailure { /* 轉錄失敗：畫面會回到可以重新錄音的狀態 */ }
+                .onFailure { requestNext() } // transcription failed: let the AI carry on
             isTranscribing = false
             file.delete()
         }
     }
     val timeUp = elapsedSec >= GROUP_MAX_SECONDS
-    LaunchedEffect(timeUp, isTyping, isTranscribing, recorder.isRecording, pendingResult) {
-        if (timeUp && !finished && !isTyping && !isTranscribing &&
+    LaunchedEffect(timeUp, isTyping, aiBusy, isTranscribing, recorder.isRecording, pendingResult) {
+        if (timeUp && !finished && !isTyping && !aiBusy && !isTranscribing &&
             !recorder.isRecording && pendingResult == null
         ) {
             val who = personas.firstOrNull { it.role != "peer" }?.displayName ?: "主考官"
@@ -310,8 +394,8 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
         }
     }
 
-    LaunchedEffect(messages.size, isTyping) {
-        val target = if (isTyping) messages.size else messages.size - 1
+    LaunchedEffect(messages.size, isTyping, awaitingUser) {
+        val target = if (isTyping || awaitingUser) messages.size else messages.size - 1
         if (target >= 0) listState.animateScrollToItem(target)
     }
 
@@ -420,7 +504,7 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
                             Box(
                                 Modifier.weight(1f).clip(RoundedCornerShape(999.dp))
                                     .background(InkGray100)
-                                    .clickable { pendingResult = null }
+                                    .clickable { pendingResult = null; requestNext() }
                                     .padding(vertical = 10.dp),
                                 contentAlignment = Alignment.Center,
                             ) { Text("重新錄音", color = InkGray700, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
@@ -453,13 +537,24 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
                     }
                 } else {
                     GroupBottomBar(
-                        input, { input = it },
-                        onVoice = { if (recorder.isRecording) recorder.stop() else recorder.start() },
+                        input,
+                        { new ->
+                            // First character counts as starting to answer: drop any AI line still waiting.
+                            if (input.isBlank() && new.isNotBlank()) onRecordStart()
+                            // Cleared without sending: let the AI carry on.
+                            else if (input.isNotBlank() && new.isBlank() && !answeredThisQuestion) requestNext()
+                            input = new
+                        },
+                        onVoice = {
+                            if (recorder.isRecording) recorder.stop()
+                            else { onRecordStart(); recorder.start() }
+                        },
                         isListening = recorder.isRecording,
                         amplitude = recorder.amplitude,
                         elapsedMs = recorder.elapsedMs,
+                        enabled = !answeredThisQuestion,
                     ) {
-                        if (input.isNotBlank() && !isTyping) {
+                        if (input.isNotBlank() && !answeredThisQuestion) {
                             val said = input
                             input = ""
                             submitGroup(said, said)
@@ -510,6 +605,14 @@ fun InterviewLiveGroupScreen(navController: NavHostController) {
                 }
                 if (isTyping) {
                     item(key = "typing") { GroupTypingBubble(typingSpeaker, personas) }
+                }
+                if (awaitingUser && !answeredThisQuestion && !finished) {
+                    item(key = "your-turn") {
+                        Text("輪到你回答", color = BrandOrange, fontWeight = FontWeight.SemiBold,
+                            style = MaterialTheme.typography.labelLarge,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
+                    }
                 }
                 item { Spacer(Modifier.height(8.dp)) }
             }
@@ -687,17 +790,21 @@ private fun GroupBottomBar(
     isListening: Boolean,
     amplitude: Float,
     elapsedMs: Long,
+    enabled: Boolean,
     onSend: () -> Unit,
 ) {
     Column(Modifier.fillMaxWidth().background(PaperOff).padding(12.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.alpha(if (enabled) 1f else 0.4f),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             RecordingMicButton(
                 isRecording = isListening,
                 amplitude = amplitude,
                 elapsedMs = elapsedMs,
                 maxDurationMs = 120_000L,
                 size = 48.dp,
-                onClick = onVoice,
+                onClick = { if (enabled) onVoice() },
             )
             Spacer(Modifier.width(8.dp))
             OutlinedTextField(
@@ -706,6 +813,7 @@ private fun GroupBottomBar(
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(24.dp),
                 maxLines = 4,
+                enabled = enabled,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = InkBlack, unfocusedBorderColor = InkGray200,
                     focusedContainerColor = MaterialTheme.colorScheme.surface,

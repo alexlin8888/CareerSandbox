@@ -372,10 +372,18 @@ fun InterviewReportScreen(navController: NavHostController) {
                 // 逐題回顧
                 SectionTitleDark("逐題回顧")
                 Spacer(Modifier.height(12.dp))
+                // turnIndex starts at 1 and follows questionFeedbacks order; calm turns are not listed.
+                val emotionByTurn = report?.turnEmotions.orEmpty().associateBy { it.turnIndex }
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    com.careersandbox.app.data.mock.MockInterviewReportProvider.questionFeedbacks().forEach {
-                        QuestionReview(q = it.question, a = it.answer, comment = it.comment, better = it.better)
-                    }
+                    com.careersandbox.app.data.mock.MockInterviewReportProvider.questionFeedbacks()
+                        .forEachIndexed { i, fb ->
+                            val emotion = emotionByTurn[i + 1]
+                            QuestionReview(
+                                q = fb.question, a = fb.answer, comment = fb.comment, better = fb.better,
+                                emotionLabel = emotion?.label,
+                                emotionQuote = emotion?.quote,
+                            )
+                        }
                 }
 
                 Spacer(Modifier.height(32.dp))
@@ -643,7 +651,10 @@ private fun DimensionRow(name: String, rawScore: Int?, basis: String = "") {
 }
 
 @Composable
-private fun QuestionReview(q: String, a: String, comment: String, better: String) {
+private fun QuestionReview(
+    q: String, a: String, comment: String, better: String,
+    emotionLabel: String? = null, emotionQuote: String? = null,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -666,6 +677,21 @@ private fun QuestionReview(q: String, a: String, comment: String, better: String
                 color = PaperWhite,
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.weight(1f))
+        }
+        if (!emotionLabel.isNullOrBlank()) {
+            Spacer(Modifier.height(10.dp))
+            Box(
+                Modifier.clip(RoundedCornerShape(50))
+                    .background(BrandOrange.copy(alpha = 0.25f))
+                    .padding(horizontal = 10.dp, vertical = 3.dp),
+            ) {
+                Text(emotionLabel, color = BrandYellow, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
+            if (!emotionQuote.isNullOrBlank()) {
+                Spacer(Modifier.height(6.dp))
+                Text("「$emotionQuote」", color = PaperWhite.copy(alpha = 0.6f),
+                    fontSize = 12.sp, lineHeight = 18.sp)
+            }
         }
         Spacer(Modifier.height(14.dp))
         Text("你的回答",
