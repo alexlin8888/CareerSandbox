@@ -73,8 +73,8 @@ fun ResumeHubScreen(navController: NavHostController) {
                 Spacer(Modifier.height(24.dp))
                 MasterCard(navController)
                 Spacer(Modifier.height(22.dp))
-                AnimatedSection(visible = visible, delayMs = 0) { AiOverviewCard() }
-                Spacer(Modifier.height(22.dp))
+//                AnimatedSection(visible = visible, delayMs = 0) { AiOverviewCard() }
+//                Spacer(Modifier.height(22.dp))
                 AnimatedSection(visible = visible, delayMs = 200) { JobApplicationsSection(navController) }
                 Spacer(Modifier.height(44.dp))
                 Spacer(Modifier.navigationBarsPadding().height(BottomNavSpace))
@@ -199,76 +199,76 @@ private fun MasterCard(navController: NavHostController) {
 }
 
 /* ===== AI overview — cross-resume analysis, read-only (no navigation) ===== */
-@Composable
-private fun AiOverviewCard() {
-    val apps = MockData.jobApplications
-    val totalVersions = apps.sumOf { it.versions.size }
-    val avgMatch = if (apps.isNotEmpty()) apps.map { it.matchScore }.average().toInt() else 0
-    val quantFraction = 1f / totalVersions.coerceAtLeast(1)
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp)
-            .clip(RoundedCornerShape(22.dp))
-            .background(Brush.linearGradient(listOf(Color(0xFF3D2419), Color(0xFF1F1611)))),
-    ) {
-        // decorative warm glow, top-right
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .size(190.dp)
-                .offset(x = 50.dp, y = (-70).dp)
-                .background(Brush.radialGradient(listOf(BrandDeepOrange.copy(alpha = 0.30f), Color.Transparent))),
-        )
-        Column(modifier = Modifier.padding(18.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(9.dp))
-                    .background(Brush.linearGradient(listOf(BrandAmber, BrandOrange)))
-                    .padding(horizontal = 9.dp, vertical = 5.dp),
-            ) {
-                Text("AI", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 14.sp, letterSpacing = 1.sp)
-            }
-            Spacer(Modifier.width(9.dp))
-            Text("履歷總覽", color = PaperWhite, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.weight(1f))
-            Text(
-                "綜覽 ${apps.size} 職缺 · $totalVersions 版本",
-                color = PaperWhite.copy(alpha = 0.45f),
-                fontSize = 11.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-        Spacer(Modifier.height(15.dp))
-        AiBar("量化成果覆蓋", quantFraction, "1 / $totalVersions 版本", BrandAmber)
-        Spacer(Modifier.height(11.dp))
-        AiBar("平均適配度", avgMatch / 100f, "$avgMatch%", BrandOrange)
-
-        Spacer(Modifier.height(15.dp))
-        Box(Modifier.fillMaxWidth().height(1.dp).background(PaperWhite.copy(alpha = 0.08f)))
-        Spacer(Modifier.height(14.dp))
-
-        Finding(
-            Color(0xFF5B9BD5),
-            "職缺領域分散",
-            "Acer、KKday、蝦皮 橫跨硬體、旅遊、電商,各份履歷該突顯不同經歷,別共用同一版。",
-        )
-        Spacer(Modifier.height(13.dp))
-        Finding(
-            BrandAmber,
-            "共同缺口:量化不足",
-            "版本普遍缺具體數字。補上成長率、規模、節省工時,說服力最有感。",
-        )
-        Spacer(Modifier.height(13.dp))
-        Finding(
-            AccentGreen,
-            "待補關鍵字",
-            "蝦皮(UX 研究)版本缺「使用者研究」「A/B 測試」等字,與 JD 匹配偏低。",
-        )
-        }
-    }
-}
+//@Composable
+//private fun AiOverviewCard() {
+//    val apps = MockData.jobApplications
+//    val totalVersions = apps.sumOf { it.versions.size }
+//    val avgMatch = if (apps.isNotEmpty()) apps.map { it.matchScore }.average().toInt() else 0
+//    val quantFraction = 1f / totalVersions.coerceAtLeast(1)
+//
+//    Box(
+//        modifier = Modifier
+//            .fillMaxWidth()
+//            .padding(horizontal = 20.dp)
+//            .clip(RoundedCornerShape(22.dp))
+//            .background(Brush.linearGradient(listOf(Color(0xFF3D2419), Color(0xFF1F1611)))),
+//    ) {
+//        // decorative warm glow, top-right
+//        Box(
+//            modifier = Modifier
+//                .align(Alignment.TopEnd)
+//                .size(190.dp)
+//                .offset(x = 50.dp, y = (-70).dp)
+//                .background(Brush.radialGradient(listOf(BrandDeepOrange.copy(alpha = 0.30f), Color.Transparent))),
+//        )
+//        Column(modifier = Modifier.padding(18.dp)) {
+//        Row(verticalAlignment = Alignment.CenterVertically) {
+//            Box(
+//                modifier = Modifier
+//                    .clip(RoundedCornerShape(9.dp))
+//                    .background(Brush.linearGradient(listOf(BrandAmber, BrandOrange)))
+//                    .padding(horizontal = 9.dp, vertical = 5.dp),
+//            ) {
+//                Text("AI", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 14.sp, letterSpacing = 1.sp)
+//            }
+//            Spacer(Modifier.width(9.dp))
+//            Text("履歷總覽", color = PaperWhite, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.weight(1f))
+//            Text(
+//                "綜覽 ${apps.size} 職缺 · $totalVersions 版本",
+//                color = PaperWhite.copy(alpha = 0.45f),
+//                fontSize = 11.sp,
+//                fontWeight = FontWeight.SemiBold,
+//            )
+//        }
+//        Spacer(Modifier.height(15.dp))
+//        AiBar("量化成果覆蓋", quantFraction, "1 / $totalVersions 版本", BrandAmber)
+//        Spacer(Modifier.height(11.dp))
+//        AiBar("平均適配度", avgMatch / 100f, "$avgMatch%", BrandOrange)
+//
+//        Spacer(Modifier.height(15.dp))
+//        Box(Modifier.fillMaxWidth().height(1.dp).background(PaperWhite.copy(alpha = 0.08f)))
+//        Spacer(Modifier.height(14.dp))
+//
+//        Finding(
+//            Color(0xFF5B9BD5),
+//            "職缺領域分散",
+//            "Acer、KKday、蝦皮 橫跨硬體、旅遊、電商,各份履歷該突顯不同經歷,別共用同一版。",
+//        )
+//        Spacer(Modifier.height(13.dp))
+//        Finding(
+//            BrandAmber,
+//            "共同缺口:量化不足",
+//            "版本普遍缺具體數字。補上成長率、規模、節省工時,說服力最有感。",
+//        )
+//        Spacer(Modifier.height(13.dp))
+//        Finding(
+//            AccentGreen,
+//            "待補關鍵字",
+//            "蝦皮(UX 研究)版本缺「使用者研究」「A/B 測試」等字,與 JD 匹配偏低。",
+//        )
+//        }
+//    }
+//}
 
 @Composable
 private fun AiBar(label: String, fraction: Float, value: String, color: Color) {
