@@ -11,7 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -20,15 +20,30 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.careersandbox.app.data.mock.MockData
-import com.careersandbox.app.data.model.InterviewRecord
-import com.careersandbox.app.navigation.Routes
 import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
+import androidx.compose.ui.platform.LocalContext
+import com.careersandbox.app.data.remote.InterviewSessionSummaryDto
+import com.careersandbox.app.data.repository.RemoteInterviewSessionRepository
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InterviewHistoryScreen(navController: NavHostController) {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    // null while loading
+    var records by remember { mutableStateOf<List<InterviewSessionSummaryDto>?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        RemoteInterviewSessionRepository().list()
+            .onSuccess { records = it }
+            .onFailure { error = it.message; records = emptyList() }
+    }
+    val list = records.orEmpty()
+    // Newest first, as the server returns them; sessions without a score are left out.
+    val scores = list.mapNotNull { it.score?.roundToInt() }
+
     Scaffold(
         containerColor = PaperWhite,
         topBar = {
@@ -62,19 +77,25 @@ fun InterviewHistoryScreen(navController: NavHostController) {
                                 .background(BrandOrange.copy(alpha = 0.1f))
                                 .padding(20.dp),
                         ) {
-                            StatBox("4", "完成", Modifier.weight(1f))
-                            StatBox("71", "平均分", Modifier.weight(1f))
-                            StatBox("78", "最高分", Modifier.weight(1f))
+                            StatBox("${list.size}", "完成", Modifier.weight(1f))
+                            StatBox(
+                                if (scores.isEmpty()) "—" else "${scores.sum() / scores.size}",
+                                "平均分", Modifier.weight(1f),
+                            )
+                            StatBox(
+                                scores.maxOrNull()?.toString() ?: "—",
+                                "最高分", Modifier.weight(1f),
+                            )
                         }
                         Spacer(Modifier.height(20.dp))
                     }
                 }
             }
-            // === #8 進步趨勢 dashboard ===
+            // 進步趨勢
             item {
                 StaggeredAppear(delayMillis = 90) {
                     Column {
-                        TrendDashboard()
+                        TrendDashboard(scores.reversed()) // 舊 → 新
                         Spacer(Modifier.height(24.dp))
                     }
                 }
@@ -93,12 +114,24 @@ fun InterviewHistoryScreen(navController: NavHostController) {
                     }
                 }
             }
+            if (records == null) {
+                item { Text("載入中…", color = InkGray400, fontSize = 13.sp) }
+            } else if (error != null) {
+                item { Text(error ?: "", color = InkGray400, fontSize = 13.sp) }
+            } else if (list.isEmpty()) {
+                item {
+                    Text(
+                        "還沒有儲存的面試。完成一場面試後，在報告頁按「儲存報告」就會出現在這裡。",
+                        color = InkGray400, fontSize = 13.sp, lineHeight = 19.sp,
+                    )
+                }
+            }
             // 紀錄列
-            itemsIndexed(MockData.interviewHistory) { idx, record ->
+            itemsIndexed(list) { idx, record ->
                 StaggeredAppear(delayMillis = 260 + idx * 70) {
                     Column {
-                        HistoryRowFull(record) {
-                            navController.navigate(Routes.INTERVIEW_REPORT)
+                        SavedInterviewRow(record) {
+                            openSavedReport(scope, ctx, navController, record.id)
                         }
                         SectionDivider(modifier = Modifier.padding(vertical = 12.dp))
                     }
@@ -125,59 +158,11 @@ private fun StatBox(value: String, label: String, modifier: Modifier = Modifier)
     }
 }
 
-@Composable
-private fun HistoryRowFull(r: InterviewRecord, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .pressScale(onClick = onClick),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier
-                        .clip(CircleShape)
-                        .background(BrandYellow.copy(alpha = 0.3f))
-                        .padding(horizontal = 8.dp, vertical = 2.dp)
-                ) {
-                    Text(r.type.label,
-                        color = BrandDeepOrange,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold)
-                }
-                Spacer(Modifier.width(8.dp))
-                Text(r.date,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = InkGray400)
-            }
-            Spacer(Modifier.height(4.dp))
-            Text(r.jobTitle,
-                style = MaterialTheme.typography.titleMedium,
-                color = InkBlack, fontWeight = FontWeight.SemiBold)
-        }
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text("${r.score}",
-                color = BrandOrange,
-                fontWeight = FontWeight.Black,
-                fontSize = 28.sp)
-            Spacer(Modifier.width(2.dp))
-            Text("分",
-                style = MaterialTheme.typography.labelSmall,
-                color = InkGray500,
-                modifier = Modifier.padding(bottom = 6.dp))
-        }
-    }
-}
 
 /* ===================== #8 進步趨勢 dashboard ===================== */
 
 @Composable
-private fun TrendDashboard() {
-    val scores = MockData.interviewHistory.reversed().map { it.score } // 舊 → 新
-    val first = scores.firstOrNull() ?: 0
-    val last = scores.lastOrNull() ?: 0
-    val delta = last - first
+private fun TrendDashboard(scores: List<Int>) { // oldest → newest
     Column(modifier = Modifier.fillMaxWidth()) {
         Text("進步趨勢", color = InkBlack, fontWeight = FontWeight.Black, fontSize = 20.sp)
         Spacer(Modifier.height(4.dp))
@@ -186,49 +171,48 @@ private fun TrendDashboard() {
             color = InkGray500, fontSize = 13.sp, lineHeight = 19.sp,
         )
         Spacer(Modifier.height(14.dp))
-        ScoreTrendChart(scores)
-        Spacer(Modifier.height(10.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                "首場 $first → 最新 $last",
-                color = InkGray700, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.weight(1f),
-            )
-            if (delta != 0) {
-                val up = delta > 0
-                val mag = if (up) delta else -delta
-                Box(
-                    Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background((if (up) AccentGreen else AccentRed).copy(alpha = 0.15f))
-                        .padding(horizontal = 10.dp, vertical = 4.dp),
-                ) {
-                    Text(
-                        (if (up) "↑ 進步 " else "↓ 退步 ") + "$mag 分",
-                        color = if (up) AccentGreen else AccentRed,
-                        fontSize = 12.sp, fontWeight = FontWeight.Bold,
-                    )
+        if (scores.size >= 2) {
+            val first = scores.first()
+            val last = scores.last()
+            val delta = last - first
+            ScoreTrendChart(scores)
+            Spacer(Modifier.height(10.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "首場 $first → 最新 $last",
+                    color = InkGray700, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                if (delta != 0) {
+                    val up = delta > 0
+                    val mag = if (up) delta else -delta
+                    Box(
+                        Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background((if (up) AccentGreen else AccentRed).copy(alpha = 0.15f))
+                            .padding(horizontal = 10.dp, vertical = 4.dp),
+                    ) {
+                        Text(
+                            (if (up) "↑ 進步 " else "↓ 退步 ") + "$mag 分",
+                            color = if (up) AccentGreen else AccentRed,
+                            fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                        )
+                    }
                 }
             }
-        }
-        Spacer(Modifier.height(20.dp))
-        Text("各面向進步(首場 → 最新)", color = InkBlack, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-        Spacer(Modifier.height(10.dp))
-        FacetTrendRow("內容", 64, 71)
-        FacetTrendRow("結構", 70, 82)
-        FacetTrendRow("表達", 66, 70)
-        Spacer(Modifier.height(14.dp))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(BrandPeach.copy(alpha = 0.4f))
-                .padding(12.dp),
-        ) {
-            Text(
-                "這些數字也會反映在面試 Hub 的 Avatar 成長卡上。練習就是在養角色。",
-                color = BrandDeepOrange, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, lineHeight = 16.sp,
-            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(BrandOrange.copy(alpha = 0.08f))
+                    .padding(16.dp),
+            ) {
+                Text(
+                    "再儲存 ${2 - scores.size} 場有分數的面試，就能看到趨勢。",
+                    color = InkGray500, fontSize = 13.sp,
+                )
+            }
         }
     }
 }
@@ -285,32 +269,3 @@ private fun ScoreTrendChart(scores: List<Int>) {
     }
 }
 
-@Composable
-private fun FacetTrendRow(name: String, from: Int, to: Int) {
-    val delta = to - from
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(name, color = InkBlack, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(52.dp))
-        Spacer(Modifier.width(10.dp))
-        Box(
-            modifier = Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(50)).background(InkGray100),
-        ) {
-            Box(
-                Modifier.fillMaxHeight().fillMaxWidth((to / 100f).coerceIn(0f, 1f)).clip(RoundedCornerShape(50)).background(BrandOrange.copy(alpha = 0.5f)),
-            )
-        }
-        Spacer(Modifier.width(10.dp))
-        Text("$from→$to", color = InkGray500, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-        if (delta != 0) {
-            Spacer(Modifier.width(6.dp))
-            val up = delta > 0
-            Text(
-                (if (up) "↑" else "↓") + (if (up) delta else -delta),
-                color = if (up) AccentGreen else AccentRed,
-                fontSize = 11.sp, fontWeight = FontWeight.Bold,
-            )
-        }
-    }
-}

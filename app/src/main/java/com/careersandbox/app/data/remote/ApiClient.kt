@@ -32,7 +32,7 @@ object ApiClient {
         .addInterceptor(authInterceptor)
         .addInterceptor(logging)
         .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
-        .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+        .readTimeout(300, java.util.concurrent.TimeUnit.SECONDS)
         .build()
 
 
@@ -48,6 +48,7 @@ object ApiClient {
     val userApi: UserApiService by lazy { retrofit.create(UserApiService::class.java) }
     val experienceApi: ExperienceApiService by lazy { retrofit.create(ExperienceApiService::class.java) }
 
+    val interviewSessionApi: InterviewSessionApiService by lazy { retrofit.create(InterviewSessionApiService::class.java) }
     val aiApi: AiApiService by lazy { retrofit.create(AiApiService::class.java) }
     val experienceChatApi: ExperienceChatApiService by lazy { retrofit.create(ExperienceChatApiService::class.java) }
 
