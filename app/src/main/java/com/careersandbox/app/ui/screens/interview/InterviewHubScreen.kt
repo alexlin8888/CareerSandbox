@@ -52,6 +52,9 @@ import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
 import androidx.compose.foundation.layout.navigationBarsPadding
 import com.careersandbox.app.ui.components.BottomNavSpace
+import androidx.compose.ui.platform.LocalContext
+import com.careersandbox.app.data.remote.InterviewSessionSummaryDto
+import com.careersandbox.app.data.repository.RemoteInterviewSessionRepository
 
 @Composable
 fun InterviewHubScreen(navController: NavHostController) {
@@ -313,8 +316,23 @@ private fun PlanCard(
     }
 }
 
+private const val HUB_HISTORY_LIMIT = 4
+
 @Composable
 private fun HistorySection(navController: NavHostController) {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    // null while loading
+    var records by remember { mutableStateOf<List<InterviewSessionSummaryDto>?>(null) }
+    var failed by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        RemoteInterviewSessionRepository().list()
+            .onSuccess { records = it }
+            .onFailure { failed = true; records = emptyList() }
+    }
+    val all = records.orEmpty()
+    val shown = all.take(HUB_HISTORY_LIMIT)
+
     Column(modifier = Modifier.padding(horizontal = 24.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("歷史紀錄",
@@ -331,59 +349,37 @@ private fun HistorySection(navController: NavHostController) {
                 })
         }
         Spacer(Modifier.height(12.dp))
-        MockData.interviewHistory.forEachIndexed { idx, r ->
-            HistoryRow(r) { navController.navigate(Routes.INTERVIEW_REPORT) }
-            if (idx < MockData.interviewHistory.size - 1) {
-                SectionDivider(modifier = Modifier.padding(vertical = 12.dp))
+        when {
+            records == null -> Text("載入中…", color = InkGray400, fontSize = 13.sp)
+            failed -> Text("目前無法讀取歷史紀錄", color = InkGray400, fontSize = 13.sp)
+            all.isEmpty() -> Text(
+                "還沒有儲存的面試。完成一場面試後，在報告頁按「儲存報告」就會出現在這裡。",
+                color = InkGray400, fontSize = 13.sp, lineHeight = 19.sp,
+            )
+            else -> {
+                shown.forEachIndexed { idx, r ->
+                    SavedInterviewRow(r) { openSavedReport(scope, ctx, navController, r.id) }
+                    if (idx < shown.size - 1) {
+                        SectionDivider(modifier = Modifier.padding(vertical = 12.dp))
+                    }
+                }
+                if (all.size > HUB_HISTORY_LIMIT) {
+                    Spacer(Modifier.height(14.dp))
+                    Text(
+                        "查看更多 ›",
+                        color = BrandOrange,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .pressScale { navController.navigate(Routes.INTERVIEW_HISTORY) },
+                    )
+                }
             }
         }
     }
 }
 
-@Composable
-private fun HistoryRow(r: InterviewRecord, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .pressScale(onClick = onClick),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier
-                        .clip(CircleShape)
-                        .background(BrandYellow.copy(alpha = 0.3f))
-                        .padding(horizontal = 8.dp, vertical = 2.dp)
-                ) {
-                    Text(r.type.label,
-                        color = BrandDeepOrange,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold)
-                }
-                Spacer(Modifier.width(8.dp))
-                Text(r.date,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = InkGray400)
-            }
-            Spacer(Modifier.height(4.dp))
-            Text(r.jobTitle,
-                style = MaterialTheme.typography.titleMedium,
-                color = InkBlack, fontWeight = FontWeight.SemiBold)
-        }
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text("${r.score}",
-                color = BrandOrange,
-                fontWeight = FontWeight.Black,
-                fontSize = 28.sp)
-            Spacer(Modifier.width(2.dp))
-            Text("分",
-                style = MaterialTheme.typography.labelSmall,
-                color = InkGray500,
-                modifier = Modifier.padding(bottom = 6.dp))
-        }
-    }
-}
 
 /* ===================== #6 Avatar 成長卡 ===================== */
 

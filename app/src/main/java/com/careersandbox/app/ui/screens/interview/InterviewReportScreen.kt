@@ -42,6 +42,11 @@ import com.careersandbox.app.data.remote.ExperienceDto
 import com.careersandbox.app.data.remote.InterviewAiApiClient
 import com.careersandbox.app.data.remote.InterviewContextDto
 import com.careersandbox.app.data.remote.ReportRequest
+import com.careersandbox.app.data.remote.ReportResponse
+import com.careersandbox.app.data.remote.SaveInterviewSessionRequest
+import com.careersandbox.app.data.repository.RemoteInterviewSessionRepository
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import com.careersandbox.app.data.remote.TurnDto
 import com.careersandbox.app.data.remote.toContextDto
 import com.careersandbox.app.data.repository.RemoteExperienceRepository
@@ -49,17 +54,30 @@ import kotlinx.coroutines.launch
 import com.careersandbox.app.data.remote.toDto
 import com.careersandbox.app.data.remote.toGroupTurns
 import kotlin.math.roundToInt
+import androidx.compose.runtime.saveable.rememberSaveable
 
 @Composable
 fun InterviewReportScreen(navController: NavHostController) {
     val ctx = LocalContext.current
     // 只有剛做完影像面試才顯示影像維度;讀取後重置,避免下次文字/語音面試誤顯示。
-    val showVideoDims = remember { InterviewConfig.lastWasVideo }
+    // True when opened from the history list: show the stored report, never fetch or save one.
+    val viewingHistory = remember { ReportViewer.viewingHistory }
+    DisposableEffect(Unit) {
+        onDispose {
+            if (ReportViewer.viewingHistory) {
+                ReportViewer.viewingHistory = false
+                // A stored report must not look like a fresh one to the next interview.
+                InterviewAiReport.response = null
+            }
+        }
+    }
+    val showVideoDims = remember { !viewingHistory && InterviewConfig.lastWasVideo }
     // 只有剛做完團體面試才顯示協作維度;同樣讀取後重置。
-    val showCollab = remember { InterviewConfig.format == "group" }
+    val showCollab = remember { viewingHistory || InterviewConfig.format == "group" }
     // A report only makes sense when the user answered at least one question.
     val hasAnswers = remember {
-        InterviewSession.turns.isNotEmpty() || InterviewSession.groupTranscript.any { it.isUser }
+        viewingHistory ||
+                InterviewSession.turns.isNotEmpty() || InterviewSession.groupTranscript.any { it.isUser }
     }
     LaunchedEffect(Unit) {
         InterviewConfig.lastWasVideo = false
@@ -84,6 +102,10 @@ fun InterviewReportScreen(navController: NavHostController) {
     }
     var isLoadingReport by remember { mutableStateOf(false) }
     var showStar by remember { mutableStateOf(false) }
+    // Survives rotation so the button does not offer a second save for a stored report.
+    var savedOk by rememberSaveable { mutableStateOf(viewingHistory) }
+    var saving by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) {
         val sessionId = InterviewAiSession.sessionId
         if (sessionId != null && hasAnswers && InterviewAiReport.response == null) {
@@ -253,7 +275,7 @@ fun InterviewReportScreen(navController: NavHostController) {
                     fontWeight = FontWeight.Bold,
                     fontSize = 20.sp,
                     modifier = Modifier.weight(1f))
-                if (isDebuggable) {
+                if (isDebuggable && !viewingHistory) {
                     Box(
                         Modifier.clip(CircleShape).background(Color(0x1AFFFFFF))
                             .pressScale { exportSession() }
@@ -490,13 +512,31 @@ fun InterviewReportScreen(navController: NavHostController) {
                         .clip(RoundedCornerShape(16.dp))
                         .background(Color(0x1AFFFFFF))
                         .pressScale {
-                            android.widget.Toast.makeText(
-                                ctx, "報告已儲存到「面試紀錄」(示範)", android.widget.Toast.LENGTH_SHORT,
-                            ).show()
+                            val current = InterviewAiReport.response
+                            val sid = InterviewAiSession.sessionId
+                            when {
+                                savedOk -> android.widget.Toast.makeText(
+                                    ctx, "這場面試已在「面試紀錄」", android.widget.Toast.LENGTH_SHORT,
+                                ).show()
+                                current == null || sid == null -> android.widget.Toast.makeText(
+                                    ctx, "報告尚未產生，無法儲存", android.widget.Toast.LENGTH_SHORT,
+                                ).show()
+                                saving -> Unit
+                                else -> scope.launch {
+                                    saving = true
+                                    savedOk = saveFinishedSession(sid, current)
+                                    saving = false
+                                    android.widget.Toast.makeText(
+                                        ctx,
+                                        if (savedOk) "已儲存到「面試紀錄」" else "儲存失敗，請稍後再試",
+                                        android.widget.Toast.LENGTH_SHORT,
+                                    ).show()
+                                }
+                            }
                         },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("儲存報告",
+                    Text(if (savedOk) "已儲存" else if (saving) "儲存中…" else "儲存報告",
                         color = PaperWhite,
                         fontWeight = FontWeight.SemiBold,
                         style = MaterialTheme.typography.titleMedium)
@@ -524,7 +564,59 @@ fun InterviewReportScreen(navController: NavHostController) {
         }
     }
 }
+// Stores one finished interview. Idempotent on the server (same sessionId replaces the record),
+// so a retry is safe. NonCancellable keeps the save alive if the user leaves the screen right away.
+private suspend fun saveFinishedSession(sessionId: String, report: ReportResponse): Boolean =
+    withContext(NonCancellable) {
+        val isGroup = InterviewConfig.format == "group"
+        val ctx = InterviewConfig.toContextDto(group = isGroup)
+        val request = SaveInterviewSessionRequest(
+            sessionId = sessionId,
+            mode = InterviewConfig.format,
+            report = report,
+            config = mapOf(
+                // The history list reads config.targetJobTitle.
+                "targetJobTitle" to ctx.customRole,
+                "targetCompany" to ctx.customCompany,
+                "round" to ctx.round,
+                "language" to ctx.language,
+                "type" to ctx.type,
+                "difficulty" to ctx.difficulty,
+                "groupInterviewers" to ctx.groupInterviewers,
+                "groupSize" to ctx.groupSize,
+                "groupRole" to ctx.groupRole,
+            ),
+            participants = InterviewAiSession.personas,
+            turns = if (isGroup) {
+                InterviewSession.groupTranscript.toGroupTurns()
+            } else {
+                InterviewSession.turns.map {
+                    TurnDto(
+                        question = it.question,
+                        answer = it.answer,
+                        inputMode = it.inputMode,
+                        answerSegments = it.answerSegments,
+                        segmentStartsMs = it.segmentStartsMs,
+                        segmentEndsMs = it.segmentEndsMs,
+                        endedBy = it.endedBy,
+                    )
+                }
+            },
+            groupSays = if (isGroup) InterviewSession.groupTranscript.map { it.toDto() } else emptyList(),
+            jdSkills = InterviewAiSession.jdSkills,
+            openingIntro = InterviewAiSession.openingIntro.orEmpty(),
+            resumeVersionId = InterviewConfig.resumeVersionId.ifBlank { null },
+            overallScore = report.overallScore,
+            scoreBasis = report.scoreBasis,
+        )
+        val repo = RemoteInterviewSessionRepository()
+        var result = repo.save(request)
+        if (result.isFailure) result = repo.save(request)
+        result.onFailure { android.util.Log.e("AI_REPORT", "save failed: ${it.message}") }
+        result.isSuccess
+    }
 
+// Debug export: everything the model team needs to replay a session offline
 // Debug export: everything the model team needs to replay a session offline
 private fun buildSessionExportJson(): String {
     val payload = linkedMapOf<String, Any?>(
@@ -1031,7 +1123,8 @@ private data class CollabRow(val name: String, val score: Int, val hint: String,
 
 @Composable
 private fun CollabDimensionSection() {
-    val userSays = InterviewSession.groupTranscript.filter { it.isUser }
+    val userSays = if (ReportViewer.viewingHistory) ReportViewer.userSays
+    else InterviewSession.groupTranscript.filter { it.isUser }.map { it.content }
     val real = InterviewAiReport.response?.collabDims.orEmpty()
     val usingReal = real.isNotEmpty()
     val rows = if (usingReal) {
@@ -1050,7 +1143,7 @@ private fun CollabDimensionSection() {
             if (userSays.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
                 userSays.takeLast(3).forEach {
-                    Text("· ${it.content}", color = PaperWhite.copy(alpha = 0.65f), fontSize = 12.sp, lineHeight = 18.sp)
+                    Text("· $it", color = PaperWhite.copy(alpha = 0.65f), fontSize = 12.sp, lineHeight = 18.sp)
                 }
             }
         }
