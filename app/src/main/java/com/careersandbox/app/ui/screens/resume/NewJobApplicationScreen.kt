@@ -85,7 +85,7 @@ fun NewJobApplicationScreen(navController: NavHostController) {
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        "從 JD 自動生第一版",
+                        "從職缺描述自動生第一版",
                         color = BrandDeepOrange,
                         fontWeight = FontWeight.Black,
                         fontSize = 17.sp,
@@ -193,7 +193,7 @@ private fun ManualForm(navController: NavHostController) {
 
     Spacer(Modifier.height(20.dp))
 
-    FieldLabel("職缺敘述 (JD)")
+    FieldLabel("職缺敘述")
     OutlinedTextField(
         value = jdText,
         onValueChange = { jdText = it },

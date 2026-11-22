@@ -185,7 +185,7 @@ private fun OnboardingIntro(onStart: () -> Unit) {
                 2 -> IntroTierCard("03 / 05")
                 3 -> IntroCard(
                     "04 / 05", R.drawable.beaver_celebrate, "跟 AI 面試官練習", "想練幾分鐘,都可以",
-                    "可以調面試官的強度、貼上 JD、選擇要給他看哪一份履歷版本。練完拿到分面向的回饋:內容、結構、表達。",
+                    "可以調面試官的強度、貼上職缺說明、選擇要給他看哪一份履歷版本。練完拿到分面向的回饋:內容、結構、表達。",
                 )
                 4 -> IntroCard(
                     "05 / 05", R.drawable.beaver_search, "用自己的話找方向", "重點是你「還缺什麼」",

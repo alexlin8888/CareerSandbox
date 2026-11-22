@@ -86,10 +86,10 @@ fun InterviewHubScreen(navController: NavHostController) {
             // === 本週練習 ===
             StaggeredAppear(delayMillis = 170) { WeeklyStreak(all) }
 
-            Spacer(Modifier.height(20.dp))
-
-            // === 快速練習(低門檻入口,放在狀態區塊之後)===
-            StaggeredAppear(delayMillis = 200) { QuickPracticeCard(navController) }
+//            Spacer(Modifier.height(20.dp))
+//
+//            // === 快速練習(低門檻入口,放在狀態區塊之後)===
+//            StaggeredAppear(delayMillis = 200) { QuickPracticeCard(navController) }
 
             // 能力輪廓 hidden: it needs per-dimension scores the list endpoint does not return.
             // StaggeredAppear(delayMillis = 225) { AbilityProfileEntry() }
@@ -223,19 +223,19 @@ private fun PlanCards(navController: NavHostController) {
             onClick = { navController.navigate(Routes.INTERVIEW_SETUP_GROUP) },
         )
 
-        // 影像面試卡(新,創新性)
-        PlanCard(
-            number = "03",
-            title = "影像面試",
-            eyebrow = "鏡頭 + 即時覺察",
-            description = "開鏡頭對著河狸面試官練,\n看自己的眼神與表現",
-            tagText = "練習工具",
-            tagBg = AccentGreen,
-            tagFg = PaperWhite,
-            cardBg = SolidColor(BrandOrange),
-            illustrationRes = R.drawable.undraw_video_call_i5de,
-            onClick = { navController.navigate(Routes.INTERVIEW_VIDEO) },
-        )
+//        // 影像面試卡(新,創新性)
+//        PlanCard(
+//            number = "03",
+//            title = "影像面試",
+//            eyebrow = "鏡頭 + 即時覺察",
+//            description = "開鏡頭對著河狸面試官練,\n看自己的眼神與表現",
+//            tagText = "練習工具",
+//            tagBg = AccentGreen,
+//            tagFg = PaperWhite,
+//            cardBg = SolidColor(BrandOrange),
+//            illustrationRes = R.drawable.undraw_video_call_i5de,
+//            onClick = { navController.navigate(Routes.INTERVIEW_VIDEO) },
+//        )
         // 面試頁改版預覽(WIP)
     }
 }

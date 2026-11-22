@@ -214,7 +214,7 @@ private fun JobTargetCard(target: JobTarget, onError: (String) -> Unit) {
             Column {
                 Spacer(Modifier.height(12.dp))
                 if (target.jdKeywords.isNotEmpty()) {
-                    Text("這個 JD 重視", color = InkGray500, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    Text("這份職缺重視", color = InkGray500, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.height(6.dp))
                     androidx.compose.foundation.layout.FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -238,7 +238,7 @@ private fun JobTargetCard(target: JobTarget, onError: (String) -> Unit) {
                 if (target.versions.isEmpty()) {
                     Text("還沒有版本", color = InkBlack, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                     Spacer(Modifier.height(2.dp))
-                    Text("到 JD 客製化,把客製存成這個職缺的版本",
+                    Text("到履歷客製化,把結果存成此職缺的版本",
                         color = InkGray500, fontSize = 12.sp, lineHeight = 16.sp)
                 } else {
                     target.versions.forEachIndexed { idx, v ->
@@ -391,7 +391,7 @@ private fun AddTargetDialog(onAdd: (String, String) -> Unit, onDismiss: () -> Un
         title = { Text("新增或查詢職缺") },
         text = {
             Column {
-                Text("先建職缺,之後在 JD 客製化把客製存成它的版本",
+                Text("先建職缺,之後再履歷客製化將結果存到此職缺中",
                     color = InkGray500, fontSize = 12.sp)
                 Spacer(Modifier.height(12.dp))
                 OutlinedTextField(

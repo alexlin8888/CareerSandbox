@@ -1141,7 +1141,7 @@ private fun SkillGapSection(requiredSkills: List<String>) {
             }
         }
         Spacer(Modifier.height(14.dp))
-        GapGroup(dot = InkGray400, title = "你有、但這份 JD 沒特別要求", chips = other, emphasized = false)
+        GapGroup(dot = InkGray400, title = "你有、但這份職缺沒特別要求", chips = other, emphasized = false)
     }
 }
 
