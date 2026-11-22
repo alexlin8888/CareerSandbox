@@ -63,6 +63,7 @@ import com.careersandbox.app.ui.components.*
 import com.careersandbox.app.ui.theme.*
 import com.careersandbox.app.data.local.UserStore
 import androidx.compose.ui.unit.Dp
+import com.careersandbox.app.data.repository.RemoteInterviewSessionRepository
 
 
 @Composable
@@ -287,6 +288,12 @@ private fun ResumeMiniCard(navController: NavHostController, cardHeight: Dp) {
 
 @Composable
 private fun InterviewMiniCard(navController: NavHostController, cardHeight: Dp) {
+    // Latest saved interview score (GET /interview-sessions, newest first).
+    var latestScore by remember { mutableStateOf<Int?>(null) }
+    LaunchedEffect(Unit) {
+        RemoteInterviewSessionRepository().list()
+            .onSuccess { latestScore = it.firstOrNull()?.score?.toInt() }
+    }
     Box(
         modifier = Modifier
             .pressScale { navController.navigate(Routes.INTERVIEW_HUB) }
@@ -327,9 +334,9 @@ private fun InterviewMiniCard(navController: NavHostController, cardHeight: Dp) 
                 modifier = Modifier.offset(x = 10.dp, y = 12.dp),
                 verticalAlignment = Alignment.Bottom,
             ) {
-                Text("78", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 30.sp)
+                Text(latestScore?.toString() ?: "—", color = PaperWhite, fontWeight = FontWeight.Black, fontSize = 30.sp)
                 Text(
-                    " 分（上次模擬）",
+                    if (latestScore != null) " 分（上次模擬）" else " 還沒有儲存的面試",
                     color = PaperWhite.copy(alpha = 0.7f),
                     fontSize = 11.sp,
                     modifier = Modifier.padding(bottom = 4.dp),
@@ -585,9 +592,7 @@ private fun companyDomain(company: String): String? = when (company.trim().lower
 /** Hero 區:wave 漸層 + 大字 + 插畫 + **僅在此區的線稿裝飾** */
 @Composable
 private fun HeroSection(navController: NavHostController) {
-    val stat = MockData.homeStat
     val user = UserStore.me
-    val pct = rememberCountUp(stat.resumeCompletion)
     val greeting = remember {
         val h = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
         when {
@@ -648,69 +653,69 @@ private fun HeroSection(navController: NavHostController) {
                 )
             }
 
-            Spacer(Modifier.height(20.dp))
+//            Spacer(Modifier.height(20.dp))
+//
+//            Row(
+//                modifier = Modifier.fillMaxWidth(),
+//                verticalAlignment = Alignment.Bottom,
+//            ) {
+//                Column(modifier = Modifier
+//                    .fillMaxWidth(0.55f)
+//                    .pressScale { navController.navigate(Routes.RESUME_HUB) }) {
+//                    Text(
+//                        "這週你完成了",
+//                        color = PaperWhite.copy(alpha = 0.85f),
+//                        fontSize = 14.sp,
+//                        lineHeight = 18.sp,
+//                    )
+//                    Spacer(Modifier.height(4.dp))
+//                    Row(verticalAlignment = Alignment.Bottom) {
+//                        Text(
+//                            "$pct",
+//                            color = PaperWhite,
+//                            fontWeight = FontWeight.Black,
+//                            fontSize = 56.sp,
+//                            lineHeight = 60.sp,
+//                        )
+//                        Spacer(Modifier.width(2.dp))
+//                        Text(
+//                            "%",
+//                            color = PaperWhite.copy(alpha = 0.9f),
+//                            fontWeight = FontWeight.Bold,
+//                            fontSize = 22.sp,
+//                            modifier = Modifier.padding(bottom = 10.dp),
+//                        )
+//                        Spacer(Modifier.width(6.dp))
+//                        Text(
+//                            "履歷",
+//                            color = PaperWhite.copy(alpha = 0.85f),
+//                            fontSize = 14.sp,
+//                            modifier = Modifier.padding(bottom = 14.dp),
+//                        )
+//                    }
+//                }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Bottom,
-            ) {
-                Column(modifier = Modifier
-                    .fillMaxWidth(0.55f)
-                    .pressScale { navController.navigate(Routes.RESUME_HUB) }) {
-                    Text(
-                        "這週你完成了",
-                        color = PaperWhite.copy(alpha = 0.85f),
-                        fontSize = 14.sp,
-                        lineHeight = 18.sp,
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        Text(
-                            "$pct",
-                            color = PaperWhite,
-                            fontWeight = FontWeight.Black,
-                            fontSize = 56.sp,
-                            lineHeight = 60.sp,
-                        )
-                        Spacer(Modifier.width(2.dp))
-                        Text(
-                            "%",
-                            color = PaperWhite.copy(alpha = 0.9f),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 22.sp,
-                            modifier = Modifier.padding(bottom = 10.dp),
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            "履歷",
-                            color = PaperWhite.copy(alpha = 0.85f),
-                            fontSize = 14.sp,
-                            modifier = Modifier.padding(bottom = 14.dp),
-                        )
-                    }
-                }
-
-                Spacer(Modifier.weight(1f))
-
-                Column(
-                    modifier = Modifier.padding(bottom = 60.dp),
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    StreakChip(
-                        leadingIcon = Icons.Outlined.LocalFireDepartment,
-                        text = "連續",
-                        value = "4",
-                        suffix = "天",
-                    )
-                    StreakChip(
-                        leadingIcon = Icons.Outlined.TrendingUp,
-                        text = "比上週",
-                        value = "+9",
-                        suffix = "%",
-                    )
-                }
-            }
+//                Spacer(Modifier.weight(1f))
+//
+//                Column(
+//                    modifier = Modifier.padding(bottom = 60.dp),
+//                    horizontalAlignment = Alignment.End,
+//                    verticalArrangement = Arrangement.spacedBy(6.dp),
+//                ) {
+//                    StreakChip(
+//                        leadingIcon = Icons.Outlined.LocalFireDepartment,
+//                        text = "連續",
+//                        value = "4",
+//                        suffix = "天",
+//                    )
+//                    StreakChip(
+//                        leadingIcon = Icons.Outlined.TrendingUp,
+//                        text = "比上週",
+//                        value = "+9",
+//                        suffix = "%",
+//                    )
+//                }
+//            }
         }
 
         Image(
