@@ -211,7 +211,7 @@ fun InterviewReportScreen(navController: NavHostController) {
     val collabEnabled = report == null || report.notices.none { it.contains("協作評分尚未啟用") }
     // A real report without missing points (for example, no saved experiences) hides the block
     // instead of falling back to mock content.
-    val showOmission = report == null || report.missingPoints.isNotEmpty()
+    val showOmission = report != null && report.missingPoints.isNotEmpty()
     val scored = com.careersandbox.app.data.mock.MockInterviewReportProvider
         .subScores().mapNotNull { it.score }
     // Prefer the backend's overallScore; a real report with nothing scored shows "—"
@@ -459,7 +459,7 @@ fun InterviewReportScreen(navController: NavHostController) {
                 if (showOmission) {
                     SectionTitleDark("該提、但你沒提到")
                     Spacer(Modifier.height(12.dp))
-                    OmissionSection()
+                    OmissionSection(report?.missingPoints.orEmpty())
                     Spacer(Modifier.height(32.dp))
                 }
 
@@ -969,8 +969,7 @@ private fun FaceCard(
 }
 
 @Composable
-private fun OmissionSection() {
-    val misses = com.careersandbox.app.data.mock.MockMissingPointsAnalyzer.analyze()
+private fun OmissionSection(misses: List<com.careersandbox.app.data.remote.MissingPointDto>) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -980,7 +979,7 @@ private fun OmissionSection() {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                "根據這份 JD 和你的履歷,這些是你有、卻整場沒講到的加分點。",
+                "根據這份職缺描述和你的履歷,這些是你有、卻整場沒講到的加分點。",
                 color = PaperWhite.copy(alpha = 0.85f),
                 style = MaterialTheme.typography.bodySmall,
                 lineHeight = 18.sp,
@@ -990,7 +989,7 @@ private fun OmissionSection() {
             Box(
                 Modifier.clip(RoundedCornerShape(50)).background(Color(0x33FFFFFF)).padding(horizontal = 7.dp, vertical = 2.dp),
             ) {
-                Text("依 JD×履歷", color = InkGray400, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Text("依 職缺×履歷", color = InkGray400, fontSize = 9.sp, fontWeight = FontWeight.Bold)
             }
         }
         Spacer(Modifier.height(14.dp))
