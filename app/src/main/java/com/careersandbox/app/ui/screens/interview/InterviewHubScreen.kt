@@ -55,35 +55,44 @@ import com.careersandbox.app.ui.components.BottomNavSpace
 import androidx.compose.ui.platform.LocalContext
 import com.careersandbox.app.data.remote.InterviewSessionSummaryDto
 import com.careersandbox.app.data.repository.RemoteInterviewSessionRepository
+import kotlin.math.roundToInt
 
 @Composable
 fun InterviewHubScreen(navController: NavHostController) {
+    // null while loading; one fetch feeds every block on this page.
+    var records by remember { mutableStateOf<List<InterviewSessionSummaryDto>?>(null) }
+    var failed by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        RemoteInterviewSessionRepository().list()
+            .onSuccess { records = it }
+            .onFailure { failed = true; records = emptyList() }
+    }
+    val all = records.orEmpty()
+
     Box(modifier = Modifier.fillMaxSize().background(PaperWhite)) {
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         ) {
             // === Hero 區 ===
-            StaggeredAppear(delayMillis = 0) { HeroSection() }
+            StaggeredAppear(delayMillis = 0) { HeroSection(records) }
 
             Spacer(Modifier.height(20.dp))
 
-            // === #6 Avatar 成長卡 ===
-            StaggeredAppear(delayMillis = 90) { AvatarGrowthCard() }
+            // === Avatar 成長卡(依已儲存場數)===
+            StaggeredAppear(delayMillis = 90) { AvatarGrowthCard(all.size) }
 
             Spacer(Modifier.height(20.dp))
 
-            // === #1 快速練習(低門檻入口,與正式 mock 區分)===
-            StaggeredAppear(delayMillis = 170) { QuickPracticeCard(navController) }
+            // === 本週練習 ===
+            StaggeredAppear(delayMillis = 170) { WeeklyStreak(all) }
 
             Spacer(Modifier.height(20.dp))
 
-            // === 本週練習(連續天數)===
-            StaggeredAppear(delayMillis = 200) { WeeklyStreak() }
+            // === 快速練習(低門檻入口,放在狀態區塊之後)===
+            StaggeredAppear(delayMillis = 200) { QuickPracticeCard(navController) }
 
-            Spacer(Modifier.height(20.dp))
-
-            // === 能力輪廓(收合,點開詳細)===
-            StaggeredAppear(delayMillis = 225) { AbilityProfileEntry() }
+            // 能力輪廓 hidden: it needs per-dimension scores the list endpoint does not return.
+            // StaggeredAppear(delayMillis = 225) { AbilityProfileEntry() }
 
             Spacer(Modifier.height(32.dp))
 
@@ -92,20 +101,26 @@ fun InterviewHubScreen(navController: NavHostController) {
 
             Spacer(Modifier.height(24.dp))
 
-            // === 三對一 panel 入口(已上線)===
-
             Spacer(Modifier.height(32.dp))
 
             // === 歷史紀錄(無框列表)===
-            StaggeredAppear(delayMillis = 410) { HistorySection(navController) }
+            StaggeredAppear(delayMillis = 410) { HistorySection(navController, records, failed) }
             Spacer(Modifier.height(48.dp))
             Spacer(Modifier.navigationBarsPadding().height(BottomNavSpace))
         }
     }
 }
 
+private fun heroStatsText(records: List<InterviewSessionSummaryDto>?): String {
+    if (records == null) return "載入中…"
+    if (records.isEmpty()) return "還沒有儲存的面試"
+    val scores = records.mapNotNull { it.score }
+    return if (scores.isEmpty()) "已儲存 ${records.size} 場"
+    else "已儲存 ${records.size} 場 · 平均 ${scores.average().roundToInt()} 分"
+}
+
 @Composable
-private fun HeroSection() {
+private fun HeroSection(records: List<InterviewSessionSummaryDto>?) {
     Box(modifier = Modifier.fillMaxWidth().height(220.dp)) {
         WaveHeroBackground(
             gradient = Brush.linearGradient(
@@ -153,7 +168,7 @@ private fun HeroSection() {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(6.dp).clip(CircleShape).background(BrandYellow))
                 Spacer(Modifier.width(6.dp))
-                Text("已完成 4 次 · 平均 74 分",
+                Text(heroStatsText(records),
                     color = PaperWhite.copy(alpha = 0.9f),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold)
@@ -319,17 +334,13 @@ private fun PlanCard(
 private const val HUB_HISTORY_LIMIT = 4
 
 @Composable
-private fun HistorySection(navController: NavHostController) {
+private fun HistorySection(
+    navController: NavHostController,
+    records: List<InterviewSessionSummaryDto>?,
+    failed: Boolean,
+) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
-    // null while loading
-    var records by remember { mutableStateOf<List<InterviewSessionSummaryDto>?>(null) }
-    var failed by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        RemoteInterviewSessionRepository().list()
-            .onSuccess { records = it }
-            .onFailure { failed = true; records = emptyList() }
-    }
     val all = records.orEmpty()
     val shown = all.take(HUB_HISTORY_LIMIT)
 
@@ -396,9 +407,8 @@ private val INTERVIEW_ABILITIES = listOf(
 private const val INTERVIEW_POWER = 74
 
 @Composable
-private fun AvatarGrowthCard() {
-    val power = INTERVIEW_POWER
-    val rank = rankOf(power)
+private fun AvatarGrowthCard(count: Int) {
+    val rank = rankOf(count)
     Column(
         modifier = Modifier
             .padding(horizontal = 20.dp)
@@ -407,7 +417,7 @@ private fun AvatarGrowthCard() {
             .background(BrandPeach.copy(alpha = 0.4f))
             .padding(18.dp),
     ) {
-        // 英雄列：段位徽章 + 段位河狸 + 面試力
+        // 英雄列：段位徽章 + 段位河狸 + 已儲存場數
         Row(verticalAlignment = Alignment.CenterVertically) {
             ShieldBadge(rank.title)
             Spacer(Modifier.width(10.dp))
@@ -419,37 +429,63 @@ private fun AvatarGrowthCard() {
             )
             Spacer(Modifier.weight(1f))
             Column(horizontalAlignment = Alignment.End) {
-                Text("面試力", color = InkGray700, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                Text("${rememberCountUp(power)}", color = InkBlack, fontSize = 44.sp, fontWeight = FontWeight.Black, lineHeight = 46.sp)
+                Text("已儲存面試", color = InkGray700, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("${rememberCountUp(count)}", color = InkBlack, fontSize = 44.sp, fontWeight = FontWeight.Black, lineHeight = 46.sp)
             }
         }
         Spacer(Modifier.height(14.dp))
-        // 段位進度條（自帶「再 X 分晉升 Y」）
-        RankProgressBar(power)
+        RankProgressBar(count)
     }
 }
 
 /* ===================== 本週練習(連續天數)===================== */
 
+// Mon=0 .. Sun=6 in the device time zone.
+private fun weekdayIndex(cal: java.util.Calendar): Int =
+    (cal.get(java.util.Calendar.DAY_OF_WEEK) + 5) % 7
+
+// Days of the current week (Mon-Sun) with at least one saved interview, plus today's index.
+private fun practicedThisWeek(records: List<InterviewSessionSummaryDto>): Pair<Set<Int>, Int> {
+    val now = java.util.Calendar.getInstance()
+    val todayIdx = weekdayIndex(now)
+    val start = (now.clone() as java.util.Calendar).apply {
+        add(java.util.Calendar.DAY_OF_YEAR, -todayIdx)
+        set(java.util.Calendar.HOUR_OF_DAY, 0)
+        set(java.util.Calendar.MINUTE, 0)
+        set(java.util.Calendar.SECOND, 0)
+        set(java.util.Calendar.MILLISECOND, 0)
+    }
+    val end = (start.clone() as java.util.Calendar).apply { add(java.util.Calendar.DAY_OF_YEAR, 7) }
+    val practiced = mutableSetOf<Int>()
+    val cal = java.util.Calendar.getInstance()
+    for (r in records) {
+        val ms = parseSavedAtMillis(r.createdAt) ?: continue
+        if (ms < start.timeInMillis || ms >= end.timeInMillis) continue
+        cal.timeInMillis = ms
+        practiced.add(weekdayIndex(cal))
+    }
+    return practiced to todayIdx
+}
+
 @Composable
-private fun WeeklyStreak() {
+private fun WeeklyStreak(records: List<InterviewSessionSummaryDto>) {
     val days = listOf("一", "二", "三", "四", "五", "六", "日")
-    val doneCount = 4   // 一~四 已完成
-    val todayIdx = 4    // 五 = 今天
+    val (practiced, todayIdx) = remember(records) { practicedThisWeek(records) }
     Column(Modifier.padding(horizontal = 20.dp).fillMaxWidth()) {
-        Text("本週練習", color = InkBlack, fontSize = 13.sp, fontWeight = FontWeight.Black)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("本週練習", color = InkBlack, fontSize = 13.sp, fontWeight = FontWeight.Black,
+                modifier = Modifier.weight(1f))
+            Text("已練習 ${practiced.size} 天", color = InkGray500, fontSize = 11.sp)
+        }
         Spacer(Modifier.height(12.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             days.forEachIndexed { i, d ->
+                val done = i in practiced
+                val isToday = i == todayIdx
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    val state = when {
-                        i < doneCount -> 0   // 已完成
-                        i == todayIdx -> 1   // 今天
-                        else -> 2            // 未來
-                    }
-                    // 完成/今天=點燃火焰, 今天額外加一圈橘色光環, 未來=熄滅火焰(半透明)
+                    // 練習過=點燃火焰, 今天額外加一圈橘色光環, 其餘=熄滅火焰(半透明)
                     Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) {
-                        if (state == 1) {
+                        if (isToday) {
                             Box(
                                 Modifier.size(36.dp).clip(CircleShape)
                                     .border(2.dp, BrandOrange, CircleShape),
@@ -457,21 +493,21 @@ private fun WeeklyStreak() {
                         }
                         Image(
                             painter = painterResource(
-                                if (state == 2) R.drawable.flame_unlit else R.drawable.flame_lit,
+                                if (done) R.drawable.flame_lit else R.drawable.flame_unlit,
                             ),
                             contentDescription = null,
                             contentScale = ContentScale.Fit,
                             modifier = Modifier
-                                .size(if (state == 1) 32.dp else 30.dp)
-                                .alpha(if (state == 2) 0.4f else 1f),
+                                .size(if (isToday) 32.dp else 30.dp)
+                                .alpha(if (done) 1f else 0.4f),
                         )
                     }
                     Spacer(Modifier.height(6.dp))
                     Text(
                         d,
-                        color = if (i == todayIdx) BrandDeepOrange else InkGray500,
+                        color = if (isToday) BrandDeepOrange else InkGray500,
                         fontSize = 11.sp,
-                        fontWeight = if (i == todayIdx) FontWeight.Black else FontWeight.Medium,
+                        fontWeight = if (isToday) FontWeight.Black else FontWeight.Medium,
                     )
                 }
             }
@@ -616,41 +652,39 @@ private fun AbilityBar(label: String, value: Int, delta: Int, isWeak: Boolean) {
     }
 }
 
-/* 段位門檻：新手 0-59 ・ 新星 60-74 ・ 好手 75-84 ・ 大師 85-100 */
-private val RANK_TIERS = listOf(0, 60, 75, 85)
+/* 段位依已儲存的面試場數。門檻是暫定值,可自行調整:新手 0-2 ・ 新星 3-5 ・ 好手 6-9 ・ 大師 10+ */
+private val RANK_TIERS = listOf(0, 3, 6, 10)
 private val RANK_NAMES = listOf("新手", "新星", "好手", "大師")
-private fun rankIndexOf(power: Int): Int = RANK_TIERS.indexOfLast { power >= it }.coerceIn(0, 3)
+private fun rankIndexOf(count: Int): Int = RANK_TIERS.indexOfLast { count >= it }.coerceIn(0, RANK_TIERS.lastIndex)
 
 @Composable
-private fun RankProgressBar(power: Int) {
-    val idx = rankIndexOf(power)
-    val nextThreshold = if (idx < 3) RANK_TIERS[idx + 1] else 100
-    val toNext = (nextThreshold - power).coerceAtLeast(0)
-    val nextName = if (idx < 3) RANK_NAMES[idx + 1] else "頂峰"
+private fun RankProgressBar(count: Int) {
+    val idx = rankIndexOf(count)
+    val reachedTop = idx >= RANK_TIERS.lastIndex
+    val toNext = if (reachedTop) 0 else RANK_TIERS[idx + 1] - count
+    val nextName = if (reachedTop) "" else RANK_NAMES[idx + 1]
+    // The bar shows progress inside the current rank, not the overall total.
+    val target = if (reachedTop) 1f
+    else (count - RANK_TIERS[idx]).toFloat() / (RANK_TIERS[idx + 1] - RANK_TIERS[idx])
 
     var appear by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { appear = true }
     val fill by animateFloatAsState(
-        targetValue = if (appear) power / 100f else 0f,
+        targetValue = if (appear) target.coerceIn(0f, 1f) else 0f,
         animationSpec = tween(900),
         label = "rankFill",
     )
 
     Column(Modifier.fillMaxWidth()) {
-        BoxWithConstraints(Modifier.fillMaxWidth().height(16.dp)) {
-            val full = maxWidth
-            Box(Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)).background(PaperWhite.copy(alpha = 0.7f)))
+        Box(
+            Modifier.fillMaxWidth().height(16.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(PaperWhite.copy(alpha = 0.7f)),
+        ) {
             Box(
-                Modifier.fillMaxHeight().width(full * fill).clip(RoundedCornerShape(8.dp))
+                Modifier.fillMaxHeight().fillMaxWidth(fill).clip(RoundedCornerShape(8.dp))
                     .background(Brush.horizontalGradient(listOf(BrandAmber, BrandOrange, BrandDeepOrange))),
             )
-            // 段位分界
-            listOf(0.60f, 0.75f, 0.85f).forEach { f ->
-                Box(
-                    Modifier.fillMaxHeight().width(2.dp).offset(x = full * f)
-                        .background(InkCharcoal.copy(alpha = 0.22f)),
-                )
-            }
         }
         Spacer(Modifier.height(6.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -665,7 +699,7 @@ private fun RankProgressBar(power: Int) {
         }
         Spacer(Modifier.height(8.dp))
         Text(
-            if (idx < 3) "再 $toNext 分晉升 $nextName" else "已達頂峰段位",
+            if (!reachedTop) "再 $toNext 場晉升$nextName" else "已達最高段位",
             color = InkCharcoal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
         )
     }
@@ -700,11 +734,11 @@ private fun NextUnlockCallout(power: Int) {
 
 private data class InterviewRank(val title: String, val beaver: Int)
 
-private fun rankOf(score: Int): InterviewRank = when {
-    score >= 85 -> InterviewRank("面試大師 I", R.drawable.beaver_rank_master)
-    score >= 75 -> InterviewRank("面試好手 II", R.drawable.beaver_rank_expert)
-    score >= 60 -> InterviewRank("面試新星 IV", R.drawable.beaver_rank_star)
-    else -> InterviewRank("面試新手 V", R.drawable.beaver_rank_novice)
+private fun rankOf(count: Int): InterviewRank = when (rankIndexOf(count)) {
+    3 -> InterviewRank("面試大師", R.drawable.beaver_rank_master)
+    2 -> InterviewRank("面試好手", R.drawable.beaver_rank_expert)
+    1 -> InterviewRank("面試新星", R.drawable.beaver_rank_star)
+    else -> InterviewRank("面試新手", R.drawable.beaver_rank_novice)
 }
 
 @Composable

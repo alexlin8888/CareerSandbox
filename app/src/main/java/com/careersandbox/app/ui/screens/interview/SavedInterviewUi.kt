@@ -82,6 +82,18 @@ internal fun openSavedReport(
     }
 }
 
+// UTC ISO text from the server -> epoch millis; null when malformed.
+internal fun parseSavedAtMillis(iso: String?): Long? {
+    if (iso.isNullOrBlank()) return null
+    return try {
+        val parser = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US)
+        parser.timeZone = java.util.TimeZone.getTimeZone("UTC")
+        parser.parse(iso.take(19))?.time
+    } catch (e: Exception) {
+        null
+    }
+}
+
 @Composable
 internal fun SavedInterviewRow(r: InterviewSessionSummaryDto, onClick: () -> Unit) {
     Row(
