@@ -49,7 +49,7 @@ object MockMissingPointsAnalyzer : MissingPointsAnalyzer {
         return listOf(
             MissingPoint(
                 "SQL 把週報效率提升 4 倍",
-                "這份 JD 很重視數據能力,但你整場沒提到這段量化成果。",
+                "這份職缺很重視數據能力,但你整場沒提到這段量化成果。",
             ),
             MissingPoint(
                 "社團 IG 從 0 經營到 1200 追蹤",
@@ -57,7 +57,7 @@ object MockMissingPointsAnalyzer : MissingPointsAnalyzer {
             ),
             MissingPoint(
                 "帶 5 人團隊完成聯名專案",
-                "JD 要求協作與領導,這段沒帶到很可惜。",
+                "此職缺要求協作與領導,這段沒帶到很可惜。",
             ),
         )
     }

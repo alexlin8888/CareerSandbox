@@ -37,7 +37,7 @@ fun ResumeArchIntroScreen(navController: NavHostController) {
         ),
         IntroStep(
             "職缺", "每個應徵目標開一個職缺",
-            "針對每間公司、每個職位開一個職缺。從母版挑出對這個 JD 重要的段落、弱化無關的,做出客製。",
+            "針對每間公司、每個職位開一個職缺。從母版挑出對這份職缺描述重要的段落、弱化無關的,做出客製。",
             BrandOrange,
         ),
         IntroStep(

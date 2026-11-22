@@ -231,7 +231,7 @@ private fun NextActionsSection(navController: NavHostController) {
             Spacer(Modifier.width(8.dp))
             Column {
                 Text("練此職缺的面試", color = PaperWhite, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                Text("帶著 JD 進面試房", color = PaperWhite.copy(alpha = 0.6f), fontSize = 10.sp)
+                Text("帶著職缺說明進面試房", color = PaperWhite.copy(alpha = 0.6f), fontSize = 10.sp)
             }
         }
         Row(
@@ -248,7 +248,7 @@ private fun NextActionsSection(navController: NavHostController) {
             Spacer(Modifier.width(8.dp))
             Column {
                 Text("還缺什麼", color = BrandDeepOrange, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                Text("看你和 JD 的差距", color = BrandDeepOrange.copy(alpha = 0.65f), fontSize = 10.sp)
+                Text("看你和此職缺的差距", color = BrandDeepOrange.copy(alpha = 0.65f), fontSize = 10.sp)
             }
         }
     }
@@ -278,7 +278,7 @@ private fun JdSnippetSection(job: JobTarget) {
         }
         Spacer(Modifier.height(10.dp))
         Text(
-            job.jdSnippet.ifBlank { "這個職缺還沒有 JD,新增版本時可以補上。" },
+            job.jdSnippet.ifBlank { "這份職缺還沒有相關說明,新增版本時可以補上。" },
             color = if (job.jdSnippet.isBlank()) InkGray500 else InkBlack,
             style = MaterialTheme.typography.bodyMedium,
             lineHeight = 22.sp,

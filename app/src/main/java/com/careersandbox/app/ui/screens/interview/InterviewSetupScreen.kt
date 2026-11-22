@@ -153,7 +153,7 @@ fun InterviewSetupScreen(navController: NavHostController) {
             Text("為哪個職缺練?",
                 color = InkBlack, fontWeight = FontWeight.Black, fontSize = 24.sp)
             Spacer(Modifier.height(4.dp))
-            Text("面試官會用這個職缺的 JD 跟你的履歷出題。",
+            Text("面試官會用這個職缺的描述跟你的履歷出題。",
                 color = InkGray500, style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.height(16.dp))
 
