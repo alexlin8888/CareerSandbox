@@ -123,31 +123,31 @@ fun SandboxResultScreen(result: SandboxResult, onGapClick: () -> Unit, onFinish:
             Note(result.transferNote.substringAfter("，", result.transferNote))
         }
 
-        // Gap (set difference) with entry to the learning path
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 10.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(Color(0xFFFFF3EA))
-                .border(1.5.dp, BrandOrange, RoundedCornerShape(12.dp))
-                .padding(12.dp),
-        ) {
-            Text("你目前還缺", color = InkSlate, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-            Text(result.gaps, color = InkSlate, fontSize = 13.sp, lineHeight = 21.sp, modifier = Modifier.padding(top = 2.dp))
-            Spacer(Modifier.height(10.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(44.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(BrandOrange)
-                    .pressScale { onGapClick() },
-                contentAlignment = Alignment.Center,
-            ) {
-                Text("看補強路徑", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            }
-        }
+//        // Gap (set difference) with entry to the learning path
+//        Column(
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .padding(bottom = 10.dp)
+//                .clip(RoundedCornerShape(12.dp))
+//                .background(Color(0xFFFFF3EA))
+//                .border(1.5.dp, BrandOrange, RoundedCornerShape(12.dp))
+//                .padding(12.dp),
+//        ) {
+//            Text("你目前還缺", color = InkSlate, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+//            Text(result.gaps, color = InkSlate, fontSize = 13.sp, lineHeight = 21.sp, modifier = Modifier.padding(top = 2.dp))
+//            Spacer(Modifier.height(10.dp))
+//            Box(
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .height(44.dp)
+//                    .clip(RoundedCornerShape(12.dp))
+//                    .background(BrandOrange)
+//                    .pressScale { onGapClick() },
+//                contentAlignment = Alignment.Center,
+//            ) {
+//                Text("看補強路徑", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+//            }
+//        }
         Spacer(Modifier.height(18.dp))
         Box(
             modifier = Modifier
