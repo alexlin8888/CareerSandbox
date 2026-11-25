@@ -407,7 +407,7 @@ private fun GroupCustomJobCard(
             OutlinedTextField(
                 value = jd,
                 onValueChange = onJd,
-                placeholder = { Text("貼上 JD(選填,越完整題目越準)", color = InkGray400) },
+                placeholder = { Text("貼上職缺說明(選填,越完整題目越準)", color = InkGray400) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 minLines = 3,

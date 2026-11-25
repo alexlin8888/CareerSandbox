@@ -602,14 +602,14 @@ private fun HeroSection(navController: NavHostController) {
             else -> "晚安"
         }
     }
-    Box(modifier = Modifier.fillMaxWidth().height(400.dp)) {
+    Box(modifier = Modifier.fillMaxWidth().height(240.dp)) {
         WaveHeroBackground(
             gradient = Brush.linearGradient(
                 colors = listOf(BrandDeepOrange, BrandOrange, BrandAmber),
                 start = androidx.compose.ui.geometry.Offset(0f, 0f),
                 end = androidx.compose.ui.geometry.Offset(800f, 600f),
             ),
-            heightDp = 400,
+            heightDp = 240,
         )
 
         ScatteredDecorations(

@@ -197,7 +197,7 @@ fun InterviewSetupScreen(navController: NavHostController) {
                 if (format == "panel")
                     "HR、技術、用人主管三位輪流問,從不同角度評估你。"
                 else
-                    "一位面試官,從你的履歷與 JD 出題、即時追問。",
+                    "一位面試官,從你的履歷與職缺說明出題、即時追問。",
                 color = InkGray500, style = MaterialTheme.typography.bodySmall, lineHeight = 18.sp,
             )
 
@@ -410,7 +410,7 @@ private fun CustomJobCard(
             Spacer(Modifier.height(10.dp))
             CtxField("產業(選填)", industry, onIndustry, "例:電商、金融、教育")
             Spacer(Modifier.height(10.dp))
-            CtxField("貼上 JD(選填,越完整題目越準)", jd, onJd,
+            CtxField("貼上職缺說明(選填,越完整題目越準)", jd, onJd,
                 "把職缺描述貼進來,面試官會照著出題", multiline = true)
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -491,7 +491,7 @@ private fun RoomPreview(format: String) {
         Interviewer("用人主管", "即戰力 · 整體評估", R.drawable.interviewer_lead),
     )
     val single = listOf(
-        Interviewer("面試官", "從履歷與 JD 出題", R.drawable.interviewer_lead),
+        Interviewer("面試官", "從履歷與職缺出題", R.drawable.interviewer_lead),
     )
     Column(
         modifier = Modifier
