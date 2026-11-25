@@ -173,7 +173,7 @@ private fun SelectJobPhase(
             }
             Spacer(Modifier.height(10.dp))
             Text(
-                "挑一個你已經新增的職缺，AI 會依照這個職缺的 JD 內容，幫你調整履歷重點。",
+                "挑一個你已經新增的職缺，AI 會依照這個職缺的說明內容，幫你調整履歷重點。",
                 color = InkGray700,
                 style = MaterialTheme.typography.bodyMedium,
                 lineHeight = 22.sp,
@@ -264,7 +264,7 @@ private fun SelectJobPhase(
 @Composable
 private fun AnalyzingPhase(onDone: () -> Unit, contentPadding: PaddingValues) {
     val steps = listOf(
-        "解析 JD 關鍵字" to 700L,
+        "解析職缺關鍵字" to 700L,
         "比對你的個人檔案" to 900L,
         "計算 ATS 適配度" to 700L,
         "重組履歷重點" to 800L,
@@ -332,7 +332,7 @@ private fun AnalyzingPhase(onDone: () -> Unit, contentPadding: PaddingValues) {
             fontWeight = FontWeight.Black,
             fontSize = 24.sp)
         Spacer(Modifier.height(6.dp))
-        Text("AI 正在為這份 JD 重組你的履歷",
+        Text("AI 正在為這份職缺重組你的履歷",
             color = InkGray500,
             style = MaterialTheme.typography.bodyMedium)
 
@@ -405,7 +405,9 @@ private fun ResultPhase(
     LaunchedEffect(job?.id) {
         val list = RemoteExperienceRepository().list().getOrNull() ?: emptyList()
         experiences = list
-        aiResult = job?.id?.let { RemoteAiRepository().customizeResume(it).getOrNull() }
+        aiResult = job?.id?.let {
+            RemoteAiRepository().customizeResume(it).getOrNull()
+        }
         loaded = true
     }
     val exp = experiences
@@ -461,7 +463,7 @@ private fun ResultPhase(
                 Spacer(Modifier.height(4.dp))
                 Text(
                     if (job != null) "已依「${job.title}・${job.company}」調整好這份履歷"
-                    else "已根據 JD 調整好這份履歷",
+                    else "已根據職缺調整好這份履歷",
                     color = InkGray500, fontSize = 13.sp,
                 )
             }
@@ -489,7 +491,7 @@ private fun ResultPhase(
         Spacer(Modifier.height(36.dp))
 
         // 已強化
-        SectionTitle("已強化", "AI 認為對這份 JD 重要的段落")
+        SectionTitle("已強化", "AI 認為對這份職缺重要的段落")
         highlights.forEachIndexed { i, (text, matched) ->
             HighlightItem(text = text, matched = matched)
             if (i < highlights.size - 1) Spacer(Modifier.height(10.dp))
@@ -526,7 +528,7 @@ private fun ResultPhase(
         }
 
         // 缺失關鍵字
-        SectionTitle("建議補強", "這些 JD 關鍵字你的檔案沒提到")
+        SectionTitle("建議補強", "這些職缺關鍵字你的檔案沒提到")
         MissingChips(missingKeywords)
 
         Spacer(Modifier.height(36.dp))
@@ -559,7 +561,7 @@ private fun ResultPhase(
                     val target = job ?: return@pressScale
                     saving = true
                     saveError = null
-                    val note = "依 JD 客製：保留 ${highlights.size} 段重點" +
+                    val note = "依職缺客製：保留 ${highlights.size} 段重點" +
                             if (restoredItems.isNotEmpty()) "、額外拉回 ${restoredItems.size} 段" else ""
                     // items[i] pairs with exp[i]; highlighted = AI pick, or the user pulled it back
                     // items[i].id pairs directly with the experience; fall back to index only if the AI didn't echo an id
@@ -647,7 +649,7 @@ private fun ResultPhase(
                 .pressScale(onClick = onBack),
             contentAlignment = Alignment.Center,
         ) {
-            Text("試另一份 JD",
+            Text("試另一份職缺",
                 color = InkBlack,
                 fontWeight = FontWeight.SemiBold,
                 style = MaterialTheme.typography.titleSmall)
@@ -945,7 +947,7 @@ private fun DimmedItem(text: String, isRestored: Boolean, onRestore: () -> Unit)
 @Composable
 private fun MissingChips(keywords: List<String>) {
     if (keywords.isEmpty()) {
-        Text("太好了,這份 JD 的關鍵字你都有提到。",
+        Text("太好了,這份職缺的關鍵字你都有提到。",
             color = InkGray500,
             style = MaterialTheme.typography.bodySmall)
         return

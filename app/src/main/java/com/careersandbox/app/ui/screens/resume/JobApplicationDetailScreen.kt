@@ -270,7 +270,7 @@ private fun JdSnippetSection(job: JobTarget) {
             Icon(Icons.Outlined.Description, contentDescription = null,
                 tint = BrandDeepOrange, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(8.dp))
-            Text("JD 摘要",
+            Text("職缺摘要",
                 color = InkGray500,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Black,

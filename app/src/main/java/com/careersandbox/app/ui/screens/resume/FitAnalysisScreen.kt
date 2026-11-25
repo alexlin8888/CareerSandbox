@@ -1229,7 +1229,7 @@ private fun GapDetailCard(skill: String) {
         }
         if (open && detail != null) {
             Spacer(Modifier.height(10.dp))
-            Text("JD 原句", color = InkGray400, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+            Text("職缺原句", color = InkGray400, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
             Spacer(Modifier.height(3.dp))
             Text(detail.jdLine, color = InkGray700, fontSize = 12.sp, lineHeight = 18.sp)
             Spacer(Modifier.height(8.dp))
